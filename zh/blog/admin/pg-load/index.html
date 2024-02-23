@@ -1,0 +1,1691 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>PostgreSQL的KPI | Pigsty</title><meta property="og:title" content="PostgreSQL的KPI" />
+<meta property="og:description" content="管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰**PG Load（PG负载）**。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/admin/pg-load/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2020-05-29T00:00:00+00:00" />
+<meta property="article:modified_time" content="2023-08-23T10:45:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="PostgreSQL的KPI">
+<meta itemprop="description" content="管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰**PG Load（PG负载）**。
+"><meta itemprop="datePublished" content="2020-05-29T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2023-08-23T10:45:50+08:00" />
+<meta itemprop="wordCount" content="239">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="PostgreSQL的KPI"/>
+<meta name="twitter:description" content="管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰**PG Load（PG负载）**。
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/admin/pg-load.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/admin/pg-load.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/admin/pg-load.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=PostgreSQL%e7%9a%84KPI" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/admin/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#0x01-introduction">0x01 Introduction</a></li>
+    <li><a href="#0x02-常用评估指标的问题">0x02 常用评估指标的问题</a></li>
+    <li><a href="#0x03-衡量pg的负载">0x03 衡量PG的负载</a>
+      <ul>
+        <li><a href="#机器负载node-load">机器负载（Node Load）</a></li>
+        <li><a href="#cpu利用率cpu-utilization">CPU利用率（CPU Utilization）</a></li>
+        <li><a href="#数据库负载pg-load">数据库负载（PG Load）</a></li>
+      </ul>
+    </li>
+    <li><a href="#0x04-计算pg的负载饱和度">0x04 计算PG的负载饱和度</a>
+      <ul>
+        <li><a href="#事务还是查询"><strong>事务还是查询？</strong></a></li>
+        <li><a href="#如何获取活跃时长"><strong>如何获取活跃时长</strong></a></li>
+        <li><a href="#可用并行数如何定义">可用并行数如何定义？</a></li>
+        <li><a href="#pg-load的另一种解释">PG LOAD的另一种解释</a></li>
+      </ul>
+    </li>
+    <li><a href="#0x05-pg-load的实际效果">0x05 PG Load的实际效果</a>
+      <ul>
+        <li><a href="#case-1-用于报警慢查询堆积导致的服务不可用">Case 1: 用于报警：慢查询堆积导致的服务不可用</a></li>
+        <li><a href="#case-2用于水位评估与容量规划">Case 2：用于水位评估与容量规划</a></li>
+      </ul>
+    </li>
+    <li><a href="#0x06-结论">0x06 结论</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>PostgreSQL的KPI</h1>
+	<div class="lead">管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰<strong>PG Load（PG负载）</strong>。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2020-05-29" class="text-muted">2020-05-29</time>
+	</div>
+	
+	<p>管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰<strong>PG Load（PG负载）</strong>。</p>
+<h2 id="0x01-introduction">0x01 Introduction</h2>
+<p>在现实生产中，经常会有衡量数据库性能与负载，评估数据库水位的需求。一种最朴素的形式就是，能不能有一个类似于KPI的单一指标，能直接了当地告诉用户他心爱的数据库负载有没有超过警戒线？工作量到底饱和不饱和？</p>
+<p>当然这里其实隐含着一个重要信息，即用户期待的负载指标是一个<strong>饱和度（Saturation）<strong>指标，所谓饱和度，即服务容量有多”满“，通常是系统中目前最为受限的某种资源的某个具体指标的度量。通常来说，0%的饱和度意味着系统完全空闲，100%的饱和度意味着满载，系统在达到100%利用率前就会出现性能的严重下降，因此设定指标时还需要包括一个</strong>利用率目标</strong>，或者说<strong>水位红线、黄线</strong>，当系统瞬时负载超过红线时应当触发告警，长期负载超过黄线时应当进行扩容。</p>
+<p>不幸的是，定义系统有多”饱和“并不是一件容易的事情，往往需要借助某些间接指标。评估一个数据库的负载程度，传统上通常会基于这样几类指标进行综合评估：</p>
+<ul>
+<li>
+<p>流量：每秒查询数量QPS，或每秒事务数量TPS。</p>
+</li>
+<li>
+<p>延迟：查询平均响应时间 Query RT，或事务平均响应时间Xact RT</p>
+</li>
+<li>
+<p>饱和度：机器负载（Load），CPU使用率，磁盘读写带宽饱和度，网卡IO带宽饱和度</p>
+</li>
+<li>
+<p>错误：数据库客户端连接排队</p>
+</li>
+</ul>
+<p>这些指标对于数据库性能评估都很有参考意义，但它们也都存在各式各样的问题。</p>
+<h2 id="0x02-常用评估指标的问题">0x02 常用评估指标的问题</h2>
+<p>让我们来看一看，这些现有的常用指标都有哪些问题。</p>
+<p>第一个Pass的当然是错误类指标，譬如连接池排队。错误类指标最大的问题就是，当错误出现时，饱和度可能已经没有意义了。<strong>评估饱和度的一个重要原因就是用于预防系统过载，如果系统已经过载大量报错，那么使用错误现象反过来定义饱和度是没有意义的</strong>。此外，错误类指标难以精确量化。我们只能说：当连接池出现排队时，数据库负载比较大；队列越长，负载越大；没有排队时，数据库负载不怎么大，仅此而已。这样的定义当然也无法让人满意。</p>
+<p>第二个Pass的则是系统层（机器级别）指标，数据库运行在机器上，CPU使用率，IO使用率这样的指标与数据库负载程度密切相关，<strong>如果CPU和IO是瓶颈，理论上当然是可以直接使用瓶颈资源的饱和度指标</strong>作为数据库的饱和指标，但这一点并非总是成立的，有可能系统瓶颈在于数据库本身。而且严格来说它们是机器的KPI而不是DB的KPI，<strong>评估数据库负载时当然可以参照系统层的指标，但DB层也应该有本层的评估指标</strong>。要先有数据库本身的饱和度指标，才可以去比较底层资源和数据库本身到底谁先饱和谁是瓶颈。这条原则同样适用于应用层观察到的指标。</p>
+<p>流量类的指标很有潜力，特别是QPS，TPS这样的指标相当具有代表性。但这些指标也存在问题。一个数据库实例上的查询往往是五花八门各式各样的，一个耗时10微秒的查询和一个10秒的查询在统计时都被算为一个Q，<strong>类似于QPS这样的指标无法进行横向比较，只有比较粗略的参考意义</strong>，甚至当查询类型发生变化时，都无法和自己的历史数据进行纵向比较。此外也很难针对QPS、TPS这样的指标设置利用率目标，同一个数据库执行<code>SELECT 1</code>可以打到几十万的QPS，但执行复杂SQL时可能就只能打到几千的QPS。不同负载类型和机器硬件会对数据库的QPS上限产生显著影响，只有当一个数据库上的查询都是高度单一同质且没有复杂变化的条件下，QPS才有参考意义，在这种苛刻条件下倒是可以通过压力测试设定一个QPS的水位目标。</p>
+<p>比起QPS/TPS，RT（响应时间 Response Time）这样的指标反而更具有参考价值。因为响应时间增加往往是系统饱和的前兆。根据经验法则，数据库的负载越大，查询与事务的平均响应时间也会越高。RT相比QPS的一个优势是**，RT是可以设置一个利用率目标的**，比如可以为RT设定一个绝对阈值：不允许生产OLTP库上出现RT超过1ms的慢查询。但QPS这样的指标就很难画出红线来。不过，RT也有自己的问题。第一个问题是它依然是定性而非定量的，延迟增加只是系统饱和的预警，但没法用来精确衡量系统的饱和度。第二个问题通常能从数据库与中间件获取到的RT统计指标都是平均值，但真正起到预警效果的有可能是诸如P99，P999这样的统计量。</p>
+<p>这里把常用指标都批判了一番，到底什么样的指标适合作为数据库本身的饱和度呢？</p>
+<h2 id="0x03-衡量pg的负载">0x03 衡量PG的负载</h2>
+<p>我们不妨参考一下**机器负载（Node Load）<strong>和</strong>CPU利用率（CPU Utilization）**的评估指标是如何设计的。</p>
+<h3 id="机器负载node-load">机器负载（Node Load）</h3>
+<p>想要看到机器的负载水平，可以在Linux系统中使用<code>top</code>命令。<code>top</code>命令的第一行输出就醒目地打印出当前机器1分钟，5分钟，15分钟的<strong>平均负载水平</strong>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ top -b1
+</span></span><span style="display:flex;"><span>top - 19:27:38 up 18:49,  <span style="color:#0000cf;font-weight:bold">1</span> user,  load average: 1.15, 0.72, 0.71
+</span></span></code></pre></div><p>这里<code>load average</code>后面的三个数字分别表示最近1分钟，5分钟，15分钟系统的平均负载水平。</p>
+<p>那么这个数字到底是什么意思呢？简单的解释是，这个数字越大机器越忙。</p>
+<p>在单核CPU的场景下，Node Load（以下简称负载）是一个非常标准的饱和度指标。对于单核CPU，负载为0时CPU处于完全空闲的状态，负载为1（100%）时，CPU正好处于满载工作的状态。负载大于100%时，超出100%部分比例的任务正在排队。</p>
+<p>Node Load也有自己的<strong>利用率目标</strong>，通常的经验是在单核情况下：0.7（70%）是黄线，意味着系统有问题，需要尽快检查；1.0（100%）是红线，负载大于1意味着进程开始堆积，需要立即着手处理。5.0（500%）是死线，意味着系统基本上已经堵死了。</p>
+<p>对于多核CPU，事情稍微有点不一样。假设有n个核，那么当系统负载为n时，所有CPU都处于满载工作的状态；而当系统负载为n/2时，姑且可以认为一半CPU核正在满载运行。因而48核CPU的机器满载时的负载为48。总的来说，如果我们把机器负载除以机器的CPU核数，得到的指标就与单核场景下保持一致了（0%空载，100%满载）。</p>
+<h3 id="cpu利用率cpu-utilization">CPU利用率（CPU Utilization）</h3>
+<p>另一个很有借鉴意义的指标是<strong>CPU利用率（CPU Utilization）</strong>。CPU利用率其实是通过一个简单的公式计算出来的，对于单核CPU：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>- <span style="color:#000">irate(node_cpu_seconds_total{mode=&#34;idle&#34;}[1m]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>这里<code>node_cpu_seconds_total{mode=&quot;idle&quot;}</code>是一个计数器指标，表示CPU处于空闲状态的总时长。<code>irate</code>函数会用该指标对时间进行求导，得出的结果是，每秒CPU处于空闲状态的时长，换句话说也就是CPU空闲率。用1减去该值就得到了CPU的利用率。</p>
+<p>对于多核CPU来说，只需要把每个CPU核的利用率加起来，除以CPU的核数，就可以得到CPU的整体利用率。</p>
+<p>那么这两个指标对于PG的负载又有什么借鉴意义呢？</p>
+<h3 id="数据库负载pg-load">数据库负载（PG Load）</h3>
+<p>PG的负载是不是也可以采用类似于CPU利用率和机器负载的方式来定义？当然可以，而且这是一个极棒的主意。</p>
+<p>让我们先来考虑单进程情况下的PG负载，假设我们需要这样一个指标，当该PG进程完全空闲时负载因子为0，当该进程处于满载状态时负载为1（100%）。类比CPU利用率的定义，我们可以使用“<em><strong>单个PG进程处于活跃状态的时长占比</strong></em>”来表示“单个PG后端进程的利用率”。</p>
+<p>如图1所示，在一秒的统计周期内，PG处于活跃（执行查询或者执行事务）状态的时长为0.6秒，那么这一秒内的PG负载就是60%。如果这个唯一的PG进程在整个统计周期中都处于忙碌状态，而且还有0.4秒的任务在排队，如那么就可以认为PG的负载为140%。</p>
+<p><img src="../img/pg-load-fig.png" alt=""></p>
+<p>对于并行场景，计算方法与多核CPU的利用率类似，首先把所有PG进程在统计周期（1s）内处于活跃状态的时长累加，然后除以“<strong>可用的PG进程/连接数</strong>”，或者说“<strong>可用并行数</strong>”，即可得到PG本身的利用率指标，如图3所示。两个PG后端进程分别有200ms+400ms与800ms的活跃时长，那么整体的负载水平为：<code>(0.2s + 0.4s + 0.8s) / 1s / 2 = 70%</code></p>
+<p>总结一下，某一段时间内PG的负载可以定义为：</p>
+<p><code>pg_load = pg_active_seconds / time_peroid / parallel  </code></p>
+<ul>
+<li>
+<p><code>pg_active_seconds</code>是该时间段内所有PG进程处于活跃状态的时长之和。</p>
+</li>
+<li>
+<p><code>time_peroid</code>是负载计算的统计周期，通常为1分钟，5分钟，15分钟，以及实时（小于10秒）。</p>
+</li>
+<li>
+<p><code>parallel </code>是PostgreSQL的可用并行数，后面会详细解释。</p>
+</li>
+</ul>
+<p>因为前两项之商实际上就是一段时间内的每秒活跃时长总数，因此这个公式进一步可以简化为活跃时长对时间的导数除以可用并行数，即：</p>
+<p><code>rate(pg_active_seconds[time_peroid]) / parallel </code></p>
+<p><code>time_peroid</code>通常是固定的常量（1，5，15分钟），所以问题就是如何获取PG进程活跃总时长<code>pg_active_seconds</code>这个指标，以及如何评估计算数据库可用并行数<code>max_parallel </code>了。</p>
+<h2 id="0x04-计算pg的负载饱和度">0x04 计算PG的负载饱和度</h2>
+<h3 id="事务还是查询"><strong>事务还是查询？</strong></h3>
+<p>当我们说数据库进程 活跃/空闲 时，究竟在说什么？ <strong>PG处于活跃状态，到底是什么意思</strong>？如果PG后端进程正在执行查询，那么当然可以认为PG正处于忙碌状态。但如果如上图4所示，PG进程正在执行一个交互式事务，但没有实际执行查询，即所谓的“Idle in Transaction”状态，又应该怎么计算“活跃时长”呢？图4中两个查询中空闲的那200ms时间。那么这段时间应该算作“活跃”，还是算作“空闲”呢？</p>
+<p><strong>这里的核心问题是怎么定义活跃状态</strong>：数据库进程位于事务中算活跃，还是只有当实际执行查询时才算活跃。对于没有交互式事务的场景，一个查询就是一个事务，用哪种方式都一样，但对于多语句，特别是交互式的多语句事务，这两者就有比较明显的区别了。从资源使用的角度看，没有执行查询也就意味着没有消耗数据库本身的资源。但空闲着的事务本身会占用连接导致连接无法复用，Idle In Transaction本身也应当是一种极力避免的情况。总的来说，这两种定义方式都可以，使用事务的方式会略微高估应用负载，但从负载评估的角度可能会更为合适。</p>
+<h3 id="如何获取活跃时长"><strong>如何获取活跃时长</strong></h3>
+<p>决定了数据库后端进程的活跃定义后，第二个问题就是，如何获取一段时间的数据库活跃时长？不幸的是在PG中，用户很难通过数据库本身获取这一性能指标。PG提供了一个系统视图：<code>pg_stat_activity</code>，可以看到当前运行着的Postgres进程里列表，但这是一个时间点快照，只能大致告诉在当前时刻，数据库的后端进程中有多少个处于活跃状态，有多少个处于空闲状态。统计一段时间内数据库处于活跃状态的时长，就成了一个难题。一种解决方案是使用类似于Load的计算方式，通过周期性地采样PG中活跃进程的数量，计算出一个负载指标来。不过，这里有更好的办法，但是需要中间件的协助参与。</p>
+<p>数据库中间件对于性能监控非常重要，因为很多指标数据库本身并没有提供，只有通过中间件才能暴露出来。以Pgbouncer为例，Pgbouncer在内部维护了一系列统计计数器，使用<code>SHOW STATS</code>可以打印出这些指标，诸如：</p>
+<ul>
+<li>total_xact_count：总共执行了多少个事务</li>
+<li>total_query_count：总共执行了多少个查询</li>
+<li>total_xact_time：总共花费在事务执行的时长</li>
+<li>total_query_time：总共花费在查询执行上的时长</li>
+</ul>
+<p>这里<code>total_xact_time</code>就是我们需要的数据，它记录了Pgbouncer中间件中花费在某个数据库上的事务总耗时。我们只需要用这个指标对时间求导，就可以得到想要的数据：每秒活跃时长占比。</p>
+<p>这里使用Prometheus的PromQL表达计算逻辑，首先对事务耗时计数器求导，分别算出其1分钟，5分钟，15分钟，以及实时粒度（最近两次采样点之间）上的<strong>每秒活跃时长</strong>。再上卷求和，将数据库层次的指标上卷为实例级别的指标。（连接池<code>SHOW STATS</code>这里的统计指标是以数据库为单位的，因此在计算实例级别的总活跃时长时，应当上卷求和，消除数据库维度的标签：<code>sum without(datname)</code>）</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_realtime</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sum without (datname) (irate(pgbouncer_stat_total_xact_time{}[1m]))</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sum without (datname) (rate(pgbouncer_stat_total_xact_time{}[1m]))</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate5m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sum without (datname) (rate(pgbouncer_stat_total_xact_time{}[5m]))</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate15m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sum without (datname) (rate(pgbouncer_stat_total_xact_time{}[15m]))</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>这样计算得到的结果指标已经可以相对本身进行纵向比较，并在同样规格的实例间进行横向比较了。而且无论数据库的负载类型怎样，都可以使用这个指标。</p>
+<p>不过<strong>不同规格的实例，仍然没法使用这个指标进行对比</strong>。比如对于单核单连接PG，满载时每秒活跃时长可能是1秒，也就是100%利用率。而对于64核64连接的PG，满载时每秒活跃时长是64秒，那么就是6400%的利用率。因此，还需要一个归一化的处理，那么问题又来了。</p>
+<h3 id="可用并行数如何定义">可用并行数如何定义？</h3>
+<p>不同于CPU利用率，PG的可用并行数并没有一个清晰的定义，而且跟负载类型有一些微妙的关系。但能够确定的是，在一定范围内，<strong>最大可用并行与CPU的核数呈粗略的线性关系</strong>。当然这个结论的前提是数据库最大连接数显著超过CPU核数，如果在64核的CPU上只允许数据库建立30条连接，那么可以肯定最大可用并行就是30而不是CPU核数64。软件的并行最终还是要由硬件的并行度来支撑，因此我们可以简单的使用实例的CPU核数作为可用并行数。</p>
+<p>在64核的CPU上运行64个活跃PG进程，则其负载为（6400% / 64 = 100%）。同理运行128个活跃PG进程，负载就是（12800% / 64 = 200%）。</p>
+<p>那么利用上面计算得到的每秒活跃时长指标，就可以计算出实例级别的PG负载指数了。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:load0</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">pg:ins:xact_time_realtime / on (ip) group_left()  node:ins:cpu_count</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:load1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate1m  / on (ip) group_left()  node:ins:cpu_count</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:load5</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate5m  / on (ip) group_left()  node:ins:cpu_count</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">record</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:load15</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg:ins:xact_time_rate15m  / on (ip) group_left()  node:ins:cpu_count</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h3 id="pg-load的另一种解释">PG LOAD的另一种解释</h3>
+<p>如果我们仔细审视PG Load的定义，其实可以发现每秒活跃时长这个指标，其实可以粗略等价于：TPS x XactRT，或者QPS x Query RT。这个也很好理解，假设我QPS为1000，每个查询RT为1ms，则每秒花费在查询上的时间为 1000 * 1ms = 1s。</p>
+<p>因此，PG Load可以视为一个由三个核心指标复合而成的衍生指标：<code>tps * xact_rt /  cpu_count</code></p>
+<p>TPS，RT用于负载评估都有各自的问题，但它们通过简单的乘法结合成一个新的复合指标，一下子就显示出了神奇的力量。（尽管实际上是通过其他更准确的方式计算出来的）</p>
+<h2 id="0x05-pg-load的实际效果">0x05 PG Load的实际效果</h2>
+<p>接下来，我们来看一下PG Load用于实际生产环境的表现。</p>
+<p>PG Load最直接的作用有两个，告警以及容量评估。</p>
+<h3 id="case-1-用于报警慢查询堆积导致的服务不可用">Case 1: 用于报警：慢查询堆积导致的服务不可用</h3>
+<p>下图是一次生产事故的现场，由于某业务上线了一个慢查询，瞬间导致连接池被慢查询占据，发生堆积。可以看出PG Load和RT都很及时地反映出了故障的情况，而TPS看上去则是掉了一个坑，并不是特别显眼。</p>
+<p>从效果上看，PG Load1与PG Load0（实时负载）是一个相当灵敏的指标，对于大多数与压力负载有关的故障都能及时准确作出反应。所以被我们采纳为核心报警指标。</p>
+<p>PG Load的利用率目标有一些经验值：黄线通常为50%，即需要引起关注的阈值；红线通常为70%，即报警线，需要立刻采取行动的阈值；500%或更高通常意味着这个实例已经被打崩了。</p>
+<p><img src="/img/blog/pg-load-compare.png" alt=""></p>
+<h3 id="case-2用于水位评估与容量规划">Case 2：用于水位评估与容量规划</h3>
+<p>比起报警，水位评估与容量规划更像是PG Load的核心用途。毕竟报警之类的的需求还是可以通过延迟，排队连接等指标来满足的。</p>
+<p>这里，PG集群的15分钟负载是一个很好的参考值。通过这个指标的历史均值，峰值，以及其他一些统计量，我们可以很轻松地看出哪些集群处于高负载状态需要扩容，哪些集群处于低资源利用率状态需要缩容。</p>
+<p>CPU利用率是另一个很重要的容量评估指标。我们可以看出，PG Load与CPU Usage有着很密切的关系。不过相比CPU使用率，PG Load更为纯粹地反映了数据库本身的负载水平，滤除了机器上的无关负载，也可以滤除掉数据库维护工作（备份，清理，垃圾回收）产生的杂音，更为丝滑平顺。因此非常适合用于容量评估。</p>
+<p>当系统负载长期位于30%~50%时，就应该考虑进行扩容了。</p>
+<p><img src="/img/blog/pg-load-cluster.png" alt=""></p>
+<h2 id="0x06-结论">0x06 结论</h2>
+<p>本文介绍了一种定量衡量PG负载的方式，即PG Load指标</p>
+<p>该指标可以简单直观地反映数据库实例的负载水平</p>
+<p>该指标非常适合作容量评估之用，也可以作为核心报警指标。</p>
+<p>该指标可以基本无视负载类型与机器类型，进行纵向历史比较与横向水位比较。</p>
+<p>该指标可以通过简单的方式计算得出，即每秒后端进程活跃总时长除以可用并发数。</p>
+<p>该指标所需数据需要从数据库中间件获取</p>
+<p>PG Load的0代表空载，100%代表满载。黄线经验值为50%，红线经验值为70%，</p>
+<p>PG Load是一个好指标👍</p>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/bG6KG7mmu4K7JMYMI34zCQ">微信公众号原文</a></p>
+</blockquote>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/admin/migrate-column-type/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/admin/entity-and-naming/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

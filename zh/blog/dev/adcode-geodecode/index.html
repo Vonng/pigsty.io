@@ -1,0 +1,1736 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>PostGIS高效解决行政区划归属查询 | Pigsty</title><meta property="og:title" content="PostGIS高效解决行政区划归属查询" />
+<meta property="og:description" content="如何高效解决典型地理逆编码问题：根据用户的经纬度坐标，定位用户的行政区划。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/dev/adcode-geodecode/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2018-06-06T00:00:00+00:00" />
+<meta property="article:modified_time" content="2023-08-23T10:45:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="PostGIS高效解决行政区划归属查询">
+<meta itemprop="description" content="如何高效解决典型地理逆编码问题：根据用户的经纬度坐标，定位用户的行政区划。
+"><meta itemprop="datePublished" content="2018-06-06T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2023-08-23T10:45:50+08:00" />
+<meta itemprop="wordCount" content="183">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="PostGIS高效解决行政区划归属查询"/>
+<meta name="twitter:description" content="如何高效解决典型地理逆编码问题：根据用户的经纬度坐标，定位用户的行政区划。
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/dev/adcode-geodecode.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/dev/adcode-geodecode.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/dev/adcode-geodecode.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=PostGIS%e9%ab%98%e6%95%88%e8%a7%a3%e5%86%b3%e8%a1%8c%e6%94%bf%e5%8c%ba%e5%88%92%e5%bd%92%e5%b1%9e%e6%9f%a5%e8%af%a2" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/dev/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#0x01-正确至上">0x01 正确至上</a></li>
+    <li><a href="#0x02-数据为王">0x02 数据为王</a></li>
+    <li><a href="#0x03-牛刀小试">0x03 牛刀小试</a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+    <li><a href="#0x04-性能优化">0x04 性能优化</a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+    <li><a href="#0x05-设计实现">0x05 设计实现</a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>PostGIS高效解决行政区划归属查询</h1>
+	<div class="lead">如何高效解决典型地理逆编码问题：根据用户的经纬度坐标，定位用户的行政区划。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2018-06-06" class="text-muted">2018-06-06</time>
+	</div>
+	
+	<p>在应用开发中，很多时候我们需要解决这样一个问题：<strong>根据用户的经纬度坐标，定位用户的行政区划。</strong></p>
+<p>​	我们收集到的是诸如<code>28°00'00&quot;N 100°00'00.000&quot;E</code>这样的经纬度坐标，但实际感兴趣的是这个点所属的行政区划：（中华人民共和国，云南省，迪庆藏族自治州，香格里拉市）。这种将地理坐标映射到某条记录的操作就称为<strong>地理编码（GeoEncode）</strong>。高效实现地理编码是一个很有趣的问题。</p>
+<p>​	本文介绍了该问题的解决与优化方案：能在确保正确性的前提下，能用几兆的空间，110μs的执行时间完成一次地理编码。</p>
+<h2 id="0x01-正确至上">0x01 正确至上</h2>
+<p>​	正确性是第一位的。我们不希望出现用户明明身处A地，却被划分到B地的尴尬情况。然而一个尴尬的现实是，很多地理编码服务的实现粗糙到令人无法直视，Vornoi方法就是一个典型的例子。</p>
+<p>​	假设我们有一系列的坐标点，那么这些坐标点之间两两连线的中垂线就对整个坐标平面做了一个Vornoi划分。每一个细胞的中心点就是细胞核，而元胞内的任意一点到该细胞核的距离是最近的（与其他细胞核相比）。</p>
+<p>​	当我们没有行政区划的边界数据，但有行政区划中心点的数据时，这也是一种能凑合管用办法。找到距离用户最近的某级行政区域中心，然后认为用户就位于该行政区域中心。这个功能实现起来非常简单。</p>
+<p>​	不过，这种方法对于边界情况的处理很差：</p>
+<p><strong>最近邻搜索—Vornoi方法</strong></p>
+<p><img src="/img/blog/adcode-vornoi.png" alt="vornoi"></p>
+<p>现实总是与理想情况相距甚远。也许对于国内而言，这种错误影响也许并不大。但涉及到国际主权边界时，这种粗糙的实现很可能会给自己带来不必要的麻烦：</p>
+<p><img src="/img/blog/adcode-south-china-seas.png" alt=""></p>
+<p>​	还有一种思路，和编程中的“查表法”类似，预先计算好所有经纬度到行政区划的映射，使用时只要用经纬度坐标查表就好了。当然无论经度还是维度，都是一个连续的标量，理论上精度必然是有限的。</p>
+<p>​	GeoHash就是这样一种方案：它将经度与维度交叉编码为单一字符串，字符串越长精度越高，每一个字符串都对应一个经纬度围成的“矩形”，只要精度足够，理论上是可以这么做的。当然，这种方案难以做到真正意义上的正确，存储开销也极为浪费。好处是实现很简单。只要有数据，一个KV服务就可以轻松搞定。</p>
+<p><img src="/img/blog/adcode-geohash.png" alt="geohash"></p>
+<p>​	相比之下，基于地理边界多边形的解决方案在保证绝对正确的前提下，能在一毫秒内完成这种地理编码功能，而且可能只需要几兆的空间。唯一的难点可能在于如何获取数据上。</p>
+<h2 id="0x02-数据为王">0x02 数据为王</h2>
+<p>​	地理编码属于典型的数据密集型应用，数据的质量直接决定了最终服务的效果。要想真正做好服务，优质数据必不可少。好在行政区划与地理边界数据也不算什么保密信息，有一些地方提供了公开获取的方式：</p>
+<p>民政部信息查询平台与高德地图两者都提供了精确到县级区划的地理边界数据：</p>
+<ul>
+<li>
+<p><a href="http://lbs.amap.com/api/webservice/guide/api/district">高德地图行政区域查询API</a></p>
+<p>高德的数据更新更及时，形式简单，边界精度较高（点数多），但不够权威，有不少<strong>错漏之处</strong>。</p>
+<p><img src="/img/blog/adcode-gaode-q.png" alt="geohash"></p>
+</li>
+<li>
+<p><a href="http://xzqh.mca.gov.cn/map">民政部全国行政区划信息查询平台</a></p>
+<p>民政部平台数据相对更加权威，而且采用的是拓扑编码，严格避免了边界重叠的问题，使用无偏的WGS84坐标，但边界精度较低（点数目较少）。</p>
+</li>
+</ul>
+<p><img src="/img/blog/adcode-mca-q.png" alt="geohash"></p>
+<p>​	除了地理围栏数据之外，另一份重要的数据是行政区划代码数据。国家统计局使用的12位城乡统计用行政区划代码编制还是很科学的，具有层次包含关系，尤其适合作为行政区划的唯一标示。但问题是稍显过时，最新的版本是2016年8月发布的，2018年7月后可能会发布一份更新的数据。</p>
+<blockquote>
+<p>笔者整理了一份连接国际统计局行政区划与高德区划边界的数据：https://github.com/Vonng/adcode</p>
+<p>民政部的数据可以直接在该网站中打开浏览器的调试工具，从接口返回数据中直接获取。</p>
+</blockquote>
+<h2 id="0x03-牛刀小试">0x03 牛刀小试</h2>
+<p>假设我们已经有一张表了，全国行政区划与地理围栏表：<code>adcode_fences</code></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">create</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode_fences</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">code</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">bigint</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">parent</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">bigint</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">level</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">rank</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">integer</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">adcode</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">integer</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">post_code</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">8</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">area_code</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">ur_code</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">municipality</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">boolean</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">virtual</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">boolean</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">dummy</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">boolean</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">longitude</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">double</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">precision</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">latitude</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#000">double</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">precision</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">center</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#000">geometry</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">province</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">city</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">county</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">town</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">village</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">fence</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#000">geometry</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p><img src="../img/adcode-data-sample.png" alt="geohash"></p>
+<h4 id="索引">索引</h4>
+<p>为了高效执行空间查询，首先需要在表示地理边界的<code>fence</code>列上创建GIST索引。</p>
+<p>中国县级行政区划的记录数据并不多（约3000条），但使用索引仍然能带来几十倍的性能提升。因为这个优化太基础太Trivial了，就不单独拎出来说了。（一百多毫秒到几毫秒）</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode_fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">GIST</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h4 id="查询">查询</h4>
+<p>PostGIS提供了<code>ST_Contains</code>与<code>ST_Within</code>两个函数，用于判断多边形与点之间的包含关系，例如以下SQL就会找出表中所有包含该点<code>(116,40)</code>的行政区划：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">code</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode_fences</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_Contains</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_Point</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">116</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">40</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">rank</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>结果是：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>100000000000	中华人民共和国
+</span></span><span style="display:flex;"><span>110000000000	北京市
+</span></span><span style="display:flex;"><span>110100000000	市辖区
+</span></span><span style="display:flex;"><span>110109000000	门头沟区
+</span></span></code></pre></div><p>再比如<code>(100,28)</code>的坐标点：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">json_object_agg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">level</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode_fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_Contains</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_Point</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">100</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">28</span><span style="color:#000;font-weight:bold">));</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#204a87;font-weight:bold">&#34;country&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#4e9a06">&#34;中华人民共和国&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#204a87;font-weight:bold">&#34;city&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#4e9a06">&#34;迪庆藏族自治州&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#204a87;font-weight:bold">&#34;county&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#4e9a06">&#34;香格里拉市&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#204a87;font-weight:bold">&#34;province&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#4e9a06">&#34;云南省&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>相当不可思议，数据就位之后，借力于PostgreSQL与PostGIS，实现这一功能所需的代码少的惊人：一行SQL。</p>
+<p>​	在笔者的笔记本上，该查询执行用时6毫秒。6ms的平均查询时间，换算为48核机器上的QPS差不多就是6400。在我们以前的生产环境代码中基本上就是这么做的，但因为还有其他国家的数据，以及单核主频没有我的机器高，因此一次查询的平均执行时间可能在12毫秒左右。</p>
+<p>​	看上去几毫秒似乎已经很快了，但还是没有达到我们生产环境的性能要求（1毫秒）。对于真实世界的生产业务而言，性能很重要，十倍的性能提升意味着省十倍的机器。还能不能再给力点？实际上通过简单的优化就可以达到百倍的性能提升。</p>
+<h2 id="0x04-性能优化">0x04 性能优化</h2>
+<h4 id="针对数据特性优化">针对数据特性优化</h4>
+<p>​	导致上述查询慢的一个重要原因是不必要的相交判断。行政区划是有层级关系的，如果一个用户位于县级行政区划中，那么他一定位于该县级区划所处的省级区划中。因此，知道了最低级的行政区划，其高级区划归属已经自然而然地确定了；那么与省界，国界做相交判断就是没有必要的。	实际上这可能是效果最明显的优化，单是中国地理边界与点做相交判断可能就需要几毫秒。</p>
+<h4 id="区域切分">区域切分</h4>
+<p>​	R树索引的原理，能为我们带来优化的启发。R树是基于**AABB（Axis Aligned Bounding Box）**的索引。因此越是饱满的凸多边形，索引的效果就越好。而对于拥有遥远飞地的行政区划，效果则可能恶化的很厉害。因此，将区域切分为均匀饱满的小块，能有效提高查询的性能。</p>
+<p>​		最基本的优化，就是将所有的<code>ST_MultiPolygon</code>拆分为<code>ST_Polygon</code>，并指向同一个行政区划。更进一步，可以将长得比较畸形的行政区划切分为形状饱满的小块（典型的比如甘肃这种）。当然，这样的代价就是让所有行政区划与地理围栏从一对一变成了一对多的关系。需要拆出一张单独的表。</p>
+<p>​	实际操作中，如果已经有了县级行政区划的数据，通常只要将带有飞地的MultiPolygon拆为单独的几个Polygon，就已经能有很好的表现了。而县一级的行政区划通常边界也比较饱满，进一步拆分效果相当有限。</p>
+<h4 id="精确度">精确度</h4>
+<p>​	正确性是第一位的，然而有的时候我们宁愿牺牲一些准确性，换来性能的大幅提升。例如高德与民政部的数据对比，显然民政部要粗糙的多，但对于糙猛快的互联网场景，低精度的数据反而可能是更合适的。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">高德</th>
+<th style="text-align:center">民政部</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><img src="/img/blog//adcode-gaode-hk.png" alt="geohash"></td>
+<td style="text-align:center"><img src="/img/blog//adcode-mca-hk.png" alt="geohash"></td>
+</tr>
+</tbody>
+</table>
+<p>​	高德的全国行政区划数据约100M左右，而民政部的数据约为10M（以原始拓扑数据表示则为4M）。但实际使用中效果差别不大，因此推荐使用民政部的数据。</p>
+<h4 id="主键设计">主键设计</h4>
+<p>​	行政区划有内在的层次关系，国家包含省，省包含城市，城市包含区县，区县包含乡镇，乡镇包含村庄街道。我国的<a href="https://vonng.com/blog/admin-division/">行政区划代码</a>就很好的体现了这种层次关系，十二位的城乡区划代码包含了很丰富的信息：</p>
+<ul>
+<li>第1～2位，为省级代码；</li>
+<li>第3～4 位，为地级代码；</li>
+<li>第5～6位，为县级代码；</li>
+<li>第7～9位，为乡级代码；</li>
+<li>第10～12位，为村级代码。</li>
+</ul>
+<p>因此这种12位的行政区划代码是很适合作为行政区划表的主键的。此外，当需要国际化支持时，这套区划代码体系还可以通过在前面添加国家代码来扩展（相应地中国行政区划对应地就是高位国家代码为0的特殊情况）。</p>
+<p>​	另一方面，地理围栏表与行政区划表由一对一变为多对一，那么地理围栏表就不再适合用行政区划代码作为主键了。可能自增列是一个更合适的选择。</p>
+<h4 id="规范化与反规范化">规范化与反规范化</h4>
+<p>​	数据模型设计的一个重要权衡就是规范化与反规范化。将地理围栏表从行政区划表中拆出来是一种规范化，而反规范化也可以用于优化：既然行政区划存在层次关系，那么在子行政区划中保留所有的祖先行政区划信息（或仅仅是代码与名称）是很合理的反规范化操作。这样，通过区划代码主键一次查询就可以取出所有的层次信息。</p>
+<h4 id="回溯支持">回溯支持</h4>
+<p>​	有时候我们想回溯到历史上某个特定时刻，查询该时刻的行政区划状态。</p>
+<p>​	举个例子，行政区划变更并不会影响该区划内现有公民的身份证号码，只会影响新出生公民的身份证号。因此有时候用公民身份证号前6位去查现在的行政区划表可能一无所获，需要回溯到该公民出生的历史时间才能查询到正确的结果。可以参考PostgreSQL MVCC的实现方式，为行政区划表添加一对PostgreSQL提供的<code>tstzrange</code>类型字段，标识行政区划记录版本的有效时间段，并在查询时指明时间点作为筛选条件。PostgreSQL可以支持在范围类型与空间类型上建立联合GIST索引，提供高效查询支持。</p>
+<p>​	不过，时序数据获取难度是很大的。而且一般这个需求也并不常见。所以这里就不展开了。</p>
+<h2 id="0x05-设计实现">0x05 设计实现</h2>
+<p>​	既然已经将地理编码的功能从区划代码表拆分出来，本题对<code>adcode</code>中的结构就不甚关注了。我们只需要知道凭借<code>code</code>字段能从该表中快速查出我们感兴趣的东西，比如一连串的行政区划层次，行政区划的人口，面积，等级，行政中心等等。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">create</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">code</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">bigint</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">parent</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">bigint</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">references</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">adcode</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">code</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">text</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">rank</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">integer</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">path</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">text</span><span style="color:#000;font-weight:bold">[],</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#a40000">……</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">other</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">attrs</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>相比之下，<code>fences</code>表才是我们需要关注的对象，因为这是性能损耗的关键路径。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">BIGSERIAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">fence</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">geometry</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">POLYGON</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">code</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">BIGINT</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">GiST</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Btree</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">code</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CLUSTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences_fence_idx</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>​	不使用行政区划代码<code>code</code>作为主键，给予了我们更多的灵活性与优化空间。任何时候需要修正地理编码的逻辑时，只修改<code>fences</code>中的数据即可。你甚至可以添加冗余字段与条件索引，将不同来源的数据，不同等级的行政区划，相互重叠的地理围栏放在同一张表中，灵活地执行自定义的编码逻辑。</p>
+<p>​	说句题外话：如果您能确保自己的数据不会重叠，则可以考虑使用PostgreSQL提供的Exclude约束确保数据完整性：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">BIGSERIAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">fence</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">geometry</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">POLYGON</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">code</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">EXCLUDE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">gist</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic">-- no need to create gist index for fence anymore
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h4 id="性能测试">性能测试</h4>
+<p>那么优化完之后的性能表现又如何？让我们随机生成一些坐标点，检验一下性能。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#a40000">\</span><span style="color:#204a87;font-weight:bold">set</span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">x</span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">random</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">75</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">125</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">\</span><span style="color:#204a87;font-weight:bold">set</span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">y</span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">random</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">20</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">50</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">code</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fences2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_Contains</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fence</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">ST_Point</span><span style="color:#000;font-weight:bold">(:</span><span style="color:#000">x</span><span style="color:#000;font-weight:bold">,:</span><span style="color:#000">y</span><span style="color:#000;font-weight:bold">));</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>在笔者的机器上，现在一次查询只要0.1ms了，单进程9k TPS，折算为48核机器约为350kTPS</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ pgbench adcode -T <span style="color:#0000cf;font-weight:bold">5</span> -f run.sql
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>number of clients: <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>number of threads: <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>duration: <span style="color:#0000cf;font-weight:bold">5</span> s
+</span></span><span style="display:flex;"><span>number of transactions actually processed: <span style="color:#0000cf;font-weight:bold">45710</span>
+</span></span><span style="display:flex;"><span>latency <span style="color:#000">average</span> <span style="color:#ce5c00;font-weight:bold">=</span> 0.109 ms
+</span></span><span style="display:flex;"><span><span style="color:#000">tps</span> <span style="color:#ce5c00;font-weight:bold">=</span> 9135.632484 <span style="color:#ce5c00;font-weight:bold">(</span>including connections establishing<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">tps</span> <span style="color:#ce5c00;font-weight:bold">=</span> 9143.947723 <span style="color:#ce5c00;font-weight:bold">(</span>excluding connections establishing<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span></code></pre></div><p>当然拿到<code>code</code>之后还是需要去行政区划表里查一次，但一次索引扫描的开销是很小的。</p>
+<p>总的来说，与优化之前的实现相比，性能提升了60倍。落实在生产环境中，可能就意味着省了百来万的成本。</p>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/5d681qolNZpqj5ZuHUGBow">微信公众号原文</a></p>
+</blockquote>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/dev/sql-distinct-on/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/dev/knn-optimize/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

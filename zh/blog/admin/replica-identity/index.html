@@ -1,0 +1,1772 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>PG复制标识详解（Replica Identity） | Pigsty</title><meta property="og:title" content="PG复制标识详解（Replica Identity）" />
+<meta property="og:description" content="复制标识很重要，它关系到逻辑复制的成败
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/admin/replica-identity/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2021-03-03T00:00:00+00:00" />
+<meta property="article:modified_time" content="2023-08-23T10:45:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="PG复制标识详解（Replica Identity）">
+<meta itemprop="description" content="复制标识很重要，它关系到逻辑复制的成败
+"><meta itemprop="datePublished" content="2021-03-03T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2023-08-23T10:45:50+08:00" />
+<meta itemprop="wordCount" content="368">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="PG复制标识详解（Replica Identity）"/>
+<meta name="twitter:description" content="复制标识很重要，它关系到逻辑复制的成败
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/admin/replica-identity.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/admin/replica-identity.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/admin/replica-identity.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=PG%e5%a4%8d%e5%88%b6%e6%a0%87%e8%af%86%e8%af%a6%e8%a7%a3%ef%bc%88Replica%20Identity%ef%bc%89" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/admin/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#引子土法逻辑复制">引子：土法逻辑复制</a></li>
+    <li><a href="#复制标识">复制标识</a>
+      <ul>
+        <li><a href="#复制标识查询">复制标识查询</a></li>
+        <li><a href="#复制标识配置">复制标识配置</a></li>
+      </ul>
+    </li>
+    <li><a href="#复制标识实例">复制标识实例</a></li>
+    <li><a href="#复制标识详解">复制标识详解</a>
+      <ul>
+        <li><a href="#重建主键">重建主键</a></li>
+        <li><a href="#重建唯一索引">重建唯一索引</a></li>
+        <li><a href="#使用不合格的索引作为复制标识">使用不合格的索引作为复制标识</a></li>
+        <li><a href="#使用full复制标识">使用FULL复制标识</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>PG复制标识详解（Replica Identity）</h1>
+	<div class="lead">复制标识很重要，它关系到逻辑复制的成败</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2021-03-03" class="text-muted">2021-03-03</time>
+	</div>
+	
+	<h2 id="引子土法逻辑复制">引子：土法逻辑复制</h2>
+<p>复制身份的概念，服务于 <a href="/zh/blog/2021/03/03/postgres%E9%80%BB%E8%BE%91%E5%A4%8D%E5%88%B6%E8%AF%A6%E8%A7%A3/"><strong>逻辑复制</strong></a>。</p>
+<p>逻辑复制的基本工作原理是，将逻辑发布相关表上<strong>对行的增删改</strong>事件解码，复制到逻辑订阅者上执行。</p>
+<p>逻辑复制的工作方式有点类似于行级触发器，在事务执行后对变更的元组逐行触发。</p>
+<p>假设您需要自己通过触发器实现逻辑复制，将一章表A上的变更复制到另一张表B中。通常情况下，这个触发器的函数逻辑通常会长这样：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- 通知触发器
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">REPLACE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FUNCTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replicate_change</span><span style="color:#000;font-weight:bold">()</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">RETURNS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TRIGGER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">BEGIN</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TG_OP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;INSERT&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- INSERT INTO tbl_b VALUES (NEW.col);
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">ELSIF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TG_OP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;DELETE&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#8f5902;font-style:italic">-- DELETE tbl_b WHERE id = OLD.id;
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">ELSIF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TG_OP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;UPDATE&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#8f5902;font-style:italic">-- UPDATE tbl_b SET col = NEW.col,... WHERE id = OLD.id;
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LANGUAGE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">plpgsql</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>触发器中会有两个变量<code>OLD</code>与<code>NEW</code>，分别包含了变更记录的旧值与新值。</p>
+<ul>
+<li><code>INSERT</code>操作只有<code>NEW</code>变量，因为它是新插入的，我们直接将其插入到另一张表即可。</li>
+<li><code>DELETE</code>操作只有<code>OLD</code>变量，因为它只是删除已有记录，我们 <strong>根据ID</strong> 在目标表B上。</li>
+<li><code>UPDATE</code>操作同时存在<code>OLD</code>变量与<code>NEW</code>变量，我们需要通过 <code>OLD.id</code> 定位目标表B中的记录，将其更新为新值<code>NEW</code>。</li>
+</ul>
+<p>这样的基于触发器的“逻辑复制”可以完美达到我们的目的，在逻辑复制中与之类似，表A上带有主键字段<code>id</code>。那么当我们删除表A上的记录时，例如：删除<code>id = 1</code>的记录时，我们只需要告诉订阅方<code>id = 1</code>，而不是把整个被删除的元组传递给订阅方。那么这里主键列<code>id</code>就是逻辑复制的<strong>复制标识</strong>。</p>
+<p>但上面的例子中隐含着一个工作假设：表A和表B模式相同，上面有一个名为 <code>id</code> 的主键。</p>
+<p>对于生产级的逻辑复制方案，即PostgreSQL 10.0后提供的逻辑复制，<strong>这样的工作假设是不合理的</strong>。因为系统无法要求用户建表时一定会带有主键，也无法要求主键的名字一定叫<code>id</code>。</p>
+<p>于是，就有了 <strong>复制标识（Replica Identity）</strong> 的概念。复制标识是对<code>OLD.id</code>这样工作假设的进一步泛化与抽象，它用来告诉逻辑复制系统，<strong>哪些信息可以被用于唯一定位表中的一条记录</strong>。</p>
+<h2 id="复制标识">复制标识</h2>
+<p>对于逻辑复制而言，<code>INSERT</code> 事件不需要特殊处理，但要想将<code>DELETE|UPDATE</code>复制到订阅者上时，必须提供一种标识行的方式，即<strong>复制标识（Replica Identity）</strong>。复制标识是一组<strong>列的集合</strong>，这些列可以唯一标识一条记录。其实这样的定义在概念上来说就是<strong>构成主键的列集</strong>，当然非空唯一索引中的列集（<strong>候选键</strong>）也可以起到同样的效果。</p>
+<p>一个被纳入逻辑复制 <strong>发布</strong>中的表，必须配置有 <strong>复制标识（Replica Identity）</strong>，只有这样才可以在<strong>订阅</strong>者一侧定位到需要更新的行，完成<code>UPDATE</code>与<code>DELETE</code>操作的复制。默认情况下，<strong>主键</strong> （Primary Key）和 <strong>非空列上的唯一索引</strong> （UNIQUE NOT NULL）可以用作复制标识。</p>
+<p>注意，<strong>复制标识</strong> 和表上的主键、非空唯一索引并不是一回事。复制标识是<strong>表</strong>上的一个属性，它指明了在逻辑复制时，哪些信息会被用作身份定位标识符写入到逻辑复制的记录中，供订阅端定位并执行变更。</p>
+<p>如PostgreSQL 13<a href="https://www.postgresql.org/docs/13/sql-altertable.html#replica_identity">官方文档</a>所述，表上的<strong>复制标识</strong> 共有4种配置模式，分别为：</p>
+<ul>
+<li>默认模式（default）：非系统表采用的默认模式，如果有主键，则用主键列作为身份标识，否则用完整模式。</li>
+<li>索引模式（index）：将某一个符合条件的索引中的列，用作身份标识</li>
+<li>完整模式（full）：将整行记录中的所有列作为复制标识（类似于整个表上每一列共同组成主键）</li>
+<li>无身份模式（nothing）：不记录任何复制标识，这意味着<code>UPDATE|DELETE</code>操作无法复制到订阅者上。</li>
+</ul>
+<h3 id="复制标识查询">复制标识查询</h3>
+<p>表上的<strong>复制标识</strong>可以通过查阅<code>pg_class.relreplident</code>获取。</p>
+<p>这是一个字符类型的“枚举”，标识用于组装 “复制标识” 的列：<code>d</code> = default ，<code>f</code> = 所有的列，<code>i</code> 使用特定的索引，<code>n</code> 没有复制标识。</p>
+<p>表上是否具有可用作复制标识的索引约束，可以通过以下查询获取：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">quote_ident</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">nspname</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;.&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">quote_ident</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">con</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">ri</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">keys</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">CASE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relreplident</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;d&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;default&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;n&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;nothing&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;f&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;full&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;i&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;index&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica_identity</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">JOIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_namespace</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relnamespace</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LATERAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">array_agg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">contype</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ri</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_constraint</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">conrelid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">con</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relkind</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;r&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AND</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">nspname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pg_catalog&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;information_schema&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;monitor&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;repack&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_toast&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h3 id="复制标识配置">复制标识配置</h3>
+<p>表到复制标识可以通过<code>ALTER TABLE</code>进行修改。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">index_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FULL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOTHING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 具体有四种形式
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic">-- 使用主键，如果没有主键则为FULL
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FULL</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">                       </span><span style="color:#8f5902;font-style:italic">-- 使用整行作为标识
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal_v_key</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 使用唯一索引
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOTHING</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic">-- 不设置复制标识
+</span></span></span></code></pre></div><h2 id="复制标识实例">复制标识实例</h2>
+<p>下面用一个具体的例子来说明复制标识的效果：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">text</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">primary</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">key</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">int</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">not</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">null</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">unique</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>现在有一个表<code>test</code>，上面有两列<code>k</code>和<code>v</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Alice&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;1&#39;</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Bob&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;2&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;3&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;Alice&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">-- update Alice value to 3
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;Oscar&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;Bob&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- rename Bob to Oscaar
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;Alice&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">           </span><span style="color:#8f5902;font-style:italic">-- delete Alice
+</span></span></span></code></pre></div><p>在这个例子中，我们对表<code>test</code>执行了增删改操作，与之对应的逻辑解码结果为：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Alice&#39; v[integer]:1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Bob&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: k[text]:&#39;Alice&#39; v[integer]:3</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: old-key: k[text]:&#39;Bob&#39; new-tuple: k[text]:&#39;Oscar&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: DELETE: k[text]:&#39;Alice&#39;</span>
+</span></span></code></pre></div><p>默认情况下，PostgreSQL会使用表的主键作为<strong>复制标识</strong>，因此在<code>UPDATE|DELETE</code>操作中，都通过<code>k</code>列来定位需要修改的记录。</p>
+<p>如果我们手动修改表的复制标识，使用非空且唯一的列<code>v</code>作为复制标识，也是可以的：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 基于UNIQUE索引的复制身份
+</span></span></span></code></pre></div><p>同样的变更现在产生如下的逻辑解码结果，这里<code>v</code>作为身份标识，出现在所有的<code>UPDATE|DELETE</code>事件中。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Alice&#39; v[integer]:1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Bob&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: old-key: v[integer]:1 new-tuple: k[text]:&#39;Alice&#39; v[integer]:3</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: k[text]:&#39;Oscar&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: DELETE: v[integer]:3</span>
+</span></span></code></pre></div><p>如果使用<strong>完整身份模式（full）</strong></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FULL</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 表test现在使用所有列作为表的复制身份
+</span></span></span></code></pre></div><p>这里，<code>k</code>和<code>v</code>同时作为身份标识，记录到<code>UPDATE|DELETE</code>的日志中。对于没有主键的表，这是一种保底方案。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Alice&#39; v[integer]:1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Bob&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: old-key: k[text]:&#39;Alice&#39; v[integer]:1 new-tuple: k[text]:&#39;Alice&#39; v[integer]:3</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: old-key: k[text]:&#39;Bob&#39; v[integer]:2 new-tuple: k[text]:&#39;Oscar&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: DELETE: k[text]:&#39;Alice&#39; v[integer]:3</span>
+</span></span></code></pre></div><p>如果使用<strong>无身份模式（nothing）</strong></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOTHING</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 表test现在没有复制标识
+</span></span></span></code></pre></div><p>那么逻辑解码的记录中，<code>UPDATE</code>操作中只有新记录，没有包含旧记录中的唯一身份标识，而<code>DELETE</code>操作中则完全没有信息。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Alice&#39; v[integer]:1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: INSERT: k[text]:&#39;Bob&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: k[text]:&#39;Alice&#39; v[integer]:3</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: UPDATE: k[text]:&#39;Oscar&#39; v[integer]:2</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">table public.test: DELETE: (no-tuple-data)</span>
+</span></span></code></pre></div><p>这样的逻辑变更日志对于订阅端来说完全没用，在实际使用中，对逻辑复制中的无复制标识的表执行<code>DELETE|UPDATE</code>会直接报错。</p>
+<h2 id="复制标识详解">复制标识详解</h2>
+<p>表上的复制标识配置，与表上有没有索引，是相对正交的两个因素。</p>
+<p>尽管各种排列组合都是可能的，然而在实际使用中，只有三种可行的情况。</p>
+<ul>
+<li>表上有主键，使用默认的 <code>default</code> 复制标识</li>
+<li>表上没有主键，但是有非空唯一索引，显式配置 <code>index</code> 复制标识</li>
+<li>表上既没有主键，也没有非空唯一索引，显式配置<code>full</code>复制标识（运行效率非常低，仅能作为兜底方案）</li>
+<li>其他所有情况，都无法正常完成逻辑复制功能</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">复制身份模式\表上的约束</th>
+<th style="text-align:center">主键(p)</th>
+<th style="text-align:center">非空唯一索引(u)</th>
+<th style="text-align:center">两者皆无(n)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>d</strong>efault</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>i</strong>ndex</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>f</strong>ull</td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>n</strong>othing</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+</tr>
+</tbody>
+</table>
+<p>下面，我们来考虑几个边界条件。</p>
+<h3 id="重建主键">重建主键</h3>
+<p>假设因为索引膨胀，我们希望重建表上的主键索引回收空间。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">text</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">primary</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">key</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">int</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_pkey2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">k</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">BEGIN</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_pkey</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_pkey2</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">COMMIT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>在<code>default</code>模式下，重建并替换主键约束与索引<strong>并不会</strong>影响复制标识。</p>
+<h3 id="重建唯一索引">重建唯一索引</h3>
+<p>假设因为索引膨胀，我们希望重建表上的非空唯一索引回收空间。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">text</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">int</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">not</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">null</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">unique</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">v</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 使用新的test_v_key2索引替换老的Unique索引
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">BEGIN</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key2</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">COMMIT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>与<code>default</code>模式不同，<code>index</code>模式下，复制标识是与<strong>具体</strong>的索引绑定的：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">                                    </span><span style="color:#204a87;font-weight:bold">Table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;public.test&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">Column</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">Type</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">Collation</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">Nullable</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">Default</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">Storage</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Stats</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">target</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Description</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">--------+---------+-----------+----------+---------+----------+--------------+-------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">k</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">text</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">           </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">extended</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">integer</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">           </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">not</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">null</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">plain</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Indexes</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#4e9a06">&#34;test_v_key&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">btree</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">v</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#4e9a06">&#34;test_v_key2&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">btree</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">v</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>这意味着如果采用偷天换日的方式替换UNIQUE索引会导致复制身份的丢失。</p>
+<p>解决方案有两种：</p>
+<ol>
+<li>使用<code>REINDEX INDEX (CONCURRENTLY)</code>的方式重建该索引，不会丢失复制标识信息。</li>
+<li>在替换索引时，一并刷新表的默认复制身份：</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">BEGIN</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key2</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key2</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test_v_key</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">COMMIT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>顺带一提，移除作为身份标识的索引。尽管在表的配置信息中仍然为<code>index</code>模式，但效果与<code>nothing</code>相同。所以不要随意折腾作为身份的索引。</p>
+<h3 id="使用不合格的索引作为复制标识">使用不合格的索引作为复制标识</h3>
+<p>复制标识需要一个 唯一，不可延迟，整表范围的，建立在非空列集上的索引。</p>
+<p>最经典的例子就是主键索引，以及通过<code>col type NOT NULL UNIQUE</code>声明的单列非空索引。</p>
+<p>之所以要求 NOT NULL，是因为NULL值无法进行等值判断，所以表中允许UNIQE的列上存在多条取值为<code>NULL</code>的记录，允许列为空说明这个列无法起到唯一标识记录的效果。如果尝试使用一个普通的<code>UNIQUE</code>索引（列上没有非空约束）作为复制标识，则会报错。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">[42809] ERROR: index &#34;t_normal_v_key&#34; cannot be used as replica identity because column &#34;v&#34; is nullable</span>
+</span></span></code></pre></div><h3 id="使用full复制标识">使用FULL复制标识</h3>
+<p>如果没有任何复制标识，可以将复制标识设置为<code>FULL</code>，也就是把整个行当作复制标识。</p>
+<p>使用<code>FULL</code>模式的复制标识效率很低，所以这种配置只能是保底方案，或者用于很小的表。因为每一行修改都需要在订阅者上执行<strong>全表扫描</strong>，<strong>很容易把订阅者拖垮</strong>。</p>
+<h4 id="full模式限制">FULL模式限制</h4>
+<p>使用<code>FULL</code>模式的复制标识还有一个限制，订阅端的表上的复制身份所包含的列，要么与发布者一致，要么比发布者更少，否则也无法保证的正确性，下面具体来看一个例子。</p>
+<p>假如发布订阅两侧的表都采用<code>FULL</code>复制标识，但是订阅侧的表要比发布侧多了一列（是的，逻辑复制允许订阅端的表带有发布端表不具有的列）。这样的话，订阅端的表上的复制身份所包含的列要比发布端多了。假设在发布端上删除<code>(f1=a, f2=a)</code>的记录，却会导致在订阅端删除两条满足身份标识等值条件的记录。</p>
+<pre tabindex="0"><code>     (Publication)       ------&gt;           (Subscription)
+|--- f1 ---|--- f2 ---|          |--- f1 ---|--- f2 ---|--- f3 ---|
+|    a     |     a    |          |    a     |     a    |     b    |
+                                 |    a     |     a    |     c    |
+</code></pre><h4 id="full模式如何应对重复行问题">FULL模式如何应对重复行问题</h4>
+<p>PostgreSQL的逻辑复制可以“正确”处理<code>FULL</code>模式下完全相同行的场景。假设有这样一张设计糟糕的表，表中存在多条一模一样的记录。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	 </span><span style="color:#000">f1</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	 </span><span style="color:#000">f2</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	 </span><span style="color:#000">f3</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>在FULL模式下，整行将作为复制标识使用。假设我们在<code>shitty_table</code>上通过ctid扫描作弊，删除了3条一模一样记录中的其中一条。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">b</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-------+---+---+---
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;(0,1)&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">b</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-------+---+---+---
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>从逻辑上讲，使用整行作为身份标识，那么订阅端执行以下逻辑，会导致全部3条记录被删除。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">shitty_table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AND</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AND</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f3</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;a&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>但实际情况是，因为PostgreSQL的变更记录以行为单位，这条变更仅会对<strong>第一条匹配</strong>的记录生效，所以在订阅侧的行为也是删除3行中的1行。在逻辑上与发布端等效。</p>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/admin/slow-query/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/admin/collate/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

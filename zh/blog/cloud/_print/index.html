@@ -1,0 +1,2307 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><link rel="canonical" type="text/html" href="/zh/blog/cloud/">
+<META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>云计算泥石流 | Pigsty</title><meta property="og:title" content="云计算泥石流" />
+<meta property="og:description" content="开源RDS PG替代" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="/zh/blog/cloud/" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="云计算泥石流">
+<meta itemprop="description" content="开源RDS PG替代"><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="云计算泥石流"/>
+<meta name="twitter:description" content="开源RDS PG替代"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-section td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+
+
+
+
+<div class="td-content">
+<div class="pageinfo pageinfo-primary d-print-none">
+<p>
+多页打印视图
+<a href="#" onclick="print();return false;">点击此处打印</a>.
+</p><p>
+<a href="/zh/blog/cloud/">返回常规视图</a>.
+</p>
+</div>
+
+
+
+<h1 class="title">云计算泥石流</h1>
+
+
+
+
+
+    <ul>
+    
+  
+  
+  
+  
+
+  
+    
+    
+	
+
+    <li><a href="#pg-0ec1a85a6ee285ef07242b34d628ef4f">下云奥德赛：第二弹</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-90a02500cfbe083444eaff966001f368">云计算泥石流：用数据解构公有云</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-4dd913a67684f69d786bd4f96db1d74d">下云奥德赛：DHH下云记</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-c0e49b0e5d0a3d0c994910d0cc773519">FinOps终点是下云</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-92be50abfd7762b4698ff779d2d05958">云计算为啥还没挖沙子赚钱？</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-fb2b56bca82f7d919a808b2f73758318">云SLA是不是安慰剂？</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-9acfe4d5f6e1972f749837119d2bab4b">云盘是不是杀猪盘？</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-9aee3f7427fa7737fadc892001b4eb32">垃圾腾讯云CDN：从入门到放弃？</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-9b856ab58261ba9aa95ed41d9b1517f0">范式转移：从云到本地优先</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-2f6739426df63d5dd62ead985e471dc9">云数据库是不是智商税</a></li>
+
+
+
+    
+  
+
+    </ul>
+
+
+<div class="content">
+      
+</div>
+</div>
+
+
+  
+  
+  
+  
+
+  
+  
+
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="">
+    <h1 id="pg-0ec1a85a6ee285ef07242b34d628ef4f">下云奥德赛：第二弹</h1>
+	<div class="lead">本文翻译了DHH从云上下来的完整旅程，对于准备上云，云上的企业都非常有借鉴与参考价值。<a href="https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ">微信公众号原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://world.hey.com/dhh">DHH</a> | 译：<a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-10-27" class="text-muted">2023-10-27</time>
+        
+	</div>
+	<p>在《<a href="/zh/blog/2023/07/07/%E4%B8%8B%E4%BA%91%E5%A5%A5%E5%BE%B7%E8%B5%9Bdhh%E4%B8%8B%E4%BA%91%E8%AE%B0/">下云奥德赛</a>》中，我们翻译了 DHH 博客的十篇文章，记录了 37Signal 从云上搬下来的完整旅程。现在 DHH 的下云旅程到了新的阶段，下云已经省下了近百万美元，且在未来的五年内还可以省下近一千万美元的高昂云开销。我们新选取了四篇有趣博文，跟进了它们下云的最新进展，译为中文，以飨读者。</p>
+<ul>
+<li>01 2023-10-27 <a href="#10-27-%E6%8E%A8%E7%89%B9x%E4%B8%8B%E4%BA%91%E7%9C%81%E6%8E%8960">推特X下云省掉60%</a></li>
+<li>02 2023-10-06 <a href="#10-06-%E6%89%98%E7%AE%A1%E4%BA%91%E6%9C%8D%E5%8A%A1%E7%9A%84%E4%BB%A3%E4%BB%B7">托管云服务的代价</a></li>
+<li>03 2023-09-15 <a href="#09-15-%E4%B8%8B%E4%BA%91%E5%90%8E%E5%B7%B2%E7%9C%81%E7%99%BE%E4%B8%87%E7%BE%8E%E9%87%91">下云后已省百万美金</a></li>
+<li>04 2023-06-23 <a href="#06-23-%E6%88%91%E4%BB%AC%E5%B7%B2%E7%BB%8F%E4%B8%8B%E4%BA%91%E4%BA%86">我们已经下云了！</a></li>
+<li>05 2023-05-03 <a href="#05-03-%E4%BB%8E%E4%BA%91%E9%81%A3%E8%BF%94%E5%88%B0%E4%B8%BB%E6%9D%83%E4%BA%91">从云遣返到主权云！</a></li>
+<li>06 2023-05-02 <a href="#05-02-%E4%B8%8B%E4%BA%91%E8%BF%98%E6%9C%89%E6%80%A7%E8%83%BD%E5%9B%9E%E6%8A%A5">下云还有性能回报？</a></li>
+<li>07 2023-04-06 <a href="#04-06-%E4%B8%8B%E4%BA%91%E6%89%80%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E5%B7%B2%E5%B0%B1%E4%BD%8D">下云所需的硬件已就位！</a></li>
+<li>08 2023-03-23 <a href="#03-23-%E8%A3%81%E5%91%98%E5%89%8D%E4%B8%8D%E5%85%88%E8%80%83%E8%99%91%E4%B8%8B%E4%BA%91%E5%90%97">裁员前不先考虑下云吗？</a></li>
+<li>09 2023-03-11 <a href="#03-11-%E5%A4%B1%E6%8E%A7%E7%9A%84%E4%B8%8D%E4%BB%85%E4%BB%85%E6%98%AF%E4%BA%91%E6%88%90%E6%9C%AC">失控的不仅仅是云成本！</a></li>
+<li>10 2023-02-22 <a href="#02-22-%E6%8C%87%E5%AF%BC%E4%B8%8B%E4%BA%91%E7%9A%84%E4%BA%94%E6%9D%A1%E4%BB%B7%E5%80%BC%E8%A7%82">指导下云的五条价值观</a></li>
+<li>11 2023-02-21 <a href="#02-21-%E4%B8%8B%E4%BA%91%E5%B0%86%E7%BB%99%E5%92%B1%E7%9C%81%E4%B8%8B%E4%BA%94%E5%8D%83%E4%B8%87">下云将给咱省下五千万！</a></li>
+<li>12 2023-01-26 <a href="#01-26-%E6%8A%98%E8%85%BE%E7%A1%AC%E4%BB%B6%E7%9A%84%E4%B9%90%E8%B6%A3%E9%87%8D%E7%8E%B0">折腾硬件的乐趣重现</a></li>
+<li>13 2023-01-10 <a href="#01-10-%E4%BC%81%E4%B8%9A%E7%BA%A7%E6%9B%BF%E4%BB%A3%E5%93%81%E8%BF%98%E8%A6%81%E7%A6%BB%E8%B0%B1">‘企业级’替代品还要离谱</a></li>
+<li>14 2022-10-19 <a href="#2022-10-19-%E6%88%91%E4%BB%AC%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%B8%8B%E4%BA%91">我们为什么要下云？</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+<p><img src="/img/cloud/odyssey-title.png" alt=""></p>
+<p>作者：<strong>David Heinemeier Hansson</strong>，网名DHH，37 Signal 联创与CTO，Ruby on Rails 作者，下云倡导者、实践者、领跑者。反击科技巨头垄断的先锋。博客：https://world.hey.com/dhh</p>
+<p>译者：<strong>冯若航</strong>，网名 Vonng 。磐吉云数创始人与CEO。Pigsty 作者，PostgreSQL 专家与布道师。云计算泥石流，数据库老司机，下云倡导者，数据库下云实践者。</p>
+<hr>
+<h2 id="译序">译序</h2>
+<p>世人常道云上好，托管服务烦恼少。我言云乃杀猪盘，溢价百倍实厚颜。</p>
+<p>赛博地主搞垄断，白嫖吸血开源件。租服务器炒概念，坐地起价剥血汗。</p>
+<p>世人皆趋云上游，不觉开销似水流。云租天价难为持，自建之路更稳实。</p>
+<p>下云先锋大卫王，引领潮流把枪扛，不畏浮云遮望眼，只缘身在最前锋。</p>
+<p>曾几何时，“上云“近乎成为技术圈的政治正确，整整一代应用开发者的视野被云遮蔽。DHH，以及像我这样的人愿意成为这个质疑者，用实打实的数据与亲身经历，讲清楚公有云租赁模式的陷阱。</p>
+<p>很多开发者并没有意识到，底层硬件已经出现了翻天覆地的变化，性能与成本以指数方式增长与降低。许多习以为常的工作假设都已经被打破，无数利弊权衡与架构方案值得重新思索与设计。</p>
+<p>我们认为，公有云有其存在意义 —— 对于那些非常早期、或两年后不复存在的公司，对于那些完全不在乎花钱、或者真正有着极端大起大落的不规则负载的公司来说，对于那些需要出海合规，CDN等服务的公司来说，公有云仍然是非常值得考虑的服务选项。</p>
+<p>然而对绝大多数已经发展起来，有一定规模的公司来说，如果能在几年内摊销资产，你真的应该认真重新审视一下这股云热潮。好处被大大夸张了 —— 在云上跑东西通常和你自己弄一样复杂，却贵得离谱，我真诚建议您好好算一下帐。</p>
+<p>最近十年间，硬件以摩尔定律的速度持续演进，IDC2.0与资源云提供了公有云资源的物美价廉替代，开源软件与开源管控调度软件的出现，更是让自建的能力变得唾手可及 —— 下云自建，在成本，性能，与安全自主可控上都会有非常显著的回报。</p>
+<p>我们提倡下云理念，并提供了实践的路径与切实可用的自建替代品 —— 我们将为认同这一结论的追随者提前铺设好意识形态与技术上的道路。不为别的，只是期望所有用户都能拥有自己的数字家园，而不是从科技巨头云领主那里租用农场。</p>
+<p>这也是一场对互联网集中化与反击赛博地主垄断收租的运动，让互联网 —— 这个美丽的自由避风港与理想乡可以走得更长。</p>
+<p>作者：<strong>David Heinemeier Hansson</strong>，网名 DHH，37 Signal 联创与CTO，Ruby on Rails 作者，下云倡导者、实践者、领跑者。反击科技巨头垄断的先锋。博客：https://world.hey.com/dhh</p>
+<p>译者：<strong>冯若航</strong>，网名 Vonng。磐吉云数创始人，Pigsty 作者，PostgreSQL 专家与布道师。云计算泥石流，数据库老司机，RDS 下云实践者。</p>
+<hr>
+<h2 id="10-27-推特x下云省掉60">10-27 推特X下云省掉60%</h2>
+<blockquote>
+<p><strong>X celebrates 60% savings from cloud exit</strong>[1]</p>
+</blockquote>
+<p>马斯克在X公司（Twitter）大力削减成本，简化流程。这个过程或许并非一帆风顺，但却效果显著。他不止一次地证明了那些对他嗤之以鼻的人们是错的。尽管有<a href="https://37signals.com/podcast/twitter-is-still-up/">许多声音</a>说，在经历了这么大的人事变动后，推特很快会翻车，但事实并非如此。X不仅成功地维持了网站的稳定运行，还在此期间加速了实验功能的推进。无论你喜欢还是讨厌这里的政治立场，这都是令人印象深刻的。</p>
+<p>我明白对于很多人来说，很难置政治于不顾。但无论你站哪一边，总是能找到一张图表来证明，X要么正在繁荣，要么即将崩溃，所以在这里抬杠没有意义。</p>
+<p>真正重要的是，X 已经将下云（<code>#CloudExit</code>）作为它们节省成本计划的关键组成部分。以下是其工程团队在<a href="https://twitter.com/XEng/status/1717754398410240018">庆祝去年成果</a>时的发言：</p>
+<blockquote>
+<p><em>&ldquo;我们优化了公有云的使用，并在本地进行更多的工作。这一转变使我们每月的云成本降低了60%。我们进行的改变里有一个是将所有的媒体/Blob工件从云端移出，这让我们的总体云数据存储量减少了60%，另外我们还成功地将云上的数据处理成本降低了75%。&rdquo;</em></p>
+</blockquote>
+<p>请再仔细读一遍上面那段话：把同样的工作从云端转移到自己的服务器上，让每月的云费用降低了60% （！！）。根据<a href="https://www.cloudzero.com/blog/twitter-aws">早先的报道</a>，X 每年在 AWS 上的开销是1亿美元，所以如果以此为基础，他们从云退出的成果可以节省高达6000万美元/年，堪称惊人！</p>
+<p>更令人印象深刻的是，他们在团队规模缩小到原来的四分之一的情况下，还能够如此迅速地削减云账单。Twitter 曾有大约八千名员工，而现在据报道 X 的员工数量不到2,000。</p>
+<p>CFO 和投资人无法忽视这一现象：如果像X这样的公司能够以四分之一的员工运营，并且从下云过程中大大获利，那么在许多情况下，大多数大公司从云端退出都有巨大的省钱潜力。</p>
+<p><a href="https://basecamp.com/cloud-exit">#CloudExit</a>或许即将成为主流，你算过你的云账单吗？</p>
+<hr>
+<h2 id="10-06-托管云服务的代价">10-06 托管云服务的代价</h2>
+<blockquote>
+<p><strong>The price of managed cloud services</strong>[2]</p>
+</blockquote>
+<p>自从<a href="https://world.hey.com/dhh/we-have-left-the-cloud-251760fb">我们离开云计算</a>后，常有人反驳说，我们不应该指望一个简单的下云迁移能有什么好果子吃。云的真正价值在于托管服务和新架构，而不仅仅是在租来的云服务器上运行同样的软件。翻译过来就是：“你用云的姿势不对！” ，这种论调简直是胡说八道！</p>
+<p>首先 <a href="https://hey.com/">HEY</a> 是在云中诞生的。在发布前，它从未在我们自己的硬件上运行过。我们在2020年开始使用 Aurora/RDS 来管理数据库，使用 OpenSearch 进行搜索，使用 EKS 来管理应用和服务器。我们深度使用了原生的云组件，而不仅仅是租了一堆虚拟机。</p>
+<p>正是因为我们如此广泛地使用了云提供的各种服务，<a href="https://dev.37signals.com/our-cloud-spend-in-2022/">账单</a>才如此之高。而且运营所需的人手也没有明显减少，我们对此深感失望。这个问题的答案绝不可能是“只管使用更多的托管服务”，或者挥一挥 “Serverless 魔法棒” 就解决了。</p>
+<p>以我们在AWS上使用 OpenSearch 服务为例。我们每月花费三十万（$43,333）来为 Basecamp、HEY 以及我们的日志基础设施提供搜索服务，每年近四百万（52万美元），这仅仅是搜索啊！</p>
+<p>而现在，我们<a href="https://twitter.com/dhh/status/1712541981220786606">刚刚关闭</a>了在 OpenSearch 上的最后一个大型日志集群，所以现在是一个很好的时机来对比替代选项的开销。我们购买所需硬件大约花费了$150,000（每个数据中心 $75,000 以实现完全冗余），如果在五年内折旧摊销，大约是每月 $2,500。我们在两个数据中心里还要为这些机器提供电力、机位和网络，每月开销大约 $2,500。所以每月总共是五千美元，这还是包含了预留缓冲的情况。</p>
+<p>这比我们在 OpenSearch 上的开销少了整整一个数量级！我们在硬件上花费的 $150,000 在短短三个月内就回本了，从三个月后我们每月将节省约 $40,000，这仅仅是搜索啊！</p>
+<p>这时，人们通常会开始问人力成本的问题。这是一个合理的问题：如果你得雇佣一大堆工程师来自建自维服务，那么每月节省 $40,000 又算得上啥呢？首先，我得说即使我们不得不<strong>全职</strong>雇佣一个人来负责搜索服务，我仍然认为这是一件很划算的事，但我们没有这么做。</p>
+<p>从 OpenSearch 切换到自己运行 Elastic Search 确实需要一些初始配置工作，但长远来看，我们没有因为这次切换而扩大团队规模。因为在自己的设备上运行，与在云上运行并没有本质上的工作范围差异。这就是我们整体下云的核心理念：</p>
+<p><strong>在云上运营我们这种规模所需的运维团队，并不会比在我们自己硬件上运行所需的规模更小！</strong></p>
+<p>这原本只是一个理论，但在现实中看到它被证实，仍然是令人震惊的。</p>
+<hr>
+<h2 id="09-15-下云后已省百万美金">09-15 下云后已省百万美金</h2>
+<blockquote>
+<p><strong>Our cloud exit has already yielded $1m/year in savings</strong>[3]</p>
+</blockquote>
+<p>把我们的应用<a href="https://world.hey.com/dhh/we-have-left-the-cloud-251760fb">搬下云</a>非常值得庆祝，但看到实际开支减少才是真正的奖励。你看，要将云端的价格从“荒谬”的程度降至“过份”的唯一方式是“预留实例”。就是你需要签约承诺在一年或者更长时间范围里，消费支出保持在某个水平上。因此，我们账单并没有在应用搬离后立即塌缩。但是现在，它要来了。哦，它就要来了！</p>
+<p><img src="/img/cloud/odyssey-6.png" alt=""></p>
+<p>我们的云支出（不包括S3）已经减少了 60% 。从每月大约十八万美元（$180,000）减少到不到八万美元（$80,000）。每年可以在这里省下的钱折合一百万美元，而且我们在九月还会有第二轮大幅降低，剩余的支出将在年底前逐渐减少。</p>
+<p>现在可以将省下的云开销与我们<a href="https://world.hey.com/dhh/the-hardware-we-need-for-our-cloud-exit-has-arrived-99d66966">自己购买服务器</a>的支出相比。我们需要花五十万美元来采购新服务器，用于替换云上所有的租赁项目。虽然会产生一些与新服务器有关的额外开销，但与整体图景相比（例如我们的运维团队规模保持不变）这只能算三瓜俩枣。我们只需要把新花掉的钱和省下来的钱进行简单对比，就能看出这个令人震惊的事实：我们会在不到六个月的时间内，省下来足够多的钱，让这笔采购服务器的大开销回本。</p>
+<p>但是请等我们把话说完，看一看最终省下来的结果：用不着小学算术就能看出，最终能节省下的开销金额高达每年两百万美元，按五年算也就是整整 <strong>一千万美元</strong>！！！。这真是一笔巨大的钱款，直接击穿了我们的底线。</p>
+<p>我们要再次提醒，每个人的情况都可能有所不同，也许你没有<a href="https://dev.37signals.com/our-cloud-spend-in-2022/">像我们之前那样</a>使用这些昂贵的云服务：Aurora/RDS，以及 OpenSearch。也许你的负载确实有着很大的波动，也许这，也许那，但我并不认为我们的情况是某种疯狂的特例。</p>
+<p>事实上，从我看到的其他软件公司未经优化的云账单来看，我们节省下来的钱实际上可能不算大。你知道<a href="https://www.businessinsider.com/snap-google-cloud-aws-reducing-costs-2023-2?IR=C">过去五年Snapchat在云上花费了<strong>三十亿美元</strong></a>吗？在以前没人在乎业务是否盈利，能省个十几亿这种事“不重要”，没人愿意听，但<a href="https://world.hey.com/dhh/the-bubble-has-popped-for-unprofitable-software-companies-2a0a5f57">现在确实很重要了</a>。</p>
+<hr>
+<h2 id="06-23-我们已经下云了">06-23 我们已经下云了！</h2>
+<blockquote>
+<p><strong>We have left the cloud</strong>[4]</p>
+</blockquote>
+<p>我们当初花了几年时间才搬上公有云，所以最初我以为下云也要耗费同样漫长的时间。然而当初上云时做准备的工作 —— 比如将应用容器化，实际上使下云过程相对简单很多。如今经过六个月的努力，我们完成了这个目标 —— 我们已经从云上下来了。上周三，最后一个应用被迁移到了我们自己的硬件上。哈利路亚！</p>
+<p>在这六个月中，我们将六个历史悠久的服务迁回了本地。虽然我们已经不再销售这些服务了，但我们承诺为现有的客户和用户提供支持，直到互联网的终点。Basecamp Classic、Highrise、Writeboard、Campfire、Backpack 和 Ta-da List 都已经有十多年的历史了，但仍在为成千上万的人提供服务，每年创造数百万美元的收入。但现在，我们在这些服务上的运营开支将大大减少，而且归功于强大的新硬件，用户体验更加丝滑迅捷了。</p>
+<p>不过，变化最大的是 HEY，这是一个诞生于云端的应用。我们以前从未在自己的硬件上跑过它，而且作为一个功能齐全的电子邮件服务，它有许多组件。但是我们的团队通过分阶段迁移，在几周内成功地将不同的数据库、缓存、邮件服务和应用实例独立地迁移到本地，而没有出现任何岔子。</p>
+<p>将所有这些应用迁回本地的过程中，我们所使用的技术栈完全是开源的 —— 我们使用 KVM 将新买的顶配性能怪兽 —— 192 线程的 Dell R7625s 切分为独立的虚拟机，然后使用 Docker 运行容器化的应用，最后使用 MRSK 完成不停机应用部署与回滚 —— 这种方式让我们规避了 Kubernetes 的复杂度，也省却了各种形式的 “企业级” 服务合同纠葛。</p>
+<p>粗略的计算表明，购置自己的硬件而不是从亚马逊租赁，每年至少可以为我们节省150万美元。关键是在完成这一切的过程中，我们的运维团队规模并没有变化：云所号称的缩减团队规模带来生产力增益纯属放屁，压根没有实现过。</p>
+<p>这可能吗？当然！因为我们运维自己硬件的方式，实际上与人们租赁使用云服务的方式差不多：我们从戴尔买新硬件，直接运到我们使用的两个数据中心，然后请 Deft 公司那些白手套代维服务商把新机器上架。接着，我们就能看到新的 IP 地址蹦出来，然后立即装上 KVM / Docker / MRSK ，完事！</p>
+<p>这里的主要区别是，从需要新服务器和看到它们在线之间的<strong>滞后时间</strong>。在云上，你可以在几分钟内拉起一百台顶配服务器，这一点确实很牛逼，只不过你也得为这个特权掏大价钱。只不过，我们的业务没有那么反复无常，以至于需要支付这么高昂的溢价。考虑到拥有自己的服务器已经为我们省了这么多钱，使劲儿超配些服务器根本不算个事儿 —— 如果还需要更多的话，也就是等个把星期的事儿。</p>
+<p>从另一个角度看，我们花了大概 <strong>50万美元</strong>从戴尔买了两托盘服务器，为我们的服务容量添加了 4000核的 vCPU，7680GB 的内存，以及 384TB 的 NVMe 存储。这些硬件不仅能运行我们所有的存量服务，还能让 HEY 满血复活，并为我们的 Basecamp 其他业务换个崭新的心脏。这些硬件成本会在五年里摊销，然而购买它们的总价还不到我们<strong>每年</strong>省下来钱的三分之一 ！</p>
+<p>这也难怪为什么当我们分享了自己的下云经验后，许多公司都开始重新审视他们每个月那疯狂的云账单了。我们去年的云预算是 <strong>320万</strong> 美元，而且已经优化得很厉害了 —— 像长期服务承诺、精打细算的资源配置和监控。有大把的公司比我们掏了几倍多的钱却办了更少的事儿。潜在的优化空间和 AWS 的季度业绩一样惊人 —— 2022 Q4 ，AWS 为亚马逊创造了超过 <strong>50亿美元</strong> 的利润！</p>
+<p>正如我之前提到过的：对于那些非常早期、完全不在乎花钱、或者两年后不复存在的公司，我认为云仍然是有一席之地的。只是要小心，别把那些慷慨的云代金券当作礼物！那是个鱼钩，一旦你过于依赖他们的专有托管服务或Serverless产品。当账单飙上天际时，你就无处可逃了。</p>
+<p>我还认为<strong>可能</strong>确实会有一些公司，有着极端大起大落的不规则负载，以至于租赁还是有意义的。如果你一年只需要犁三次地，那么在其余的363天里把犁放在谷仓里闲置，确实是没有多大意义。</p>
+<p>但是对绝大多数已经发展起来的公司来说，如果能在几年内摊销资产，你真的应该认真重新审视一下这股云热潮。好处被大大夸张了 —— 在云上跑东西通常和你自己弄一样复杂，却贵得离谱。</p>
+<p>所以，如果钱很重要（话说回来，什么时候不重要呢？）—— 我真的建议您好好算一下账：假设您真的有一个能从不断调整容量大小中获益的服务，然后设想它下云之后的样子。我们在六个月内搬下来七个应用，你也可以的。工具就在那里，都是开源免费的。所以不要仅仅因为炒作，就停留在云端。</p>
+<hr>
+<h2 id="05-03-从云遣返到主权云">05-03 从云遣返到主权云！</h2>
+<blockquote>
+<p><strong>Sovereign clouds</strong>[5]</p>
+</blockquote>
+<p>我一直在讨论我们的下云之旅 —— “云遣返”。从在AWS上租服务器，到在一个本地数据中心拥有这些硬件。但我意识到这个术语可能会错误地让一些人感到不舒服 —— 有一整代技术人员给自己标记上&quot;云原生&quot;。仅仅只是因为我们想拥有而非租用服务器这种理由而疏远他们，并不能帮到任何人。这些“云原生”人才所拥有的大部分技能都是有用的，无论他们的应用跑在哪儿。</p>
+<p>技能的重叠实际上是为什么我们能从AWS退出如此之快的部分原因。现如今，在你自有硬件上运行所需 的知识，和在云上租赁运行所需的知识十有八九是相同的。从容器到负载均衡，再到监控和性能分析，还有其他一百万个主题 —— 技术栈不仅仅是相似而已，几乎可以说一模一样。</p>
+<p>当然也会有地方会有差别，比如 FinOps：如果你拥有自己的硬件，就不再需要像法医和会计师那样理解账单，也不需要像斗牛犬一样防止它疯狂增长了！但这确实也意味着，你偶尔需要处理磁盘损坏告警，找数据中心的白手套来换备件。</p>
+<p>但是在全局图景中，这些都是微不足道的差异。对于一个云上租赁弓马娴熟的人来说，教会他在自有硬件上运行同样的技术栈并不会耗费太长时间（这个学习曲线肯定比跟上Kubernetes的速度要容易多了）</p>
+<p>针对这个问题，有些人建议使用&quot;私有云&quot;这个术语。这个名字让我联想到毛骨悚然的CIO白皮书 —— 虽然我也不认为它有足够的冲击力让公众明了其中的差异。但我得承认，对于刚刚沉淀下一些“云XX”自我身份认同的整个行业来说，这个术语显然更能缓和气氛。这不禁让我思考起来。</p>
+<p>最终，我认为这里的关键区别不是公有还是私有，而是 —— 自有还是租赁。我们需要反击云上租赁的 “<strong>你将一无所有并乐在其中</strong> ” 的宣传。这种异端观点有悖于时代精神，会招致互联网（ —— 这个分布式的，无需许可的世界奇观）支持者的强烈反感。</p>
+<p>因此，让我提出一个新术语：“<strong>主权云</strong>”。</p>
+<p>主权云建立在所有权与独立性上。这是一个的可选的升级项：对所有的云租户来说，只要他们的业务强大到足以承担一部分前期成本。这也是一个值得追求的目标：拥有自己的数字家园，而不是从科技巨头云领主那里租用农场。这也是一场对互联网集中化，和正在兴起的赛博地主垄断租金的反击运动。</p>
+<p>试试看吧！</p>
+<hr>
+<h2 id="05-02-下云还有性能回报">05-02 下云还有性能回报？</h2>
+<blockquote>
+<p><strong>Cloud exit pays off in performance too</strong>[6]</p>
+</blockquote>
+<p>上周，我们成功完成了迄今为止最大的一次下云行动，这次是搬迁 Basecamp Classic。这是我们从2004年开始就整起来的元老应用。而现在，在AWS上运行了几年之后，它又回到了我们自己的硬件上使用 MRSK 管理，天哪，性能实在是太屌了，看看这张监控图：</p>
+<p><img src="/img/cloud/odyssey-1.png" alt=""></p>
+<p>现在的请求响应时间中位数只有 19ms，而以前要 67ms；平均值从138ms 降至 95ms。查询耗时的中位数降了一半（当你一个请求做很多查询时，这可是会累积起来放大的）。Basecamp Classic 在云上的表现一直还不错，但是现在95%的请求RT都低于那个的 300ms &ldquo;慢&quot;界限。</p>
+<blockquote>
+<p>也别把这些比较太当回事：这并非严谨的净室科学实验，只是我们刚刚离开精细微调的云环境，放到自有替代硬件上刚跑出来的峰值。</p>
+</blockquote>
+<p>Basecamp Classic 以前跑在 AWS EKS 上（那是他们的托管 Kubernetes ），应用本身混用 c5.xlarge 和 c5.2xlarge 实例部署。数据库跑在 db.r4.2xlarge 和 db.r4.xlarge 规格的 RDS 实例上。现在都搬回老家，跑在配备了双 AMD EPYC 9454 CPU 的 Dell R7625 服务器上。</p>
+<p>用来跑应用和任务的 vCPU 核数规格都一样，122个。以前是云上的 vCPU，现在是 KVM 配置的核数。而且，在保持上面牛逼性能的前提下，现在负载水平还有很大压榨空间。</p>
+<p>实际上，考虑到我们的每一台新的 Dell R7625 都有196个 vCPU，所以包含数据库与 Redis 在内的整个 Basecamp Classic 应用其实可以完整跑在这样的单台机器上！这简直太震撼了，当然，出于安全冗余的考虑你并不会真的这么做。但这确实证明了<strong>硬件领域重新变得有趣起来</strong>，我们绕了一圈又回到了 “原点” —— 当 Basecamp 起步时，我们就是在单个机器（<strong>只有1核！</strong>）上跑起来的，而到了 2023 年，我们又能重新在一台机器上跑起来了。</p>
+<p>这样的机器每台不到<strong>两万美元</strong>，除路由器外的所有硬件五年摊销，就是333美元/每月。这就是当下运行完整 Basecamp Classic 所需的费用 —— 而这仍然是一个每年实打实产出数百万美元收入大型的 SaaS 应用！而市场上绝大多数 SaaS 业务服务客户所需的火力将远远少于此。</p>
+<p>我们并未期望下云能提高应用的性能，但它确实做到了，这真是个意外之喜。尤其是 Basecamp Classic，我们业务中的二十年老将，依然在为一个庞大的，忠诚的，满意的客户群提供服务，这些客户在过去十年里都没获得任何新功能 —— 不过，嘿，速度也是一种特性，所以呢，你也可以说我们刚刚发布了一个新特性吧！</p>
+<p>接下就是下云的重头戏了 —— HEY！敬请期待。</p>
+<hr>
+<h2 id="04-06-下云所需的硬件已就位">04-06 下云所需的硬件已就位！</h2>
+<blockquote>
+<p><strong>The hardware we need for our cloud exit has arrived</strong>[7]</p>
+</blockquote>
+<p>距离我上次看到运行我们 37Signal 公司服务所使用的物理服务器硬件已经过去很长时间了。我依稀记得上次是十年前参观我们在芝加哥的数据中心，但是在某个时间点，我对硬件就失去兴趣了。然而现在我又重新对它感兴趣了 —— <strong>因为硬件领域变得越来越有趣起来</strong>。所以让我来和你们分享一下这种兴奋吧：</p>
+<p><img src="/img/cloud/odyssey-2.png" alt=""></p>
+<p>这是最近运抵我们芝加哥数据中心的两个托盘。同一天，一套同样的设备也到达了我们在弗吉尼亚州 Ashburn 的第二个数据中心。总的来说，我们收到了二十台R7625 Dell 服务器，是支撑我们的下云计划的主力。如此令人震惊的算力，占用的空间却惊人的小。</p>
+<p>这是我们在芝加哥数据中心四个机柜的示意图（我们在 Ashburn 还有另外四个）。正如你所见，还有一堆专门给 Basecamp 用的老硬件。一旦我们装好新机器，大部分老服务器就该退役了。在下面带有 &ldquo;kvm&rdquo; 标记的2U服务器是新家伙：</p>
+<p><img src="/img/cloud/odyssey-3.png" alt=""></p>
+<p>这儿你可以看到新的R7625服务器位于机架底部，挨着旧设备：</p>
+<p><img src="/img/cloud/odyssey-4.png" alt=""></p>
+<p>每台R7625都包含两个 AMD EPYC 9454 处理器，每个处理器 48个核心/96个线程，频率 2.75 GHz。这意味着我们为私有部署大军的容量添加了近4000个虚拟CPU！近乎荒谬的 7680GB 内存！以及 384TB 的第四代 NVMe SSD 存储！除了足以满足未来数年需求的强大马力外，在夏季前还有另外六台数据库服务器要过来，然后我们就全准备好啦。</p>
+<p>与 Basecamp 起源形成鲜明对比的是，我们在2004年以一台只有256MB内存的单核Celeron服务器启动了Basecamp，用的还是 7200转的破烂硬盘。而那些玩意已经足够我们在一年间把它从兼职业务转为全职工作。</p>
+<p>二十年后，我们现在有一大堆历史遗留应用（因为我们承诺让客户依赖的应用运行到互联网的终点！），一些诸如 Basecamp 和 HEY 的大型旗舰服务，以及让这些重新运行在我们自己硬件上的使命任务。</p>
+<p>想想三个月前，我们决定放弃 Kubernetes 并使用 MRSK 打造更简单的下云解决方案，这还是挺疯狂的一件事儿。但是看看现在，我们已经把一半跑在云上的应用搬回了家中！</p>
+<p>在接下来的一个月中，我们计划将 Basecamp Classic（这玩意13年没有更新了，但仍然是一个每年赚数百万美元的业务 —— 这就是SaaS的魔法！），以及下云的重头戏 —— HEY！全部都带回家。这样在五月初的话，我们云上就只剩下 Highrise 和一个名叫 Portfolio 的小型辅助服务了。我原本以为，在夏末完成下云已经是很乐观的估计了，但现在看来，基本上会在春天结束之前就能搞定，绝对算是我们团队的一个杰出成就。</p>
+<p>加速的时刻表让我对下云大业更加充满信心，我本以为下云会跟上云一样困难，但事实表明并非如此。我想也许是每月<strong>三万八千美元</strong>的云消费的原因，它就像吊在我们面前的胡萝卜一样，激励着我们更快地去完成这件事。</p>
+<p>我真诚地希望那些看着自己令人生畏的云账单的 SaaS 创业者注意到这一点：上云之后再下来这件事，看起来几乎是不可能的，但你一个字儿也别信！</p>
+<p>现代服务器硬件在过去几年中，在性能、密度和成本上都有了不可思议的巨大飞跃。如果在过去十年中云已经成为了你的默认选项，那么我建议你重新了解一下相关数字。这些数字很可能会像震惊我们一样吓到你们。</p>
+<p>因此，下云的终点就在眼前，我们已经解决了所有下云所需的关键技术挑战，让这件事变得切实可行起来。我们已经在 MRSK 上运行生产应用一段时间了。道路是非常光明的，我已经迫不及待地想看到那些巨大的云账单赶紧消失掉。我觉得之前粗略估算的下云降本数额已经高度保守了，让我们拭目以待，我们也会分享出来。</p>
+<hr>
+<h2 id="03-23-裁员前不先考虑下云吗">03-23 裁员前不先考虑下云吗？</h2>
+<blockquote>
+<p><strong>Cut cloud before payroll</strong>[8]</p>
+</blockquote>
+<p>最近每周都能看到科技公司大裁员的新闻，几个科技巨头已经进行了第二轮裁员，而且没人说不会有第三轮。尽管在个人层面上这是很难受但 —— 我太难了！—— 但对整个经济来说，还算是有一个积极的方面：释放了被束缚的人才。</p>
+<p>你看，大型科技公司在疫情期间以如此高的薪资吞噬吸收了大量人才，以至于几乎没有给生态中其他人留点渣。在关键技术人才的竞争中，除了科技巨头之外的许多公司都出不起价，被挤出了市场。长期来看，这对经济来说肯定不是啥好事。我们需要聪明人去关注一些除了让人点击广告之外的问题。</p>
+<p>尽管 Facebook、Amazon 这些科技巨头的巨额裁员占据了新闻头条，小型科技公司也在进行裁员，很难相信这里还有什么生机。当然，小公司也有可能和巨头们一样，雄心勃勃地雇佣了一批他们不仅不需要，反而会拖慢进度的人。如果是这样，那还算有点道理。</p>
+<p>但也有这种可能，这些公司的技术的市场正在收缩，而投资者不再愿意延长亏损期，所以不得不裁员以削减成本以免破产。这是谨慎的做法，但是人力并不是唯一的成本。</p>
+<p>在我所了解的大部分科技公司中，主要有两项大的开支：员工 与 云服务。员工通常是最大的开支，但令人震惊的是，云服务的费用也可以非常非常大。或者对真正算过这笔账的人来说，“震惊”这个词不太合适，恰当的用词是 —— “可怖”。</p>
+<p>在与云业务有关的事上我可能有些老生常谈了，但当我看到科技公司试图通过裁员，而不是控制他们的云支出来削减成本时，我真的感到非常困惑。削减云开支最好的方式，特别是对于中等及以上规模的软件公司来说，就是部分/全部下云！</p>
+<p>所以我敦促所有正在检阅预算，想知道在哪里可以降本增效的创始人和高管们优先关注云开支。也许你可以通过优化现有的资源使用来走的更远（现在有一整个新冒出来的小行业在干这事：FinOps），但也许你也高估了自己采购硬件自建与下云的难度。</p>
+<p>我们已经完成了一半的下云工作。我们真正开始全力以赴是在1月份。我们不仅在搬迁那些最先进的现代技术栈，还要迁移很多历史遗留领域的应用。然而在下云的进度上，这已经比我敢想到的速度要快太多了。我们已经在下云日程表上远超预期了，大幅度的开支缩减肉眼可见。</p>
+<p>如果我们可以这么快地做到这些，那么当你经营一家公司而准备打印那些解雇通知前，至少有责任计算一下这些数字并检视一下可行的选项，这也是对你的员工应当负起的责任。</p>
+<hr>
+<h2 id="03-11-失控的不仅仅是云成本">03-11 失控的不仅仅是云成本！</h2>
+<blockquote>
+<p><strong>It&rsquo;s not just cloud costs that are out of control</strong>[9]</p>
+</blockquote>
+<p>这个月底我们在 Datadog 上的年度订阅要到期了，我们不打算续费。</p>
+<p>Datadog 是一个性能监控工具，倒不是因为我们不喜欢这项服务 —— 实际上它非常棒！我们不续订是因为它每年花费我们 88,000 美元，这实在是太离谱了。而且这反映出一个更大的问题：企业SaaS定价越来越愚蠢荒谬。</p>
+<p>然而，我原本以为我们的账单已经够傻逼了。但是竟然有一个 Datadog 的客户为他们的服务支付了 6500 万美元！！这个信息是在他们最近的财报电话会议上提到的。这显然是一家加密货币公司，用“优化”账单的方式承认了这项蠢出天际的开支。</p>
+<p><img src="/img/cloud/odyssey-5.png" alt=""></p>
+<p>冒着陈词滥调的风险我也要说：这种花在性能和监控服务上的支出就像零利率投资一样：我无法想象在哪个宇宙里会认为这是一项合理的开支。这种事儿明显能用开源替代解决，如果你要做点内部二开魔改定制还能解决的更好更优雅。</p>
+<p>但我发现很多企业级 SaaS 软件都是这样的，比如在一个2000人的公司里采购 Salesforce 的 Slack， 每人每月 15$ ：仅仅是为了一个聊天工具，每年的开支就超过了三十万美元！</p>
+<p>现在，再加上像 Asana 这样的工具，每人每月30刀。然后是 Dropbox 每人每月20美元。只是这三个工具，每个席位每月就需要每月65刀的费用。对那家2000人的公司来说，每年的成本就是一百五十万刀。哎妈呀！</p>
+<p>我很惊讶于目前还没有更多的压力迫使那些为他们的SaaS软件支付高昂费用的公司去削减成本。但我觉得快了 —— 感觉我们现在正处在一个服务的泡沫里，等待着破裂 —— 总会有人看到这些利润空间并发现机会。</p>
+<p>这也是我们坚持 Basecamp 调性的一个关键原因。任何人向我们支付的最高费用不会超过每月299美元 —— 不限用户，不限功能，所有一切。是的，我们是不是扔掉了钓大鱼的机会？可能吧。但我不能心安理得地以我自己都不愿支付的价格来出售这些软件。</p>
+<p>我们确实需要在这儿调整一下。</p>
+<hr>
+<h2 id="02-22-指导下云的五条价值观">02-22 指导下云的五条价值观</h2>
+<blockquote>
+<p><strong>Five values guiding our cloud exit</strong>[10]</p>
+</blockquote>
+<p>当谈及我们离开云的原因时，已经说了很多关于 <strong>成本</strong> 的事儿。尽管成本非常重要，但它并不是唯一的动机。以下是五条引领我们决策的价值观，我最近在37signals的内网文章里阐述了这些原则：</p>
+<p><strong>1. 我们最看重的是独立性</strong>。被困在亚马逊的云里，在实验新东西（比如固态缓存）时，不得不忍受高昂到荒诞的定价带来的羞辱，这已经构成对此核心价值观无法容忍的侵犯。</p>
+<p><strong>2. 我们服务于互联网本身</strong>。这个业务的整个存在，都归功于社会与经济上的异类 —— 互联网。可以用来进行包括商业在内的各种活动，却不归属任何一家公司或任何一个国家。自由贸易和自由表达得以在一个人类历史上前所未有的规模上实现。我们不会让手中的钱，被用于侵蚀这个理想乡 —— 让支撑这个美丽的自由避风港的服务器在集中到少数几个超大规模数据中心的手中。</p>
+<p><strong>3. 我们明智地花钱</strong>。在几个关键例子上，云的成本都极其高昂 —— 无论是大型物理机数据库、大型 NVMe 存储，或者只是最新最快的算力。租生产队的驴所花的钱是如此高昂，以至于几个月的租金就能与直接购买它的价格持平。在这种情况下，你应该直接直接把这头驴买下来！我们将把我们的钱，花在我们自己的硬件和我们自己的人身上，其他的一切都会被压缩。</p>
+<p><strong>4. 我们引领道路</strong>。在过去十多年间，云作为 “标准答案” 被推销给我们这样的 SaaS 公司。我相信了这个故事，我们都相信了这一套，然而这个故事并不是真的。云计算有它的适用场景，例如我们在 HEY 起步时就很好地使用了云，然而这是一个少数派生态位。许多像我们一样规模的 SaaS 业务应当拥有他们自己的基础设施而不是靠租赁。我们将为认同这一结论的追随者提前铺设好意识形态与技术上的道路。</p>
+<p><strong>5. 我们寻求冒险</strong>。&ldquo;不要弄些小打小闹的计划，它没有激发人们热血的魔力，本身也可能无法实现。要绘制宏伟蓝图，志存高远，并竭尽所能&rdquo; —— 丹尼尔·伯纳姆。我们已经在这一行打拼了二十多年了。为了维持内心的热情，我们应当继续设定高标准，坚守我们的价值观，并在各个方面探索新边疆，否则我们会枯萎的。我们不需要成为最大的，我们也不需要成为赚得最多的，但我们确实需要继续学习，挑战和追求。</p>
+<p>我们走！</p>
+<hr>
+<h2 id="02-21-下云将给咱省下五千万">02-21 下云将给咱省下五千万！</h2>
+<blockquote>
+<p><strong>We stand to save $7m over five years from our cloud exit</strong>[11]</p>
+</blockquote>
+<p>自从去年十月份我们宣布打算下云以来，我们一直在脚踏实地的推进。在一个企业级Kubernetes供应商那儿走了一条短暂的弯路后，我们开始自己开发工具，并在几周前成功地将第一个小应用从云上搬下来。现在我们的目标是在夏天结束前完全下云，根据我们的初步计算，这样做将在五年内为我们节省大约700万美元的服务器费用，而无需改变我们运维团队的规模。</p>
+<p>粗略的计算方式是这样的：我们在2022年的云开销是320万美元。其中有将近100万美元用在 S3 上，用于存储 8PB 的文件，这些文件在几个不同区域中进行了全量复制。而剩下的大约230万美元用在其他所有东西上：应用服务器、缓存服务器、数据库服务器、搜索服务器，其他所有的事情。这部分预算是我们打算在2023年归零的部分。然后我们将在2024年再来着手把 S3 上的 8PB 给搬走。</p>
+<p>经过深思熟虑与多次基准测试，我们叹服于 AMD新的 Zen4 芯片，以及四代NVMe磁盘的惊人速度。我们基本上准备好向 Dell 下订单了，大约 <strong>60万</strong> 美元。我们仍在仔细调整所需的具体配置，但是对算总账来说，无论我们最终是每个数据中心订购8台双插槽64核CPU的机器（一个箱子里256个vCPU！），还是14台运行单插槽CPU但主频更高的机器，这种细节并不重要。我们需要为每个数据中心添加约 2000核vCPU算力，而我们的业务跑在两个数据中心里，所以考虑到性能和冗余的需求，我们需要 4000 核vCPU 算力，这都是粗略的数字。</p>
+<p>在云的时代，投入60万美元购买一堆硬件可能听上去不少，但如果你把它摊销到五年里，那就只有12万美元一年！这已经很保守了，我们还有不少服务器已经跑了七八年了。</p>
+<p>当然，那只是服务器盒子本身的价格，它们还需要接上电源和带宽。我们目前在Deft的两个数据中心上有八个专用机架，每月花费大约6万美元。我们特意超配了一些空间，所以我们呢可以把这些新服务器塞进现有的机架中，而无需为更多机位与电力付钱，因而每年机房本身开销仍然是 <strong>72万</strong> 美元。</p>
+<p>所有的花销总计每年84万美元：包括了带宽、电力，以及按照五年折旧的服务器盒子。与云上的<strong>230万</strong>美元相比，我们的硬件要快得多，有更多的算力，极其便宜的 NVMe 存储，以及用极低的成本进行扩展的空间（只要我们每个数据中心的四个机架里还放得下）。</p>
+<p>我们大致可以说，每年节省了<strong>150万</strong>美元。预留出一个<strong>50万</strong>美元应对未来五年中尚未预见到的开销，那么<strong>在未来五年，我们仍然可以省下 700万 美元！！</strong></p>
+<p>在当下时间点，任何中型及以上的SaaS业务，如果他们的工作负载稳定，却没有对云服务器的租赁费用和自建服务器进行测试比对，那么可以称得上是财务渎职行为。我建议你打电话给 Dell，然后再打给Deft。拿到一些真实的数据，然后自己做决定。</p>
+<p>我们将在2023年完成下云（除了S3），并将继续分享我们的经验，工具，以及计算方法。</p>
+<hr>
+<h2 id="01-26-折腾硬件的乐趣重现">01-26 折腾硬件的乐趣重现</h2>
+<blockquote>
+<p><strong>Hardware is fun again</strong> [12]</p>
+</blockquote>
+<p>2010 年代，我对计算机硬件的兴趣几乎消失殆尽。一年又一年，进步似乎微乎其微。Intel陷入困境，CPU的进步也很有限。唯一能让我眼前一亮的是Apple在手机上的A系列芯片的进步。但那更像是与常规计算机不同的另一个世界。现在却不再是这样了！</p>
+<p>现在，计算机硬件再次活跃起来！自从Apple的M1首次亮相以来，硬件有趣程度和大幅改进的通道已经打开。不仅仅是 Apple ，还有 AMD 和 Intel 。世代跃变发生得更加频繁，增益也不再是“微不足道”。处理器核数在迅速增长，单核性能定期向前跃进 20-30%，而且这种进步积累得很迅速。</p>
+<p>虽然我对技术本身很感兴趣，但我更关心这些新飞跃会带来什么。例如在2010年代，我们曾经因为手机运行 JavaScript 速度太慢，所以不得不为 Basecamp Web应用创建一个专门的移动版本。现在大多数 iPhone 的速度已经超过了大多数计算机，甚至安卓的芯片也在迎头赶上。因而维护单独构建版本的复杂性已经消失了。</p>
+<p>在 SSD/NVMe 存储上也发生了类似的情况，这里的这里的代际跃进幅度甚至比 CPU 领域还要大。我们快速地从第二代约 500MB/秒的速度，到第三代的大约2.5GB/秒，再到第四代大约 5GB/秒，而现在第五代为我们带来高到荒谬的约 13GB/秒 的速度！这种数量级的飞跃，需要你重新想想你的工作假设了。</p>
+<p>我们正在探索将 Basecamp 的缓存和任务队列从内存实现转变为NVMe磁盘实现。现在两者的延迟已经足够接近了，所以容量充足且足够快的 NVMe存储更有优势。我们刚买了一些 12TB 的第四代NVMe卡，使用新的 <a href="https://www.servethehome.com/e1-and-e3-edsff-to-take-over-from-m-2-and-2-5-in-ssds-kioxia/">E1/E3 NVMe接口规格</a>，价格两万块不到（$2,390），这可是 12TB 啊！我们现在正在考虑单机柜 PB级全闪存储服务器的可能性，大概二十万美元，这简直太疯狂啦！</p>
+<p>有整整一代的应用开发者只知道云，这使他们一叶障目，无法充分认知到硬件的直接进步速度。随着越来越多的公司开始重新计算<a href="https://dev.37signals.com/our-cloud-spend-in-2022/">云账单</a>，并把他们的应用从服务器租赁市场上<a href="https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0">撤回来</a>，我认为我们将看到越来越多的开发者，重新关心起裸金属服务器来。</p>
+<p>举个例子，我很喜欢这个<a href="https://thume.ca/2023/01/02/one-machine-twitter/">粗略的草稿证明</a>，它证明了 Twitter 可以在单台服务器上运行。你可能不会真的这样做，但这里的数学计算非常有趣。我认为这确实提出了一种观点，那就是我们最终可能会很容易地做到这一点：运行我们所有的高级服务，为数百万用户服务，运行于单台服务器上（或为了冗余考虑，还是三台吧）。</p>
+<p>我迫不及待地想要一台配备 Gen 5 NVMe 的 AMD Zen4 机器。拥有 384 个 vCPU 和 13GB/秒带宽的存储，全跑在一台双CPU插槽的刀片服务器内。我已经等不及报名参加这个即将到来的未来了！</p>
+<hr>
+<h2 id="01-10-企业级替代品还要离谱">01-10 “企业级“替代品还要离谱</h2>
+<blockquote>
+<p><strong>The only thing worse than cloud pricing is the enterprisey alternatives</strong>[13]</p>
+</blockquote>
+<p>我们在过去几个月一直在想，把 HEY 从云中带回家可能会涉及到 SUSE Rancher 和 Harvester。这些企业级软件产品的组合跑在自有硬件上，却会给我们提供类似于云上的使用体验，而且对现有 HEY 的打包和部署只需进行最小化的改造。但是，当我们需要几次在线会议才能获取关于定价的基本信息时，我们就应该觉察到有些不对劲了，然后看看别的，因为最后的报价完全就是个<strong>狗屎</strong>。</p>
+<p>我们每年在云上租用硬件和服务的开销大约为 <strong>300万</strong>美元。拥有我们自己的硬件，运行开源软件来替换，有一部分很重要的目的就是为了砍低那个荒谬的账单。但是我们从 SUSE 收到的报价竟然更为荒谬，200万美元，仅仅是许可和支持成本，仅仅是在我们自己的硬件上运行Rancher和Harvester。</p>
+<p>最初，我们其实认为这不会是一个问题。企业销售以高出天际的标价而臭名昭著，然后打折回到实际价格以成交。当我们采购我们热爱的戴尔服务器时，经常能得到 80% 的折扣！所以，配置出一个一万美元的服务器并没有挥霍的感觉 —— 如果实际成交价只是2000美元。</p>
+<p>如果这里的情况也类似，那么这个两百万美元的合同将会是每年40万美元。仍然太高，但是我们可以在这里那里削减一点，也许最后能得到我们可以接受的结果。但当我们开始讨价还价施加压力以获得折扣时，答案是 3， 3%。好吧，服了，拉倒吧！</p>
+<p>我并不是来告诉别人市场能承受什么价格的。我听说 SUSE 把这些套餐卖给军队和保险公司的生意还不错，祝他们好运。</p>
+<p><strong>但是为什么他妈的这帮人要在一个又一个的会议中对价格折扣守口如瓶，浪费我们的时间？</strong></p>
+<p>因为那就是企业销售游戏。讨价还价，欺诈，玩弄。看看我们能逃脱多少狗屎的游戏，让那些在谈判中搏斗的西装革履的人生活有意义。那就是<strong>赢得</strong>交易的含义 —— 阻挠欺骗另一方。</p>
+<p><strong>我受够了。事实上，我极其厌恶它。</strong></p>
+<p>所以现在我把那种怨气装瓶摇两下，然后大口闷下去以驱使我选择另一条路：我们要建造自己的主题公园，有二十一点，以及……没有那些该死的企业销售人员。</p>
+<hr>
+<h2 id="2022-10-19-我们为什么要下云">2022-10-19 我们为什么要下云？</h2>
+<blockquote>
+<p><strong>Why we&rsquo;re leaving the cloud</strong>[14]</p>
+</blockquote>
+<p>过去十多年间 Basecamp 这个业务一只脚在云上，而 HEY 自两年前推出以来就一直独占云端。我们在亚马逊云和谷歌云上大展身手，我们在裸金属与虚拟机上运行，我们在 Kubernetes 上飞驰。我们见识了云上的花花世界，也都尝试过大部分。终于是时候画上句号了：对于像我们这样稳定增长的中型公司来说，租用计算机（在绝大多数情况下）是比糟糕的交易。简化复杂度带来的节省并未变成现实。所以，我们正在制定下云的计划。</p>
+<p>云在生态位光谱的两个极端上表现出色，而我们只对其中一个感兴趣。第一个是当你的应用非常简单，流量很低，使用完全托管的服务确实可以省却很多复杂性。这是由 Heroku 开创的光辉之路，后来被 Render 和其他公司发扬光大。当你还没有客户时，这仍然是一个绝佳的起点，即使你开始有一些客户了，它也能支撑你走得很远。（然后随着使用量增加，而账单蹭蹭往上涨突破天际时，你会面临一个大难题，但这是合理的利弊权衡。）</p>
+<p>第二个是当你的负载高度不规则时。当你的使用量波动剧烈或者就是高耸的尖峰，基线只是你最大需求的一小部分；或者当你不确定是否需要十台服务器还是一百台。当这种情况发生时，没有什么比云更合适的了，就像我们在推出 HEY 时遇到的情况：突然有 30 万用户在三周内注册尝试我们的服务，而不是我们预计的六个月内 3 万用户。</p>
+<p>但是，这两种情况现在对我们都不适用了。对 Basecamp 来说则是从来没有过。继续在云上运营的代价是，我们为<strong>可能</strong>发生的情况支付了近乎荒谬的溢价。这就像你为地震保险支付四分之一的房产价值，而你根本不住在断层线附近一样。是的，如果两个州之外的地震让地面裂开，导致你的地基开裂，你可能会很高兴自己买了保险，但这里的比例感很不对劲，对吧？</p>
+<p>以 HEY 为例。我们在数据库（RDS）和搜索（ES）服务上，每年要支付给 AWS 超过<strong>50万</strong>美元的费用。是的，当你为成千上万的客户处理电子邮件时，确实有大量的数据需要分析和存储，但这仍然让我感到有些荒谬。你知道每年<strong>50万</strong>美元能买多少性能怪兽一般的服务器吗？</p>
+<p>现在的论调都是这样：没错，但你必须管理这些机器！而云要简单得太多啦！节省下来的都是人工成本！然而，事实并非如此。任何认为在云中运行像 HEY 或 Basecamp 这样的大型服务是“简单”的人，显然从未自己动手试过。有些事情更简单了，而其他事情更复杂了，但总的来说，我还没有听说过我们这个规模的组织因为转向云而能够大幅缩减运维团队的。</p>
+<p>不过，这确实是一个绝妙的营销妙招。用类比来推销，比如 “你不会自己开发电厂，对吧？” 或者 “基础设施服务真的是你的核心能力吗？” ，然后再刷上层层脂粉，云的光芒如此闪耀，以至于只有愚昧的路德分子（强烈抵制技术革新的人）才会在它的阴影下运维自己的服务器。</p>
+<p>与此同时，亚马逊以高额利润出租服务器来大发横财。尽管在未来的产能和新服务上进行了巨大的投资，AWS 的利润率还能高达 30%（<strong>622亿</strong>美元营收，<strong>185亿</strong>美元的利润）。这个利润率肯定还会飙升，因为该公司表示，“计划将服务器的使用寿命从四年延长到五年，将网络设备的使用寿命从五年延长到将来的六年”。</p>
+<p>很好！从别人那里租用计算机当然是很昂贵的。但它从来没有以这种方式呈现 —— 云被描述为按需计算，听起来很前卫很酷，而绝非像“租用电脑”这样平淡无奇的东西，尽管它基本上就是这么回事。</p>
+<p>但这不仅仅关乎成本，也关乎我们希望在未来运营一个什么样的互联网。这个去中心化的世界奇迹现在主要是在少数几个大公司拥有的计算机上运行，这让我感到非常悲哀。如果 AWS 的主要区域之一出现故障，看似一半的互联网都会随之下线。这可不是 DARPA 的设计初衷啊！</p>
+<p>因此，我认为我们在 37signals 有责任逆流而上。我们的商业模式非常适合拥有自己的硬件，并在多年内进行折旧。增长轨迹大多是可预测的。我们有专业的人才，他们完全可以将他们的才华用于维护我们自己的机器，而不是属于亚马逊或谷歌的机器。而且，我认为还有很多其他公司处于与我们类似的境地。</p>
+<p>但在我们勇敢扬帆起航，回到低成本和去中心化的海岸之前，我们需要转舵以扭转公共议题的风向，远离云服务营销的胡言乱语 —— 比如营运你自己的发电厂这类屁话。</p>
+<p>直到最近，人们自建服务器所需的工具已经有了巨大的进展，让云成为可能的大部分工具也可以用在你自己的服务器上。不要相信根深蒂固的云上既得利益集团的鬼话 —— 自建运维过于复杂。当年的先辈，开局一条狗，平地起高楼搞起了整个互联网，而现在这件事已经容易太多了。</p>
+<p>是时候让拨云见日，让互联网再次闪耀人间了。</p>
+<hr>
+<h2 id="references">References</h2>
+<p>[1] <a href="https://world.hey.com/dhh/x-celebrates-60-savings-from-cloud-exit-7cc26895">X celebrates 60% savings from cloud exit</a></p>
+<p>[2] <a href="https://world.hey.com/dhh/the-price-of-managed-cloud-services-4f33d67e">The price of managed cloud services</a></p>
+<p>[3] <a href="https://world.hey.com/dhh/our-cloud-exit-has-already-yielded-1m-year-in-savings-db358dea">Our cloud exit has already yielded $1m/year in savings</a></p>
+<p>[4] <a href="https://world.hey.com/dhh/we-have-left-the-cloud-251760fb">We have left the cloud</a></p>
+<p>[5] <a href="https://world.hey.com/dhh/sovereign-clouds-661eb5e4">Sovereign clouds</a></p>
+<p>[6] <a href="https://world.hey.com/dhh/cloud-exit-pays-off-in-performance-too-4c53b697">Cloud exit pays off in performance too</a></p>
+<p>[7] <a href="https://world.hey.com/dhh/the-hardware-we-need-for-our-cloud-exit-has-arrived-99d66966">The hardware we need for our cloud exit has arrived</a></p>
+<p>[8] <a href="https://world.hey.com/dhh/cut-cloud-before-payroll-a4530ebd">Cut cloud before payroll</a></p>
+<p>[9] <a href="https://world.hey.com/dhh/it-s-not-just-cloud-costs-that-are-out-of-control-efcd098c">It&rsquo;s not just cloud costs that are out of control</a></p>
+<p>[10] <a href="https://world.hey.com/dhh/five-values-guiding-our-cloud-exit-638add47">Five values guiding our cloud exit</a></p>
+<p>[11] <a href="https://world.hey.com/dhh/we-stand-to-save-7m-over-five-years-from-our-cloud-exit-53996caa">We stand to save $7m over five years from our cloud exit</a></p>
+<p>[12] <a href="https://world.hey.com/dhh/hardware-is-fun-again-b819d0b4">Hardware is fun again</a></p>
+<p>[13]  <a href="https://world.hey.com/dhh/the-only-thing-worse-than-cloud-pricing-is-the-enterprisey-alternatives-854e98f3">The only thing worse than cloud pricing is the enterprisey alternatives</a></p>
+<p>[14] <a href="https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0">Why we&rsquo;re leaving the cloud</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-90a02500cfbe083444eaff966001f368">云计算泥石流：用数据解构公有云</h1>
+	<div class="lead">让我们用实打实的数据与亲身经历的故事，讲清楚公有云租赁模式的陷阱与价值 —— 在这个降本增效的时代中，供您借鉴与参考。<a href="https://mp.weixin.qq.com/s/eag0CqfUTeNPbIB6TZqFVg">微信公众号原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-07-08" class="text-muted">2023-07-08</time>
+        
+	</div>
+	<p>曾几何时，“上云“近乎成为技术圈的政治正确，但很少有人会用实打实的数据来分析这里面的利弊权衡。我愿意成为这个质疑者：让我用实打实的 数据 与亲身经历的故事，讲清楚公有云租赁模式的陷阱与价值 —— 在这个降本增效的时代中，供您借鉴与参考。</p>
+<p><a href="/zh/blog/2023/07/07/%E4%B8%8B%E4%BA%91%E5%A5%A5%E5%BE%B7%E8%B5%9B/">下云奥德赛</a></p>
+<p><a href="/zh/blog/2023/07/06/finops%E7%BB%88%E7%82%B9%E6%98%AF%E4%B8%8B%E4%BA%91/">FinOps的终点是下云</a></p>
+<p><a href="/zh/blog/2023/06/14/%E4%BA%91%E8%AE%A1%E7%AE%97%E4%B8%BA%E5%95%A5%E8%BF%98%E6%B2%A1%E6%8C%96%E6%B2%99%E5%AD%90%E8%B5%9A%E9%92%B1/">云计算为啥还没挖沙子赚钱？</a></p>
+<p><a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">云SLA是不是安慰剂？</a></p>
+<p><a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/">云盘是不是杀猪盘？</a></p>
+<p><a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税？</a></p>
+<p><a href="/zh/blog/2023/02/03/%E8%8C%83%E5%BC%8F%E8%BD%AC%E7%A7%BB%E4%BB%8E%E4%BA%91%E5%88%B0%E6%9C%AC%E5%9C%B0%E4%BC%98%E5%85%88/">范式转移：从云到本地优先</a></p>
+<p><a href="/zh/blog/2023/03/08/%E5%9E%83%E5%9C%BE%E8%85%BE%E8%AE%AF%E4%BA%91cdn%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/">腾讯云CDN：从入门到放弃</a></p>
+<p><img src="/img/cloud/debris-title.png" alt=""></p>
+<h2 id="序">序</h2>
+<p>经济下行，降本增效成为主旋律，除了裁员，下云以削减高昂的云开支，也被越来越多的企业纳入考虑提上日程。</p>
+<p>我们认为，公有云有其存在意义 —— 对于那些非常早期、或两年后不复存在的公司，对于那些完全不在乎花钱、或者真正有着极端大起大落的不规则负载的公司来说，对于那些需要出海合规，CDN等服务的公司来说，公有云仍然是非常值得考虑的服务选项。</p>
+<p>然而对绝大多数已经发展起来，有一定规模的公司来说，如果能在几年内摊销资产，你真的应该认真重新审视一下这股云热潮。好处被大大夸张了 —— 在云上跑东西通常和你自己弄一样复杂，却贵得离谱。我真的建议您好好算一下帐。</p>
+<p>最近十年间，硬件以摩尔定律的速度持续演进，IDC2.0与资源云提供了公有云资源的物美价廉替代，开源软件与开源管控调度软件的出现，更是让自建的能力变得唾手可及 —— 下云自建，在成本，性能，与安全自主可控上都会有非常显著的回报。</p>
+<p>这个合集 <strong>《数据库泥石流 —— 用数据解构公有云》</strong>，包含了我们自己作为甲方在云上云下/上云下云过程中的亲身体验例证，收集对比了自建与云服务的实际效能成本数据并进行分析，为您提供参考与借鉴。</p>
+<p>我们提倡下云理念，并提供了实践的路径与切实可用的自建替代品 —— 我们将为认同这一结论的追随者提前铺设好意识形态与技术上的道路。</p>
+<p>不为别的，只是期望所有用户都能拥有自己的数字家园，而不是从科技巨头云领主那里租用农场。—— 这也是一场对互联网集中化与反击赛博地主垄断收租的运动，让互联网 —— 这个美丽的自由避风港与理想乡可以走的更长。</p>
+<hr>
+<h2 id="下云奥德赛zhblog20230707下云奥德赛"><a href="/zh/blog/2023/07/07/%E4%B8%8B%E4%BA%91%E5%A5%A5%E5%BE%B7%E8%B5%9B/">下云奥德赛</a></h2>
+<p>当代的下云史诗，云遣返奥德赛。来自 37 Signal 的传奇下云故事：如何在6个月内下云并省下五千万元。我从 @dhh 的博客上挑选了10篇文章，以时间线倒序展现这段波澜壮阔的旅程，译作中文，供大家参考借鉴。</p>
+<p>作者：<strong>David Heinemeier Hansson</strong>，网名DHH，37 Signal 联创与CTO，Ruby on Rails 作者，下云倡导者、实践者、领跑者。反击科技巨头垄断的先锋。博客：https://world.hey.com/dhh</p>
+<p>译者：<strong>冯若航</strong>，网名 Vonng。磐吉云数 创始人与CEO。Pigsty 作者，PostgreSQL 专家与布道师。云计算泥石流，数据库老司机，下云倡导者与实践者。</p>
+<p><a href="https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ"><img src="/img/cloud/odyssey-title.png" alt="odyssey"></a></p>
+<hr>
+<h2 id="finops的终点是下云zhblog20230706finops终点是下云"><a href="/zh/blog/2023/07/06/finops%E7%BB%88%E7%82%B9%E6%98%AF%E4%B8%8B%E4%BA%91/">FinOps的终点是下云</a></h2>
+<p>在 SACC 2023 大会 FinOps 专场上，我狠狠喷了一把云厂商。这是现场发言的文字整理稿，介绍了终极 FinOps —— <strong>下云</strong> 的理念与实践路径。</p>
+<p><strong>FinOps关注点跑偏</strong>：<strong>总价 = 单价 x 数量</strong>，搞 FinOps 的关注减少浪费资源的<strong>数量</strong>，却故意无视了房间里的大象 —— <strong>云资源单价</strong>。</p>
+<p><strong>公有云是个杀猪盘</strong>：廉价EC2/S3获客，EBS/RDS杀猪。云算力的成本是自建的五倍，块存储的成本则可达百倍以上，堪称终极成本刺客。</p>
+<p><strong>FinOps终点是下云</strong>：对于有一定规模企业来说，IDC自建的总体成本在云服务列表价1折上下。下云是原教旨 FinOps 的终点，也是真正 FinOps 的起点。</p>
+<p><strong>自建能力决定议价权</strong>：拥有自建能力的用户即使不下云也能谈出极低的折扣，没有自建能力的公司只能向公有云厂商缴纳高昂的 “无专家税” 。</p>
+<p><strong>数据库是自建关键</strong>：K8S 上的无状态应用与数据仓库搬迁相对容易，真正的难点是在不影响<strong>质量安全</strong>的前提下，完成数据库的自建。</p>
+<p><a href="https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ"><img src="/img/cloud/finops-title.png" alt="finops"></a></p>
+<hr>
+<h2 id="云计算为啥还没挖沙子赚钱zhblog20230614云计算为啥还没挖沙子赚钱"><a href="/zh/blog/2023/06/14/%E4%BA%91%E8%AE%A1%E7%AE%97%E4%B8%BA%E5%95%A5%E8%BF%98%E6%B2%A1%E6%8C%96%E6%B2%99%E5%AD%90%E8%B5%9A%E9%92%B1/">云计算为啥还没挖沙子赚钱？</a></h2>
+<p>公有云毛利不如挖沙子，杀猪盘为何成为赔钱货？</p>
+<p>卖资源模式走向价格战，开源替代打破垄断幻梦。</p>
+<p>服务竞争力逐渐被抹平，云计算行业将走向何方？</p>
+<p>在《<a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/">云盘是不是杀猪盘</a>》、《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》以及《<a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">云SLA是不是安慰剂</a>》中，我们已经研究过关键云服务的真实成本。规模以上以核·月单价计算的云服务器成本是自建的 5～10 倍，云数据库则可达十几倍，云盘更是能高达上百倍，按这个定价模型，云的毛利率做到八九十也不稀奇。</p>
+<p>业界标杆的 AWS 与 Azure 毛利就可以轻松到 60% 与 70% 。反观国内云计算行业，毛利普遍在个位数到 <strong>15%</strong> 徘徊，榜一大哥阿里云最多给一句“预估远期整体毛利 40%” ，至于像金山云这样的云厂商，毛利率直接一路干到 <strong>2.1%</strong>，还不如打工挖沙子的毛利高。</p>
+<p>而说起净利润，国内公有云厂商更是惨不忍睹。AWS / Azure 净利润率能到 30% ～ 40% 。标杆阿里云也不过在盈亏线上下徘徊挣扎。这不禁让人好奇，<strong>国内这些云厂商是怎么把一门百分之三四十纯利的生意能做到这种地步的？</strong></p>
+<p><a href="https://mp.weixin.qq.com/s/JU4lznF6-5Q4LaJTnG8SSQ"><img src="/img/cloud/profit-title.png" alt="ebs"></a></p>
+<hr>
+<h2 id="云sla是不是安慰剂zhblog20230612云sla是不是安慰剂"><a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">云SLA是不是安慰剂？</a></h2>
+<p>在云计算的世界里，服务等级协议（SLA）被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些 SLA 时，会发现它们并不能像期望的那样“兜底”：你以为给自己的数据库上了保险可以高枕无忧，但其实白花花的银子买的是提供情绪价值的安慰剂。</p>
+<p>对于云厂商来说，<strong>SLA 并不是真正的可靠性承诺或历史战绩，而是一种营销工具，旨在让买家相信云厂商可以托管关键业务应用</strong>。对用户来说，SLA不是兜底损失的保险单。在最坏的情况下，它是吃不了兜着走的哑巴亏。在最好的情况下，它才是提供情绪价值的安慰剂。</p>
+<p><strong>与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”</strong>。云厂商并不需要在可靠性上精益求精 —— 没达到自罚三杯即可。然而苦果只能由客户自己承担。</p>
+<p><a href="https://mp.weixin.qq.com/s/7BwlF7V2M085mXCA2bYEgg"><img src="/img/cloud/sla-title.png" alt="sla"></a></p>
+<hr>
+<h2 id="云盘是不是杀猪盘zhblog20230315云盘是不是杀猪盘"><a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/">云盘是不是杀猪盘？</a></h2>
+<p>我们已经用数据回答了《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》这个问题，但在<strong>公有云<strong><strong>块存储</strong></strong>的百倍溢价杀猪比率</strong>前，云数据库只能说还差点意思。本文用实际数据揭示公有云真正的商业模式 —— 廉价EC2/S3获客，EBS/RDS杀猪。而这样的做法，也让公有云与其初心愿景渐行渐远。</p>
+<p>EC2 / S3 / EBS 是所有云服务的定价之锚。如果说 EC2/S3 定价还勉强能算合理，那么 EBS 的定价乃是故意杀猪。公有云厂商最好的块存储服务与自建可用的 PCI-E NVMe SSD 在性能规格上基本相同。然而相比直接采购硬件，<strong>AWS EBS 的成本高达 120 倍，而阿里云的 ESSD 则可高达 200 倍</strong>**。**</p>
+<p>即插即用的磁盘硬件，百倍溢价到底为何？云厂商无法解释如此的天价到底源于何处。结合其他云存储服务的设计思路与定价模型，只有一个合理的解释：<strong>EBS的高溢价倍率是故意设置的门槛，以便于云数据库杀猪</strong>。</p>
+<p>作为云数据库定价之锚的 EC2 与 EBS，溢价分别为几倍与几十倍，从而支撑起云数据库的杀猪高毛利。但这样的垄断利润必定无法持久：IDC 2.0/运营商/国资云冲击 IaaS；私有云/云原生/开源平替冲击 PaaS；科技行业大裁员、AI冲击与天朝的低人力成本冲击云服务（运维人力外包/共享专家）。<strong>公有云如果执着于目前的杀猪模式，背离“存算基础设施”的初心，那么必将在以上三者形成的合力下面临越来越严峻的竞争与挑战</strong>。</p>
+<p><a href="https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag"><img src="/img/cloud/ebs-title.png" alt="ebs"></a></p>
+<hr>
+<h2 id="云数据库是不是智商税zhblog20230130云数据库是不是智商税"><a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税？</a></h2>
+<p>近日，Basecamp &amp; HEY 联合创始人 DHH 的一篇文章【1,2】引起热议，主要内容可以概括为一句话：“<em>我们每年在云数据库（RDS/ES）上花50万美元，你知道50万美元可以买多少牛逼的服务器吗？我们要下云，拜拜了您呐！</em>“</p>
+<p>所以，50 万美元可以买多少牛逼的服务器 ？</p>
+<p>一台 64C 384G + 3.2TB NVMe SSD 的高配数据库服务器，我们本地自建，5年摊销，每年1.5万元。自建两台组HA，每年5万，同规格阿里云上25～50万（包3年打五折）；AWS 上则更离谱：160 ～ 217 万元。</p>
+<p>所以问题来了，如果你用云数据库1年的钱，就够你买几台甚至十几台性能更好的服务器，那么使用云数据库的意义到底在哪里？如果您觉得自己没有能力自建 —— 那么我们为您提供一个开箱即用，免费的 RDS 管控替代，来帮你解决这个问题！—— Pigsty！</p>
+<p><strong>如果您的业务符合公有云的适用光谱，那是最好不过；但为了不需要的灵活性与弹性支付几倍乃至十几倍溢价，那是纯交智商税。</strong></p>
+<p><a href="https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A"><img src="/img/cloud/rds-title.png" alt="rds"></a></p>
+<hr>
+<h2 id="范式转移从云到本地优先zhblog20230203范式转移从云到本地优先"><a href="/zh/blog/2023/02/03/%E8%8C%83%E5%BC%8F%E8%BD%AC%E7%A7%BB%E4%BB%8E%E4%BA%91%E5%88%B0%E6%9C%AC%E5%9C%B0%E4%BC%98%E5%85%88/">范式转移：从云到本地优先</a></h2>
+<p><strong>最初，软件吞噬世界</strong>，以 Oracle 为代表的商业数据库，用软件取代了人工簿记，用于数据分析与事务处理，极大地提高了效率。不过 Oracle 这样的商业数据库非常昂贵，一核·一月光是软件授权费用就能破万，不是大型机构都不一定用得起，即使像壕如淘宝，上了量后也不得不”去O“。</p>
+<p><strong>接着，开源吞噬软件</strong>，像 PostgreSQL 和 MySQL 这样”开源免费“的数据库应运而生。软件开源本身是免费的，每核每月只需要几十块钱的硬件成本。大多数场景下，如果能找到一两个数据库专家帮企业用好开源数据库，那可是要比傻乎乎地给 Oracle 送钱要实惠太多了。</p>
+<p>开源软件带来了巨大的行业变革，可以说，互联网的历史就是开源软件的历史。尽管如此，开源软件免费，但 专家稀缺昂贵。能帮助企业 用好/管好 开源数据库的专家非常稀缺，甚至有价无市。某种意义上来说，这就是”开源“这种模式的商业逻辑：免费的开源软件吸引用户，用户需求产生开源专家岗位，开源专家产出更好的开源软件。但是，专家的稀缺也阻碍了开源数据库的进一步普及。于是，“云软件”出现了 —— <strong>垄断不了软件，垄断专家也可以</strong>。</p>
+<p><strong>然后，云吞噬开源</strong>。公有云软件，是互联网大厂将自己使用开源软件的能力产品化对外输出的结果。公有云厂商把开源数据库内核套上壳，包上管控软件跑在托管硬件上，并雇佣共享 DBA 专家提供支持，便成了云数据库服务 （RDS） 。这诚然是有价值的服务，也为很多软件变现提供了新的途径。但云厂商的搭便车行径，无疑对开源软件社区是一种剥削与攫取，而捍卫计算自由的开源组织与开发者自然也会展开反击。</p>
+<p>云软件的崛起会引发新的制衡反作用力：与云软件相对应的本地优先软件开始如雨后春笋一般出现。而我们，就在亲历见证这次<strong>范式转移</strong>。</p>
+<p><a href="https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw"><img src="/img/cloud/paradigm-title.png" alt="paradigm"></a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-4dd913a67684f69d786bd4f96db1d74d">下云奥德赛：DHH下云记</h1>
+	<div class="lead">本文翻译了DHH从云上下来的完整旅程，对于准备上云，云上的企业都非常有借鉴与参考价值。<a href="https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ">微信公众号原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://world.hey.com/dhh">DHH</a> | 译：<a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-07-07" class="text-muted">2023-07-07</time>
+        
+	</div>
+	<p>DHH一直以来都是下云先锋，本文摘取了DHH博客关于下云相关的十篇文章，记录了 37Signal 从云上搬下来的完整旅程，按照时间倒序排列组织，译为中文，以飨读者。本文翻译了DHH从云上下来的完整旅程，对于准备上云，云上的企业都非常有借鉴与参考价值。</p>
+<p>云遣返奥德赛：DHH下云记</p>
+<ul>
+<li>2023-06-23 <a href="#06-23-%E6%88%91%E4%BB%AC%E5%B7%B2%E7%BB%8F%E4%B8%8B%E4%BA%91%E4%BA%86">我们已经下云了！</a></li>
+<li>2023-05-03 <a href="#05-03-%E4%BB%8E%E4%BA%91%E9%81%A3%E8%BF%94%E5%88%B0%E4%B8%BB%E6%9D%83%E4%BA%91">从云遣返到主权云！</a></li>
+<li>2023-05-02 <a href="#05-02-%E4%B8%8B%E4%BA%91%E8%BF%98%E6%9C%89%E6%80%A7%E8%83%BD%E5%9B%9E%E6%8A%A5">下云还有性能回报？</a></li>
+<li>2023-04-06 <a href="#04-06-%E4%B8%8B%E4%BA%91%E6%89%80%E9%9C%80%E7%9A%84%E7%A1%AC%E4%BB%B6%E5%B7%B2%E5%B0%B1%E4%BD%8D">下云所需的硬件已就位！</a></li>
+<li>2023-03-23 <a href="#03-23-%E8%A3%81%E5%91%98%E5%89%8D%E4%B8%8D%E5%85%88%E8%80%83%E8%99%91%E4%B8%8B%E4%BA%91%E5%90%97">裁员前不先考虑下云吗？</a></li>
+<li>2023-03-11 <a href="#03-11-%E5%A4%B1%E6%8E%A7%E7%9A%84%E4%B8%8D%E4%BB%85%E4%BB%85%E6%98%AF%E4%BA%91%E6%88%90%E6%9C%AC">失控的不仅仅是云成本！</a></li>
+<li>2023-02-22 <a href="#02-22-%E6%8C%87%E5%AF%BC%E4%B8%8B%E4%BA%91%E7%9A%84%E4%BA%94%E6%9D%A1%E4%BB%B7%E5%80%BC%E8%A7%82">指导下云的五条价值观</a></li>
+<li>2023-02-21 <a href="#02-21-%E4%B8%8B%E4%BA%91%E5%B0%86%E7%BB%99%E5%92%B1%E7%9C%81%E4%B8%8B%E4%BA%94%E5%8D%83%E4%B8%87">下云将给咱省下五千万！</a></li>
+<li>2023-01-10 <a href="#01-10-%E4%BC%81%E4%B8%9A%E7%BA%A7%E6%9B%BF%E4%BB%A3%E5%93%81%E8%BF%98%E8%A6%81%E7%A6%BB%E8%B0%B1">‘企业级’替代品还要离谱</a></li>
+<li>2022-10-19 <a href="#2022-10-19-%E6%88%91%E4%BB%AC%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%B8%8B%E4%BA%91">我们为什么要下云？</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+<p><img src="/img/cloud/odyssey-title.png" alt=""></p>
+<p>作者：<strong>David Heinemeier Hansson</strong>，网名DHH，37 Signal 联创与CTO，Ruby on Rails 作者，下云倡导者、实践者、领跑者。反击科技巨头垄断的先锋。博客：https://world.hey.com/dhh</p>
+<p>译者：<strong>冯若航</strong>，网名 Vonng。磐吉云数 创始人与CEO。Pigsty 作者，PostgreSQL 专家与布道师。云计算泥石流，数据库老司机，下云倡导者与实践者：《<a href="/zh/blog/2023/07/06/finops%E7%BB%88%E7%82%B9%E6%98%AF%E4%B8%8B%E4%BA%91/">FinOps的终点是下云</a>》</p>
+<hr>
+<h2 id="06-23-我们已经下云了">06-23 我们已经下云了！</h2>
+<blockquote>
+<p><strong>We have left the cloud</strong>[1]</p>
+</blockquote>
+<p>我们当初花了几年时间才搬上公有云，所以最初我以为下云也要耗费同样漫长的时间。然而当初上云时做准备的工作 —— 比如将应用容器化，实际上使下云过程相对简单很多。如今经过六个月的努力，我们完成了这个目标 —— 我们已经从云上下来了。上周三，最后一个应用被迁移到了我们自己的硬件上。哈利路亚！</p>
+<p>在这六个月中，我们将六个历史悠久的服务迁回了本地。虽然我们已经不再销售这些服务了，但我们承诺为现有的客户和用户提供支持，直到互联网的终点。Basecamp Classic、Highrise、Writeboard、Campfire、Backpack 和 Ta-da List 都已经有十多年的历史了，但仍在为成千上万的人提供服务，每年创造数百万美元的收入。但现在，我们在这些服务上的运营开支将大大减少，而且归功于强大的新硬件，用户体验更加丝滑迅捷了。</p>
+<p>不过，变化最大的是 HEY，这是一个诞生于云端的应用。我们以前从未在自己的硬件上跑过它，而且作为一个功能齐全的电子邮件服务，它有许多组件。但是我们的团队通过分阶段迁移，在几周内成功地将不同的数据库、缓存、邮件服务和应用实例独立地迁移到本地，而没有出现任何岔子。</p>
+<p>将所有这些应用迁回本地的过程中，我们所使用的技术栈完全是开源的 —— 我们使用 KVM 将新买的顶配性能怪兽 —— 192 线程的 Dell R7625s 切分为独立的虚拟机，然后使用 Docker 运行容器化的应用，最后使用 MRSK 完成不停机应用部署与回滚 —— 这种方式让我们规避了 Kubernetes 的复杂度，也省却了各种形式的 “企业级” 服务合同纠葛。</p>
+<p>粗略的计算表明，购置自己的硬件而不是从亚马逊租赁，每年至少可以为我们节省150万美元。关键是在完成这一切的过程中，我们的运维团队规模并没有变化：云所号称的缩减团队规模带来生产力增益纯属放屁，压根没有实现过。</p>
+<p>这可能吗？当然！因为我们运维自己硬件的方式，实际上与人们租赁使用云服务的方式差不多：我们从戴尔买新硬件，直接运到我们使用的两个数据中心，然后请 Deft 公司那些白手套代维服务商把新机器上架。接着，我们就能看到新的 IP 地址蹦出来，然后立即装上 KVM / Docker / MRSK ，完事！</p>
+<p>这里的主要区别是，从需要新服务器和看到它们在线之间的<strong>滞后时间</strong>。在云上，你可以在几分钟内拉起一百台顶配服务器，这一点确实很牛逼，只不过你也得为这个特权掏大价钱。只不过，我们的业务没有那么反复无常，以至于需要支付这么高昂的溢价。考虑到拥有自己的服务器已经为我们省了这么多钱，使劲儿超配些服务器根本不算个事儿 —— 如果还需要更多的话，也就是等个把星期的事儿。</p>
+<p>从另一个角度看，我们花了大概 <strong>50万美元</strong>从戴尔买了两托盘服务器，为我们的服务容量添加了 4000核的 vCPU，7680GB 的内存，以及 384TB 的 NVMe 存储。这些硬件不仅能运行我们所有的存量服务，还能让 HEY 满血复活，并为我们的 Basecamp 其他业务换个崭新的心脏。这些硬件成本会在五年里摊销，然而购买它们的总价还不到我们<strong>每年</strong>省下来钱的三分之一 ！</p>
+<p>这也难怪为什么当我们分享了自己的下云经验后，许多公司都开始重新审视他们每个月那疯狂的云账单了。我们去年的云预算是 <strong>320万</strong> 美元，而且已经优化得很厉害了 —— 像长期服务承诺、精打细算的资源配置和监控。有大把的公司比我们掏了几倍多的钱却办了更少的事儿。潜在的优化空间和 AWS 的季度业绩一样惊人 —— 2022 Q4 ，AWS 为亚马逊创造了超过 <strong>50亿美元</strong> 的利润！</p>
+<p>正如我之前提到过的：对于那些非常早期、完全不在乎花钱、或者两年后不复存在的公司，我认为云仍然是有一席之地的。只是要小心，别把那些慷慨的云代金券当作礼物！那是个鱼钩，一旦你过于依赖他们的专有托管服务或Serverless产品。当账单飙上天际时，你就无处可逃了。</p>
+<p>我还认为<strong>可能</strong>确实会有一些公司，有着极端大起大落的不规则负载，以至于租赁还是有意义的。如果你一年只需要犁三次地，那么在其余的363天里把犁放在谷仓里闲置，确实是没有多大意义。</p>
+<p>但是对绝大多数已经发展起来的公司来说，如果能在几年内摊销资产，你真的应该认真重新审视一下这股云热潮。好处被大大夸张了 —— 在云上跑东西通常和你自己弄一样复杂，却贵得离谱。</p>
+<p>所以，如果钱很重要（话说回来，什么时候不重要呢？）—— 我真的建议您好好算一下帐：假设您真的有一个能从不断调整容量大小中获益的服务，然后设想它下云之后的样子。我们在六个月内搬下来七个应用，你也可以的。工具就在那里，都是开源免费的。所以不要仅仅因为炒作，就停留在云端。</p>
+<hr>
+<h2 id="05-03-从云遣返到主权云">05-03 从云遣返到主权云！</h2>
+<blockquote>
+<p><strong>Sovereign clouds</strong>[2]</p>
+</blockquote>
+<p>我一直在讨论我们的下云之旅 —— “云遣返”。从在AWS上租服务器，到在一个本地数据中心拥有这些硬件。但我意识到这个术语可能会错误地让一些人感到不舒服 —— 有一整代技术人员给自己标记上&quot;云原生&quot;。仅仅只是因为我们想拥有而非租用服务器这种理由而疏远他们，并不能帮到任何人。这些“云原生”人才所拥有的大部分技能都是有用的，无论他们的应用跑在哪儿。</p>
+<p>技能的重叠实际上是为什么我们能从AWS退出如此之快的部分原因。现如今，在你自有硬件上运行所需 的知识，和在云上租赁运行所需的知识十有八九是相同的。从容器到负载均衡，再到监控和性能分析，还有其他一百万个主题 —— 技术栈不仅仅是相似而已，几乎可以说一模一样。</p>
+<p>当然也会有地方会有差别，比如 FinOps：如果你拥有自己的硬件，就不再需要像法医和会计师那样理解账单，也不需要像斗牛犬一样防止它疯狂增长了！但这确实也意味着，你偶尔需要处理磁盘损坏告警，找数据中心的白手套来换备件。</p>
+<p>但是在全局图景中，这些都是微不足道的差异。对于一个云上租赁弓马娴熟的人来说，教会他在自有硬件上运行同样的技术栈并不会耗费太长时间（这个学习曲线肯定比跟上Kubernetes的速度要容易多了）</p>
+<p>针对这个问题，有些人建议使用&quot;私有云&quot;这个术语。这个名字让我联想到毛骨悚然的CIO白皮书 —— 虽然我也不认为它有足够的冲击力让公众明了其中的差异。但我得承认，对于刚刚沉淀下一些“云XX”自我身份认同的整个行业来说，这个术语显然更能缓和气氛。这不禁让我思考起来。</p>
+<p>最终，我认为这里的关键区别不是公有还是私有，而是 —— 自有还是租赁。我们需要反击云上租赁的 “<strong>你将一无所有并乐在其中</strong> ” 的宣传。这种异端观点有悖于时代精神，会招致互联网（ —— 这个分布式的，无需许可的世界奇观）支持者的强烈反感。</p>
+<p>因此，让我提出一个新术语：“<strong>主权云</strong>”。</p>
+<p>主权云建立在所有权与独立性上。这是一个的可选的升级项：对所有的云租户来说，只要他们的业务强大到足以承担一部分前期成本。这也是一个值得追求的目标：拥有自己的数字家园，而不是从科技巨头云领主那里租用农场。这也是一场对互联网集中化，和正在兴起的赛博地主垄断租金的反击运动。</p>
+<p>试试看吧！</p>
+<hr>
+<h2 id="05-02-下云还有性能回报">05-02 下云还有性能回报？</h2>
+<blockquote>
+<p><strong>Cloud exit pays off in performance too</strong>[3]</p>
+</blockquote>
+<p>上周，我们成功完成了迄今为止最大的一次下云行动，这次是搬迁 Basecamp Classic。这是我们从2004年开始就整起来的元老应用。而现在，在AWS上运行了几年之后，它又回到了我们自己的硬件上使用 MRSK 管理，天哪，性能实在是太屌了，看看这张监控图：</p>
+<p><img src="/img/cloud/odyssey-1.png" alt=""></p>
+<p>现在的请求响应时间中位数只有 19ms，而以前要 67ms；平均值从138ms 降至 95ms。查询耗时的中位数降了一半（当你一个请求做很多查询时，这可是会累积起来放大的）。Basecamp Classic 在云上的表现一直还不错，但是现在95%的请求RT都低于那个的 300ms &ldquo;慢&quot;界限。</p>
+<blockquote>
+<p>也别把这些比较太当回事：这并非严谨的净室科学实验，只是我们刚刚离开精细微调的云环境，放到自有替代硬件上刚跑出来的峰值。</p>
+</blockquote>
+<p>Basecamp Classic 以前跑在 AWS EKS 上（那是他们的托管 Kubernetes ），应用本身混用 c5.xlarge 和 c5.2xlarge 实例部署。数据库跑在 db.r4.2xlarge 和 db.r4.xlarge 规格的 RDS 实例上。现在都搬回老家，跑在配备了双 AMD EPYC 9454 CPU 的 Dell R7625 服务器上。</p>
+<p>用来跑应用和任务的 vCPU 核数规格都一样，122个。以前是云上的 vCPU，现在是 KVM 配置的核数。而且，在保持上面牛逼性能的前提下，现在负载水平还有很大压榨空间。</p>
+<p>实际上，考虑到我们的每一台新的 Dell R7625 都有196个 vCPU，所以包含数据库与 Redis 在内的整个 Basecamp Classic 应用其实可以完整跑在这样的单台机器上！这简直太震撼了，当然，出于安全冗余的考虑你并不会真的这么做。但这确实证明了<strong>硬件领域重新变得有趣起来</strong>，我们绕了一圈又回到了 “原点” —— 当 Basecamp 起步时，我们就是在单个机器（<strong>只有1核！</strong>）上跑起来的，而到了 2023 年，我们又能重新在一台机器上跑起来了。</p>
+<p>这样的机器每台不到<strong>两万美元</strong>，除路由器外的所有硬件五年摊销，就是333美元/每月。这就是当下运行完整 Basecamp Classic 所需的费用 —— 而这仍然是一个每年实打实产出数百万美元收入大型的 SaaS 应用！而市场上绝大多数 SaaS 业务服务客户所需的火力将远远少于此。</p>
+<p>我们并未期望下云能提高应用的性能，但它确实做到了，这真是个意外之喜。尤其是 Basecamp Classic，我们业务中的二十年老将，依然在为一个庞大的，忠诚的，满意的客户群提供服务，这些客户在过去十年里都没获得任何新功能 —— 不过，嘿，速度也是一种特性，所以呢，你也可以说我们刚刚发布了一个新特性吧！</p>
+<p>接下就是下云的重头戏了 —— HEY！敬请期待。</p>
+<hr>
+<h2 id="04-06-下云所需的硬件已就位">04-06 下云所需的硬件已就位！</h2>
+<blockquote>
+<p><strong>The hardware we need for our cloud exit has arrived</strong>[4]</p>
+</blockquote>
+<p>距离我上次看到运行我们 37Signal 公司服务所使用的物理服务器硬件已经过去很长时间了。我依稀记得上次是十年前参观我们在芝加哥的数据中心，但是在某个时间点，我对硬件就失去兴趣了。然而现在我又重新对它感兴趣了 —— <strong>因为硬件领域变得越来越有趣起来</strong>。所以让我来和你们分享一下这种兴奋吧：</p>
+<p><img src="/img/cloud/odyssey-2.png" alt=""></p>
+<p>这是最近运抵我们芝加哥数据中心的两个托盘。同一天，一套同样的设备也到达了我们在弗吉尼亚州 Ashburn 的第二个数据中心。总的来说，我们收到了二十台R7625 Dell 服务器，是支撑我们的下云计划的主力。如此令人震惊的算力，占用的空间却惊人的小。</p>
+<p>这是我们在芝加哥数据中心四个机柜的示意图（我们在 Ashburn 还有另外四个）。正如你所见，还有一堆专门给 Basecamp 用的老硬件。一旦我们装好新机器，大部分老服务器就该退役了。在下面带有 &ldquo;kvm&rdquo; 标记的2U服务器是新家伙：</p>
+<p><img src="/img/cloud/odyssey-3.png" alt=""></p>
+<p>这儿你可以看到新的R7625服务器位于机架底部，挨着旧设备：</p>
+<p><img src="/img/cloud/odyssey-4.png" alt=""></p>
+<p>每台R7625都包含两个 AMD EPYC 9454 处理器，每个处理器 48个核心/96个线程，频率 2.75 GHz。这意味着我们为私有部署大军的容量添加了近4000个虚拟CPU！近乎荒谬的 7680GB 内存！以及 384TB 的第四代 NVMe SSD 存储！除了足以满足未来数年需求的强大马力外，在夏季前还有另外六台数据库服务器要过来，然后我们就全准备好啦。</p>
+<p>与 Basecamp 起源形成鲜明对比的是，我们在2004年以一台只有256MB内存的单核Celeron服务器启动了Basecamp，用的还是 7200转的破烂硬盘。而那些玩意已经足够我们在一年间把它从兼职业务转为全职工作。</p>
+<p>二十年后，我们现在有一大堆历史遗留应用（因为我们承诺让客户依赖的应用运行到互联网的终点！），一些诸如 Basecamp 和 HEY 的大型旗舰服务，以及让这些重新运行在我们自己硬件上的使命任务。</p>
+<p>想想三个月前，我们决定放弃 Kubernetes 并使用 MRSK 打造更简单的下云解决方案，这还是挺疯狂的一件事儿。但是看看现在，我们已经把一半跑在云上的应用搬回了家中！</p>
+<p>在接下来的一个月中，我们计划将 Basecamp Classic（这玩意13年没有更新了，但仍然是一个每年赚数百万美元的业务 —— 这就是SaaS的魔法！），以及下云的重头戏 —— HEY！全部都带回家。这样在五月初的话，我们云上就只剩下 Highrise 和一个名叫 Portfolio 的小型辅助服务了。我原本以为，在夏末完成下云已经是很乐观的估计了，但现在看来，基本上会在春天结束之前就能搞定，绝对算是我们团队的一个杰出成就。</p>
+<p>加速的时刻表让我对下云大业更加充满信心，我本以为下云会跟上云一样困难，但事实表明并非如此。我想也许是每月<strong>三万八千美元</strong>的云消费的原因，它就像吊在我们面前的胡萝卜一样，激励着我们更快地去完成这件事。</p>
+<p>我真诚地希望那些看着自己令人生畏的云账单的 SaaS 创业者注意到这一点：上云之后再下来这件事，看起来几乎是不可能的，但你一个字儿也别信！</p>
+<p>现代服务器硬件在过去几年中，在性能、密度和成本上都有了不可思议的巨大飞跃。如果在过去十年中云已经成为了你的默认选项，那么我建议你重新了解一下相关数字。这些数字很可能会像震惊我们一样吓到你们。</p>
+<p>因此，下云的终点就在眼前，我们已经解决了所有下云所需的关键技术挑战，让这件事变得切实可行起来。我们已经在 MRSK 上运行生产应用一段时间了。道路是非常光明的，我已经迫不及待地想看到那些巨大的云账单赶紧消失掉。我觉得之前粗略估算的下云降本数额已经高度保守了，让我们拭目以待，我们也会分享出来。</p>
+<hr>
+<h2 id="03-23-裁员前不先考虑下云吗">03-23 裁员前不先考虑下云吗？</h2>
+<blockquote>
+<p><strong>Cut cloud before payroll</strong>[5]</p>
+</blockquote>
+<p>最近每周都能看到科技公司大裁员的新闻，几个科技巨头已经进行了第二轮裁员，而且没人说不会有第三轮。尽管在个人层面上这是很难受但 —— 我太难了！—— 但对整个经济来说，还算是有一个积极的方面：释放了被束缚的人才。</p>
+<p>你看，大型科技公司在疫情期间以如此高的薪资吞噬吸收了大量人才，以至于几乎没有给生态中其他人留点渣。在关键技术人才的竞争中，除了科技巨头之外的许多公司都出不起价，被挤出了市场。长期来看，这对经济来说肯定不是啥好事。我们需要聪明人去关注一些除了让人点击广告之外的问题。</p>
+<p>尽管 Facebook、Amazon 这些科技巨头的巨额裁员占据了新闻头条，小型科技公司也在进行裁员，很难相信这里还有什么生机。当然，小公司也有可能和巨头们一样，雄心勃勃地雇佣了一批他们不仅不需要，反而会拖慢进度的人。如果是这样，那还算有点道理。</p>
+<p>但也有这种可能，这些公司的技术的市场正在收缩，而投资者不再愿意延长亏损期，所以不得不裁员以削减成本以免破产。这是谨慎的做法，但是人力并不是唯一的成本。</p>
+<p>在我所了解的大部分科技公司中，主要有两项大的开支：员工 与 云服务。员工通常是最大的开支，但令人震惊的是，云服务的费用也可以非常非常大。或者对真正算过这笔账的人来说，“震惊”这个词不太合适，恰当的用词是 —— “可怖”。</p>
+<p>在与云业务有关的事上我可能有些老生常谈了，但当我看到科技公司试图通过裁员，而不是控制他们的云支出来削减成本时，我真的感到非常困惑。削减云开支最好的方式，特别是对于中等及以上规模的软件公司来说，就是部分/全部下云！</p>
+<p>所以我敦促所有正在检阅预算，想知道在哪里可以降本增效的创始人和高管们优先关注云开支。也许你可以通过优化现有的资源使用来走的更远（现在有一整个新冒出来的小行业在干这事：FinOps），但也许你也高估了自己采购硬件自建与下云的难度。</p>
+<p>我们已经完成了一半的下云工作。我们真正开始全力以赴是在1月份。我们不仅在搬迁那些最先进的现代技术栈，还要迁移很多历史遗留领域的应用。然而在下云的进度上，这已经比我敢想到的速度要快太多了。我们已经在下云日程表上远超预期了，大幅度的开支缩减肉眼可见。</p>
+<p>如果我们可以这么快地做到这些，那么当你经营一家公司而准备打印那些解雇通知前，至少有责任计算一下这些数字并检视一下可行的选项，这也是对你的员工应当负起的责任。</p>
+<hr>
+<h2 id="03-11-失控的不仅仅是云成本">03-11 失控的不仅仅是云成本！</h2>
+<blockquote>
+<p><strong>It&rsquo;s not just cloud costs that are out of control</strong>[6]</p>
+</blockquote>
+<p>这个月底我们在 Datadog 上的年度订阅要到期了，我们不打算续费。</p>
+<p>Datadog 是一个性能监控工具，倒不是因为我们不喜欢这项服务 —— 实际上它非常棒！我们不续订是因为它每年花费我们 88,000 美元，这实在是太离谱了。而且这反映出一个更大的问题：企业SaaS定价越来越愚蠢荒谬。</p>
+<p>然而，我原本以为我们的账单已经够傻逼了。但是竟然有一个 Datadog 的客户为他们的服务支付了 6500 万美元！！这个信息是在他们最近的财报电话会议上提到的。这显然是一家加密货币公司，用“优化”账单的方式承认了这项蠢出天际的开支。</p>
+<p><img src="/img/cloud/odyssey-5.png" alt=""></p>
+<p>冒着陈词滥调的风险我也要说：这种花在性能和监控服务上的支出就像零利率投资一样：我无法想象在哪个宇宙里会认为这是一项合理的开支。这种事儿明显能用开源替代解决，如果你要做点内部二开魔改定制还能解决的更好更优雅。</p>
+<p>但我发现很多企业级 SaaS 软件都是这样的，比如在一个2000人的公司里采购 Salesforce 的 Slack， 每人每月 15$ ：仅仅是为了一个聊天工具，每年的开支就超过了三十万美元！</p>
+<p>现在，再加上像 Asana 这样的工具，每人每月30刀。然后是 Dropbox 每人每月20美元。只是这三个工具，每个席位每月就需要每月65刀的费用。对那家2000人的公司来说，每年的成本就是一百五十万刀。哎妈呀！</p>
+<p>我很惊讶于目前还没有更多的压力迫使那些为他们的SaaS软件支付高昂费用的公司去削减成本。但我觉得快了 —— 感觉我们现在正处在一个服务的泡沫里，等待着破裂 —— 总会有人看到这些利润空间并发现机会。</p>
+<p>这也是我们坚持 Basecamp 调性的一个关键原因。任何人向我们支付的最高费用不会超过每月299美元 —— 不限用户，不限功能，所有一切。是的，我们是不是扔掉了钓大鱼的机会？可能吧。但我不能心安理得地以我自己都不愿支付的价格来出售这些软件。</p>
+<p>我们确实需要在这儿调整一下。</p>
+<hr>
+<h2 id="02-22-指导下云的五条价值观">02-22 指导下云的五条价值观</h2>
+<blockquote>
+<p><strong>Five values guiding our cloud exit</strong>[7]</p>
+</blockquote>
+<p>当谈及我们离开云的原因时，已经说了很多关于 <strong>成本</strong> 的事儿。尽管成本非常重要，但它并不是唯一的动机。以下是五条引领我们决策的价值观，我最近在37signals的内网文章里阐述了这些原则：</p>
+<p><strong>1. 我们最看重的是独立性</strong>。被困在亚马逊的云里，在实验新东西（比如固态缓存）时，不得不忍受高昂到荒诞的定价带来的羞辱，这已经构成对此核心价值观无法容忍的侵犯。</p>
+<p><strong>2. 我们服务于互联网本身</strong>。这个业务的整个存在，都归功于社会与经济上的异类 —— 互联网。可以用来进行包括商业在内的各种活动，却不归属任何一家公司或任何一个国家。自由贸易和自由表达得以在一个人类历史上前所未有的规模上实现。我们不会让手中的钱，被用于侵蚀这个理想乡 —— 让支撑这个美丽的自由避风港的服务器在集中到少数几个超大规模数据中心的手中。</p>
+<p><strong>3. 我们明智地花钱</strong>。在几个关键例子上，云的成本都极其高昂 —— 无论是大型物理机数据库、大型 NVMe 存储，或者只是最新最快的算力。租生产队的驴所花的钱是如此高昂，以至于几个月的租金就能与直接购买它的价格持平。在这种情况下，你应该直接直接把这头驴买下来！我们将把我们的钱，花在我们自己的硬件和我们自己的人身上，其他的一切都会被压缩。</p>
+<p><strong>4. 我们引领道路</strong>。在过去十多年间，云作为 “标准答案” 被推销给我们这样的 SaaS 公司。我相信了这个故事，我们都相信了这一套，然而这个故事并不是真的。云计算有它的适用场景，例如我们在 HEY 起步时就很好地使用了云，然而这是一个少数派生态位。许多像我们一样规模的 SaaS 业务应当拥有他们自己的基础设施而不是靠租赁。我们将为认同这一结论的追随者提前铺设好意识形态与技术上的道路。</p>
+<p><strong>5. 我们寻求冒险</strong>。&ldquo;不要弄些小打小闹的计划，它没有激发人们热血的魔力，本身也可能无法实现。要绘制宏伟蓝图，志存高远，并竭尽所能&rdquo; —— 丹尼尔·伯纳姆。我们已经在这一行打拼了二十多年了。为了维持内心的热情，我们应当继续设定高标准，坚守我们的价值观，并在各个方面探索新边疆，否则我们会枯萎的。我们不需要成为最大的，我们也不需要成为赚得最多的，但我们确实需要继续学习，挑战和追求。</p>
+<p>我们走！</p>
+<hr>
+<h2 id="02-21-下云将给咱省下五千万">02-21 下云将给咱省下五千万！</h2>
+<blockquote>
+<p><strong>We stand to save $7m over five years from our cloud exit</strong>[8]</p>
+</blockquote>
+<p>自从去年十月份我们宣布打算下云以来，我们一直在脚踏实地的推进。在一个企业级Kubernetes供应商那儿走了一条短暂的弯路后，我们开始自己开发工具，并在几周前成功地将第一个小应用从云上搬下来。现在我们的目标是在夏天结束前完全下云，根据我们的初步计算，这样做将在五年内为我们节省大约700万美元的服务器费用，而无需改变我们运维团队的规模。</p>
+<p>粗略的计算方式是这样的：我们在2022年的云开销是320万美元。其中有将近100万美元用在 S3 上，用于存储 8PB 的文件，这些文件在几个不同区域中进行了全量复制。而剩下的大约230万美元用在其他所有东西上：应用服务器、缓存服务器、数据库服务器、搜索服务器，其他所有的事情。这部分预算是我们打算在2023年归零的部分。然后我们将在2024年再来着手把 S3 上的 8PB 给搬走。</p>
+<p>经过深思熟虑与多次基准测试，我们叹服于 AMD新的 Zen4 芯片，以及四代NVMe磁盘的惊人速度。我们基本上准备好向 Dell 下订单了，大约 <strong>60万</strong> 美元。我们仍在仔细调整所需的具体配置，但是对算总账来说，无论我们最终是每个数据中心订购8台双插槽64核CPU的机器（一个箱子里256个vCPU！），还是14台运行单插槽CPU但主频更高的机器，这种细节并不重要。我们需要为每个数据中心添加约 2000核vCPU算力，而我们的业务跑在两个数据中心里，所以考虑到性能和冗余的需求，我们需要 4000 核vCPU 算力，这都是粗略的数字。</p>
+<p>在云的时代，投入60万美元购买一堆硬件可能听上去不少，但如果你把它摊销到五年里，那就只有12万美元一年！这已经很保守了，我们还有不少服务器已经跑了七八年了。</p>
+<p>当然，那只是服务器盒子本身的价格，它们还需要接上电源和带宽。我们目前在Deft的两个数据中心上有八个专用机架，每月花费大约6万美元。我们特意超配了一些空间，所以我们呢可以把这些新服务器塞进现有的机架中，而无需为更多机位与电力付钱，因而每年机房本身开销仍然是 <strong>72万</strong> 美元。</p>
+<p>所有的花销总计每年84万美元：包括了带宽、电力，以及按照五年折旧的服务器盒子。与云上的<strong>230万</strong>美元相比，我们的硬件要快得多，有更多的算力，极其便宜的 NVMe 存储，以及用极低的成本进行扩展的空间（只要我们每个数据中心的四个机架里还放得下）。</p>
+<p>我们大致可以说，每年节省了<strong>150万</strong>美元。预留出一个<strong>50万</strong>美元应对未来五年中尚未预见到的开销，那么<strong>在未来五年，我们仍然可以省下 700万 美元！！</strong></p>
+<p>在当下时间点，任何中型及以上的SaaS业务，如果他们的工作负载稳定，却没有对云服务器的租赁费用和自建服务器进行测试比对，那么可以称得上是财务渎职行为。我建议你打电话给 Dell，然后再打给Deft。拿到一些真实的数据，然后自己做决定。</p>
+<p>我们将在2023年完成下云（除了S3），并将继续分享我们的经验，工具，以及计算方法。</p>
+<hr>
+<h2 id="01-10-企业级替代品还要离谱">01-10 “企业级“替代品还要离谱</h2>
+<blockquote>
+<p><strong>The only thing worse than cloud pricing is the enterprisey alternatives</strong>[9]</p>
+</blockquote>
+<p>我们在过去几个月一直在想，把 HEY 从云中带回家可能会涉及到 SUSE Rancher 和 Harvester。这些企业级软件产品的组合跑在自有硬件上，却会给我们提供类似于云上的使用体验，而且对现有 HEY 的打包和部署只需进行最小化的改造。但是，当我们需要几次在线会议才能获取关于定价的基本信息时，我们就应该觉察到有些不对劲了，然后看看别的，因为最后的报价完全就是个<strong>狗屎</strong>。</p>
+<p>我们每年在云上租用硬件和服务的开销大约为 <strong>300万</strong>美元。拥有我们自己的硬件，运行开源软件来替换，有一部分很重要的目的就是为了砍低那个荒谬的账单。但是我们从 SUSE 收到的报价竟然更为荒谬，200万美元，仅仅是许可和支持成本，仅仅是在我们自己的硬件上运行Rancher和Harvester。</p>
+<p>最初，我们其实认为这不会是一个问题。企业销售以高出天际的标价而臭名昭著，然后打折回到实际价格以成交。当我们采购我们热爱的戴尔服务器时，经常能得到 80% 的折扣！所以，配置出一个一万美元的服务器并没有挥霍的感觉 —— 如果实际成交价只是2000美元。</p>
+<p>如果这里的情况也类似，那么这个两百万美元的合同将会是每年40万美元。仍然太高，但是我们可以在这里那里削减一点，也许最后能得到我们可以接受的结果。但当我们开始讨价还价施加压力以获得折扣时，答案是 3， 3%。好吧，服了，拉倒吧！</p>
+<p>我并不是来告诉别人市场能承受什么价格的。我听说 SUSE 把这些套餐卖给军队和保险公司的生意还不错，祝他们好运。</p>
+<p><strong>但是为什么他妈的这帮人要在一个又一个的会议中对价格折扣守口如瓶，浪费我们的时间？</strong></p>
+<p>因为那就是企业销售游戏。讨价还价，欺诈，玩弄。看看我们能逃脱多少狗屎的游戏，让那些在谈判中搏斗的西装革履的人生活有意义。那就是<strong>赢得</strong>交易的含义 —— 阻挠欺骗另一方。</p>
+<p><strong>我受够了。事实上，我极其厌恶它。</strong></p>
+<p>所以现在我把那种怨气装瓶摇两下，然后大口闷下去以驱使我选择另一条路：我们要建造自己的主题公园，有二十一点，以及……没有那些该死的企业销售人员。</p>
+<hr>
+<h2 id="2022-10-19-我们为什么要下云">2022-10-19 我们为什么要下云？</h2>
+<blockquote>
+<p><strong>Why we&rsquo;re leaving the cloud</strong>[10]</p>
+</blockquote>
+<p>过去十多年间 Basecamp 这个业务一只脚在云上，而 HEY 自两年前推出以来就一直独占云端。我们在亚马逊云和谷歌云上大展身手，我们在裸金属与虚拟机上运行，我们在 Kubernetes 上飞驰。我们见识了云上的花花世界，也都尝试过大部分。终于是时候画上句号了：对于像我们这样稳定增长的中型公司来说，租用计算机（在绝大多数情况下）是比糟糕的交易。简化复杂度带来的节省并未变成现实。所以，我们正在制定下云的计划。</p>
+<p>云在生态位光谱的两个极端上表现出色，而我们只对其中一个感兴趣。第一个是当你的应用非常简单，流量很低，使用完全托管的服务确实可以省却很多复杂性。这是由 Heroku 开创的光辉之路，后来被 Render 和其他公司发扬光大。当你还没有客户时，这仍然是一个绝佳的起点，即使你开始有一些客户了，它也能支撑你走得很远。（然后随着使用量增加，而账单蹭蹭往上涨突破天际时，你会面临一个大难题，但这是合理的利弊权衡。）</p>
+<p>第二个是当你的负载高度不规则时。当你的使用量波动剧烈或者就是高耸的尖峰，基线只是你最大需求的一小部分；或者当你不确定是否需要十台服务器还是一百台。当这种情况发生时，没有什么比云更合适的了，就像我们在推出 HEY 时遇到的情况：突然有 30 万用户在三周内注册尝试我们的服务，而不是我们预计的六个月内 3 万用户。</p>
+<p>但是，这两种情况现在对我们都不适用了。对 Basecamp 来说则是从来没有过。继续在云上运营的代价是，我们为<strong>可能</strong>发生的情况支付了近乎荒谬的溢价。这就像你为地震保险支付四分之一的房产价值，而你根本不住在断层线附近一样。是的，如果两个州之外的地震让地面裂开，导致你的地基开裂，你可能会很高兴自己买了保险，但这里的比例感很不对劲，对吧？</p>
+<p>以 HEY 为例。我们在数据库（RDS）和搜索（ES）服务上，每年要支付给 AWS 超过<strong>50万</strong>美元的费用。是的，当你为成千上万的客户处理电子邮件时，确实有大量的数据需要分析和存储，但这仍然让我感到有些荒谬。你知道每年<strong>50万</strong>美元能买多少性能怪兽一般的服务器吗？</p>
+<p>现在的论调都是这样：没错，但你必须管理这些机器！而云要简单得太多啦！节省下来的都是人工成本！然而，事实并非如此。任何认为在云中运行像 HEY 或 Basecamp 这样的大型服务是“简单”的人，显然从未自己动手试过。有些事情更简单了，而其他事情更复杂了，但总的来说，我还没有听说过我们这个规模的组织因为转向云而能够大幅缩减运维团队的。</p>
+<p>不过，这确实是一个绝妙的营销妙招。用类比来推销，比如 “你不会自己开发电厂，对吧？” 或者 “基础设施服务真的是你的核心能力吗？” ，然后再刷上层层脂粉，云的光芒如此闪耀，以至于只有愚昧的路德分子（强烈抵制技术革新的人）才会在它的阴影下运维自己的服务器。</p>
+<p>与此同时，亚马逊以高额利润出租服务器来大发横财。尽管在未来的产能和新服务上进行了巨大的投资，AWS 的利润率还能高达 30%（<strong>622亿</strong>美元营收，<strong>185亿</strong>美元的利润）。这个利润率肯定还会飙升，因为该公司表示，“计划将服务器的使用寿命从四年延长到五年，将网络设备的使用寿命从五年延长到将来的六年”。</p>
+<p>很好！从别人那里租用计算机当然是很昂贵的。但它从来没有以这种方式呈现 —— 云被描述为按需计算，听起来很前卫很酷，而绝非像“租用电脑”这样平淡无奇的东西，尽管它基本上就是这么回事。</p>
+<p>但这不仅仅关乎成本，也关乎我们希望在未来运营一个什么样的互联网。这个去中心化的世界奇迹现在主要是在少数几个大公司拥有的计算机上运行，这让我感到非常悲哀。如果 AWS 的主要区域之一出现故障，看似一半的互联网都会随之下线。这可不是 DARPA 的设计初衷啊！</p>
+<p>因此，我认为我们在 37signals 有责任逆流而上。我们的商业模式非常适合拥有自己的硬件，并在多年内进行折旧。增长轨迹大多是可预测的。我们有专业的人才，他们完全可以将他们的才华用于维护我们自己的机器，而不是属于亚马逊或谷歌的机器。而且，我认为还有很多其他公司处于与我们类似的境地。</p>
+<p>但在我们勇敢扬帆起航，回到低成本和去中心化的海岸之前，我们需要转舵以扭转公共议题的风向，远离云服务营销的胡言乱语 —— 比如营运你自己的发电厂这类屁话。</p>
+<p>直到最近，人们自建服务器所需的工具已经有了巨大的进展，让云成为可能的大部分工具也可以用在你自己的服务器上。不要相信根深蒂固的云上既得利益集团的鬼话 —— 自建运维过于复杂。当年的先辈，开局一条狗，平地起高楼搞起了整个互联网，而现在这件事已经容易太多了。</p>
+<p>是时候让拨云见日，让互联网再次闪耀人间了。</p>
+<hr>
+<h2 id="references">References</h2>
+<p>[1]  <a href="https://world.hey.com/dhh/we-have-left-the-cloud-251760fb">We have left the cloud</a></p>
+<p>[2]  <a href="https://world.hey.com/dhh/sovereign-clouds-661eb5e4">Sovereign clouds</a></p>
+<p>[3]  <a href="https://world.hey.com/dhh/cloud-exit-pays-off-in-performance-too-4c53b697">Cloud exit pays off in performance too</a></p>
+<p>[4]  <a href="https://world.hey.com/dhh/the-hardware-we-need-for-our-cloud-exit-has-arrived-99d66966">The hardware we need for our cloud exit has arrived</a></p>
+<p>[5]  <a href="https://world.hey.com/dhh/cut-cloud-before-payroll-a4530ebd">Cut cloud before payroll</a></p>
+<p>[6]  <a href="https://world.hey.com/dhh/it-s-not-just-cloud-costs-that-are-out-of-control-efcd098c">It&rsquo;s not just cloud costs that are out of control</a></p>
+<p>[7]  <a href="https://world.hey.com/dhh/five-values-guiding-our-cloud-exit-638add47">Five values guiding our cloud exit</a></p>
+<p>[8]  <a href="https://world.hey.com/dhh/we-stand-to-save-7m-over-five-years-from-our-cloud-exit-53996caa">We stand to save $7m over five years from our cloud exit</a></p>
+<p>[9]  <a href="https://world.hey.com/dhh/the-only-thing-worse-than-cloud-pricing-is-the-enterprisey-alternatives-854e98f3">The only thing worse than cloud pricing is the enterprisey alternatives</a></p>
+<p>[10] <a href="https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0">Why we&rsquo;re leaving the cloud</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-c0e49b0e5d0a3d0c994910d0cc773519">FinOps终点是下云</h1>
+	<div class="lead">在 SACC 2023 FinOps专场上，我狠狠喷了一把云厂商。这是现场发言的文字整理稿，介绍了终极 FinOps —— <strong>下云</strong> 的理念与实践路径。<a href="https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ">微信公众号原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-07-06" class="text-muted">2023-07-06</time>
+        
+	</div>
+	<p>在 SACC 2023 FinOps专场上，我狠狠喷了一把云厂商。这是现场发言的文字整理稿，介绍了终极 FinOps —— <strong>下云</strong> 的理念与实践路径。</p>
+<h2 id="太长不看">太长不看</h2>
+<p><strong>FinOps关注点跑偏</strong>：<strong>总价 = 单价 x 数量</strong>，搞 FinOps 的关注减少浪费资源的<strong>数量</strong>，却故意无视了房间里的大象 —— <strong>云资源单价</strong>。</p>
+<p><strong>公有云是个杀猪盘</strong>：廉价EC2/S3获客，EBS/RDS杀猪。云算力的成本是自建的五倍，块存储的成本则可达百倍以上，堪称终极成本刺客。</p>
+<p><strong>FinOps终点是下云</strong>：对于规模以上企业，IDC自建成本在云服务列表价1折上下。下云是原教旨 FinOps 的终点，也是真正 FinOps 的起点。</p>
+<p><strong>自建能力决定议价权</strong>：拥有自建能力的用户即使不下云也能谈出极低的折扣，没有自建能力的公司只能向公有云厂商缴纳高昂的 “无专家税” 。</p>
+<p><strong>数据库是自建关键</strong>：K8S 上的无状态应用与数据仓库搬迁相对容易，真正的难点是在不影响<strong>质量安全</strong>的前提下，完成数据库的自建。</p>
+<p><img src="/img/cloud/finops-title.png" alt=""></p>
+<hr>
+<h2 id="finops关注点跑偏">FinOps关注点跑偏</h2>
+<blockquote>
+<p>比起浪费的数量，资源单价才是重点。</p>
+</blockquote>
+<p>FinOps 基金会说，FinOPS关注的是“<strong>云成本优化</strong>”。但我们认为只强调<strong>公有云</strong>其实是<strong>有意</strong>把这个概念缩小了 —— 值得关注的是<strong>全部的</strong>资源的成本管控优化，而不仅仅局限在上公有云 —— 还有“混合云”与”私有云“。即使不用公有云，FinOps 的一些方法论也依然能用于 K8S 云原生全家桶。正因为这样，很多搞 FinOps 的人关注点被刻意带偏 —— 目光被局限在<strong>减少云资源浪费数量</strong>上，却忽视了一个非常重要的问题：<strong>单价</strong>。</p>
+<p><strong>总成本</strong>取决于两个因素：<strong>数量 ✖️ 单价</strong>。比起数量，<strong>单价可能才是降本增效的关键</strong>。前面几位嘉宾介绍过，云上资源平均有 1/3 左右的浪费，这也是 FinOps 的优化空间。然而如果你把不需要弹性的服务放在公有云上，本身使用的<strong>资源单价</strong>就已经溢价了<strong>几倍到十几倍</strong>，浪费的部分与之相比只能算三瓜两枣。</p>
+<p>在我职业生涯的第一站，便亲历过一次 FinOps 运动。我们的BU曾是阿里云第一批内部用户，也是“<strong>数据中台</strong>”诞生的地方，阿里云出了十几个工程师直接加入带我们上云。上了 ODPS 后每年存储计算开销<strong>七千万</strong>，而通过健康分等 FinOps 手段确实优化了十几个M的浪费。然而原本使用自建机房 Hadoop 全家桶跑同样的东西，每年成本<strong>不到一千万</strong> —— <strong>节约是好事，但与翻几番的资源成本相比根本算不了什么</strong>。</p>
+<p>随着降本增效成为主旋律，云遣返也成为一种潮流。发明中台这个概念的阿里，自己已经开始拆中台了。然而还有很多企业在重蹈杀猪盘的覆辙，重复着上云 - 云遣返的老路。</p>
+<hr>
+<h2 id="公有云是个杀猪盘">公有云是个杀猪盘</h2>
+<blockquote>
+<p>廉价EC2/S3获客，EBS/RDS杀猪。</p>
+</blockquote>
+<p>公有云所鼓吹的弹性是针对其商业模式而设计的：<strong>启动成本极低，维持成本极高</strong>。低启动成本吸引用户上云，而且良好的弹性可以随时适配业务增长，可是业务稳定后形成供应商锁定，尾大不掉，极高的维持成本就会让用户痛不欲生了。这种模式有一个俗称 —— <a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/"><strong>杀猪盘</strong></a>。</p>
+<p><strong>要想杀猪，先要养猪</strong>，舍不着孩子套不着狼。所以对于新用户、初创企业，小微用户，公用云都不吝于提供一些甜头，甚至赔本赚吆喝。新用户首单骨折，初创企业免费/半价 Credit，以及微妙的定价策略。以 AWS RDS 报价为例可以看出，1核2核的迷你机型，单价也就是 <strong>几$/核·月</strong>，折合三四百块人民币一年，可以说是非常便宜实惠（不含存储）：如果你需要一个低频使用的小微数据库放点东西，这也许就是最简单便宜的选择。</p>
+<p><img src="/img/cloud/finops-1.png" alt=""></p>
+<p>然而，只要你稍微把配置往上抬哪怕一丁点儿，核月单价就出现了<strong>数量级</strong>的变化，干到了二三十～一百来刀，最高可以翻到几十倍 —— 这还没有算上惊悚的 EBS 价格。用户也许只有在看到突然出现的天价账单时，才会意识到到底发生了什么。</p>
+<p>相比自建，<strong>云资源单价普遍在几倍到十几倍的范围，租售比在十几天到几个月之间</strong>。例如，探探IDC包网包电代维+运维网工所有成本均摊下来，一个物理机核算力核月成本在 19块钱，如果使用 K8S 容器私有云，一个虚拟核月成本只要7块钱。</p>
+<p>与之对应，阿里云的 ECS 核月单价在一两百块钱，AWS EC2 的核月单价在两三百块钱。如果你“不在乎弹性”，预付买个三年，通常还能再打个五六折。但再怎么算，云算力和本地自建算力的<strong>几倍</strong>差价是放在这儿没跑的。</p>
+<p><img src="/img/cloud/finops-2.png" alt=""></p>
+<p>云<strong>存储</strong>资源的定价则更为离谱，一块常见的 3.2 TB 规格企业级 NVMe SSD 有着极为强悍的性能、可靠性与性价比，批发价 <strong>¥3000</strong> 元出头，全方位吊打老存储。然而，在云上同样的存储，就敢卖你 100 倍的价格。相比直接采购硬件，<strong>AWS EBS io2 的成本高达 120 倍，而阿里云的 ESSD PL3 则高达 200 倍</strong>。</p>
+<p>以 3.2TB 规格的企业级 PCI-E SSD 卡为参照基准，<strong>AWS 上按需售租比为 15 天，阿里云上不到 5 天</strong>，租用此时长即可买下整块磁盘。若在阿里云以采购三年预付最大优惠五折计算，<strong>三年租金够买下 120 多块同款硬盘</strong>。</p>
+<p><img src="/img/cloud/finops-3.png" alt=""></p>
+<blockquote>
+<p>《<a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/">云盘是不是杀猪盘</a>》</p>
+</blockquote>
+<p>云数据库RDS的的溢价倍率则介于云盘与云服务器之间。以 RDS for PostgreSQL 为例， AWS 上 64C / 256GB 的 RDS 用一个月价格 $25,817 / 月，折合每月 18 万元人民币，一个月的租金够你把两台性能比这还要好的多得多的服务器直接买下来自建了。<strong>租售比甚至都不到一个月</strong>，租十来天就够你买下来整台服务器。</p>
+<p>任何理智的企业用户都看得明白这里面的道理：<strong>如果采购这种服务不是为了短期的，临时性的需求，那么绝对算得上是重大的财务失当行为。</strong></p>
+<table>
+<thead>
+<tr>
+<th>付费模式</th>
+<th>价格</th>
+<th>折合每年（万¥）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC自建（单物理机）</td>
+<td>¥7.5w / 5年</td>
+<td>1.5</td>
+</tr>
+<tr>
+<td>IDC自建（2～3台组HA）</td>
+<td>¥15w / 5年</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 按需</td>
+<td>¥87.36/时</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 月付（基准）</td>
+<td>¥4.2w / 月</td>
+<td>50</td>
+</tr>
+<tr>
+<td>阿里云 RDS 年付（85折）</td>
+<td>¥425095 / 年</td>
+<td>42.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 3年付（5折）</td>
+<td>¥750168 / 3年</td>
+<td>25</td>
+</tr>
+<tr>
+<td>AWS 按需</td>
+<td>$25,817 / 月</td>
+<td>217</td>
+</tr>
+<tr>
+<td>AWS 1年不预付</td>
+<td>$22,827 / 月</td>
+<td>191.7</td>
+</tr>
+<tr>
+<td>AWS 3年全预付</td>
+<td>12w$ + 17.5k$/月</td>
+<td>175</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏按需</td>
+<td>¥197,489 / 月</td>
+<td>237</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏1年不预付</td>
+<td>¥143,176 / 月</td>
+<td>171</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏3年全预付</td>
+<td>¥647k + 116k/月</td>
+<td>160.6</td>
+</tr>
+</tbody>
+</table>
+<p>我们可以对比一下自建与云数据库的成本差异：</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>折合每年（万元）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC托管服务器 64C / 384G / 3.2TB NVME SSD 660K IOPS (2～3台)</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS PG 高可用版 pg.x4m.8xlarge.2c, 64C / 256GB / 3.2TB ESSD PL3</td>
+<td>25 ～ 50</td>
+</tr>
+<tr>
+<td>AWS RDS PG 高可用版 db.m5.16xlarge, 64C / 256GB / 3.2TB io1 x 80k IOPS</td>
+<td>160 ～ 217</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》</p>
+</blockquote>
+<p>任何有意义的降本增效行动都无法忽视这个问题：如果资源单价有打0.5～2折的潜力，那么折腾30%的浪费根本排不上优先级。只要你的业务主体还在云上，原教旨 FinOps 就如同隔靴搔痒 —— <strong>下云，才是 FinOps 的重点</strong>。</p>
+<hr>
+<h2 id="finops终点是下云">FinOps终点是下云</h2>
+<blockquote>
+<p>饱汉不知饿汉饥，人类的悲欢并不相通。</p>
+</blockquote>
+<p>我在探探待了五年 —— 这是一家瑞典人创办的北欧风互联网创业公司。北欧工程师有个特点，<strong>实事求是</strong>。在云与自建选型这件事上不会受炒作营销影响，而是会定量分析利弊得失。我们仔细核算过自建与上云的成本 —— 简单的结论是，<strong>自建（含人力）总体成本基本在云列表价的 0.5 ～ 1 折范围浮动</strong>。</p>
+<p>因此，探探从创立伊始就选择了自建。除了出海合规业务，CDN 与极少量弹性业务使用公有云，主体部分完全放在 IDC 托管代维的机房中自建。我们的数据库规模不小，13K 核的 PostgreSQL 与 12K 核的 Redis，450w QPS 与 300TB 不重复的TP数据。这两部分每年成本1000万不到：算上两个DBA一个网工的工资，网电托管代维费用，硬件五年均摊。但是这样的规模，如果使用公有云上的云数据库，即使打到骨折，也需要五六千万起步，更别提杀猪更狠的大数据部分了。</p>
+<p>然而，企业数字化是有阶段的，不同的企业处于不同的阶段。对于不少互联网公司来说，已进入自建云原生 K8S 全家桶玩到飞起的阶段了。在这个阶段，关注资源利用率，在线离线混合部署，减少浪费是合理的需求，也是 FinOps 应该发力的方向。但是对那些占总量绝大多数的数字化门外汉企业来说，迫在眉睫的不是减少浪费，<strong>而是压低资源单价</strong> —— Dell服务器可以打两折，IDC虚拟机可以打两折，云骨折也能打两折，请问这些公司是不是还在掏原价采购，甚至还有几倍的回扣费用呢？<strong>大把大把的公司还在因为信息不对称与能力缺失被嘎嘎割韭菜</strong>。</p>
+<p>企业应该根据自己的规模与阶段，评估审视自己的业务并进行利弊权衡。如果是小规模初创企业，云确实能节省不少人力成本，很有吸引力 —— <strong>但请您保持警惕，不要因为贪图便利而被供应商锁定</strong>。如果您在云上的年消费已经超过了 100万人民币，那么是时候认真考虑一下 <strong>下云所带来的收益</strong> —— 很多业务并不需要微博并发出轨，训练 AI 大模型那种弹性。为了临时/突发性需求，或出海合规支付溢价还算合情合理，但是为了<strong>不需要的弹性</strong>支付几倍到几十倍的资源溢价，那就是冤大头了。您可以把真正需要弹性的部分留在公有云上，把那些不需要弹性的部分转移到 IDC 。仅仅只是这样做就能省下的成本可能让用户惊掉下巴。</p>
+<p><strong>下云是原教旨 FinOps 的终点，也是真正 FinOps 的起点。</strong></p>
+<hr>
+<h2 id="下云核心是自建">下云核心是自建</h2>
+<blockquote>
+<p>以斗争求和平则和平存，以妥协求和平则和平亡</p>
+</blockquote>
+<p>时来天地皆同力，运去英雄不自由：在泡沫阶段，大家可以不在乎在云上大撒币，在经济下行阶段，降本增效成为核心议题。越来越多的公司意识到，使用云服务其实是一种缴纳“无专家税”与“保护费”的行为。行业也出现了下云的思潮 —— <strong>云遣返</strong>，37 Signal DHH就是最著名的例子。与之对应，全球各大云厂商营收增速也出现了持续性下滑，阿里云的营收甚至已经增速为负 —— 开始负增长了（2023Q1）。</p>
+<p><img src="/img/cloud/finops-5.png" alt=""></p>
+<blockquote>
+<p>《<a href="/zh/blog/2023/06/14/%E4%BA%91%E8%AE%A1%E7%AE%97%E4%B8%BA%E5%95%A5%E8%BF%98%E6%B2%A1%E6%8C%96%E6%B2%99%E5%AD%90%E8%B5%9A%E9%92%B1/">云计算为啥还没挖沙子赚钱</a>》</p>
+</blockquote>
+<p>背后的时代趋势是，<strong>开源平替</strong>的出现，打破了公有云的<strong>技术壁垒</strong>；资源云/IDC2.0的出现，提供了公有云资源的物美价廉替代；大裁员释放的技术人才与将来的AI大模型，让各行各业都有机会拥有自建所需的专家知识与能力。结合以上三方面的趋势，<strong>IDC2.0 + 开源自建的组合越来越有竞争力</strong>：<strong>短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择</strong>。</p>
+<p>公有云厂商并非做不好 IDC 卖资源站着挣钱的生意，按理说云厂商的水平比IDC好不少，理应通过技术优势与规模效应降本增效，向公众提供比 IDC自建更便宜的资源才对。然而残酷的现状是，资源云可以爽快的给用户2折虚拟机，而公有云不行。甚至如果考虑到存储计算行业摩尔定律的指数增长规律，公有云其实每年都还在大幅<strong>涨价</strong> ！</p>
+<p>专业懂行的大客户，特别是那种随时有能力迁移横跳的甲方去和公有云搞商务谈判，确实有可能获取<strong>两折</strong>的底价折扣，而小客户不太可能有这种机会 —— 在这种意义上，<strong>云其实是吸血中小客户补贴大客户，损不足以奉有余的</strong>。 <strong>云厂商在大客户那边疯狂打折促销，而对中小客户和开发者进行薅羊毛杀猪</strong>，这种方式已经完全违背了云计算本身的初心与愿景。</p>
+<p>云用低起步价格把用户赚上来，当用户被深度锁定之后，杀猪就会开始 —— 聊好的折扣与优惠，在每年续约时没有了。从云下来又要支付一笔伤筋动骨的大费用，用户处在进退两难的困境中只能选择饮鸩止渴，继续缴纳保护费。</p>
+<p>然而对于有自建能力，可以在多云/本地混合云灵活横跳的用户来说，就没有这个问题：<strong>谈折扣的杀手锏，就是你自己有随时下云、或迁移至其他云上的自建能力</strong>，这比什么口舌都好使 —— 正所谓 “<strong>以斗争求和平则和平存，以妥协求和平则和平亡</strong>” 。<strong>成本能降多少取决于您的议价权，而议价权取决于您是否有能力自建</strong>。</p>
+<p><strong>自建听上去很麻烦，但其实会者不难</strong>。关键是解决 <strong>资源</strong> 与 <strong>能力</strong> 两个核心问题。而在 2023 年，因为资源云与开源平替的出现，这两件事已经比以前要简单太多了。</p>
+<p><strong>在资源方面，IDC与资源云已经解决得足够好了</strong>。上面说的IDC自建，并不是自己从头买土地建机房，而是可以直接使用资源云/IDC的机房托管 —— 你可能只需要一位网工规划一下网络，其他的运维性工作都可以交由供应商打理。</p>
+<p>如果您懒得折腾，IDC能爽快地直接卖你云列表价两折的虚拟机，您也可以直接每月两三千租用现成的物理机 64C/256G；无论是整租一整个机房，还是只要一个零售托管机位都没问题。一个零售机位网电代维全包，一年五千块全搞定，整两台百核物理机跑个 K8S 或虚拟化，还要啥弹性ECS ？</p>
+<p>自建还有一个额外的好处 —— 如果您真的想做到<strong>极致</strong> FinOps，可以使用过保甚至二手服务器。服务器通常按三年五年均摊报废，但用八年十年的也不少见 —— 相比购买云服务的<strong>消费</strong>，这是实打实的<strong>资产</strong>，多用都算白赚。</p>
+<p>上面所使用的 64C 256G 服务器全新价格也需要五万，但用了一两年二手甩卖的“电子垃圾”只需要两千八。换掉最容易坏的部件插块全新企业级3.2TB NVMe SSD （¥2800），整机六千块拿下。</p>
+<p><img src="/img/cloud/finops-6.png" alt=""></p>
+<p>在这种情况下，你的核月成本甚至可以做到1块钱以内 —— 游戏领域确实有这么个传奇案例，可以做到几毛钱一个服务器。有了K8S调度能力和数据库高可用切换能力，可靠性可以完全可以靠多台电子垃圾并联，最终做到令人震惊的成本效益比。</p>
+<p><strong>在能力方面，随着足够好用的开源平替出现，当下自建的难度和几年前完全不可同日而语</strong>。</p>
+<p>例如，Kubernetes / OpenStack / SealOS，可以理解为云厂商 EC2/ECS/VPS 管控软件的开源替代；MinIO / Ceph 旨在作为为云厂商 S3 / OSS 管控软件的开源替代；而 <strong>Pigsty</strong> / 各种数据库 Operator 就是 RDS 云数据库管控软件的开源替代 —— <strong>有许许多多的开源软件提供免费用好这些资源的能力；也有许许多多的商业公司提供明码标价的服务支持</strong>。</p>
+<p><strong>您的业务应该尽可能收敛到只用虚拟机和对象存储这种纯资源</strong>，因为这是所有云厂商的提供服务的<strong>最大公约数</strong>。在理想的状态下，所有应用都完整运行在 Kubernetes 上，而这套 Kubernetes 可以运行在任意环境中 —— 不论是云提供的 K8S底座，ECS，独占物理机，还是你自己机房的服务器上。外部状态例如数据库备份，大数据数仓使用存算分离的方案放在 MinIO / S3 存储上。</p>
+<p>这样一套 CloudNative 技术栈，理论上有了在任意资源环境上运行与灵活搬迁的能力，从而<strong>避免了供应商锁定，掌握了主动权</strong> —— <strong>您可以选择直接下云省大钱， 也可以选择以此为筹码和公有云商务谈判，要一个骨折折扣出来继续使用</strong>。</p>
+<p>当然，下云自建也是有风险的，而最大的风险点就在 RDS 上。</p>
+<hr>
+<h2 id="数据库是最大风险点">数据库是最大风险点</h2>
+<blockquote>
+<p><strong>云数据库</strong>也许不是最大的开销项，但一定是锁定最深，最难搬迁的服务。</p>
+</blockquote>
+<p>质量、安全、效率、成本，是一个递进的需求金字塔上的不同层次。而 FinOps 的目标，是要在<strong>不影响质量安全的前提下完成降本增效</strong>。</p>
+<p>无论是K8S上的无状态应用，还是离线大数据平台，搬迁起来都很难有致命风险。特别是如果您已经完成了<strong>大数据存算分离</strong>与<strong>无状态应用云原生</strong>改造，这两个部分搬动起来通常不会有太大困难。前者通常停几个小时也无所谓，后者则可以蓝绿部署，灰度切换。<strong>唯有作为工作记忆的数据库动起来容易搞出大问题。</strong></p>
+<p>可以说绝大多数 IT 系统的架构都服务于数据库这一核心，下云牵一发而动全身的关键风险点落在 OLTP 数据库 / RDS 上。<strong>很多用户不下云自建的原因正是缺少自建靠谱数据库服务的能力</strong> —— 土法的 Kubernetes Operator 似乎没法达到云数据库的完整功能体验：把 OLTP 数据库放在 K8S/容器 中，使用 EBS 运行也不是成熟的最佳实践。</p>
+<p><strong>时代在呼唤一个足够好的 RDS 的开源替代品，而这正是我们要解决的问题</strong>：让用户可以在任意环境上自建起比肩甚至超越云数据库的本地 RDS 服务 —— <strong>Pigsty</strong>，开源免费的 RDS PG 替代。帮助用户真正用好 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485685&amp;idx=1&amp;sn=688f6d6d0f4128d7f77d710f04ff9024&amp;chksm=fe4b3d2ec93cb438665b7e0d554511674091b2e486a70b8a3eb7e2c7a53681fb9834a08cb3c3&amp;scene=21#wechat_redirect">世界上最先进、最成功的数据库 —— PostgreSQL</a>。</p>
+<p>Pigsty 是一个公益性质的自由软件，软件本身完全开源免费用爱发电。它提供了一个开箱即用扩展齐全的 PostgreSQL 发行版，带有自动配置的高可用与PITR，业界顶尖的监控系统，Infra as Code，提供一键安装部署的云端 Terraform 模板 与本地 Vagrant沙箱，针对各种操作都给出了 SOP 手册预案，让您无需专业 DBA 也可以快速完成 RDS 自建。</p>
+<p>尽管 Pigsty 是一个数据库发行版，但它赋能用户践行最终极的 FinOps 理念 —— 用几乎接近于纯资源的价格，在任何地方（ECS，资源云，机房服务器甚至本地笔记本虚拟机）运行生产级的 PostgreSQL RDS 数据库服务。<strong>让云数据库的能力成本，从正比于资源的边际成本，变为约等于0的固定学习成本</strong>。</p>
+<p><img src="/img/cloud/finops-7.png" alt=""></p>
+<p>可能也就是北欧企业的社会主义氛围，才能孵化出这种的纯粹的自由软件。我们做这件事不是为了挣钱，而是要践行一种理念：把用好世界上最先进的开源数据库 PostgreSQL 的能力普及给每一个用户，而不是让使用软件的能力沦为公有云的禁脔。云厂商垄断开源专家与岗位，吸血白嫖开源软件，而我们要要打破云厂商对于能力的垄断 —— <strong>Freedom is not free，你不应该把世界让给你所鄙视的人，而应该直接把他们的饭桌掀翻</strong>。</p>
+<p><strong>这才是最终极的 FinOps ——</strong> <strong>授人以渔，提供让用户真正用得上的更优备选，赋予用户自建的能力与面对云厂商的议价权</strong>。</p>
+<hr>
+<h2 id="references">References</h2>
+<p>[1] <a href="https://mp.weixin.qq.com/s/JU4lznF6-5Q4LaJTnG8SSQ">云计算为啥还没挖沙子赚钱？</a></p>
+<p>[2] <a href="https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ">云数据库是不是智商税？</a></p>
+<p>[3] <a href="https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA">云SLA是不是安慰剂？</a></p>
+<p>[4] <a href="https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag">云盘是不是杀猪盘？</a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw">范式转移：从云到本地优先</a></p>
+<p>[6] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485559&amp;idx=1&amp;sn=9279f44f0aa804a6e2698e503d5eacea&amp;chksm=fe4b3dacc93cb4ba370cab412379ebee07b7b8e16ddd9a79448815e5ba5c3a2bac2ab867d574&amp;scene=21#wechat_redirect">杀猪盘真的降价了吗？</a></p>
+<p>[7] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485349&amp;idx=1&amp;sn=96fde26dd9efd399ef7ae11e52e05843&amp;chksm=fe4b327ec93cbb688e2708ff4e709a7ba32eee2be9d8637e9b941f47e6600dc7fcd2710a42c4&amp;scene=21#wechat_redirect">炮打 RDS，Pigsty v2.0 发布</a></p>
+<p>[8] <a href="https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug">垃圾腾讯云CDN：从入门到放弃</a></p>
+<p>[9] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485093&amp;idx=1&amp;sn=5815f71f1d832101d35a75f5aa4acd3c&amp;chksm=fe4b337ec93cba68fbf30eb0ed50d052c6e8972d42cf506051b5016668f4555edaa0756688dc&amp;scene=21#wechat_redirect">云RDS：从删库到跑路</a></p>
+<p>[10] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485549&amp;idx=1&amp;sn=7c34439d82431129c57aba211202b5ca&amp;chksm=fe4b3db6c93cb4a0423daf3a226e04867821e34ba3c6b5a8145bd5319c728fb08d63b2544a43&amp;scene=21#wechat_redirect">分布式数据库是伪需求吗？</a></p>
+<p>[11] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485566&amp;idx=1&amp;sn=640f4441fddbfe889d98d715af0a1cad&amp;chksm=fe4b3da5c93cb4b30839bc2e65f40983c7e881768c908a4a38ffe3565543b56090244d38f63e&amp;scene=21#wechat_redirect">微服务是不是个蠢主意？</a></p>
+<p>[12] <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect">更好的开源RDS替代：Pigsty</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-92be50abfd7762b4698ff779d2d05958">云计算为啥还没挖沙子赚钱？</h1>
+	<div class="lead">公有云毛利不如挖沙子，杀猪盘为何成为赔钱货？<a href="https://mp.weixin.qq.com/s/JU4lznF6-5Q4LaJTnG8SSQ">微信公众号原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-06-14" class="text-muted">2023-06-14</time>
+        
+	</div>
+	<p><a href="#%E5%85%AC%E6%9C%89%E4%BA%91%E6%AF%9B%E5%88%A9%E4%B8%8D%E5%A6%82%E6%8C%96%E6%B2%99%E5%AD%90">公有云毛利不如挖沙子</a>，<a href="#%E6%9D%80%E7%8C%AA%E7%9B%98%E4%B8%BA%E4%BD%95%E6%88%90%E4%B8%BA%E8%B5%94%E9%92%B1%E8%B4%A7">杀猪盘为何成为赔钱货</a>？</p>
+<p><a href="#%E5%8D%96%E8%B5%84%E6%BA%90%E6%A8%A1%E5%BC%8F%E8%B5%B0%E5%90%91%E4%BB%B7%E6%A0%BC%E6%88%98">卖资源模式走向价格战</a>，<a href="#%E5%BC%80%E6%BA%90%E6%9B%BF%E4%BB%A3%E6%89%93%E7%A0%B4%E5%9E%84%E6%96%AD%E5%B9%BB%E6%A2%A6">开源替代打破垄断幻梦</a>！</p>
+<p><a href="#%E6%9C%8D%E5%8A%A1%E7%AB%9E%E4%BA%89%E5%8A%9B%E9%80%90%E6%B8%90%E8%A2%AB%E6%8A%B9%E5%B9%B3">服务竞争力逐渐被抹平</a>，<a href="#%E4%BA%91%E8%AE%A1%E7%AE%97%E8%A1%8C%E4%B8%9A%E5%B0%86%E8%B5%B0%E5%90%91%E4%BD%95%E6%96%B9">云计算行业将走向何方</a>？</p>
+<p><img src="/img/cloud/profit-title.png" alt=""></p>
+<hr>
+<h2 id="公有云毛利不如挖沙子">公有云毛利不如挖沙子</h2>
+<p>在《<a href="/zh/blog/2023/03/15/%E4%BA%91%E7%9B%98%E6%98%AF%E4%B8%8D%E6%98%AF%E6%9D%80%E7%8C%AA%E7%9B%98/">云盘是不是杀猪盘</a>》、《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》以及《<a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">云SLA是不是安慰剂</a>》中，我们已经研究过关键云服务的真实成本。规模以上以核·月单价计算的云服务器成本是自建的 5～10 倍，云数据库则可达十几倍，云盘更是能高达上百倍，按这个定价模型，云的毛利率做到八九十也不稀奇。</p>
+<p>业界标杆的 AWS 与 Azure 毛利就可以轻松到 60% 与 70% 。反观国内云计算行业，毛利普遍在个位数到 <strong>15%</strong> 徘徊，榜一大哥阿里云最多给一句“预估远期整体毛利 40%” ，至于像金山云这样的云厂商，毛利率直接一路干到 <strong>2.1%</strong>，还不如打工挖沙子的毛利高。</p>
+<p>而说起净利润，国内公有云厂商更是惨不忍睹。AWS / Azure 净利润率能到 30% ～ 40% 。标杆阿里云也不过在盈亏线上下徘徊挣扎。这不禁让人好奇，这些云厂商是怎么把一门百分之三四十纯利的生意能做到这种地步的？</p>
+<p><img src="/img/cloud/profit-1.png" alt=""></p>
+<hr>
+<h2 id="杀猪盘为何成为赔钱货">杀猪盘为何成为赔钱货</h2>
+<p>我们可以列举出许许多多多可能的原因：营收压倒一切的KPI，销售主导的增长模式，大公司病与团队内耗，冗员导致的高昂成本，恶意竞争价格战同行卷翻，反佣产生的回扣贪腐，不顾生态亲自下场抢食吃，忘记初心迷失方向陷入歧途，等等等等。</p>
+<p>但国内云厂商赔钱的核心问题，还是在于<strong>利润空间被两头挤压</strong>，<strong>能提供的用户价值也因为资源云（国资云/IDC2.0）和开源平替的出现越来越少</strong>。而要理解这一点，就需要从从公有云的业务结构说起。</p>
+<p>公有云可以分为 IaaS， PaaS，SaaS 三层，尽管这三层都带 <strong>S</strong>(ervice)，但还是有不小的区别：<strong>底层更偏向于卖资源，顶层更偏向于卖能力</strong>（服务/技术/知识/认知/保险）。<strong>IaaS 层资源占主导地位，SaaS 层能力占主导地位，PaaS 层介于两者之间</strong> —— 例如数据库，既可以视为一种利用整合底层存算资源的<strong>能力</strong>，又可以视作一种更高层次的抽象软件<strong>资源</strong>。</p>
+<p><img src="/img/cloud/profit-2.png" alt=""></p>
+<p>在云刚出现的时候，核心是硬件 / <strong>IaaS</strong>层 ：存储、带宽、算力、服务器。云厂商的初心故事是：<strong>让计算和存储资源像水电一样，自己扮演基础设施的提供者的角色</strong>。这是一个很有吸引力的愿景：公有云厂商可以通过规模效应，压低硬件成本并均摊人力成本；理想情况下，在给自己留下足够利润的前提下，还可以向公众提供比 IDC 价格更有优势，更有弹性的存储算力<strong>资源</strong>。</p>
+<p>但很快，公有云就不满足只卖包装硬件卖资源的 IaaS 了：卖资源吃饭的 <strong>IaaS</strong> 定价没有太大水分空间，可以对着 BOM 一笔一笔精算。但是像云数据库这样的 <strong>PaaS</strong>， 里面包含的“<strong>服务/保险</strong>”，人力 / 研发成本就包含大量水分，难以厘定，就可以名正言顺地卖出天价并攫取高额利润。</p>
+<p>尽管国内公有云 <strong>IaaS</strong> 层存储、计算、网络三大件的收入能占营收一半的比例，但其毛利率只有 <strong>15% ～ 20%</strong>，而以云数据库为代表的公有云 <strong>PaaS</strong> 毛利率可以达到 <strong>50%</strong> 或更高，完爆卖资源吃饭的 <strong>IaaS</strong>。</p>
+<p>对公有云来说，<strong>PaaS 是核心技术壁垒</strong>，<strong>IaaS 是营收基本盘</strong>，云厂商的主要营收也来自这两者。然而，<strong>前者面临开源平替的冲击，后者受到价格战的挑战。</strong></p>
+<p><img src="/img/cloud/profit-3.png" alt=""></p>
+<p>AWS 的壁垒是先发优势，繁荣的软件生态，Azure 的壁垒是Office SaaS和大模型 PaaS，GCP的壁垒是全球一张网。反观国内云厂商的壁垒：阿里云的数据库，腾讯云的微信生态，百度云的大模型？</p>
+<hr>
+<h2 id="卖资源模式走向价格战">卖资源模式走向价格战</h2>
+<p>拔了毛的凤凰不如鸡，失去技术垄断的公有云将陷入卖资源价格战的泥潭。当<strong>质量</strong>、<strong>安全</strong>、<strong>效率</strong>搞不出亮点时，唯一能抢占市场份额的选择就是在<strong>成本</strong>上做文章 —— <strong>价格战</strong>。</p>
+<p><img src="/img/cloud/profit-4.png" alt=""></p>
+<p>然而与公有云 <strong>IaaS</strong> 云硬件竞争的，是运营商/国资云/IDC2.0。这些对手的特点就是有各种各样的资源 —— 特殊血统身份关系，自有机房网络土地，廉价带宽低息贷款；卖资源躺着挣钱，主打一个物美价廉：没啥高精尖 PaaS/SaaS，但IDC可以爽快的卖给用户公有云列表价两折或更低的虚拟机，租机柜自建托管更是便宜上天。云列表价 1/5 ～ 1/10 的综合成本，不玩<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485391&amp;idx=1&amp;sn=4cec9af2b58160eb345a6b12411f0b68&amp;chksm=fe4b3214c93cbb023c13a89133c75bf1e88e1543de9359df7447498e4a9d5ec555313a954566&amp;scene=21#wechat_redirect">云盘杀猪</a>之类花里胡哨的东西，就是纯卖资源。</p>
+<p>公有云厂商在面对这些对手时，敢卖天价甚至“涨价”（请注意，<strong>资源降价速度慢于摩尔定律等于涨价</strong>）的最大的<strong>壁垒</strong>就是自己有“技术” —— IaaS 层差距拉不了太大，靠的就是还有不错的 PaaS 作为壁垒，来吸引用户 —— 数据库，K8S，大模型以及配套的基础设施。<strong>而拥有能力的技术专家多被互联网/云计算大厂垄断，很多客户上云就是因为找不到稀缺的专家来自建这些服务，因而不得不向公有云缴纳高昂的“无专家税”与“保护费”</strong>。</p>
+<p><strong>然而，<strong><strong>开源的管控软件</strong></strong>以普惠赋能的方式，起到了降维打击的效果</strong>。当这些资源型选手或者用户自己就可以轻松使用开源软件拉起、搭建、组织起自己的“私有云平台”时，公有云构造的技术壁垒护城河就被打破了。曾经靠技术垄断高高在上的云厂商被拉下神坛，拉到了和躺平纯卖资源同侪相近的起跑线。公有云厂商不得不卷入泥潭中厮杀斗兽起来，和这些自己曾经“看不上”的对手打成一团。</p>
+<hr>
+<h2 id="开源替代打破垄断幻梦">开源替代打破垄断幻梦</h2>
+<p>自由软件 / 开源软件曾经彻底改变了整个软件与互联网行业，而我们将再次见证历史。</p>
+<p><strong>最初，软件吞噬世界</strong>，例如以 Oracle / Unix 为代表的商业软件，用机器取代了人工，极大提高了效率，节省了很多开销。商业软件凭借“人无我有”形成了垄断优势，牢牢掌握了定价权。像 Oracle 这样的商业数据库非常昂贵，一核·一月光是软件授权费用就能破万，不是大型机构都不一定用得起，即使像壕如淘宝，上了量后也不得不”去O“。</p>
+<p><strong>接着，开源吞噬软件</strong>，像 PostgreSQL 和 Linux 这样”开源免费“的软件应运而生，打破商业软件的垄断。软件开源本身是免费的，只需要几十块钱每核·每月的硬件成本，即可获取接近商业软件的效能。比如在大多数场景下，如果能找到专家帮助企业用好开源操作系统数据库，那么要比用商业软件划算太多了。互联网的历史就是开源软件的历史，互联网的繁荣便是建立在开源软件之上。</p>
+<p>开源的“商业逻辑”不是“卖产品”，而是创造专家岗位：免费的开源软件吸引用户，用户需求产生开源专家岗位，开源专家产出更好的开源软件，形成一个闭环。开源软件免费，但能帮助企业<strong>用好/管好</strong> 开源数据库的<strong>专家非常稀缺昂贵</strong>。这也产生了新的垄断机会 —— <strong>产品没法垄断，那就垄断专家。垄断了专家，就能垄断提供服务的能力</strong>。于是，“云服务”出现了。</p>
+<p><strong>然后，云吞噬开源</strong>。公有云软件，是互联网大厂将自己使用开源软件的能力产品化对外输出的结果。公有云厂商把开源数据库内核套上壳，跑在自己的硬件资源上，并雇佣专家编写管控软件并提供代运维与专家咨询服务。大量高端专家人才被头部互联网厂商高薪垄断，普通公司想要<strong>用好</strong>开源软件，除了少数幸运者能找到“专家”自建，大部分不得不选择云服务，并支付十几倍甚至百倍的资源溢价。</p>
+<p><img src="/img/cloud/profit-5.png" alt=""></p>
+<p>那么，<strong>谁来吃云呢</strong>？<strong>云原生运动</strong>，就是开源社区对公有云垄断的反击 —— 在公有云的话语体系中，CloudNative 被解释为长在公有云上的服务；而开源世界对此的理解是“在本地运行云一样的”服务。如何在本地运行云一样的服务？<strong>服务真正的壁垒，不是软件/资源本身，而是能用好这些软件的知识</strong>。—— 无论是以直接堆专家人力的形式，还是专家经验沉淀而成的管控软件 / K8S Operator  的形式，或者专家经验训练得到的大模型的形式。</p>
+<p>实际上，真正负责云服务日常性、高频性、运维性核心主体工作的往往并不是专家本身，而是<strong>管控软件</strong> —— <strong>沉淀了专家经验的元软件</strong>。一旦这些云管控软件出现开源替代，开源软件打破商业软件垄断的剧情会再一次上演。</p>
+<p>这一次，是<a href="https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485301&amp;idx=1&amp;sn=2fb038f8b9f26c095d97eb0d87e8b262&amp;scene=21#wechat_redirect"><strong>本地优先</strong></a>的管控软件掀翻云管控软件。PaaS 失去<strong>垄断度</strong>，将使云厂商丧失部分<strong>定价权</strong>，进而<strong>利润受损</strong>。但真正让云受伤的，是<strong>基本盘</strong> <strong>IaaS 资源生意失去壁垒，不得不直面纯资源厂商的价格战。</strong></p>
+<hr>
+<h2 id="服务竞争力逐渐被抹平">服务竞争力逐渐被抹平</h2>
+<p><strong>利润源于定价权，定价权源于垄断度，垄断度取决于产品在市场上的相对竞争力</strong>。随着开源社区滚雪球形成合力，开源管控软件与云管控软件的竞争力已经被逐步抹平，甚至在一些领域出现了<strong>反超</strong>。</p>
+<p>例如，Kubernetes / OpenStack / SealOS，可以理解为云厂商 EC2/ECS/VPS 管控软件的开源替代；MinIO / Ceph 旨在作为为云厂商 S3 / OSS 管控软件的开源替代；而 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485349&amp;idx=1&amp;sn=96fde26dd9efd399ef7ae11e52e05843&amp;chksm=fe4b327ec93cbb688e2708ff4e709a7ba32eee2be9d8637e9b941f47e6600dc7fcd2710a42c4&amp;scene=21#wechat_redirect"><strong>Pigsty</strong></a> / 各种数据库 Operator 就是 RDS 云数据库管控软件的开源替代。</p>
+<p>这些软件的特点在于：它们旨在解决管理好<strong>资源</strong>的问题，并提供用好软件本身的<strong>能力</strong>。此类自建服务的质量水平在很多方面不逊色甚至超越了所对标的云服务，而上手复杂度与人力成本基本持平，却只需要几分之一到十几分之一的纯资源成本即可：<strong>The more you run, the more you save!</strong></p>
+<p><img src="/img/cloud/profit-6.png" alt=""></p>
+<p>自建的门槛也在以惊人的速度不断降低，一个初中级的研发运维，可以轻松使用 Sealos 这样的软件创建起具有弹性伸缩，资源调度能力的 Kubernetes 集群运行无状态应用；也可以轻松地使用 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect"><strong>Pigsty</strong></a> 部署 PostgreSQL / Redis / MinIO / Greenplum 集群，声明式地拉起“自动驾驶”的本地云数据库（数仓/缓存/对象存储）存储状态，补完K8S的短板。</p>
+<p>即使是云厂商，也不得不承认 Kubernetes 的成功：它已经成为了运行无状态弹性应用的事实标准，并且有很大概率成为下个时代的数据中心级“操作系统” —— 在应用与底层物理机资源之间，可能并不需要一层 EC2/VM 作为中间商。</p>
+<p>同理，在用户使用数据库的平均水平就是yum安装+定时备份+设置密码的时代，云数据库RDS服务可以凭借质量安全效率合格标品的先进优势大杀四方，然而当顶尖水平的用户以可复制的形式输出最佳实践，出现开源免费的上位优质替代后，大锅饭合格品层次的 RDS 就只能相形见绌了。</p>
+<p><img src="/img/cloud/profit-7.png" alt=""></p>
+<p>作为公有云壁垒的云 PaaS 将在开源替代的冲击下走向独立/解体/萎缩/消亡，然而一鲸落，万物生，这也意味着更多的 PaaS/SaaS 创业团队将会迎来解放。</p>
+<hr>
+<h2 id="云计算行业将走向何方">云计算行业将走向何方？</h2>
+<p>如果我们把目光回退至上世纪初，从电力的推广普及垄断监管中汲取历史经验。就不难看云计算行业的剧本走向 —— 云的故事与电力行业如出一辙，<strong>资源与能力的拆分是未来的方向</strong>。</p>
+<p><img src="/img/cloud/profit-8.jpeg" alt=""></p>
+<p><strong>资源与基础设施性质的行业，最终的归宿是国家垄断</strong>。公有云的资源部分 —— IaaS 层会被剥离，整合，招安，成为算力/存储的“国家电网”。作为央企，国家电网并不负责发电，也不负责制造电器，它做的就是电力垄断资源的传输与分发。云 IaaS 也不会去制造芯片，硬盘，光纤，服务器，而是将其整合为存算网资源，交付到用户手上。国资云，运营商云，阿里云/华为云等会瓜分这一市场。</p>
+<p><strong>能力性质的行业，主旋律将是自由竞争，百花齐放</strong>。如果 IaaS 是供电行业，那么 PaaS/SaaS 便是电器行业 —— 提供各种不同的，使用存算网资源的能力。洗衣机，冰箱，热水器，电脑，都会涌现出无数创业公司与开源社区同台竞技，充分竞争。当然也会有一部分软件可以享受例外的垄断保护地位 —— 比如安可信创。</p>
+<p><strong>同时有着 IaaS / PaaS / SaaS 的公有云可能会解体</strong>。云内部的博弈可能要比外部竞争更激烈：IaaS 团队会认为，就连自己用的 IDC机房都有 30% 的毛利，凭啥有躺着卖资源挣钱的机会，却要去陪 PaaS/SaaS 一起卷？有能力的云软件团队会认为，在哪家云甚至私有云上卖不是卖，为啥要绑在一棵树上吊死，为 IaaS 作嫁衣裳？像 OceanBase 一样独立出去到处卖或者自己出来创业难道不香？</p>
+<p><strong>公有云厂商寡头价格战只是这个进程的开始</strong>，云厂 IaaS 在相互斗兽竞争中，通过垄断并购形成“规模效应”，利用“峰谷电”，“弹性定价”等各种方式优化整体资源利用率，会将算力成本不断压低至新的底线，最终实现“家家有电用”。中小云厂商估计不太可能活过这一场，当然，最后也少不了政府监管介入，公私合营国资入场。各家云 IaaS 成为类似于电信运营商的国有垄断企业，通过控制竞争烈度维持一个可观的利润率，边挣边躺。</p>
+<p>公有云的 PaaS / SaaS 在被更好，更优质，更便宜的替代物冲击下逐渐萎缩，或回归到足够低廉的价格水平。数据库，K8S，云安全等业务团队会从云中拆分与独立，<strong>能打的云软件团队必然选择出来单干</strong>**，采取云中立的立场**，在各种云底座上与各种供应商、开源社区同台赛马，各显所长。</p>
+<p>正如当年开源运动的死对头微软现在也选择拥抱开源。公有云厂商肯定也会有这一天，与自由软件世界达成和解，心平气和地接受基础设施供应商的角色定位，为社会提供水与电一般的平价存算网资源，<strong>云软件也会</strong>回归正常毛利率，不卑不亢，不骗不抢，采购软件如同购买家电一样稀松寻常。</p>
+<p>博弈的终点非常清晰，然而道阻且长。但能肯定的是，我们的下一代将对于云端的<strong>存</strong>与<strong>算</strong>习以为常，正如上一代看<strong>水</strong>与<strong>气</strong>，这一代看<strong>电</strong>与<strong>网</strong>。</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-fb2b56bca82f7d919a808b2f73758318">云SLA是不是安慰剂？</h1>
+	<div class="lead">SLA 并不是真正的可靠性承诺或历史战绩，而是一种营销工具。你以为花钱买云服务上了SLA保险，在最坏的情况下，它是吃不了兜着走的哑巴亏。在最好的情况下，它才是提供情绪价值的安慰剂。 <a href="https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA">微信原文</a> | <a href="https://mp.weixin.qq.com/s/7BwlF7V2M085mXCA2bYEgg">校订版</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-06-12" class="text-muted">2023-06-12</time>
+        
+	</div>
+	<p>在云计算的世界里，服务等级协议（SLA）被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些 SLA 时，会发现它们并不能像期望的那样“兜底”：你以为给自己的数据库上了保险可以高枕无忧，但其实白花花的银子买的是提供情绪价值的安慰剂。</p>
+<p><img src="/img/cloud/sla-title.png" alt=""></p>
+<hr>
+<h2 id="保险单还是安慰剂">保险单还是安慰剂？</h2>
+<p>许多用户购买云服务的一个原因是“兜底”，而问他们所谓“兜底”到底指的是什么，很多人会回答“<strong>SLA</strong>”。云专家将购买云服务比作购买保险：一些故障可能在许多公司的整个生命周期中都不会出现，但一旦遇到，后果可能就是毁灭性的。在这种情况下，云服务提供商的 SLA 就是兜底保险。然而，当我们实际查看这些 SLA 时，会发现这份“保单”并不像想象中那样有用。</p>
+<p>数据是许多企业的生命线，云盘是公有云上几乎所有数据存储的基石，所以让我们以云盘服务为例。许多云服务提供商在其产品介绍中都会宣称他们的云盘服务具有 9个9 的<strong>数据可靠性</strong>【1】。然而当查看其 SLA 时，就会发现这些最为重要的承诺压根没有写入 SLA 【2】。</p>
+<p>写入 SLA 的通常只有服务的<strong>可用性</strong>。而且这种可用性的承诺也流于表面，相比真实世界的核心业务可靠性指标极其逊色，赔偿方案相比常见停机损失来说约等于没有。<strong>比起保险单，SLA 更像是提供情绪价值的安慰剂。</strong></p>
+<hr>
+<h2 id="拉胯的可用性">拉胯的可用性</h2>
+<p>云 SLA 中使用的关键指标是可用性。云服务可用性通常表示为：可以从外部访问该资源的时间占比，通常使用一个月作为衡量周期。如果由于云厂商的问题，导致用户无法通过 Internet 访问该资源，则该资源将被视为不可用（Unavailable / Down）。</p>
+<p>以业界标杆 AWS 为例，AWS 大部分服务使用类似的 SLA 模板3。AWS 上的单个虚拟机提供以下 SLA【4】。这意味着在最好情况下，如果 AWS 上EC2 一个月内不可用时间在 21 分钟内（99.9%），AWS 一分钱不赔。在最坏情况下，只有当不可用时间超过36小时（95%），您才能获得 100% 的代金券返还。</p>
+<p><img src="/img/cloud/sla-1.png" alt=""></p>
+<p>对于一些互联网公司来说，15分钟的服务故障就足以让奖金泡汤，30分钟的故障足够让领导下课。绝大多数时间实际运行的核心系统可用性可能有5个9，6个9，甚至无穷多个9。从互联网大厂孵化出来的云厂商使用如此逊色的可用性指标，实在是让人看了摇头。</p>
+<p>更过分的是，当故障发生后，这些补偿也不是自动提供给你的。用户需要在时效（<strong>通常是两个月</strong>）内，自己负责衡量停机时间，提出申诉举证，并要求赔偿才会有。这要求用户去收集监控指标与日志证据和云厂商扯皮，换回来的也不是现金，而是代金券/时长补偿 —— <strong>对云厂商而言可以说没有任何实质损失，对用户来说没有任何实际意义，几乎没有可能弥补服务中断产生的实际损失。</strong></p>
+<hr>
+<h2 id="兜底有意义吗">“兜底”有意义吗？</h2>
+<p>对于企业来说，<strong>兜底</strong>意味着在故障发生后如何尽可能减少损失。不幸的是，SLA 在这里帮不上什么忙。</p>
+<p>服务不可用对业务造成的影响因行业、时间、长度而异。几秒钟几分钟的短暂的故障，可能对一般行业影响不大，<strong>然而长时间（几个小时到几十个小时）的故障会严重影响收入与声誉</strong>。</p>
+<p>在 Uptime Institute 2021年数据中心调查中【5】，几场最严重停机故障给受访者造成的平均成本近100万美元，最惨重的 2% 不在其中，他们遭受的损失超过 4000 万美元。</p>
+<p>然而，SLA 补偿对于这些业务损失来说是杯水车薪。以 <code>us-east-1</code> 区域的 <code>t4g.nano</code> 虚拟机实例为例，价格约为每月 3 美元。如果不可用时间少于 7 小时 18 分钟（月可用性 99%），AWS 将支付该虚拟机每月成本的 10%，总补偿为 30 美分。如果虚拟机不可用时间少于 36 小时（一个月内 95% 的可用性），补偿仅为 30% —— 不到 1 美元。<strong>如果不可用时间超过一天半，用户才能收到当月的全额退款 —— 3美元</strong>。即使是补偿个成千上万台，与损失相比也可基本忽略不计。</p>
+<p><img src="/img/cloud/sla-2.png" alt=""></p>
+<p>相比之下，传统的保险行业是实打实地为客户兜底。例如，顺丰快递的保价费用为物品价值 1%，但如果物品丢失，他们会全额赔偿。同样，每年几万商业医保，出问题真能兜底几百万。“保险”这个行业也是一分钱一分货的。</p>
+<p>云服务提供商收取了远超BOM的昂贵服务费（参见：《公有云是不是杀猪盘》【7】），但当服务出现问题时，他们提供的补偿所谓的“兜底”却只是一些代金券，这显然是有失公平的。</p>
+<hr>
+<h2 id="消失的可靠性">消失的可靠性</h2>
+<p>有些人使用云服务是为了“<strong>甩锅</strong>”，推卸自己的责任。有一些重要的责任是无法推卸给外部 IT 供应商的。比如<strong>数据安全</strong>。用户可以忍受一段时间的服务不可用，但数据丢乱错带来的伤害往往是无法接受的。<strong>轻信浮夸承诺的后果实在是太过严重，以至于对于一个创业公司就是生与死的区别。</strong></p>
+<p>在各家云厂商的存储类产品中，经常能看到“承诺 99.9999999%” 9个9的可靠性【1】，可以理解为，使用云盘出现数据丢失的概率是十亿分之一。考察云厂商硬盘故障率的实际报告【6】，非常让人怀疑这个数字是拍脑袋想出来的。但只要敢说敢赔敢作敢当，那就没问题。</p>
+<p><img src="/img/cloud/sla-3.png" alt=""></p>
+<p>然而翻开各家云厂商的 SLA 就会发现，这一条“承诺”消失了！【2】</p>
+<p>在2018年轰动的《腾讯云给一家创业公司带来的灾难！》 【8】案例中，这家创业公司就相信了云厂商的承诺，把数据放在服务器硬盘上，结果遇到了所谓“硬盘静默错误”：“几年来积累的数据全部丢失，造成近千万元的损失”。腾讯云向该公司表达歉意，愿意赔偿该公司在腾讯云产生的实际消费共计3569元，本着帮助用户迅速恢复业务的目的，承诺为该公司提供13.29万元现金或云资源的额外补偿。达到其消费金额的 37 倍！多么慷慨，多么仁慈，但这对于用户来说能弥补损失哪怕是零头吗？不行。</p>
+<p>如果您是企业主或IT负责人，会觉得这样的甩锅有意义吗？</p>
+<p><img src="/img/cloud/sla-4.png" alt=""></p>
+<hr>
+<h2 id="sla-到底是什么">SLA 到底是什么</h2>
+<p>话都讲到这里，云服务的鼓吹者会祭出最后一招：虽然出了故障后的兜底是个摆设，但是用户需要的是尽可能不出故障，按照 SLA 中的承诺，我们有 99.99% 的概率不出故障，这才是对用户最有价值的。</p>
+<p><strong>然而，SLA 被有意地与服务的真实可靠性相混淆</strong> ：<strong>用户不应该将 SLA 视作来服务可用性的可靠预测指标 —— 甚至是过去可用性水平的真实记录</strong>。<strong>对于厂家来说，SLA 并不是真正的可靠性承诺或历史战绩，而是一种营销工具，旨在让买家相信云厂商可以托管关键业务应用。</strong></p>
+<p>UPTIME INSTITUTE 发布的年度数据中心故障分析报告表明，很多云服务的真实表现低于其发布的 SLA 。对 2022 年故障分析发现：行业遏制故障频率的努力落空，故障成本和后果正在不断恶化【9】。</p>
+<p><img src="/img/cloud/sla-5.png" alt=""></p>
+<p><strong>与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”</strong>。<strong>惩罚的威慑取决于惩罚的确定性及惩罚的严重性</strong>。月消的时长/代金券赔付对云厂商来说并没有什么实际成本，所以惩罚的<strong>严重性</strong>趋近于零；赔付还需要需要用户自己举证主张并得到云厂商的批准，这意味着<strong>确定性</strong>也不会很高。</p>
+<p>比起会因为故障丢掉奖金与工作的专家工程师来说，SLA的惩罚对于云厂商属于是自罚三杯，不痛不痒。如果惩罚没有意义，那么云厂商也没有动力会提供更好的服务质量。用户遇到问题时只能提供单等死，服务态度比起自建/三方服务公司可谓天差地别，对小客户更是趾高气扬。</p>
+<p>更微妙的是，云厂商对于 SLA协议具有绝对的权力：云厂商有权单方调整修订SLA并告知用户生效，用户只有<strong>选择不用</strong>的权利，没有任何参与权和选择权。作为默认签署无法拒绝的“霸王条款”，堵死了用户进行真正有意义赔偿追索的可能性。</p>
+<p>所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是吃不了兜着走的哑巴亏。在最好的情况下，它才是提供情绪价值的安慰剂。因此，当我们选择云服务时，我们需要擦亮双眼，清楚地了解其 SLA 的内容，以便做出明智的决策。</p>
+<hr>
+<h2 id="reference">Reference</h2>
+<p>【1】<a href="https://help.aliyun.com/document_detail/122389.html">阿里云 ESSD云盘</a></p>
+<p>【2】<a href="https://help.aliyun.com/document_detail/56773.htm">阿里云 SLA 汇总页</a></p>
+<p>【3】<a href="https://aws.amazon.com/cn/legal/service-level-agreements/">AWS SLA 汇总页</a></p>
+<p>【4】<a href="https://d1.awsstatic.com/legal/AmazonComputeServiceLevelAgreement/Amazon_Compute_Service_Level_Agreement_Chinese_Simplfied_(CN)2022-05-25.pdf">AWS EC2 SLA 样例</a></p>
+<p>【5】<a href="https://journal.uptimeinstitute.com/cloud-slas-punish-not-compensate/">云SLA更像是惩罚用户而不是补偿用户</a></p>
+<p>【6】<a href="https://www.usenix.org/system/files/atc22-lu.pdf">NVMe SSD失效率统计</a></p>
+<p>【7】<a href="https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag">公有云是不是杀猪盘</a></p>
+<p>【8】<a href="https://www.doit.com.cn/p/312087.html">腾讯云给一家创业公司带来的灾难！</a></p>
+<p>【9】<a href="https://www.businesswire.com/news/home/20220608005265/en/Uptime-Institute%E2%80%99s-2022-Outage-Analysis-Finds-Downtime-Costs-and-Consequences-Worsening-as-Industry-Efforts-to-Curb-Outage-Frequency-Fall-Short">Uptime Institute 2022 故障分析</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-9acfe4d5f6e1972f749837119d2bab4b">云盘是不是杀猪盘？</h1>
+	<div class="lead">廉价EC2/S3获客，EBS/RDS杀猪：揭开公有云真正的商业模式。<a href="https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag">微信公众号原文</a> / <a href="https://mp.weixin.qq.com/s/Ee6eutL7iBjOGI9PM203Jg">校订版</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-03-15" class="text-muted">2023-03-15</time>
+        
+	</div>
+	<p>我们已经用数据回答了《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》这个问题，但在<strong>公有云块存储的百倍溢价杀猪比率</strong>前，云数据库只能说还差点意思。本文用实际数据揭示公有云真正的商业模式 —— 廉价EC2/S3获客，EBS/RDS杀猪。而这样的做法，也让公有云与其初心愿景渐行渐远。</p>
+<ul>
+<li><a href="#tldr-%E5%A4%AA%E9%95%BF%E4%B8%8D%E7%9C%8B">TLDR：太长不看</a></li>
+<li><a href="#what%E7%9C%9F%E6%AD%A3%E7%9A%84%E6%9D%80%E7%8C%AA%E7%9B%98">WHAT：真正的杀猪盘</a></li>
+<li><a href="#why%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E8%BF%99%E6%A0%B7%E5%AE%9A%E4%BB%B7">WHY：为什么要这样定价</a></li>
+<li><a href="#how%E8%BF%98%E5%8E%9F%E6%9D%80%E7%8C%AA%E7%9B%98%E5%86%85%E5%B9%95">HOW：还原杀猪盘内幕</a></li>
+<li><a href="#%E8%A2%AB%E9%81%97%E5%BF%98%E7%9A%84%E5%88%9D%E5%BF%83%E6%84%BF%E6%99%AF">被遗忘的初心愿景</a></li>
+<li><a href="#%E5%8D%9A%E5%BC%88%E5%B0%86%E8%B5%B0%E5%90%91%E4%BD%95%E6%96%B9">博弈将走向何方？</a></li>
+</ul>
+<p><a href="https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag"><img src="/img/cloud/ebs-title.png" alt=""></a></p>
+<h2 id="tldr-太长不看">TL;DR 太长不看</h2>
+<p>EC2 / S3 / EBS 是所有云服务的定价之锚。如果说 EC2/S3 定价还勉强能算合理，那么 EBS 的定价乃是故意杀猪。公有云厂商最好的块存储服务与自建可用的 PCI-E NVMe SSD 在性能规格上基本相同。然而相比直接采购硬件，<strong>AWS EBS 的成本高达 60 倍，而阿里云的 ESSD 则可高达 100 倍。</strong></p>
+<p>即插即用的磁盘硬件，百倍溢价到底为何？云厂商无法解释如此的天价到底源于何处。结合其他云存储服务的设计思路与定价模型，只有一个合理的解释：<strong>EBS的高溢价倍率是故意设置的门槛，以便于云数据库杀猪</strong>。</p>
+<p>作为云数据库定价之锚的 EC2 与 EBS，溢价分别为几倍与几十倍，从而支撑起云数据库的杀猪高毛利。但这样的垄断利润必定无法持久：IDC 2.0/运营商/国资云冲击 IaaS；私有云/云原生/开源平替冲击 PaaS；科技行业大裁员、AI冲击与天朝的低人力成本冲击云服务（运维人力外包/共享专家）。<strong>公有云如果执着于目前的杀猪模式，背离“存算基础设施”的初心，那么必将在以上三者形成的合力下面临越来越严峻的竞争与挑战</strong>。</p>
+<h2 id="what真正的杀猪盘">WHAT：真正的杀猪盘</h2>
+<p>你在家用微波炉加热黄焖鸡米饭料理包花费10元，餐馆老板替你用微波炉加热装碗上桌收费30元，你不会计较什么，房租水电人工服务也都是要钱的。但如果现在老板端出同样一碗饭跟你收费 1000 元并说：我们提供的不是黄焖鸡米饭，<strong>而是可靠质保的弹性餐饮服务</strong>，大厨品控掌握火候，按量付费想吃多少有多少，按需付费吃多少盛多少，不吃黄焖鸡还有麻辣烫串串香可选，反正就值这个价，你会不会有打一顿这个老板的冲动？这样的事情就发生在块存储上！</p>
+<p>硬件技术日新月异，<strong>PCI-E NVMe SSD</strong> 在各种指标上都达到了一个全新水平。一块常见的 3.2 TB 规格企业级 MLC颗粒 SSD 有着极为强悍的性能、可靠性与性价比，价格 ¥3000 元不到，全方位吊打老存储。</p>
+<p><img src="/img/cloud/ebs-1.png" alt=""></p>
+<p>Aliyun ESSD PL3 和我们 IDC 自建采购 PCI-E NVMe SSD 【1】是同一家供应商。所以在最大容量和 IOPS 限制上都一模一样。AWS 最好的块存储 io2 Block Express 的规格和各类指标也基本类似。云厂商提供的最高端存储就是使用这种 32 TB 的单卡，所以才会有 32TB 最大容量的限制（AWS 64T），可以认为底下的实际硬件基本是高度一致的。</p>
+<p><img src="/img/cloud/ebs-2.png" alt=""></p>
+<p>然而相比直接采购硬件，<strong>AWS EBS io2 的成本高达 120 倍，而阿里云的 ESSD PL3 则高达 200 倍</strong>。以 3.2TB 规格的企业级 PCI-E SSD 卡为参照基准，AWS 上按需售租比为 15 天，阿里云上不到 5 天，租用此时长即可买下整块磁盘。若在阿里云以采购三年预付最大优惠五折计算，三年租金够买下 120 多块同款硬盘。</p>
+<p><img src="/img/cloud/ebs-3.gif" alt=""></p>
+<blockquote>
+<p>你这 SSD 是金子做的 ？</p>
+</blockquote>
+<p><strong>当然，云厂商会争论说块存储的对标物是 SAN</strong>，而本地 DAS 在云上的对标物应当是<strong>实例存储（Host Storage）</strong>。但是，公有云的实例存储基本都是临时性的（ Ephemeral Storage），实例一旦休眠/停止就会回收抹除数据【7，11】，难以用于严肃的生产数据库，云厂商自己也建议你不要把重要数据放在上面。因此唯一能用于数据库的存储就是 EBS 块存储 。类似于DBFS之类的产品指标与成本与 EBS 基本类似，也在此合并同类项。</p>
+<p>说到底，用户在意的不是设备块底下到底是 SAN，SSD，还是HDD；真正重要的永远是实打实的硬指标：<strong>延迟、IOPS，可靠性，成本</strong>。拿本地与云上的最好选项对比，没有任何问题，更别提最好的云存储底下用的也是一样的本地盘了。</p>
+<p><strong>有的“专家”又会说，云上的块存储稳定可靠，多副本冗余纠错</strong>。在以前，Share Everything 的数据库要用 SAN 存储跑，然而现在很多数据库都是 Share Nothing 架构了。在数据库实例层面进行冗余，不需要存储层再搞个三副本，更何况企业级磁盘本身就有极强的自我纠错能力与安全冗余（ UBER &lt; 1e-18 ）。<strong>在上层数据库本身已经有冗余的情况下，多副本块存储对数据库来说属于毫无意义的浪费</strong>。退一万步讲，如果云厂商真的用了多余的两副本来做无谓的冗余，那也不过是溢价率从 200x 降到 66x ，杀猪逻辑依然没有质变。</p>
+<p><strong>“专家”还会说，买“云服务”其实类似于买保险</strong>：“年化 0.02% 的故障看起来大部分人一次都遇不到，但是遇到一次就毁灭性的打击，而云厂商来为你兜底”。听上去好像很有吸引力。但翻开各家云厂商 EBS 的 SLA，你会发现压根没有为可靠性兜底的条款。ESSD 云盘介绍上是写了 9个9 的数据可靠性，但他也不敢把这句话写到 SLA 里。<strong>云厂商敢兜的只有可用性，而且还是相当逊的可用性</strong>，以 AWS EBS SLA 【9】为例：</p>
+<p><img src="/img/cloud/ebs4.png" alt=""></p>
+<blockquote>
+<p>《<a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">云SLA是不是安慰剂</a>》</p>
+</blockquote>
+<p>翻译成大白话就是：如果一个月里挂一天半（95%），本月此项服务费补偿100%代金券，挂了7个小时（99%）补偿 30% 代金券，挂了几十分钟 （99.9%单盘，99.99%区域）补偿10%代金券。云厂商收了百倍费用，这么大的重大冲击就补偿点代金券？挂几分钟都受不了的应用，谁会稀罕这几毛钱代金券？莫过于前几年那篇《腾讯云给一家创业公司带来的灾难》</p>
+<p>顺丰快递保价 1% ，搞丢了人家真的赔你。每年几万块的商业医保，出问题真能兜底几百万。不要侮辱“保险”这个行业，起码人家也是一分钱一分货的。<strong>所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是吃不了兜着走的哑巴亏。在最好的情况下，它才是提供情绪价值的安慰剂。</strong></p>
+<p>云数据库服务的溢价还可以用 “专家人力” 来解释，但这一点对于服务器插上就能用的磁盘完全说不通，<strong>云厂商自己也讲不出这里几十倍的价格到底溢在哪里</strong>。你去问他们的工程师，大概逼急了也只能告诉你：</p>
+<p>“<strong>我们抄 AWS ，人家就是这么设计的</strong>”</p>
+<h2 id="why为什么要这样定价">WHY：为什么要这样定价</h2>
+<p>即使是公有云自己的工程师可能也搞不清楚这样定价的意义，明白的人也不太可能会告诉你。但是这并不妨碍我们从<strong>产品的设计</strong>中推断出这样做背后的道理。</p>
+<p>存储是有事实标准的：<strong>POSIX 文件系统 + 块存储</strong>。无论是数据库文件，图片音视频都使用同样的文件系统接口存储在磁盘上。但是 AWS 的“神之一手” 将其切分为两种不同的服务：<strong>S3</strong> （简单对象存储）与 <strong>EBS</strong> （弹性块存储）。很多“追随者”模仿了AWS 的产品设计与定价模型，却说不清这样做的逻辑与原理。</p>
+<p><img src="/img/cloud/ebs-5.png" alt=""></p>
+<blockquote>
+<p>阿里云官网对 EBS 和 OSS 的定位</p>
+</blockquote>
+<p><strong>S3</strong> 的全称 是 <strong>Simple Storage Service ，简单存储服务</strong>。它是文件系统/存储的一种简化替代：牺牲了强一致性、目录管理，访问时延等功能属性，以换取廉价的成本与海量伸缩的能力。它提供了一个简单的、高延迟、高吞吐扁平 KV 存储服务，从标准的存储服务中剥离出来。这个部分物美价廉，是公有云用来吸引用户上云的一大杀手锏：因此成为了可能是唯一一个，<strong>在各家公有云通行的云计算事实标准</strong>。</p>
+<p><strong>而数据库需要的是低延迟，强一致、高质量、高性能、可随机读写的块存储</strong>，这一部分被包装为 EBS 服务：Elastic Block Store ，弹性块存储服务，这个部分成为了公有云厂商的 禁脔 ：不愿为用户染指。<strong>因为EBS是 RDS 的定价之锚 —— 也就是云数据库的壁垒与护城河</strong>。</p>
+<p>卖资源吃饭的 IaaS 定价没有太大水分空间，可以对着 BOM 一笔一笔精算。但是像云数据库这样的 PaaS， 里面包含的“服务”，人力 / 研发成本就包含大量水分，难以厘定，就可以名正言顺的<strong>卖出天价</strong>，攫取高额利润。尽管国内公有云 IaaS 层存储、计算、网络三大件的收入能占营收一半的比例，但其毛利率只有 <strong>15% ～ 20%</strong>，而以云数据库为代表的公有云 PaaS 毛利率可以达到 <strong>50%</strong> 或更高，完爆卖资源吃饭的 IaaS。</p>
+<p><strong>如果用户选择使用 IaaS 资源（EC2 / EBS）自行搭建数据库，对云厂商而言是一笔巨大的利润损失。所以公有云厂商会竭尽全力避免这样的情况出现，而怎样设计产品才能实现这个需求呢？</strong></p>
+<p>首先，最适合用于自建数据库的<strong>实例存储</strong>必须添加各种限制：实例一旦休眠/停止就会回收并抹除数据，让你没法用 EC2 自带的盘跑严肃的生产数据库服务。其次尽管 EBS 相比本地 NVMe SSD 存储性能可靠性稍显拉胯，但用来跑数据库也是可以的，所以这里也要限制：但也不能不给用户，那么就<strong>设置一个天价</strong>！作为补偿，次一级的廉价海量存储 S3 就可以卖便宜一些来钓鱼获客。</p>
+<p>当然要想客户买单，也需要一些云计算 KOL 来鼓吹配套 “公有云云原生” 哲学理念：“EC2 不适合放状态哟，请把状态放到 S3 或者 RDS 以及其他托管服务，这才是使用我们公有云的‘<strong>最佳实践</strong>’ ”。</p>
+<p><a href=""><img src="/img/cloud/ebs-7.png" alt=""></a></p>
+<p>这四条总结的很到位，但公有云绝对不会告诉你“最佳实践”的代价是什么。用白话解释一下<a href="https://github.com/lipingtababa/cloud-native-best-practices/blob/main/%E4%BA%91%E5%8E%9F%E7%94%9F%E7%8E%8B%E5%9B%9B%E6%9D%A1.md">这四条</a>的意思，这是一个为客户<strong>精心设计的连环杀猪套</strong>：</p>
+<p><strong>普通文件丢S3</strong>！（这么物美价廉的S3，还要啥 EBS？）</p>
+<p><strong>不要自建数据库</strong>！（别想着用实例存储折腾开源替代）</p>
+<p><strong>请深度使用厂商专有的身份认证系统</strong>（供应商锁定）</p>
+<p><strong>乖乖给云数据库上贡</strong>！（锁死用户后，杀猪时刻）</p>
+<h2 id="how还原杀猪盘内幕">HOW：还原杀猪盘内幕</h2>
+<p>公有云的商业模式可以概括为：<strong>廉价EC2/S3获客，EBS/RDS杀猪</strong>。</p>
+<p>要想杀猪，先要养猪，舍不着孩子套不着狼。所以对于新用户、初创企业，小微用户，公用云都不吝于提供一些甜头，甚至赔本赚吆喝。新用户首单骨折，初创企业免费/半价 Credit，以及微妙的定价策略。</p>
+<p>以 AWS RDS <a href="https://instances.vantage.sh/">报价</a>为例可以看出，1核2核的迷你机型，单价也就是 <strong>几$/核·月</strong>，折合三四百块人民币一年，可以说是非常便宜实惠（不含存储）：如果你需要一个低频使用的小微数据库放点东西，这也许就是最简单便宜的选择【10】。</p>
+<p><a href="https://instances.vantage.sh/"><img src="/img/cloud/ebs-8.png" alt=""></a></p>
+<p>然而，<strong>只要你稍微把配置往上抬哪怕一丁点儿，核月单价就出现了数量级的变化</strong>，干到了二三十～一百来刀，最高可以翻到几十倍 —— <strong>算上惊悚的 EBS 价格还要再翻番</strong>。用户只有在看到突然出现的天价账单时，才会意识到到底发生了什么。</p>
+<p>以 RDS for PostgreSQL 为例， AWS 上 64C / 256GB 的 db.m5.16xlarge RDS用一个月价格 $25,817 / 月，折合每月 18 万元人民币，一个月的租金够你把两台性能比这还要好的多得多的服务器直接买下来自建了。<strong>租售比甚至都不到一个月，租十来天就够你买下来整台服务器自建</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>付费模式</th>
+<th>价格</th>
+<th>折合每年（万¥）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC自建（单物理机）</td>
+<td>¥7.5w / 5年</td>
+<td>1.5</td>
+</tr>
+<tr>
+<td>IDC自建（2～3台组HA）</td>
+<td>¥15w / 5年</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 按需</td>
+<td>¥87.36/时</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 月付（基准）</td>
+<td>¥4.2w / 月</td>
+<td>50</td>
+</tr>
+<tr>
+<td>阿里云 RDS 年付（85折）</td>
+<td>¥425095 / 年</td>
+<td>42.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 3年付（5折）</td>
+<td>¥750168 / 3年</td>
+<td>25</td>
+</tr>
+<tr>
+<td>AWS 按需</td>
+<td>$25,817 / 月</td>
+<td>217</td>
+</tr>
+<tr>
+<td>AWS 1年不预付</td>
+<td>$22,827 / 月</td>
+<td>191.7</td>
+</tr>
+<tr>
+<td>AWS 3年全预付</td>
+<td>12w$ + 17.5k$/月</td>
+<td>175</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏按需</td>
+<td>¥197,489 / 月</td>
+<td>237</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏1年不预付</td>
+<td>¥143,176 / 月</td>
+<td>171</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏3年全预付</td>
+<td>¥647k + 116k/月</td>
+<td>160.6</td>
+</tr>
+</tbody>
+</table>
+<p>我们可以对比一下自建与云数据库的成本差异：</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>折合每年（万元）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC托管服务器 64C / 384G / 3.2TB NVME SSD 660K IOPS (2～3台)</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS PG 高可用版 pg.x4m.8xlarge.2c, 64C / 256GB / 3.2TB ESSD PL3</td>
+<td>25 ～ 50</td>
+</tr>
+<tr>
+<td>AWS RDS PG 高可用版 db.m5.16xlarge, 64C / 256GB / 3.2TB io1 x 80k IOPS</td>
+<td>160 ～ 217</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>RDS</strong> 定价与自建对比，详见《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》</p>
+</blockquote>
+<p>任何理智的企业用户都看得明白这里面的道理：<strong>如果采购这种服务不是为了短期的，临时性的需求，那么绝对算得上是<strong><strong>重大的财务失当</strong></strong>行为</strong>。</p>
+<p>不仅仅是 关系型数据库服务 / RDS 是这样，各种云数据库都在杀猪。MongoDB， ClickHouse，Cassandra，用 EC2 / EBS的有一个算一个。以流行的 NoSQL 文档数据库 MongoDB 为例：</p>
+<p><img src="/img/cloud/ebs-10.png" alt=""></p>
+<blockquote>
+<p>这种报价没有十年脑血栓的产品经理真的想不出来</p>
+</blockquote>
+<p><strong>五年时间正好是常见服务器折旧年限</strong>，最大折扣，12节点（64C 512G），报价两千三百万。这个报价的零头就可以轻松把五年硬件代维轻松搞定，再加一个 MongoDB 专家天团为您按需定制随意自建了。</p>
+<p><strong>高级餐厅加收菜品 15% 的服务费，而用户也可以理解并支持这种合理范围内的利润需求</strong>。云数据库如果在硬件资源的基础上加收百分之几十的服务费与弹性溢价（白嫖开源的云服务就不要提软件费用了），可以解释为生产性要素的定价，解决的问题与提供的服务确实值这个钱。</p>
+<p>然而加收百分之几百甚至几千的溢价，那就完全属于<strong>破坏性要素参与分配</strong>了：云厂商吃死了用户上来之后没有备选项，以及迁移会产生伤筋动骨的大成本，所以大可以放心杀猪！在这种意义下，用户掏的钱，买的不是服务，而是在被强制征收 “无专家税” 与 “保护费”。</p>
+<h2 id="被遗忘的初心愿景">被遗忘的初心愿景</h2>
+<p>因而面对杀猪的指责，云厂商也会辩解说：“<em><strong>哎呀，你们看到的都是列表价啦，说是最低 5折，但大客户打起折来，可是没有底线的哦</strong></em>“。作为一条经验法则：<strong>自建成本差不多在目前云服务列表价的零点五到一折上下浮动</strong>，如果能长期保有此折扣，云服务就会比自建更有竞争力。</p>
+<p>专业懂行的大客户，特别是那种随时有能力迁移横跳的甲方去和公有云搞商务谈判，确实有可能获取两折的骨折折扣，而小客户天然在议价方面没有能力，通常不太可能有这种机会。</p>
+<p>然而，<strong>云计算不应成为云算计</strong>：云厂商如果只能在大企业那边疯狂打折促销，而面对中小客户和开发者进行薅羊毛的方式进行杀猪，那实际上是<strong>损不足以奉有余 —— 吸中小客户的血补贴大客户</strong>。这种方式已经完全违背了云计算本身的初心与愿景，必然难以持续长久。</p>
+<p>在云刚出现的时候，关注的焦点是 <strong>云硬件 /  IaaS 层</strong> ：算力、存储、带宽。云硬件 是云厂商的初心故事：让计算和存储资源像水电一样，而自己扮演基础设施的提供者的角色。这是一个很有吸引力的愿景：公有云厂商可以通过规模效应，压低硬件成本并均摊人力成本；理想情况下，在给自己留下足够利润的前提下，还可以向公众提供比 IDC 价格更有优势，更有弹性的存储算力。</p>
+<p>而 <strong>云软件（ PaaS / SaaS ）</strong>，则是与云硬件有着迥然不同的商业逻辑：云硬件靠的是规模效应，优化整体效率赚取资源池化超卖的钱，总体来说算是一种效率进步。而云软件则是靠共享专家，提供运维外包来收取服务费。公有云上大量的服务，本质是对免费的开源软件进行封装，依靠的是垄断专家，利用信息不对称收取天价保险费，是一种价值的攫取转移。</p>
+<p>不幸的是，出于混淆视线的目的，云软件与云硬件都使用了“云”这个 Title。因而在云的故事中，混杂着打破资源垄断与建立能力垄断的叙事：<strong>同时混掺着将算力普及到千家万户的理想主义光辉</strong>，<strong>与达成垄断攫取不义利润杀猪的贪婪</strong>。</p>
+<p><strong>抛弃平台中立性与做基础设施的初心，沉沦在 PaaS / SaaS / 甚至应用层恰烂钱的公有云供应商，将在没有底线的竞争中沉沦。</strong></p>
+<h2 id="博弈将走向何方">博弈将走向何方？</h2>
+<p><strong>垄断利润将随着竞争出现而消失，公有云厂商被卷入了一场苦战之中。</strong></p>
+<p>在基础设施层面，运营商，国资云，IDC 1.5/2.0 都进入了赛道，并提供了非常有竞争力的 IaaS 服务，一条龙包网包电托管代维，高端服务器既可以自购托管，也完全可以用实价弹性直接租赁，论起弹性来一点不怵。</p>
+<p><img src="/img/cloud/ebs-11.png" alt=""></p>
+<blockquote>
+<p>IDC 2.0 服务器租赁新模式：实价租赁，满年限归用户</p>
+</blockquote>
+<p>在软件层面，曾经作为公有云技术门槛的各类管控软件 / <strong>PaaS</strong> 已经出现了相当优秀的开源平替，OpenStack / Kubernetes 取代 EC2，MinIO / Ceph 取代 S3，RDS 上也出现了诸如 <strong>Pigsty</strong> 【5】与各种 K8S Operator 这样的开源替代品。</p>
+<p><strong>整个“云原生”运动，说白了就是开源生态对公有云白嫖挑战的回应</strong>：<strong>用户与开发者们为了避免被公有云杀猪，打造了一套本地优先的完整公有云开源替代</strong>。</p>
+<p><img src="/img/cloud/ebs-12.png" alt=""></p>
+<blockquote>
+<p>“CloudNative” 这个名字起的好，一中各表，公有云觉得是“公有云上出生”的，私有云想的是“在本地跑和云一样的东西”。推 Kubernetes 最狠的竟然还是公有云本身，就和销售绞死自己的绳索一样。</p>
+</blockquote>
+<p>经济衰退的大环境下，降本增效成为主旋律。十几万规模的科技行业大裁员，以及未来AI对智力行业的大规模冲击将释放出大量相关人才，再加上本朝的低工资优势，<strong>自建人才稀缺与昂贵的情状将大为缓解</strong>。人力成本相比云服务成本要有优势的多。</p>
+<p>结合以上三方面的趋势，IDC2.0 + 开源自建的组合越来越有竞争力：对于稍微有点规模和人才储备的组织来说，<strong>短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择</strong>。</p>
+<p>不忘初心，方得始终。公有云在云硬件 / IaaS 层上做的确实不错，除了<strong>贵到离谱</strong>，没有太大问题，东西确实是不错的。如果能回归最初的愿景初心，真正做好水与电一样的基础设施提供者，<strong>卖资源虽毛利虽不高，但可以站着把钱挣了。如果继续执迷不悟沉迷于杀猪，最终用户将用脚给出自己的选择</strong>。</p>
+<p><img src="/img/cloud/ebs-13.png" alt=""></p>
+<blockquote>
+<p>《<a href="/zh/blog/2023/06/14/%E4%BA%91%E8%AE%A1%E7%AE%97%E4%B8%BA%E5%95%A5%E8%BF%98%E6%B2%A1%E6%8C%96%E6%B2%99%E5%AD%90%E8%B5%9A%E9%92%B1/">云计算为啥还没挖沙子挣钱？</a>》</p>
+</blockquote>
+<h2 id="references">References</h2>
+<p>【1】<a href="https://mp.weixin.qq.com/s?__biz=MzI4OTc4MzI5OA==&amp;mid=2247575580&amp;idx=1&amp;sn=5a00fbca4688012d5d91958e50e5c146&amp;scene=21#wechat_redirect">撤离 AWS：3年省下27.5亿元</a></p>
+<p>【2】<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a></p>
+<p>【3】<a href="/zh/blog/2023/02/03/%E8%8C%83%E5%BC%8F%E8%BD%AC%E7%A7%BB%E4%BB%8E%E4%BA%91%E5%88%B0%E6%9C%AC%E5%9C%B0%E4%BC%98%E5%85%88/">范式转移：从云到本地优先</a></p>
+<p>【4】<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485363&amp;idx=1&amp;sn=8622b25fd2309d4fc969d22964a04129&amp;chksm=fe4b3268c93cbb7efb8757e876574bebf5d615bdd3c4ceb76e48b2bd907d78faeb450ca1e825&amp;scene=21#wechat_redirect">腾讯云CDN：从入门到放弃</a></p>
+<p>【5】<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485349&amp;idx=1&amp;sn=96fde26dd9efd399ef7ae11e52e05843&amp;chksm=fe4b327ec93cbb688e2708ff4e709a7ba32eee2be9d8637e9b941f47e6600dc7fcd2710a42c4&amp;scene=21#wechat_redirect">炮打 RDS，Pigsty v2.0 发布</a></p>
+<p>【6】<a href="https://en.shannon-sys.com/product.html?name=gen_4">Shannon NVMe Gen4 Series</a></p>
+<p>【7】<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html">AWS实例存储</a></p>
+<p>【8】<a href="https://aws.amazon.com/cn/blogs/storage/achieve-higher-database-performance-using-amazon-ebs-io2-block-express-volumes/">AWS io2 gp3 存储性能与定价</a></p>
+<p>【9】<a href="https://aws.amazon.com/cn/ebs/sla/">AWS EBS SLA</a></p>
+<p>【10】<a href="https://instances.vantage.sh/">AWS EC2 / RDS 报价查询</a></p>
+<p>【11】<a href="https://help.aliyun.com/document_detail/63138.html">阿里云：本地盘</a></p>
+<p>【12】<a href="https://help.aliyun.com/document_detail/25383.html">阿里云：云盘概述</a></p>
+<p>【13】<a href="https://help.aliyun.com/document_detail/445806.html">图说块存储与云盘</a></p>
+<p>【14】<a href="https://news.futunn.com/post/24656633">从狂飙到集体失速，云计算换挡寻出路</a></p>
+<p>【15】<a href="https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA">云计算为啥还没挖沙子赚钱？</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-9aee3f7427fa7737fadc892001b4eb32">垃圾腾讯云CDN：从入门到放弃？</h1>
+	<div class="lead">本来我相信至少在  IaaS 的存储，计算，网络三大件上，公有云厂商还是可以有不小优势与很大作为的。只不过在腾讯云 CDN 上的亲身体验让我的想法动摇了。 <a href="https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug">微信原文</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-03-08" class="text-muted">2023-03-08</time>
+        
+	</div>
+	<p>我和 瑞典马工虽然在 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485292&amp;idx=1&amp;sn=4f650c3f5c3fb5207c55ff67e44d7d8a&amp;chksm=fe4b32b7c93cbba190e60d477061d19a165e1f9b074beb00b132ae1369a9fd2c7d10ed77a013&amp;scene=21#wechat_redirect">云数据库</a> VS <a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483919&amp;idx=1&amp;sn=fa5b4dba96b60bafeb862e05de8c7ff5&amp;chksm=c0ca8ec5f7bd07d3375eab6bc1938ff741a167bf22008f25a702438393d20a754f30aa6bdfb9&amp;scene=21#wechat_redirect"><strong>DBA</strong></a> 这个议题上针锋相对，但在一点上能达成共识：至少<strong>国内的公有云厂商做的是真垃圾</strong>。用马工的话来说就是：“<strong>阿里云是个工程质量差劲的正经云，但腾讯云是一群业余销售加业务码农玩游戏</strong>”。</p>
+<p><img src="/img/cloud/cdn-1.jpeg" alt=""></p>
+<h3 id="前因后果">前因后果</h3>
+<p>我有个软件托管在 <strong>GitHub</strong> 上，提供了 <strong>1MB</strong> 的源码包和 <strong>1GB</strong> 的离线软件包下载。大陆用户因为 在境内 没法从 <strong>GitHub</strong> 下载，因此需要有一个境内的下载地址，于是我就用了腾讯云的 <strong>COS</strong>（对象存储） 与 <strong>CDN</strong>（内容分发网络）服务。</p>
+<p>用 <strong>CDN</strong> 的初衷不外乎：1. 加速，2. 省钱。互联网流量费通常是 8毛钱1GB，使用 <strong>CDN</strong> 流量包可以节省不少流量费打对折。当然，因为 CDN 就是给境内用户专用的。所以我也只买了境内的流量包。一直以来也用的还算可以，直到 2月底，我突然发现，怎么冒出来几笔异常费用。</p>
+<p><img src="/img/cloud/cdn-1.png" alt=""></p>
+<p>点进去一看，CDN 收了<strong>几百块钱</strong>，我还想，难道是哪里渠道带火了下载？于是进入 数据统计分析界面一看，这段时间里，总共软件包也就是 <strong>100GB</strong> 不到的下载流量，撑死了几十块钱，怎么会我收几百块呢？</p>
+<p><img src="/img/cloud/cdn-2.png" alt=""></p>
+<p>点看分析一看好家伙，1TB的访问流量，全是 “<strong>境外其他</strong>”，什么鬼？</p>
+<p><img src="/img/cloud/cdn-3.png" alt=""></p>
+<p><img src="/img/cloud/cdn-1.jpeg" alt=""></p>
+<p><strong>于是，呼出腾讯云客服来：</strong></p>
+<p><img src="/img/cloud/cdn-4.png" alt=""></p>
+<p><strong>甩锅 x 1，我们这个 TOP不准，要看日志哈</strong>。</p>
+<p><img src="/img/cloud/cdn-5.png" alt=""></p>
+<p>那我就下载一份日志来看看，究竟是谁吃饱了撑着来爆破。结果，里面一大堆请求连客户端 IP 地址都没有。</p>
+<p><strong>甩锅 x 2 ，客服说，这种大概率是被</strong>攻击<strong>了！好怕怕啊！</strong></p>
+<p><img src="/img/cloud/cdn-6.png" alt=""></p>
+<p>这种话术还想忽悠我？<strong>不懂行的用户一听”攻击“，说不定就被拐带着跑去买公有云厂商的”高防服务“了。</strong></p>
+<p>绕了一圈又等了半个小时，终于告知了我真正的原因，<strong>流量费是“预热”扣除的</strong>。所以这些没有 “来源IP”的请求终于真相大白了：<strong>原来是“监守自盗，贼喊捉贼”，你们自己的系统跑过来爆破俺的流量啊！</strong></p>
+<p><img src="/img/cloud/cdn-7.png" alt=""></p>
+<p>工程师电话沟通告知说：我们的 CDN 预热是这样的，所有的 CDN 节点都会来回源请求，所以才有的这两万次请求与 <strong>1TB</strong> 流量。</p>
+<p>听到这样的解释，我都要笑喷了。<strong>我为什么买CDN？因为要省对象存储的流量钱。CDN 去刷新预热，这是云厂商自己系统内部的流量，为啥要挂在用户身上付费？<strong>但是</strong>你刷新预热一下，一下花掉了我直接走对象存储下载一年都用不了的钱。</strong></p>
+<p>好吧，就算我们退一万步讲预热要付费，一个合乎工程逻辑的做法是，每个大区域来对象存储回源一次，然后再下发同步到每个终端节点上。付个几倍流量费，我也不会介意的。<strong>1GB</strong> 的软件花个 <strong>10GB</strong> 预热一下，客户也不会说什么。</p>
+<p>腾讯云 CDN则不然，一个1MB/1GB的软件包预热，每个终端节点直接来请求，产生 <strong>1TB</strong> 的“预热流量”。八毛钱<strong>1GB</strong> 流量费，几百块就没了。更滑稽的是，我 CDN 是给大陆用户使用的，墙外用户根本用不着，直接 Github 下载就好了，而这些流量全都跑到“境外”去了，<strong>事先买好境内的流量包压根不能抵扣</strong>。而腾讯云的文档上也压根没有提及，这些 “预热” 究竟有多大的量和来自哪里。我认为，这已经构成了事实上的欺诈与恶意引导杀猪盘。比 《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税</a>》还要恶劣的多。</p>
+<p><strong>所以，一个简简单单的 1MB / 1GB 的软件包要走 CDN 分发，本来可能一天也没几块钱的东西，点一下按钮，大几百块就没了</strong>。<strong>在监控图表上，把内部的流量藏的好好的；在计费逻辑上，把本应免费的内部流量硬塞到用户头上。</strong></p>
+<p><img src="/img/cloud/cdn-8.png" alt=""></p>
+<blockquote>
+<p><strong>CDN预热内部流量也好意思向用户收钱？</strong></p>
+</blockquote>
+<p>几百块钱的成本对我来说不痛不痒，但我作为用户，感觉到智商受到了羞辱。腾讯云提议退一半钱给你好不好？全退给你好不好？<strong>我也一分没要，我就是要写一篇文章告诉大家，这个产品做的有多烂多傻逼</strong>。</p>
+<p><strong>阿里云不管怎么样，起码在某些方面我还会表示一下敬意。而腾讯云的表现，实实在在是彻底丢了中国公有云的脸，这么大一厂商，这点事儿都弄不明白就出来做云。也难怪别人会说：</strong></p>
+<p><strong>中国没有云计算，有的只是 IDC 2.0</strong></p>
+<p>就这个样子出来卖，还是早点洗洗睡吧。</p>
+<p>更多腾讯云的精彩表现，请欣赏云计算霰弹枪的往期文章：</p>
+<h2 id="扩展阅读">扩展阅读</h2>
+<p>[1] <a href="https://mp.weixin.qq.com/s/tuyv9nGQPaQRWD_q4EXpMw">腾讯云团队为什么用阿里云的服务名？</a></p>
+<p>[2] <a href="https://mp.weixin.qq.com/s/aP5FgFQ39u-UKC9mE4HKug">究竟是客户差劲，还是腾讯云差劲？</a></p>
+<p>[3] <a href="https://mp.weixin.qq.com/s/JnK3sIPozZqe2kFoFO1mJg">腾讯云：从入门到放弃</a></p>
+<p>[4] <a href="https://mp.weixin.qq.com/s/mMvDiTiMOt6eiTTYbHvbbQ">腾讯云阿里云做的真的是云计算吗?&ndash;从客户成功案例的视角</a></p>
+<p>[5] <a href="https://mp.weixin.qq.com/s/_eiZPNfz8OUP5iHBJ-oxJA">本土云厂家究竟在服务谁？</a></p>
+<p>[6] <a href="https://mp.weixin.qq.com/s/wGuGrtzmfDj9gIFUGNJ30g">云计算厂商们，你们辜负了中国的用户</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-9b856ab58261ba9aa95ed41d9b1517f0">范式转移：从云到本地优先</h1>
+	<div class="lead">本地优先的软件与云软件之间的对抗，将成为软件行业在这个时代的主旋律，而我们将有幸目睹并参与其中。<a href="https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw">微信原文</a> / <a href="https://mp.weixin.qq.com/s/BgNL2h2NYZuA1u1V1E4EjA">校订版</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-02-03" class="text-muted">2023-02-03</time>
+        
+	</div>
+	<p>上一篇里，我们用数据回答了《<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/"><strong>云数据库是不是智商税</strong></a>》 这个问题：<strong>高达几倍到十几倍的溢价，对于云适用光谱外的用户是毫无疑问的杀猪</strong>。但我们还可以进一步探究：公有云特别是云数据库为什么会是这样？并基于其底层逻辑此对行业的未来进行预测与判断。</p>
+<p>软件行业经历了几次范式转移，数据库也不例外</p>
+<hr>
+<h2 id="前生今世">前生今世</h2>
+<blockquote>
+<p>天下大势，分久必合，合久必分。</p>
+<p>—— The pendulum of the software industry.</p>
+</blockquote>
+<p>软件行业经历了几次范式转移，数据库也不例外。</p>
+<p><img src="/img/cloud/paradigm-title.png" alt="paradigm-title.png"></p>
+<p>软件吞噬世界，开源吞噬软件，云吞噬开源，谁来吃云？</p>
+<p><strong>最初，软件吞噬世界</strong>，以 Oracle 为代表的商业数据库，用软件取代了人工簿记，用于数据分析与事务处理，极大地提高了效率。不过 Oracle 这样的商业数据库非常昂贵，一核·一月光是软件授权费用就能破万，不是大型机构都不一定用得起，即使像壕如淘宝，上了量后也不得不”去O“。</p>
+<p><strong>接着，开源吞噬软件</strong>，像 PostgreSQL 和 MySQL 这样”<strong>开源</strong>免费“的数据库应运而生。软件开源本身是免费的，每核每月只需要几十块钱的硬件成本。大多数场景下，如果能找到一两个数据库专家帮企业用好开源数据库，那可是要比傻乎乎地给 Oracle 送钱要实惠太多了。</p>
+<p>开源软件带来了巨大的行业变革，可以说，<strong>互联网的历史就是开源软件的历史</strong>。尽管如此，开源软件免费，但 <strong>专家稀缺昂贵</strong>。能帮助企业 <strong>用好/管好</strong> 开源数据库的专家非常稀缺，甚至有价无市。某种意义上来说，这就是”开源“这种模式的商业逻辑：<strong>免费的开源软件吸引用户，用户需求产生开源专家岗位，开源专家产出更好的开源软件</strong>。但是，专家的稀缺也阻碍了开源数据库的进一步普及。于是，“云软件”出现了。</p>
+<p><strong>然后，云吞噬开源</strong>。公有云软件，是互联网大厂将自己使用开源软件的能力产品化对外输出的结果。公有云厂商把开源数据库内核套上壳，包上管控软件跑在托管硬件上，并雇佣共享 DBA 专家提供支持，便成了<strong>云数据库服务</strong> （RDS） 。<strong>这诚然是有价值的服务，也为很多软件变现提供了新的途径。但云厂商的搭便车行径，无疑对开源软件社区是一种剥削与攫取</strong>，而捍卫计算自由的开源组织与开发者自然也会展开反击。</p>
+<p>云软件的崛起会引发新的制衡反作用力：与云软件相对应的<strong>本地优先软件</strong>开始如雨后春笋一般出现。<strong>而我们，就在亲历见证这次范式转移。</strong></p>
+<hr>
+<h2 id="二律背反">二律背反</h2>
+<blockquote>
+<p>“<strong>我想直率地说：多年来，我们就像个傻子一样，他们拿着我们开发的东西大赚了一笔</strong>”。</p>
+<p>Redis Labs 首席执行官 Ofer Bengal</p>
+</blockquote>
+<p>冷战已经结束，但在<strong>软件行业</strong>中，垄断和反垄断的斗争却方兴未艾。</p>
+<p><strong>与<strong><strong>物理世界</strong></strong>不同，信息复制近乎为0的成本，让两种模式在软件世界有了相互争斗的实际意义</strong>。<strong>商业软件与云软件遵循垄断资本主义的逻辑；而自由软件、开源软件以及正在崛起的本地优先软件，遵循的是共产主义的逻辑</strong>【2】。信息技术行业之所以有今天的繁荣，人们能享受到如此多的免费信息服务，正是这种斗争的结果。</p>
+<p>正如开源软件的概念已经彻底改变了软件世界：商业软件公司耗费了海量资金与这个想法斗争了几十年。最终还是难以抵挡开源软件的崛起 —— 软件这种IT业的核心生产资料变为全世界开发者公有，按需分配。开发者各尽所能，人人为我，我为人人，这直接催生了互联网的黄金繁荣时代。</p>
+<p><img src="/img/cloud/paradigm-2.png" alt="paradigm-2.png"></p>
+<p>然而，盛极而衰，物极必反。商业软件改头换面以云服务的方式卷土重来，而开源软件的理念在云计算时代出了大问题。<strong>云软件在本质上是商业软件的形态升级</strong>：如果软件只能运行在供应商的服务器上，而不是跑在用户本地的服务器上，就可以形成新的垄断。更妙的是云软件完全可以白嫖开源，以彼之矛攻彼之盾。免费的开源软件加上供应商的运维与服务器，整合包装为虚实莫辨的服务，即可省却研发成本，溢价几倍甚至十几倍大赚一笔。</p>
+<p>在云刚出现的时候，他们的核心是硬件 / <strong>IaaS</strong>层 ：存储、带宽、算力、服务器。云厂商的初心故事是：让计算和存储资源像水电一样，自己扮演基础设施的提供者的角色。这是一个很有吸引力的愿景：公有云厂商可以通过规模效应，压低硬件成本并均摊人力成本；理想情况下，在给自己留下足够利润的前提下，还可以向公众提供比 IDC 价格更有优势，更有弹性的存储算力。</p>
+<p>而云软件（ PaaS / SaaS ），则是与<strong>云硬件</strong>有着迥然不同的商业逻辑：云硬件靠的是规模效应，优化整体效率赚取资源池化超卖的钱，总体来说算是一种效率进步。而<strong>云软件</strong>则是靠共享专家，提供运维外包来收取服务费。公有云上大量的<strong>软件</strong>，本质是对免费的开源软件进行封装，依靠的是信息不对称收取天价服务费，是一种价值的攫取转移。【1】</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">硬件算力</th>
+<th style="text-align:center">单价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 A1: 64C384G）</td>
+<td style="text-align:center">19</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 B1: 40C64G）</td>
+<td style="text-align:center">26</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 C2: 8C16G）</td>
+<td style="text-align:center">38</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（容器，超卖200%）</td>
+<td style="text-align:center">17</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（容器，超卖500%）</td>
+<td style="text-align:center">7</td>
+</tr>
+<tr>
+<td style="text-align:center">UCloud 弹性虚拟机（8C16G，有超卖）</td>
+<td style="text-align:center">25</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 2x内存（独占无超卖）</td>
+<td style="text-align:center">107</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 4x内存（独占无超卖）</td>
+<td style="text-align:center">138</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 8x内存（独占无超卖）</td>
+<td style="text-align:center">180</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS C5D.METAL 96C 200G (按月无预付)</td>
+<td style="text-align:center">100</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS C5D.METAL 96C 200G(预付3年)</td>
+<td style="text-align:center">80</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>数据库</strong></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.T2 (4x)</td>
+<td style="text-align:center">440</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.M5 (4x)</td>
+<td style="text-align:center">611</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.R6G (8x)</td>
+<td style="text-align:center">786</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.M5 24xlarge</td>
+<td style="text-align:center">1328</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 2x内存（独占）</td>
+<td style="text-align:center">260</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 4x内存（独占）</td>
+<td style="text-align:center">320</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 8x内存（独占）</td>
+<td style="text-align:center">410</td>
+</tr>
+<tr>
+<td style="text-align:center">ORACLE数据库授权</td>
+<td style="text-align:center">10000</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>论云如何把 20来块的单位硬件卖出十几倍溢价</p>
+</blockquote>
+<p>不幸的是，出于混淆视线的目的，云软件与云硬件都使用了“云”这个名字。因而在云的故事中，同时混掺着将算力普及到千家万户的理想主义光辉，与达成垄断攫取不义利润的贪心。</p>
+<hr>
+<h2 id="矛盾嬗变">矛盾嬗变</h2>
+<blockquote>
+<p><strong>在 2022 年，软件自由的敌人是云计算软件。【3】</strong></p>
+</blockquote>
+<p>云计算软件，即主要在供应商的服务器上运行的软件，而你的所有数据也存储在这些服务器上。以云数据库为代表的 PaaS 与各类 SaaS 服务都属于此类。这些“云软件”也许有一个客户端组件（手机App，网页控制台，跑在你浏览器中的JavaScript），但它们只能与供应商的服务端共同工作。而云软件存在很多问题：</p>
+<ul>
+<li>如果云软件供应商倒闭或停产，您的云软件就歇菜了，而你用这些软件创造的文档与数据就被锁死了。例如，很多初创公司的 SaaS 服务会被大公司收购，而大公司没有兴趣继续维护这些产品。</li>
+<li>云服务可能在没有任何警告和追索手段的情况下突然暂停您的服务（例如 Parler ）。您可能在完全无辜的情况下，被自动化系统判定为违反服务条款：其他人可能入侵了你的账户，并在你不知情的情况下使用它来发送恶意软件或钓鱼邮件，触发违背服务条款。因而，你可能会突然发现自己用各种云文档或其它App创建的文档全部都被永久锁死无法访问。</li>
+<li>运行在你自己的电脑上的软件，即使软件供应商破产倒闭，它也可以继续跑着，想跑多久跑多久。相比之下，如果云软件被关闭，你根本没有保存的能力，因为你从来就没有服务端软件的副本，无论是源代码还是编译后的形式。</li>
+<li>云软件极大加剧了软件的定制与扩展难度，在你自己的电脑上运行的闭源软件，至少有人可以对它的数据格式进行逆向工程，这样你至少有个使用其他替代软件的PlanB。而云软件的数据只存储在云端而不是本地，你甚至连这一点都做不到了。</li>
+</ul>
+<p>如果所有软件都是免费和开源的，这些问题就都自动解决了。然而，<strong>开源和免费实际上并不是解决云软件问题的必要条件；即使是收钱的或者闭源的软件，也可以避免上述问题</strong>：只要它运行在你自己的电脑、服务器、机房上，而不是供应商的云服务器上就可以。拥有源代码会让事情更容易一些，但这并不是不关键，<strong>最重要的还是要有一份软件的本地副本</strong>。</p>
+<p>在当今，<strong>云软件，而不是闭源软件或商业软件，成为了软件自由的头号威胁</strong>。<strong>云软件供应商可以在您<strong><strong>无法审计，无法取证，无法追索的情况下访问您的数据，或突然心血来潮随心所欲地锁定你的所有数据</strong></strong>，这种可能性的潜在危害，要比无法查看和修改软件源码的危害大得多</strong>。与此同时，也有不少“开源软件公司”将“开源”视作一种获客营销包装、或形成垄断标准的手段，而不是真正追求“软件自由”的目的。</p>
+<p><strong>”开源“ 与 ”闭源“ 已经不再是软件行业中最核心的矛盾，斗争的焦点变为 “云” 与 “本地”。</strong></p>
+<hr>
+<h2 id="本地优先">本地优先</h2>
+<p>“<strong>本地</strong>” 与 “<strong>云</strong>” 的对立体现为多种不同的形式：有时候是 “<strong>Native Cloud</strong>” vs “<strong>Cloud Native</strong>”，有时候叫体现为 “私有云” vs “公有云”，大部分时候与 ”开源“ vs “闭源”重叠，某种意义上也牵扯着 “自主可控” vs “仰人鼻息”。</p>
+<p>以 <strong>Kubernetes</strong> 为代表的 <strong>Cloud Native</strong> 运动就是最典型的例子：云厂商将 <strong>Native</strong> 解释 “原生”：“原生诞生在公有云环境里的软件” 以混淆视听；但究其目的与效果而言，<strong>Native</strong> 真正的含义应为 “本地”，即与 <strong>Cloud</strong> 相对应的 “<strong>Local</strong>” —— 本地云 / 私有云 / 专有云 / 原生云，叫什么不重要，重要的是它运行在用户想运行的任何地方（包括云服务器），而不是仅仅是公有云所独有！</p>
+<p>本地优先的软件在您自己的硬件上运行，并使用本地数据存储，但也保留云软件的便利特性，比如实时协作，简化运维，跨设备同步，资源调度，灵活伸缩等等。开源的本地优先的软件当然非常好，但这并不是必须的，本地优先软件90%的优点同样适用于闭源的软件。同理，免费的软件当然好，但本地优先的软件也不排斥商业化与收费服务。</p>
+<p>在云软件没有出现开源/本地优先的替代品前，公有云厂商尽可大肆收割，攫取垄断利润。而一旦更好用，更简易，成本低得多的开源替代品出现，好日子便将到达终点。正如 Kubernetes 用于替代云计算服务 EC2， MinIO / Ceph 用于替代云存储服务 S3， 而 Pigsty 则指在替代云数据库服务：RDS PostgreSQL。越来越多的云软件开源/本地优先替代正如雨后春笋一样冒出来。</p>
+<p><img src="/img/cloud/paradigm-3.jpeg" alt="paradigm-3.jpeg"></p>
+<blockquote>
+<p>CNCF Landscape</p>
+</blockquote>
+<hr>
+<h2 id="历史经验">历史经验</h2>
+<p>云计算的故事与电力的推广过程如出一辙，让我们把目光回退至上个世纪初，从电力的推广普及垄断监管中汲取历史经验。</p>
+<p><img src="/img/cloud/paradigm-4.jpeg" alt="paradigm-4.jpeg"></p>
+<blockquote>
+<p>ChatGPT: 电力的推广过程</p>
+</blockquote>
+<p><strong>供电也许会走向垄断、集中、国有化，但你管不住电器</strong>。如果云硬件（算力）类似于电力，那么云软件便是电器。生活在现代的我们难以想象：洗衣机，冰箱，热水器，电脑，竟然还要跑到电站边的机房去用，我们也很难想象，居民要由自己的发电机而不是公共发电厂来供电。</p>
+<p>因此从长期来看，公有云厂商大概也会有这么一天：在云硬件上通过类似于电力行业，通过垄断并购与兼并形成“规模效应”，利用“峰谷电”，“弹性定价”等各种方式优化整体资源利用率，在相互斗兽竞争中将算力成本不断压低至新的底线，实现“家家有电用”。当然，最后也少不了政府监管介入，公私合营收归国有，成为如同国家电网与电信运营商类似的存在，最终实现 IaaS 层的存储带宽算力的垄断。</p>
+<p>而与之对应，制造灯泡、空调、洗衣机这类电器的职能会从电力公司中剥离，百花齐放。云厂商的 PaaS / SaaS 在被更好，更优质，更便宜的替代物冲击下逐渐萎缩，或回归到足够低廉的价格水平。</p>
+<p>正如当年开源运动的死对头微软，现在也选择拥抱开源。公有云厂商肯定也会有这一天，与自由软件世界达成和解，心平气和地接受基础设施供应商的角色定位，为大家提供水与电一般的存算资源。而<strong>云软件终将</strong>会回归正常毛利，<strong>希望那一天人们能记得人们能记得，这不是因为云厂商大发慈悲，而是因为有人带来过开源平替。</strong></p>
+<hr>
+<h2 id="参考阅读">参考阅读</h2>
+<p>【1】<a href="/zh/blog/2023/01/30/%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E4%B8%8D%E6%98%AF%E6%99%BA%E5%95%86%E7%A8%8E/">云数据库是不是智商税？</a></p>
+<p>【2】<a href="https://www.gnu.org/philosophy/shouldbefree.zh-cn.html">为什么软件应该是自由的</a></p>
+<p>【3】<a href="https://martin.kleppmann.com/2021/04/14/goodbye-gpl.html">是时候和GPL说再见了</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-2f6739426df63d5dd62ead985e471dc9">云数据库是不是智商税</h1>
+	<div class="lead">寒冬来袭，大厂纷纷开始裁员进入降本增效模式，作为公有云杀猪刀一哥的云数据库，故事还能再讲下去吗？ <a href="https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A">微信公众号原文</a> / <a href="https://mp.weixin.qq.com/s/YKqH324Qtg0mj6WfSMb66w">校订版</a></div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2023-01-30" class="text-muted">2023-01-30</time>
+        
+	</div>
+	<p>寒冬来袭，大厂纷纷开始裁员，进入降本增效模式，作为公有云杀猪刀一哥的云数据库，故事还能再讲下去吗？</p>
+<p>近日，Basecamp &amp; HEY 联合创始人 DHH 的一篇文章【1,2】引起热议，主要内容可以概括为一句话：</p>
+<blockquote>
+<p>“我们每年在云数据库（RDS/ES）上花50万美元，你知道50万美元可以买多少牛逼的服务器吗？</p>
+<p>我们要下云，拜拜了您呐！“</p>
+</blockquote>
+<p><strong>所以，50 万美元可以买多少牛逼的服务器 ？</strong></p>
+<p><a href="https://mp.weixin.qq.com/s/YKqH324Qtg0mj6WfSMb66w"><img src="/img/cloud/rds-title.png" alt=""></a></p>
+<h2 id="荒谬定价">荒谬定价</h2>
+<blockquote>
+<p>磨刀霍霍向猪羊</p>
+</blockquote>
+<p><strong>我们可以换一种问法，服务器和RDS都卖多少钱？</strong></p>
+<p>以我们自己数据库大量使用的物理机型为例：Dell R730， 64核384GB内存，加装一块 3.2 TB MLC的NVME SSD。像这样的一台服务器部署标准的生产级 PostgreSQL，单机可以承载十几万的TPS，只读点查询可以干到四五十万。要多钱呢？算上电费网费IDC托管代维费用，按照5年报废均摊，整个生命周期成本七万五千上下，合每年一万五。当然，如果要在生产中使用，高可用是必须的，所以通常一组数据库集群需要两到三台物理机，也就是每年3万到4.5万。</p>
+<p>这里没有算入DBA费用：两三个人管几万核真没多少。</p>
+<p>如果您直接购买这样规格的云数据库，则费用几何呢？让我们看看国内阿里云的收费【3】。因为基础版（乞丐版）实在是没法生产实用（请参考：《<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485093&amp;idx=1&amp;sn=5815f71f1d832101d35a75f5aa4acd3c&amp;chksm=fe4b337ec93cba68fbf30eb0ed50d052c6e8972d42cf506051b5016668f4555edaa0756688dc&amp;scene=21#wechat_redirect">云数据库：删库到跑路</a>》），我们选用高可用版，通常底下是两到三个实例。包年包月，引擎 PostgreSQL 15 on x86，华东1默认可用区，独享的64核256GB实例：pg.x4m.8xlarge.2c，并加装一块3.2TB的ESSD PL3云盘。每年的费用在25万（3年）到75万（按需）不等，其中存储费用约占1/3。</p>
+<p><img src="/img/cloud/rds-1.png" alt=""></p>
+<p>让我们再来看看公有云一哥AWS【4】【5】。AWS上与此最接近的是 db.m5.16xlarge ，也是64核256GB多可用区部署，同理，我们加装一块最大8万IOPS，3.2TB的 io1 SSD磁盘，查询AWS全球与国区的报价，总体在每年160 ～ 217万元不等，存储费用约占一半，整体成本如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>付费模式</th>
+<th>价格</th>
+<th>折合每年（万¥）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC自建（单物理机）</td>
+<td>¥7.5w / 5年</td>
+<td>1.5</td>
+</tr>
+<tr>
+<td>IDC自建（2～3台组HA）</td>
+<td>¥15w / 5年</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 按需</td>
+<td>¥87.36/时</td>
+<td>76.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 月付（基准）</td>
+<td>¥4.2w / 月</td>
+<td>50</td>
+</tr>
+<tr>
+<td>阿里云 RDS 年付（85折）</td>
+<td>¥425095 / 年</td>
+<td>42.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS 3年付（5折）</td>
+<td>¥750168 / 3年</td>
+<td>25</td>
+</tr>
+<tr>
+<td>AWS 按需</td>
+<td>$25,817 / 月</td>
+<td>217</td>
+</tr>
+<tr>
+<td>AWS 1年不预付</td>
+<td>$22,827 / 月</td>
+<td>191.7</td>
+</tr>
+<tr>
+<td>AWS 3年全预付</td>
+<td>12w$ + 17.5k$/月</td>
+<td>175</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏按需</td>
+<td>¥197,489 / 月</td>
+<td>237</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏1年不预付</td>
+<td>¥143,176 / 月</td>
+<td>171</td>
+</tr>
+<tr>
+<td>AWS 中国/宁夏3年全预付</td>
+<td>¥647k + 116k/月</td>
+<td>160.6</td>
+</tr>
+</tbody>
+</table>
+<p>我们可以对比一下自建与云数据库的成本差异：</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>折合每年（万元）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDC托管服务器 64C / 384G / 3.2TB NVME SSD 660K IOPS (2～3台)</td>
+<td>3.0 ~ 4.5</td>
+</tr>
+<tr>
+<td>阿里云 RDS PG 高可用版 pg.x4m.8xlarge.2c, 64C / 256GB / 3.2TB ESSD PL3</td>
+<td>25 ～ 50</td>
+</tr>
+<tr>
+<td>AWS RDS PG 高可用版 db.m5.16xlarge, 64C / 256GB / 3.2TB io1 x 80k IOPS</td>
+<td>160 ～ 217</td>
+</tr>
+</tbody>
+</table>
+<p>所以问题来了，<strong>如果你用云数据库1年的钱，就够你买几台甚至十几台性能更好的服务器，那么使用云数据库的意义到底在哪里</strong>？当然，公有云的大客户通常可以有商务折扣，但再怎么打折，数量级上的差距也是没法弥补的吧？</p>
+<p><strong>用云数据库到底是不是在交智商税？</strong></p>
+<h2 id="适用场景">适用场景</h2>
+<blockquote>
+<p>没有银弹</p>
+</blockquote>
+<p><strong>数据库是数据密集型应用的核心</strong>，应用跟着数据库走，所以数据库选型需要非常审慎。而评价一款数据库需要从许多维度出发：稳定性，可靠性，安全性，简单性，可伸缩性，可扩展性，可观测性，可维护性，成本性价比，等等等等。甲方真正在意的是这些属性，而不是虚头巴脑的技术炒作：存算分离，Serverless，HTAP，云原生，超融合……，这些必须翻译成工程的语言：<strong>牺牲了什么换来了什么</strong>，才有实际意义。</p>
+<p>公有云的鼓吹者很喜欢往给它脸上贴金：节约成本，灵活弹性，安全可靠，是企业数字化转型的万灵药，是汽车对马车的革命，又好又快还便宜，诸如此类，可惜没几条是实事求是的。绕开这些虚头巴脑的东西，云数据库相比专业的数据库服务真正有优势的属性只有一条：<strong>弹性</strong>。具体来说是两点：<strong>启用成本低，可伸缩性强</strong>。</p>
+<p><strong>启动成本低</strong>，意味着用户不需要进行机房建设，人员招聘培训，服务器采购就可以开始用；<strong>可伸缩性强</strong>，指的是各种配置升降配，扩缩容比较容易；因此公有云真正适用的场景核心就是这两种：</p>
+<ol>
+<li><strong>起步阶段，流量极小的简单应用</strong></li>
+<li><strong>毫无规律可循，大起大落的负载</strong></li>
+</ol>
+<p>前者主要包括简单网站，个人博客，小程序小工具，演示/PoC，Demo，后者主要包括低频的的数据分析/模型训练，突发的秒杀抢票，明星并发出轨等特殊场景。</p>
+<p><strong>公有云的商业模型就是租赁</strong>：租服务器，租带宽，租存储，租专家。它和租房，租车，租充电宝没有本质区别。当然，租服务器和运维外包实在是不怎么中听，所以有了云这个名字，听起来更有赛博地主的感觉。而租赁这种模式的特点，就是弹性。</p>
+<p><strong>租赁模型有租赁的好处</strong>，出门在外，共享充电宝可以解决临时应急性的小规模充电需求。但对于大量日常从家到单位两点一线的人来说，每天用共享充电宝给手机电脑充电，毫无疑问是非常荒谬的，何况共享充电宝租一个小时4块钱，租几个小时的钱，就够你把它直接买下来了。租车可以很好的满足临时的、突发的、一次性用车需求：外地出差旅游，临时拉一批货。但如果你的出行需求是频繁的，本地性，那么购置一辆自动驾驶的车也许是最省事省钱的选择。</p>
+<p><strong>问题的关键还是在于租售比</strong>，房子的租售比几十年，汽车的租售几年，而公有云服务器的租售比通常只有几个月。如果你的业务能够稳定活几个月以上，为什么要租，而不是直接买呢？</p>
+<p>所以，云厂商赚的钱，要么来自VC砸钱求爆发增长的科技创企，要么来自灰色寻租空间比云溢价还高的特殊单位，要么是人傻钱多的狗大户，要么是零零散散的站长/学生/VPN个人用户。聪明的高净值企业客户，谁会放着便宜舒适的大House不住，跑去挤着租住方舱医院人才公寓呢？</p>
+<p><strong>如果您的业务符合公有云的适用光谱，那是最好不过；但为了不需要的灵活性与弹性支付几倍乃至十几倍溢价，那是纯交智商税</strong>**。**</p>
+<h2 id="成本刺客">成本刺客</h2>
+<blockquote>
+<p>任何信息不对称都可以构成盈利空间，但你无法永远欺骗所有人。</p>
+</blockquote>
+<p>公有云的弹性就是针对其商业模式设计的：<strong>启动成本极低，维持成本极高</strong>。低启动成本吸引用户上云，而且良好的弹性可以随时适配业务增长，可是业务稳定后形成供应商锁定，尾大不掉，极高的维持成本就会让用户痛不欲生了。这种模式有一个俗称 —— <strong>杀猪盘</strong>。</p>
+<p><img src="/img/cloud/rds-2.gif" alt=""></p>
+<p>在我职业生涯的第一站中，就有这样一次杀猪经历让我记忆犹新。作为前几个被逼上A云的内部BU，A云直接出工程师加入手把手提供上云服务。用ODPS全家桶换掉了自建的大数据/数据库全家桶。应该说，服务确实不错，只不过，每年的存储计算开销从千万出头飙升到接近一亿，利润几乎都转移到A云了，堪称终极成本刺客。</p>
+<p><img src="/img/cloud/rds-3.jpeg" alt=""></p>
+<p>后来在下一站，情况则完全不同。我们管理着两万五千核规模，450W QPS的 PostgreSQL 与 Redis 数据库集群。像这种规格的数据库，如果按AWS RCU/WCU 计费，每年几个亿就出去了；即使全买长期包年包月再加个大商务折扣，至少五六千万是肯定是少不了的。而我们总共两三个DBA，几百台服务器，人力+资产均摊每年统共不到一千万。</p>
+<p><img src="/img/cloud/rds-31.png" alt=""></p>
+<p>这里我们可以用一种简单的方式来核算单位成本：一核算力（含mem/disk）使用一个月的综合成本，简称<strong>核·月</strong>。我们核算过自建各机型的成本，以及云厂商给出的报价，大致结果如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">硬件算力</th>
+<th style="text-align:center">单价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 A1: 64C384G）</td>
+<td style="text-align:center">19</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 B1: 40C64G）</td>
+<td style="text-align:center">26</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（独占物理机 C2: 8C16G）</td>
+<td style="text-align:center">38</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（容器，超卖200%）</td>
+<td style="text-align:center">17</td>
+</tr>
+<tr>
+<td style="text-align:center">IDC自建机房（容器，超卖500%）</td>
+<td style="text-align:center">7</td>
+</tr>
+<tr>
+<td style="text-align:center">UCloud 弹性虚拟机（8C16G，有超卖）</td>
+<td style="text-align:center">25</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 2x内存（独占无超卖）</td>
+<td style="text-align:center">107</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 4x内存（独占无超卖）</td>
+<td style="text-align:center">138</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 弹性服务器 8x内存（独占无超卖）</td>
+<td style="text-align:center">180</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS C5D.METAL 96C 200G (按月无预付)</td>
+<td style="text-align:center">100</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS C5D.METAL 96C 200G(预付3年)</td>
+<td style="text-align:center">80</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>数据库</strong></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.T2 (4x)</td>
+<td style="text-align:center">440</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.M5 (4x)</td>
+<td style="text-align:center">611</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.R6G (8x)</td>
+<td style="text-align:center">786</td>
+</tr>
+<tr>
+<td style="text-align:center">AWS RDS PostgreSQL db.M5 24xlarge</td>
+<td style="text-align:center">1328</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 2x内存（独占）</td>
+<td style="text-align:center">260</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 4x内存（独占）</td>
+<td style="text-align:center">320</td>
+</tr>
+<tr>
+<td style="text-align:center">阿里云 RDS PG 8x内存（独占）</td>
+<td style="text-align:center">410</td>
+</tr>
+<tr>
+<td style="text-align:center">ORACLE数据库授权</td>
+<td style="text-align:center">10000</td>
+</tr>
+</tbody>
+</table>
+<p>所以这里问题就来了，单价二十块的服务器硬件，为什么可以卖出上百块，而且装上云数据库软件还可以再翻几番？<strong>运维是金子做的，还是服务器是金子做的？</strong></p>
+<p>常用的回应话术是：<em><strong>数据库是基础软件里的皇冠明珠，凝聚着无数无形知识产权BlahBlah</strong></em>。因此软件的价格远超硬件非常合理。如果是 Oracle 这样的顶尖商业数据库，或者索尼任天堂的主机游戏，这么说也过得去。</p>
+<p>但公有云上的云数据库（RDS for PostgreSQL/MySQL/&hellip;.），本质上是开源数据库内核换皮魔改封装，加上自己管控软件和共享DBA人头服务。那这种溢价率就非常荒谬了：数据库内核是免费的呀，<strong>你家管控软件是金子做的，还是DBA是金子做的？</strong></p>
+<p><img src="/img/cloud/ebs-3.gif" alt=""></p>
+<p><strong>公有云的秘密就在这里：<strong><strong>用廉价的存算资源获客，用云数据库杀猪</strong></strong>。</strong></p>
+<p>尽管国内公有云 IaaS （存储、计算、网络）的收入占营收接近一半，但毛利率只有 15% ～ 20%，而公有云 PaaS 的营收虽然不如 IaaS，但 PaaS 的毛利率可以达到 50%，完爆卖资源吃饭的 IaaS 。<strong>而 PaaS 中最具代表性的，就是云数据库</strong>。</p>
+<p>正常来说，如果不是把公有云单纯当作一个 IDC 2.0 或者 CDN供应商来用，最费钱的服务就是数据库。公有云上的存储、计算、网络资源贵吗？严格来说不算特别离谱。IDC托管物理机代维的核月成本大约为二三十块，而公有云上一核 CPU 算力用一个月的价格，大概在七八十块到一两百块，考虑到各种折扣与活动，以及弹性溢价，勉强处在可以接受的合理范围。</p>
+<p>但云数据库就非常离谱了，同样是一核算力用一个月，云数据库价格比起对应规格的硬件可以翻几倍乃至十几倍。便宜一些阿里云，核月单价两百到四百，贵一些的 AWS，核月单价可以七八百甚至上千。</p>
+<p>如果说您只有一两核的 RDS ，那也别折腾了，交点税就交点吧。但如果您的业务上了量还不赶紧从云上下来，那可真的是在交智商税了。</p>
+<hr>
+<h2 id="足够好吗">足够好吗？</h2>
+<blockquote>
+<p>不要误会，云数据库只是及格品大锅饭。</p>
+</blockquote>
+<p>关于云数据库/云服务器的成本，如果您能跟销售聊到这儿，话术就该变成：<em><strong>虽然我们贵，但是我们好呀！</strong></em></p>
+<p><strong>但是，云数据库真的好吗？</strong></p>
+<p>应该说，对于玩具应用，小微网站，个人托管，以及土法野路子自建数据库来，毫无技术认知的甲方来说，RDS也许足够好了。但在高净值客户与数据库专家看来，RDS不过是及格线上的大锅饭产品罢了。</p>
+<p>说到底，公有云源于大厂内部的运维能力外溢，大厂人自己厂里技术啥样门儿清，大可不必有啥莫名的崇拜。（Google也许算个例外）。</p>
+<p><img src="/img/cloud/rds-4.png" alt=""></p>
+<p>以 <strong>性能</strong> 为例，性能的核心指标是 <strong>延迟 / 响应时间</strong>，特别是长尾延迟，会直接影响用户体验：没有人愿意等着划一下屏幕转几秒圈圈。而在这一点上，<strong>磁盘</strong>起到决定性作用。</p>
+<p>我们生产环境数据库中使用的是本地 NVME SSD，典型4K写延迟为15µs，读延迟94µs。因而，PostgreSQL简单查询的响应时间通常为 100 ~ 300µs，应用侧的查询响应时间通常为 200 ~ 600µs；对于简单查询，我们的 SLO 是命中1ms内，未命中10ms内，超过10ms算慢查询，要打回去优化。</p>
+<p><img src="/img/cloud/rds-41.png" alt=""></p>
+<p>而 AWS 提供的EBS服务用fio实测性能极其拉垮【6】，默认的gp3读写延迟为 40ms，io1 读写延迟为10ms，整整差了近三个数量级，而且IOPS最大也只有八万。RDS使用的存储就是EBS，如果连一次磁盘访问都需要10ms，那这就根本没法整了。io2 倒是使用了自建同款 NVMe SSD，然而远程块存储相比本地磁盘延迟直接翻倍。</p>
+<p><img src="/img/cloud/rds-5.png" alt=""></p>
+<p>确实，有时候云厂商会提供性能足够好的本地的NVME SSD，但都会非常鸡贼的设定各种限制条件，来避免用户来使用EC2来自建数据库。AWS的限制方式是只有NVME SSD Ephemeral Storage，这种盘一旦遇上EC2重启就自动抹干净了，根本没法用。阿里云的限制方式是给你卖天价，相比直接采购硬件，<strong>阿里云的 ESSD PL3 则高达 200 倍</strong>。以 3.2TB 规格的企业级 PCI-E SSD 卡为参照基准，AWS 上售租比为 1个月，阿里云上为 9 天，租用此时长即可买下整块磁盘。若在阿里云以采购三年最大优惠五折计算，租用三年的时间可购买 123 块同款硬盘近 400TB 永久所有权。</p>
+<p><strong>再以</strong> <strong>可观测性</strong> <strong>为例，没有一家RDS的监控能称得上是“好”</strong>。就以监控指标数量来说吧，虽然说知道服务死了还是活着只需要几个指标，但如果想进行故障根因分析，需要越多越好的监控指标来构建良好的Context。而大多数RDS都只是做了一些基本的监控指标，和简陋到可怜的监控面板。以阿里云RDS PG为例【7】，所谓的“增强监控”，里面只有这么点可怜的指标 ， AWS里和PG数据库相关的指标也差不多不到100个，而我们自己的监控系统里主机指标有800多类，PGSQL数据库指标610类，REDIS指标257类，整个大约三千类指标，在数量上完爆这些RDS。</p>
+<p><img src="/img/cloud/rds-6.png" alt=""></p>
+<p><img src="/img/dashboards/overall.jpg" alt=""></p>
+<blockquote>
+<p>公开 <a href="https://demo.pigsty.cc">Demo</a>：https://demo.pigsty.cc</p>
+</blockquote>
+<p>至于<strong>可靠性</strong>，以前我对RDS的可靠性还抱有基本的信任，直到一个月前A云香港机房那场丑闻。租的机房，服务器喷水消防，OSS故障，大量RDS不可用也切不了；然后A云自己整个Region的管控服务竟然因为一个单AZ的故障自己挂点了，<strong>连自己的管控API都做不到异地容灾，那做云数据库异地容灾岂不是天大的笑话</strong>。</p>
+<p>当然，并不是说自建就不会出现这些问题，只是稍微靠谱点的IDC托管都不至于犯这么离谱的错误。安全性也不用多说，最近闹的出过的几次大笑话，比如著名的SHGA；一堆样例代码里硬编码AK/SK，云RDS更安全吗？别搞笑啦，经典架构起码还有VPN堡垒机扛着一层，而公网上暴露端口弱密码裸奔的数据库简直不要太多，攻击面肯定是更大了无疑。</p>
+<p><strong>云数据库另一个广为人所诟病的是其可扩展性</strong>。RDS是不给用户 dbsu 权限的，这也意味着用户是不能在数据库中安装扩展插件，而 PostgreSQL 的插件恰恰就是其醍醐味，没有扩展的PostgreSQL就像可乐不加冰，酸奶不加糖一样。更严重的问题是<strong>在一些故障出现时，用户甚至都丧失了自我救助的能力</strong>，参见《<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485093&amp;idx=1&amp;sn=5815f71f1d832101d35a75f5aa4acd3c&amp;chksm=fe4b337ec93cba68fbf30eb0ed50d052c6e8972d42cf506051b5016668f4555edaa0756688dc&amp;scene=21#wechat_redirect">云数据库：从删库到跑路</a>》中的真实案例：WAL归档与PITR这么基础性的功能，在RDS中竟然是一个付费的升级功能。至于可维护性，有些人说云数据库可以点点鼠标就创建销毁多方便呀，说这话的人肯定没经历过重启每个数据库都要收手机短信验证码的山炮场景。<strong>有 Database as Code 式的管理工具，真正的工程师绝对不会用这种“ClickOps”</strong>。</p>
+<p>不过任何事物存在都有其道理，云数据库也不是一无是处，在<strong>可伸缩性</strong>上，云数据库确实卷出了新高度，比如各种 Serverless 的花活，但这也是给云厂商自己省钱超卖用的，对用户来说确实没有太大意义。</p>
+<hr>
+<h2 id="淘汰dba">淘汰DBA？</h2>
+<blockquote>
+<p>被云厂商垄断，想招都找不到，还淘汰？</p>
+</blockquote>
+<p><strong>云数据库的另一种鼓吹思路是，用了RDS，你就不用DBA啦！</strong></p>
+<p>例如这篇知名点炮文《<a href="https://mp.weixin.qq.com/s/DtRFnh8LgtfesCNMNl3eNw">你怎么还在招聘DBA</a>》【8】里说：我们有数据库自治服务！RDS和DAS能帮你解决这些数据库相关的问题，DBA都要下岗了，哈哈哈哈。我相信任何认真看过这些所谓“自治服务”，“AI4DB”官方文档【9】【10】的人都不会相信这种鬼话：<strong>连一个足够好用的监控系统都算不上的小模块，能让数据库自治起来，这不是在说梦话？</strong></p>
+<p>DBA，Database Administrator，数据库管理员，以前也叫做数据库协调员、数据库程序员。DBA是一个横跨于研发团队与运维团队的广博角色，涉及DA、SA、Dev、Ops、以及SRE的多种职责，负责各种与数据与数据库有关的问题：设置管理策略与运维标准，规划软硬件架构，协调管理数据库，验证表模式设计，优化SQL查询，分析执行计划，乃至于处理紧急故障以及抢救数据。</p>
+<p><strong>DBA的第一点价值在于安全兜底</strong>：<strong>他是企业核心数据资产的守护者，也是可以轻易对企业造成致命伤害的人</strong>。在蚂蚁金服有个段子，能搞死支付宝的，除了监管就是DBA了。高管们通常也很难意识到 DBA 对于公司的重要性，直到出了数据库事故，一堆CXO紧张地站在DBA背后观看救火修复过程时…。比起避免一场数据库故障所造成的损失，例如：全美停航，Youtube宕机，工厂停产一天，雇佣DBA的成本显得微不足道。</p>
+<p><strong>DBA的第二点价值在于模型设计与优化</strong>。许多公司并不在乎他们的查询是纯狗屎，他们只是觉得“硬件很便宜”，砸钱买硬件就好了。然而问题在于，一个调整不当的查询/SQL或设计不当的数据模型与表结构，可以对性能产生几个数量级的影响。总会在某一个规模，堆硬件的成本相比雇佣一个靠谱DBA的成本高得令人望而却步。实话说，<strong>我认为大多数公司在IT软硬件开销中花费最大的是：开发人员没有正确使用数据库</strong>。</p>
+<p><strong>DBA的基本功是管理DB，但灵魂在于A</strong>：Administration ，如何管住研发人员创造的熵，需要的可不仅仅是技术。“自治数据库”也许可以帮助你分析负载创建索引，但没有任何可能帮你理解业务需求，去Push业务去优化表结构，而这一点在未来的二三十年里，都看不到任何被云替代的可能。</p>
+<p>无论是公有云厂商，还是以Kubernetes为代表的云原生/私有云，或者是类似 Pigsty 【11】这样的本地开源RDS替代，<strong>其核心价值都在于****尽可能多地使用软件，而不是人来应对系统复杂度</strong>。那么，<strong>云软件会革了运维与DBA的命吗</strong>？</p>
+<p><strong>云并不是什么都不用管的运维外包魔法</strong>。根据复杂度守恒定律，无论是系统管理员还是数据库管理员，管理员这个岗位消失的唯一方式是，它们被重命名为“DevOps Engineer”或SRE。<strong>好的云软件可以帮你屏蔽运维杂活，解决70%的日常高频问题，然而总是会有那么一些复杂问题只有人才能处理</strong>。你可能需要更少的人手来打理这些云软件，但总归还是需要人来管理【12】。毕竟，<strong>你也需要懂行的人来协调处理，才不至于被云厂商嘎嘎割韭菜当傻逼。</strong></p>
+<p><strong>在大型组织中，一个好的DBA是至关重要的</strong>。然而优秀的DBA相当稀有，供不应求，以至于这个角色在大多数组织中只能外包：包给专业的数据库服务公司，包给云数据库RDS服务团队。找不到DBA供应的组织只能将这个职责 <strong>内包</strong> 给自己的研发/运维人员，直到公司的规模足够大，或者吃到足够的苦头之后，一些Dev/Ops才会培养出相应的能力来。</p>
+<p><strong>DBA不会被淘汰，只会被集中到云厂商中垄断提供服务。</strong></p>
+<hr>
+<h2 id="垄断阴影">垄断阴影</h2>
+<blockquote>
+<p>在2020年，计算自由的敌人是云计算软件。</p>
+</blockquote>
+<p><strong>比起“淘汰DBA”，云的出现蕴含着更大的威胁</strong>。我们需要担心的是这样一幅图景：公有云（或果子云）坐大，控制硬件与运营商上下游，垄断计算，存储，网络，顶尖专家资源，形成事实标准。假如所有顶级DBA都被挖到云厂商去集中提供共享专家服务，普通的企业组织就彻底失去了用好数据库的能力，最终只能选择被公有云收税杀猪。最终，所有IT资源集中于云厂商，只要控制住这几个关键少数，就可以控制整个互联网。这毫无疑问与互联网诞生的初衷相悖。</p>
+<p>引用 DDIA 作者 Martin Kelppmann 的一段话【13】来说：</p>
+<blockquote>
+<p><strong>在2020年，计算自由的敌人是云计算软件</strong></p>
+<p>—— 即主要在供应商的服务器上运行的软件，而你的所有数据也存储在这些服务器上。这些“云软件”也许有一个客户端组件（手机App，网页App，跑在你浏览器中的JavaScript），但它们只能与供应商的服务端共同工作。而云软件存在很多问题：</p>
+<ul>
+<li>如果提供云软件的公司倒闭，或决定停产，软件就没法工作了，而你用这些软件创造的文档与数据就被锁死了。对于初创公司编写的软件来说，这是一个很常见的问题：这些公司可能会被大公司收购，而大公司没有兴趣继续维护这些初创公司的产品。</li>
+<li>谷歌和其他云服务可能在没有任何警告和追索手段的情况下，突然暂停你的账户。例如，您可能在完全无辜的情况下，被自动化系统判定为违反服务条款：其他人可能入侵了你的账户，并在你不知情的情况下使用它来发送恶意软件或钓鱼邮件，触发违背服务条款。因而，你可能会突然发现自己用Google Docs或其它App创建的文档全部都被永久锁死，无法访问了。</li>
+<li>而那些运行在你自己的电脑上的软件，即使软件供应商破产了，它也可以继续运行，直到永远。（如果软件不再与你的操作系统兼容，你也可以在虚拟机和模拟器中运行它，当然前提是它不需要联络服务器来检查许可证）。例如，互联网档案馆有一个超过10万个历史软件的软件集锦，你可以在浏览器中的模拟器里运行！相比之下，如果云软件被关闭，你没有办法保存它，因为你从来就没有服务端软件的副本，无论是源代码还是编译后的形式。</li>
+<li>20世纪90年代，无法定制或扩展你所使用的软件的问题，在云软件中进一步加剧。对于在你自己的电脑上运行的闭源软件，至少有人可以对它的数据文件格式进行逆向工程，这样你还可以把它加载到其他的替代软件里（例如OOXML之前的微软Office文件格式，或者规范发布前的Photoshop文件）。有了云软件，甚至连这个都做不到了，因为数据只存储在云端，而不是你自己电脑上的文件。</li>
+</ul>
+<p><strong>如果所有的软件都是免费和开源的，这些问题就都解决了</strong>。然而，开源实际上并不是解决云软件问题的必要条件；即使是闭源软件也可以避免上述问题，只要它运行在你自己的电脑上，而不是供应商的云服务器上。请注意，互联网档案馆能够在没有源代码的情况下维持历史软件的正常运行：如果只是出于存档的目的，在模拟器中运行编译后的机器代码就够了。也许拥有源码会让事情更容易一些，但这并不是关键，<strong>最重要的事情，还是要有一份软件的副本</strong>。</p>
+<p>我和我的合作者们以前曾主张过<strong>本地优先软件</strong>的概念，这是对云软件的这些问题的一种回应。本地优先的软件在你自己的电脑上运行，将其数据存储在你的本地硬盘上，同时也保留了云计算软件的便利性，比如，实时协作，和在你所有的设备上同步数据。开源的本地优先的软件当然非常好，但这并不是必须的，本地优先软件90%的优点同样适用于闭源的软件。云软件，而不是闭源软件，才是对软件自由的真正威胁，原因在于：<strong>云厂商能够突然心血来潮随心所欲地锁定你的所有数据，其危害要比无法查看和修改你的软件源码的危害大得多</strong>。因此，普及本地优先的软件显得更为重要和紧迫。</p>
+</blockquote>
+<p>有力就会有反作用力，与云软件相对应的本地优先软件开始如雨后春笋一般出现。例如，以Kubernetes为代表的 Cloud Native 运动就是一例。“Cloud Native”，云厂商将 Native 解释 “原生”：“原生诞生在公有云环境里的软件”；而其真正的含义应为 “本地”，即与 Cloud 相对应的 “Local” —— 本地云 / 私有云 / 专有云 / 原生云，叫什么不重要，重要的是它运行在用户想运行的任何地方（包括云服务器），而不是仅仅是公有云所独有！</p>
+<p>以 K8S为代表的开源项目，将原本公有云才有的资源调度/智能运维能力普及到所有企业中，让企业在本地也可以运行起‘云’一样的能力。对于无状态的应用来说，它已经是一个足够好的 “云操作系统” 内核。Ceph/Minio也提供了 S3 对象存储的开源替代，只有一个问题仍然没有答案，有状态的，生产级的数据库服务如何管理与部署？</p>
+<p>时代在呼唤 RDS 的开源替代物。</p>
+<hr>
+<h2 id="解决方案">解决方案</h2>
+<blockquote>
+<p>Pigsty —— 开源免费，开箱即用，更好的 RDS PG 替代</p>
+</blockquote>
+<p>我希望，未来的世界人人都有自由使用优秀服务的事实权利，而不是只能被圈养在几个公有云厂商提供的猪圈（Pigsty）里吃粑粑。这就是我要做 Pigsty 的原因 —— <strong>一个更好的，开源免费的 PostgreSQL RDS替代</strong>。让用户能够在任何地方（包括云服务器）上，一键拉起有比云RDS更好的数据库服务。</p>
+<p>Pigsty 是是对 PostgreSQL 的彻底补完，<strong>更是对云数据库的辛辣嘲讽</strong>。它本意是“猪圈”，但更是 Postgres In Great STYle 的缩写，即“<strong>全盛状态下的 PostgreSQL</strong>”。它是一个完全基于开源软件的，可以运行在任何地方的，浓缩了 PostgreSQL 使用管理最佳实践的 Me-Better  RDS 开源替代。用真实世界的大规模，高标准 PostgreSQL 集群打磨而来的解决方案，它是为了满足探探自己管理数据库的需求而生，在八个维度上进行了许多有价值的工作：</p>
+<p><img src="/img/cloud/rds-7.png" alt=""></p>
+<p><strong>可观测性（Observability）是天；天行健君子以自强不息</strong>；Pigsty使用现代可观测性技术栈为 PostgreSQL 打造了一款无与伦比的监控系统，从全局大盘概览到单个表/索引/函数等对象的秒极历史详情指标一览无遗，让用户对系统能够做到洞若观火，进而掌控一切。此外，Pigsty的监控系统还可以独立使用，监控第三方数据库实例。</p>
+<p><strong>可控制性（Controllability）是地；地势坤君子以厚德载物</strong>；Pigsty提供Database as Code的能力：使用表现力丰富的声明式接口描述数据库集群的状态，并使用幂等的剧本进行部署与调整。让用户拥有精细定制的能力的同时又无需操心实现细节，解放心智负担，让数据库操作与管理的门槛从专家级降低到新手级。</p>
+<p><strong>可伸缩性（Scalability）是水；水洊至习坎君子以常德行</strong>；Pigsty提供预制通用调参模板（OLTP / OLAP / CRIT / TINY），自动优化系统参数，并可通过级联复制无限扩展只读能力，也使用Pgbouncer连接池优化海量并发连接；Pigsty确保 PostgreSQL 的性能可以在现代硬件条件下充分发挥：单机可达数万并发连接/百万级单点查询QPS/十万级单条写入TPS。</p>
+<p><strong>可维护性（Maintainability）是火；明两作离大人以继明照于四方</strong>；Pigsty 允许在线摘除添加实例以扩缩容，Switchover/滚动升级进行升降配，提供基于逻辑复制的不停机迁移方案，将维护窗口压缩至亚秒级，让系统整体的可演化性，可用性，可维护性提高到一个新的水准。</p>
+<p><strong>安全性（Security）是雷；洊雷震君子以恐惧修省</strong>；Pigsty提供了一套遵循最小权限原则的访问控制模型，并带有各种安全特性开关：流复制同步提交防丢失，数据目录校验和防腐败，网络流量SSL加密防监听，远程备份AES-256防泄漏。只要物理硬件与密码安全，用户无需担心数据库的安全性。</p>
+<p><strong>简单性（Simplicity）是风；随风巽君子以申命行事</strong>；使用Pigsty的难度不会超过任何云数据库，它旨在以最小的复杂度成本交付完整的RDS功能，模块化设计允许用户自行组合选用所需的功能。Pigsty提供基于Vagrant的本地开发测试沙箱，与Terraform的云端IaC一键部署模板，让您在任意新EL节点上一键完成离线安装，完整复刻环境。</p>
+<p><strong>可靠性（Reliability）是山；兼山艮君子以思不出其位</strong>；Pigsty提供了故障自愈的高可用架构应对硬件问题，也提供开箱即用的PITR时间点恢复为人为删库与软件缺陷兜底，并通过长时间、大规模的生产环境运行与高可用演练验证其可靠性。</p>
+<p><strong>可扩展性（Extensibility）是泽：丽泽兑君子以朋友讲习</strong>；Pigsty深度整合PostgreSQL生态核心扩展PostGIS、TimescaleDB、Citus 、PGVector、以及大量扩展插件；Pigsty提供模块化设计的Prometheus/Grafana可观测性技术栈，以及MINIO，ETCD，Redis、Greenplum 等组件的监控与高可用部署与PostgreSQL 组合使用；</p>
+<p><img src="/img/cloud/rds-8.png" alt=""></p>
+<p><strong>更重要的是，Pigsty是完全开源免费的自由软件</strong>，采用 AGPL v3.0 协议。我们用爱发电，而您可以用几十块核·月的纯硬件成本，跑起运行功能完备甚至更好的RDS服务。无论你是初心者还是资深DBA，无论你管理着上万核的大集群还是1核2G的小水管，无论你已经用了RDS还是在本地搭建过数据库，只要你是 PostgreSQL 用户，Pigsty都会对您有所帮助，完全免费。<strong>您可以专注于业务中最有趣或最有价值的部分，将杂活丢给软件来解决</strong>。</p>
+<p>尽管Pigsty 本身旨在用数据库自动驾驶软件替代人肉数据库运维，但正如上所述，再好的软件也没法解决 100% 的问题。总会有一些的冷门低频疑难杂症需要专家介入处理。我们提供免费的社区答疑，如果您觉得安装使用维护有困难，需要下云迁移或者疑难杂症兜底，我们也提供顶尖的数据库专家咨询服务，性价比相对公有云数据库的<a href="/zh/blog/2023/06/12/%E4%BA%91sla%E6%98%AF%E4%B8%8D%E6%98%AF%E5%AE%89%E6%85%B0%E5%89%82/">工单/SLA</a>极有竞争力。Pigsty帮助用户用好 PostgreSQL，而我们帮助用户用好 Pigsty。</p>
+<p>Pigsty简单易用，人力成本与复杂度RDS持平，但资源成本差异确是天翻地覆。且不说自建机房的20块和几百块的云数据库怎么比，考虑到 RDS 对比同规格 EC2 都有几倍的溢价，您完全可以折中：使用云服务器部署 Pigsty RDS，既保留了云的弹性，又可以原地省掉五六成开销。如果是IDC自建或者代维，成本砍掉90%都不一定打得住。</p>
+<p><img src="/img/cloud/rds-9.png" alt=""></p>
+<p>RDS成本与规模成本曲线</p>
+<p>Pigsty 允许您践行最终极的 FinOps 理念 —— 用几乎接近于纯资源的价格，在任何地方（ECS，资源云，机房服务器甚至本地笔记本虚拟机）运行生产级的 PostgreSQL RDS 数据库服务。<strong>让云数据库的能力成本，从正比于资源的边际成本，变为约等于0的固定学习成本</strong>。</p>
+<p><strong>如果您可以用几分之一的成本来使用更好的 RDS 服务，那么再用云数据库就真的是纯纯的智商税了。</strong></p>
+<hr>
+<h2 id="reference">Reference</h2>
+<p>【1】<a href="https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0">为什么我们要离开云</a></p>
+<p>【2】<a href="https://www.infoq.cn/article/qoq3v6jfenwwzmpg4fre">上云“被坑”十年终放弃，寒冬里第一轮“下云潮”要来了？</a></p>
+<p>【3】<a href="https://rdsbuy.console.aliyun.com/create/rds/PostgreSQL">阿里云RDS for PostgreSQL定价</a></p>
+<p>【4】<a href="https://calculator.aws/#/addService/RDSPostgreSQL">AWS Pricing Calculator</a></p>
+<p>【5】 <a href="https://calculator.amazonaws.cn/#/?trk=pricing-ban">AWS Pricing Calculator</a> （中国宁夏）</p>
+<p>【6】<a href="https://github.com/Vonng/pgtpc/blob/master/fio/aws-ebs-bench.md">FIO 测试 AWS EBS性能</a></p>
+<p>【7】<a href="https://help.aliyun.com/document_detail/299200.html">阿里云RDS PG 增强监控</a></p>
+<p>【8】<a href="https://mp.weixin.qq.com/s/DtRFnh8LgtfesCNMNl3eNw">你为什么还在招DBA</a></p>
+<p>【9】<a href="https://help.aliyun.com/document_detail/159166.html">阿里云RDS PG 数据库自治服务</a></p>
+<p>【10】<a href="https://docs.opengauss.org/zh/docs/3.0.0/docs/Developerguide/AI4DB-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%87%AA%E6%B2%BB%E8%BF%90%E7%BB%B4.html">OpenGauss AI for DB</a></p>
+<p>【11】<a href="https://pigsty.cc/">Me-Better RDS PostgreSQL 替代 Pigsty</a></p>
+<p>【12】<a href="https://mp.weixin.qq.com/s/9lceZdyUZU9AzsqlAcpjTA">Pigsty v2 正式发布：更好的RDS PG开源替代</a></p>
+<p>【13】<a href="https://mp.weixin.qq.com/s/DJsDRO18saZaxe3oyzzYrA">是时候和GPL说再见了</a></p>
+<p>【14】<a href="https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ">云数据库是不是智商税？</a></p>
+<p>【15】<a href="https://mp.weixin.qq.com/s/rtx4UWkuvrKf7gtd6pFr-A">大厂裁员轰轰烈烈，哪个技术岗位可以独善其身？</a></p>
+<p>【16】<a href="https://mp.weixin.qq.com/s/UZVoQxFYbG7WlJ1JC-gclQ">蹭个热度&ndash;要不要DBA和云数据库</a></p>
+<p>【17】<a href="https://mp.weixin.qq.com/s/LFnWliDxPQnVePkDWsIVag">你怎么不招DBA</a></p>
+<p>【18】<a href="https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA">DBA还是一份好工作吗？</a></p>
+<p>【19】<a href="https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ">云RDS：从删库到跑路</a></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

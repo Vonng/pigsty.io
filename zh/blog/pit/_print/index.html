@@ -1,0 +1,1323 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><link rel="canonical" type="text/html" href="/zh/blog/pit/">
+<META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>故障 | Pigsty</title><meta property="og:title" content="故障" />
+<meta property="og:description" content="关于PostgreSQL的一些故障记录
+" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="/zh/blog/pit/" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="故障">
+<meta itemprop="description" content="关于PostgreSQL的一些故障记录
+"><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="故障"/>
+<meta name="twitter:description" content="关于PostgreSQL的一些故障记录
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-section td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+
+
+
+
+<div class="td-content">
+<div class="pageinfo pageinfo-primary d-print-none">
+<p>
+多页打印视图
+<a href="#" onclick="print();return false;">点击此处打印</a>.
+</p><p>
+<a href="/zh/blog/pit/">返回常规视图</a>.
+</p>
+</div>
+
+
+
+<h1 class="title">故障</h1>
+<div class="lead">关于PostgreSQL的一些故障记录</div>
+
+
+
+
+    <ul>
+    
+  
+  
+  
+  
+
+  
+    
+    
+	
+
+    <li><a href="#pg-e77b07072a5be832615cbbe0db37a741">故障档案:时间回溯导致的Patroni故障</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-d0b319a46ab3c293aa0825c81f3aceca">故障档案：PG安装Extension导致无法连接</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-d16f4df3ed844dacb1be55c5b9cec875">故障档案：pg_dump导致的连接池污染</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-17e936a2246bcab963cbb6180d21d58f">PostgreSQL数据页面损坏修复</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-52e3d650da1255d8d03553de21e3cca2">故障档案：PostgreSQL事务号回卷</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-7ddc661e5d3e6b2cd24c09b0f712ec21">故障档案：序列号消耗过快导致整型溢出</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-9ccf41f725b7ac3557776e2bab07da81">故障档案:移除负载导致过载</a></li>
+
+
+
+    
+  
+
+    </ul>
+
+
+<div class="content">
+      
+</div>
+</div>
+
+
+  
+  
+  
+  
+
+  
+  
+
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="">
+    <h1 id="pg-e77b07072a5be832615cbbe0db37a741">故障档案:时间回溯导致的Patroni故障</h1>
+	<div class="lead">机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致Patroni无法启动。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2021-02-22" class="text-muted">2021-02-22</time>
+        
+	</div>
+	<p>【草稿】</p>
+<p>机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致Patroni无法启动。</p>
+<p>Patroni中的故障信息如下所示。</p>
+<p>patroni 进程启动时间和pid时间不一致。就会认为：postgres is not running。</p>
+<p>两个时间相差超过30秒。patroni就尿了。</p>
+<p>还发现了Patroni里的一个BUG：https://github.com/zalando/patroni/issues/811</p>
+<p>错误信息里两个时间戳打反了。</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-d0b319a46ab3c293aa0825c81f3aceca">故障档案：PG安装Extension导致无法连接</h1>
+	<div class="lead">今天遇到一个比较有趣的Case，客户报告说数据库连不上了，发现是扩展导致的。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2019-06-13" class="text-muted">2019-06-13</time>
+        
+	</div>
+	<p>今天遇到一个比较有趣的Case，客户报告说数据库连不上了。报这个错：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql: FATAL:  could not load library <span style="color:#4e9a06">&#34;/export/servers/pgsql/lib/pg_hint_plan.so&#34;</span>: /export/servers/pgsql/lib/pg_hint_plan.so: undefined symbol: RINFO_IS_PUSHED_DOWN
+</span></span></code></pre></div><p>当然，这种错误一眼就知道是插件没编译好，报符号找不到。因此数据库后端进程在启动时尝试加载<code>pg_hint_plan</code>插件时就GG了，报FATAL错误直接退出。</p>
+<p>通常来说这个问题还是比较好解决的，这种额外的扩展通常都是在<code>shared_preload_libraries</code>中指定的，只要把这个扩展名称去掉就好了。</p>
+<h2 id="结果">结果……</h2>
+<p>客户说是通过<code>ALTER ROLE|DATABASE SET session_preload_libraries = pg_hint_plan</code>的方式来启用扩展的。</p>
+<p>这两条命令会在使用特定用户，或连接到特定数据库时覆盖系统默认参数，去加载<code>pg_hint_plan</code>插件。</p>
+<pre tabindex="0"><code class="language-psql" data-lang="psql">ALTER DATABASE postgres SET session_preload_libraries = pg_hint_plan;
+ALTER ROLE postgres SET session_preload_libraries = pg_hint_plan;
+</code></pre><p>如果是这样的话，也是可以解决的，通常来说只要有其他的用户或者其他的数据库可以正常登陆，就可以通过<code>ALTER TABLE</code>语句把这两行配置给去掉。</p>
+<p>但坏事就坏在，所有的用户和数据库都配了这个参数，以至于没有任何一条连接能连到数据库了。</p>
+<p>这种情况下，数据库就成了植物人状态，postmaster还活着，但任何新创建的后端服务器进程都会因为扩展失效自杀……。即使<code>dropdb</code>这种外部自带的二进制命令也无法工作。</p>
+<h2 id="于是">于是……</h2>
+<p>无法建立到数据库的连接，那么常规手段就都失效了……，只能Dirty hack了。</p>
+<p>如果我们从二进制层面把用户和数据库级别的配置项给抹掉，那么就可以连接到数据库，把扩展给清理掉了。</p>
+<p>DB与Role级别的配置存储在系统目录<code>pg_db_role_setting</code>中，这个表有着固定的OID = 2964，存储在数据目录下<code>global/2964</code>里。关闭数据库，使用二进制编辑器打开<code>pg_db_role_setting</code>对应的文件</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># vim打开后使用 :%!xxd 编辑二进制</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 编辑完成后使用 :%!xxd -r转换回二进制，再用:wq保存</span>
+</span></span><span style="display:flex;"><span>vi <span style="color:#4e9a06">${</span><span style="color:#000">PGDATA</span><span style="color:#4e9a06">}</span>/global/2964
+</span></span></code></pre></div><p><img src="/img/blog/pit-extension.png" alt=""></p>
+<p>这里，将所有的<code>pg_hint_plan</code>字符串都替换成等长的<code>^@</code>二进制零字符即可。当然如果不在乎原来的配置，更省事的做法是直接把这个文件截断成零长文件。</p>
+<p>重启数据库，终于又能连接上了。</p>
+<h2 id="复现">复现</h2>
+<p>这个问题复现起来也非常简单，初始化一个新数据库实例</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>initdb -D /pg/test -U postgres <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> pg_ctl -D /pg/test start
+</span></span></code></pre></div><p>然后执行以下语句，就可以体会这种酸爽了。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">psql</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">postgres</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">postgres</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;ALTER ROLE postgres SET session_preload_libraries = pg_hint_plan;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h2 id="教训">教训……</h2>
+<ol>
+<li>安装扩展后，一定要先验证扩展本身可以正常工作，再<strong>启用</strong>扩展</li>
+<li>凡事留一线，日后好相见：一个紧急备用的纯洁的su，或者一个无污染的可连接数据库，都不至于这么麻烦。</li>
+</ol>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-d16f4df3ed844dacb1be55c5b9cec875">故障档案：pg_dump导致的连接池污染</h1>
+	<div class="lead">有时候，组件之间的相互作用会以微妙的形式表现出来。例如使用pg_dump从连接池中导出数据，就可能产生连接池污染的问题。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2018-12-11" class="text-muted">2018-12-11</time>
+        
+	</div>
+	<p>PostgreSQL很棒，但这并不意味着它是Bug-Free的。这一次在线上环境中，我又遇到了一个很有趣的Case：由<code>pg_dump</code>导致的线上故障。这是一个非常微妙的Bug，由Pgbouncer，<code>search_path</code>，以及特殊的<code>pg_dump</code>操作所触发。</p>
+<h2 id="背景知识">背景知识</h2>
+<h3 id="连接污染">连接污染</h3>
+<p>在PostgreSQL中，每条数据库连接对应一个后端进程，会持有一些临时资源（状态），在连接结束时会被销毁，包括：</p>
+<ul>
+<li>本会话中修改过的参数。<code>RESET ALL;</code></li>
+<li>准备好的语句。 <code>DEALLOCATE ALL</code></li>
+<li>打开的游标。<code>CLOSE ALL;</code></li>
+<li>监听的消息信道。<code>UNLISTEN *</code></li>
+<li>执行计划的缓存。<code>DISCARD PLANS;</code></li>
+<li>预分配的序列号值及其缓存。<code>DISCARD SEQUENCES;</code></li>
+<li>临时表。<code>DISCARD TEMP</code></li>
+</ul>
+<p>Web应用会频繁建立大量的数据库连接，故在实际应用中通常都会使用连接池，复用连接，以减小连接创建与销毁的开销。除了使用各种语言/驱动内置的连接池外，Pgbouncer是最常用的第三方中间件连接池。Pgbouncer提供了一种Transaction Pooling的模式，即：每当客户端事务开始时，连接池会为客户端连接分配一个服务端连接，当事务结束时，服务端连接会被放回到池中。</p>
+<p>事务池化模式也存在一些问题，例如<strong>连接污染</strong>。当某个客户端修改了连接的状态，并将该连接放回池中，其他的应用遍可能受到非预期的影响。如下图所示：</p>
+<p><img src="/img/blog/pg-dump-failure.png" alt=""></p>
+<p>假设有四条客户端连接（前端连接）C1、C2、C3、C4，和两条服务器连接（后端连接）S1，S2。数据库默认搜索路径被配置为：<code>app,$user,public</code>，应用知道该假设，并使用<code>SELECT * FROM tbl;</code>的方式，来默认访问模式<code>app</code>下的表<code>app.tbl</code>。现在假设客户端C2在使用了服务器连接S2的过程中，执行了<code>set search_path = ''</code>清空了连接S2上的搜索路径。当S2被另一个客户端C3复用时，C3执行<code>SELECT * FROM tbl</code>时就会因为<code>search_path</code>中找不到对应的表而报错。</p>
+<p>当客户端对于连接的假设被打破时，很容易出现各种错误。</p>
+<h2 id="故障排查">故障排查</h2>
+<p>线上应用突然大量报错触发熔断，错误内容为大量的对象（表，函数）找不到。</p>
+<p>第一直觉就是连接池被污染了：某个连接在修改完<code>search_path</code>之后将连接放回池中，当这个后端连接被其他前端连接复用时，就会出现找不到对象的情况。</p>
+<p>连接至相应的Pool中，发现确实存在连接的<code>search_path</code>被污染的情况，某些连接的<code>search_path</code>被置空了，因此使用这些连接的应用就找不到对象了。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql -p6432 somedb
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># show search_path; \watch 0.1</span>
+</span></span></code></pre></div><p>在Pgbouncer中使用管理员账户执行<code>RECONNECT</code>命令，强制重连所有连接，<code>search_path</code>重置为默认值，问题解决。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>reconnect somedb
+</span></span></code></pre></div><p>不过问题就来了，究竟是什么应用修改了<code>search_path</code>呢？如果问题来源没有排查清楚，难免以后会重犯。有几种可能：业务代码修改，应用的驱动Bug，人工操作，或者连接池本身的Bug。嫌疑最大的当然是手工操作，有人如果使用生产账号用<code>psql</code>连到连接池，手工修改了<code>search_path</code>，然后退出，这个连接就会被放回到生产池中，导致污染。</p>
+<p>首先检查数据库日志，发现报错的日志记录全都来自同一条服务器连接<code>5c06218b.2ca6c</code>，即只有一条连接被污染。找到这条连接开始持续报错的临界时刻：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000">cat</span> <span style="color:#000">postgresql</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">Tue</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">csv</span> <span style="color:#ce5c00;font-weight:bold">|</span> <span style="color:#000">grep</span> <span style="color:#0000cf;font-weight:bold">5</span><span style="color:#000">c06218b</span><span style="color:#0000cf;font-weight:bold">.2</span><span style="color:#000">ca6c</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">2018</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">14</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">44</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">42.766</span> <span style="color:#000">CST</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;xxx&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;xxx-xxx&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">182892</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;127.0.0.1:60114&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#000">c06218b</span><span style="color:#0000cf;font-weight:bold">.2</span><span style="color:#000">ca6c</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">36</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;SELECT&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">2018</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">14</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">41</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">15</span> <span style="color:#000">CST</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">24</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">LOG</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">00000</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;duration: 1067.392 ms  statement: SELECT xxxx FROM x&#34;</span><span style="color:#000;font-weight:bold">,,,,,,,,,</span><span style="color:#4e9a06">&#34;app - xx.xx.xx.xx:23962&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">2018</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">14</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">45</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">03.857</span> <span style="color:#000">CST</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;xxx&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;xxx-xxx&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">182892</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;127.0.0.1:60114&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#000">c06218b</span><span style="color:#0000cf;font-weight:bold">.2</span><span style="color:#000">ca6c</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">37</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;SELECT&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">2018</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">14</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">41</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">15</span> <span style="color:#000">CST</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">24</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">368400961</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">42883</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;function upsert_xxxxxx(xxx) does not exist&#34;</span><span style="color:#000;font-weight:bold">,,</span><span style="color:#4e9a06">&#34;No function matches the given name and argument types. You might need to add explicit type casts.&#34;</span><span style="color:#000;font-weight:bold">,,,,</span><span style="color:#4e9a06">&#34;select upsert_phone_plan(&#39;965+6628&#39;,1,0,0,0,1,0,&#39;2018-12-03 19:00:00&#39;::timestamp)&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">8</span><span style="color:#000;font-weight:bold">,,</span><span style="color:#4e9a06">&#34;app - 10.191.160.49:46382&#34;</span>
+</span></span></code></pre></div><p>这里<code>5c06218b.2ca6c</code>是该连接的唯一标识符，而后面的数字<code>36,37</code>则是该连接所产生日志的行号。一些操作并不会记录在日志中，但这里幸运的是，正常和出错的两条日志时间相差只有21秒，可以比较精确地定位故障时间点。</p>
+<p>通过扫描所有白名单机器上该时刻的命令操作记录，精准定位到了一条执行记录：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_dump --host master.xxxx --port <span style="color:#0000cf;font-weight:bold">6432</span> -d somedb -t sometable
+</span></span></code></pre></div><p>嗯？<code>pg_dump</code>不是官方自带的工具吗，难道会修改<code>search_path</code>？不过直觉告诉我，还真不是没可能。例如我想起了一个有趣的行为，因为<code>schema</code>本质上是一个命名空间，因此位于不同schema内的对象可以有相同的名字。在老版本在使用<code>-t</code>转储特定表时，如果提供的表名参数不带schema前缀，<code>pg_dump</code>默认会默认转储所有同名的表。</p>
+<p>查阅<code>pg_dump</code>的源码，发现还真有这种操作，以10.5版本为例，发现在<code>setup_connection</code>的时候，确实修改了<code>search_path</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// src/bin/pg_dump/pg_dump.c line 287
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">main</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">int</span> <span style="color:#000">argc</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">char</span> <span style="color:#ce5c00;font-weight:bold">**</span><span style="color:#000">argv</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// src/bin/pg_dump/pg_dump.c line 681 main
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">setup_connection</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">fout</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">dumpencoding</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">dumpsnapshot</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">use_role</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// src/bin/pg_dump/pg_dump.c line 1006 setup_connection
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">PQclear</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ExecuteSqlQueryForSingleRow</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">AH</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">ALWAYS_SECURE_SEARCH_PATH_SQL</span><span style="color:#000;font-weight:bold">));</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// include/server/fe_utils/connect.h
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#8f5902;font-style:italic">#define ALWAYS_SECURE_SEARCH_PATH_SQL \
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">   &#34;SELECT pg_catalog.set_config(&#39;search_path&#39;, &#39;&#39;, false)&#34; 
+</span></span></span></code></pre></div><h2 id="bug复现">Bug复现</h2>
+<p>接下来就是复现该BUG了。但比较奇怪的是，在使用PostgreSQL11的时候并没能复现出该Bug来，于是我看了一下肇事司机的全部历史记录，还原了其心路历程（发现pg_dump和服务器版本不匹配，来回折腾），使用不同版本的pg_dump终于复现了该BUG。</p>
+<p>使用一个现成的数据库，名为<code>data</code>进行测试，版本为11.1。使用的Pgbouncer配置如下，为了便于调试，连接池的大小已经改小，只允许两条服务端连接。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">[databases]</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">postgres</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">host=127.0.0.1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">[pgbouncer]</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">logfile</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">/Users/vonng/pgb/pgbouncer.log</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">pidfile</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">/Users/vonng/pgb/pgbouncer.pid</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">listen_addr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">listen_port</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">6432</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">auth_type</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">trust</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">admin_users</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">postgres</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">stats_users</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">stats, postgres</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">auth_file</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">/Users/vonng/pgb/userlist.txt</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">pool_mode</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">transaction</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">server_reset_query</span> <span style="color:#ce5c00;font-weight:bold">=</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_client_conn</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">50000</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">default_pool_size</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">reserve_pool_size</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">reserve_pool_timeout</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">5</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">log_connections</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">log_disconnections</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">application_name_add_host</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">ignore_startup_parameters</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">extra_float_digits</span>
+</span></span></code></pre></div><p>启动连接池，检查<code>search_path</code>，正常的默认配置。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ psql postgres://vonng:123456@:6432/data -c <span style="color:#4e9a06">&#39;show search_path;&#39;</span>
+</span></span><span style="display:flex;"><span>     search_path
+</span></span><span style="display:flex;"><span>-----------------------
+</span></span><span style="display:flex;"><span> app, <span style="color:#4e9a06">&#34;</span><span style="color:#000">$user</span><span style="color:#4e9a06">&#34;</span>, public
+</span></span></code></pre></div><p>使用10.5版本的pg_dump，从6432端口发起Dump</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/usr/local/Cellar/postgresql/10.5/bin/pg_dump <span style="color:#4e9a06">\
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06"></span>	postgres://vonng:123456@:6432/data <span style="color:#4e9a06">\
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06"></span>	-t geo.pois -f /dev/null
+</span></span><span style="display:flex;"><span>pg_dump: server version: 11.1<span style="color:#000;font-weight:bold">;</span> pg_dump version: 10.5
+</span></span><span style="display:flex;"><span>pg_dump: aborting because of server version mismatch
+</span></span></code></pre></div><p>虽然Dump失败，但再次检查所有连接的<code>search_path</code>时，就会发现池里的连接已经被污染了，一条连接的<code>search_path</code>已经被修改为空</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ psql postgres://vonng:123456@:6432/data -c <span style="color:#4e9a06">&#39;show search_path;&#39;</span>
+</span></span><span style="display:flex;"><span> search_path
+</span></span><span style="display:flex;"><span>-------------
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> row<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span></code></pre></div><h2 id="解决方案">解决方案</h2>
+<p>同时配置pgbouncer的<code>server_reset_query</code>以及<code>server_reset_query_always</code>参数，可以彻底解决此问题。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">server_reset_query</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">DISCARD ALL</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">server_reset_query_always</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">1</span>
+</span></span></code></pre></div><p>在TransactionPooling模式下，<code>server_reset_query</code>默认是不执行的，因此需要通过配置<code>server_reset_query_always=1</code>使每次事务执行完后强制执行<code>DISCARD ALL</code>清空连接的所有状态。不过，这样的配置是有代价的，<code>DISCARD ALL</code>实质上执行了以下操作：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SESSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AUTHORIZATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">RESET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ALL</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DEALLOCATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ALL</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CLOSE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ALL</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">UNLISTEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_advisory_unlock_all</span><span style="color:#000;font-weight:bold">();</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">DISCARD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PLANS</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">DISCARD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SEQUENCES</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">DISCARD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">TEMP</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>如果每个事务后面都要多执行这些语句，确实会带来一些额外的性能开销。</p>
+<p>当然，也有其他的方法，譬如从管理上解决，杜绝使用<code>pg_dump</code>访问6432端口的可能，将数据库账号使用专门的加密配置中心管理。或者要求业务方使用带schema限定名的name访问数据库对象。但都可能产生漏网之鱼，不如强制配置来的直接。</p>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/egK80gEoGv2x6EYUquiLMw">微信公众号原文</a></p>
+</blockquote>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-17e936a2246bcab963cbb6180d21d58f">PostgreSQL数据页面损坏修复</h1>
+	<div class="lead">采用二进制编辑的方式修复PostgreSQL数据页，以及如何让一条主键查询出现两条记录来。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2018-11-29" class="text-muted">2018-11-29</time>
+        
+	</div>
+	<p>PostgreSQL是一个很可靠的数据库，但是再可靠的数据库，如果碰上了不可靠的硬件，恐怕也得抓瞎。本文介绍了在PostgreSQL中，应对数据页面损坏的方法。</p>
+<h2 id="最初的问题">最初的问题</h2>
+<p>线上有一套统计库跑离线任务，业务方反馈跑SQL的时候碰上一个错误：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ERROR:  invalid page in block <span style="color:#0000cf;font-weight:bold">18858877</span> of relation base/16400/275852
+</span></span></code></pre></div><p>看到这样的错误信息，第一直觉就是硬件错误导致的关系数据文件损坏，第一步要检查定位具体问题。</p>
+<p>这里，16400是数据库的oid，而275852则是数据表的<code>relfilenode</code>，通常等于OID。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">somedb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">select</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">275852</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">RegClass</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#000">regclass</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">---------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dailyuseractivities</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 如果relfilenode与oid不一致，则使用以下查询
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">somedb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">select</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">from</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">where</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_relation_filenode</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;275852&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">---------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dailyuseractivities</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>定位到出问题的表之后，检查出问题的页面，这里错误提示区块号为18858877的页面出现问题。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">somedb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">select</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">from</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dailyuseractivities</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">where</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;(18858877,1)&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">invalid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">page</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">block</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">18858877</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">of</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relation</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16400</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">275852</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 打印详细错误位置
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">somedb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">\</span><span style="color:#000">errverbose</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">XX001</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">invalid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">page</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">block</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">18858877</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">of</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relation</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16400</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">275852</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">LOCATION</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">ReadBuffer_common</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">bufmgr</span><span style="color:#000;font-weight:bold">.</span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">917</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>通过检查，发现该页面无法访问，但该页面前后两个页面都可以正常访问。使用<code>errverbose</code>可以打印出错误所在的源码位置。搜索PostgreSQL源码，发现这个错误信息只在一处位置出现：https://github.com/postgres/postgres/blob/master/src/backend/storage/buffer/bufmgr.c。可以看到，错误发生在页面从磁盘加载到内存共享缓冲区时。PostgreSQL认为这是一个无效的页面，因此报错并中止事务。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* check for garbage data */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">PageIsVerified</span><span style="color:#000;font-weight:bold">((</span><span style="color:#000">Page</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">bufBlock</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">blockNum</span><span style="color:#000;font-weight:bold">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">mode</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#000">RBM_ZERO_ON_ERROR</span> <span style="color:#ce5c00;font-weight:bold">||</span> <span style="color:#000">zero_damaged_pages</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">ereport</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">WARNING</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">(</span><span style="color:#000">errcode</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ERRCODE_DATA_CORRUPTED</span><span style="color:#000;font-weight:bold">),</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#000">errmsg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;invalid page in block %u of relation %s; zeroing out page&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#000">blockNum</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#000">relpath</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">smgr</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">smgr_rnode</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">forkNum</span><span style="color:#000;font-weight:bold">))));</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">MemSet</span><span style="color:#000;font-weight:bold">((</span><span style="color:#204a87;font-weight:bold">char</span> <span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">bufBlock</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">BLCKSZ</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#204a87;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">ereport</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#000;font-weight:bold">(</span><span style="color:#000">errcode</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ERRCODE_DATA_CORRUPTED</span><span style="color:#000;font-weight:bold">),</span>
+</span></span><span style="display:flex;"><span>                 <span style="color:#000">errmsg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;invalid page in block %u of relation %s&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#000">blockNum</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>                        <span style="color:#000">relpath</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">smgr</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">smgr_rnode</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">forkNum</span><span style="color:#000;font-weight:bold">))));</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>进一步检查<code>PageIsVerified</code>函数的逻辑：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* 这里的检查并不能保证页面首部是正确的，只是说它看上去足够正常
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 允许其加载至缓冲池中。后续实际使用该页面时仍然可能会出错，这也
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 是我们提供校验和选项的原因。*/</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">((</span><span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_flags</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#ce5c00;font-weight:bold">~</span><span style="color:#000">PD_VALID_FLAG_BITS</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_lower</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_upper</span> <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_upper</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_special</span> <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_special</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#000">BLCKSZ</span> <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_special</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#000">MAXALIGN</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">p</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">pd_special</span><span style="color:#000;font-weight:bold">))</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">header_sane</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87">true</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">header_sane</span> <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> <span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">checksum_failure</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#204a87;font-weight:bold">return</span> <span style="color:#204a87">true</span><span style="color:#000;font-weight:bold">;</span>
+</span></span></code></pre></div><p>接下来就要具体定位问题了，那么第一步，首先要找到问题页面在磁盘上的位置。这其实是两个子问题：在哪个文件里，以及在文件里的偏移量地址。这里，关系文件的<code>relfilenode</code>是275852，在PostgreSQL中，每个关系文件都会被默认切割为1GB大小的段文件，并用<code>relfilenode, relfilenode.1, relfilenode.2, …</code>这样的规则依此命名。</p>
+<p>因此，我们可以计算一下，第18858877个页面，每个页面8KB，一个段文件1GB。偏移量为<code>18858877 * 2^13 = 154491920384</code>。</p>
+<pre tabindex="0"><code class="language- c" data-lang=" c">154491920384 / (1024^3) = 143
+154491920384 % (1024^3) = 946839552 = 0x386FA000
+</code></pre><p>由此可得，问题页面位于第143个段内，偏移量<code>0x386FA000</code>处。</p>
+<p>落实到具体文件，也就是<code>${PGDATA}/base/16400/275852.143</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>hexdump 275852.143 <span style="color:#000;font-weight:bold">|</span> grep -w10 386fa00
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>386f9fe0 003b <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0100</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0100</span> <span style="color:#0000cf;font-weight:bold">0000</span> 4b00 07c8
+</span></span><span style="display:flex;"><span>386f9ff0 9b3d 5ed9 1f40 eb85 b851 44de <span style="color:#0000cf;font-weight:bold">0040</span> <span style="color:#0000cf;font-weight:bold">0000</span>
+</span></span><span style="display:flex;"><span>386fa000 <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span>
+</span></span><span style="display:flex;"><span>*
+</span></span><span style="display:flex;"><span>386fb000 62df 3d7e <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0452</span> <span style="color:#0000cf;font-weight:bold">0000</span> 011f c37d
+</span></span><span style="display:flex;"><span>386fb010 <span style="color:#0000cf;font-weight:bold">0040</span> <span style="color:#0000cf;font-weight:bold">0003</span> 0b02 <span style="color:#0000cf;font-weight:bold">0018</span> 18f6 <span style="color:#0000cf;font-weight:bold">0000</span> d66a <span style="color:#0000cf;font-weight:bold">0068</span>
+</span></span></code></pre></div><p>使用二进制编辑器打开并定位至相应偏移量，发现该页面的内容已经被抹零，没有抢救价值了。好在线上的数据库至少都是一主一从配置，如果是因为主库上的坏块导致的页面损坏，从库上应该还有原来的数据。在从库上果然能找到对应的数据：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>386f9fe0:3b00 <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0001</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0001</span> <span style="color:#0000cf;font-weight:bold">0000</span> 004b c807  <span style="color:#000;font-weight:bold">;</span>............K..
+</span></span><span style="display:flex;"><span>386f9ff0:3d9b d95e 401f 85eb 51b8 de44 <span style="color:#0000cf;font-weight:bold">4000</span> <span style="color:#000">0000</span>  <span style="color:#ce5c00;font-weight:bold">=</span>..^@...Q..D@...
+</span></span><span style="display:flex;"><span>386fa000:e3bd <span style="color:#0000cf;font-weight:bold">0100</span> 70c8 864a <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0400</span> f801 <span style="color:#0000cf;font-weight:bold">0002</span>  ....p..J........
+</span></span><span style="display:flex;"><span>386fa010:0020 <span style="color:#0000cf;font-weight:bold">0420</span> <span style="color:#0000cf;font-weight:bold">0000</span> <span style="color:#0000cf;font-weight:bold">0000</span> c09f 7a00 809f 7a00  . . ......z...z.
+</span></span><span style="display:flex;"><span>386fa020:409f 7a00 009f 7a00 c09e 7a00 809e 7a00  @.z...z...z...z.
+</span></span><span style="display:flex;"><span>386fa030:409e 7a00 009e 7a00 c09d 7a00 809d 7a00  @.z...z...z...z.
+</span></span></code></pre></div><p>当然，如果页面是正常的，在从库上执行读取操作就不会报错。因此可以直接通过<code>CTID</code>过滤把损坏的数据找回来。</p>
+<p>到现在为止，数据虽然找回来，可以松一口气了。但主库上的坏块问题仍然需要处理，这个就比较简单了，直接重建该表，并从从库抽取最新的数据即可。有各种各样的方法，<code>VACUUM FULL</code>，<code>pg_repack</code>，或者手工重建拷贝数据。</p>
+<p>不过，我注意到在判定页面有效性的代码中出现了一个从来没见过的参数<code>zero_damaged_pages</code>，查阅文档才发现，这是一个开发者调试用参数，可以允许PostgreSQL忽略损坏的数据页，将其视为全零的空页面。用WARNING替代ERROR。这引发了我的兴趣。毕竟有时候，对于一些粗放的统计业务，跑了几个小时的SQL因为一两条脏数据中断，恐怕要比错漏那么几条记录更令人抓狂。这个参数可不可以满足这样的需求呢？</p>
+<blockquote>
+<p><code>zero_damaged_pages</code> (<code>boolean</code>)</p>
+<p>PostgreSQL在检测到损坏的页面首部时通常会报告一个错误，并中止当前事务。将参数<code>zero_damaged_pages</code>配置为<code>on</code>，会使系统取而代之报告一个WARNING，并将内存中的页面抹为全零。然而该操作会摧毁数据，也就是说损坏页面上的行全都会丢失。不过，这样做确实能允许你略过错误并从未损坏的页面中获取表中未受损的行。当出现软件或硬件导致的数据损坏时，该选项可用于恢复数据。通常情况下只有当您放弃从受损的页面中恢复数据时，才应当使用该选项。抹零的页面并不会强制刷回磁盘，因此建议在重新关闭该选项之前重建受损的表或索引。本选项默认是关闭的，且只有超级用户才能修改。</p>
+</blockquote>
+<p>毕竟，当重建表之后，原来的坏块就被释放掉了。如果硬件本身没有提供坏块识别与筛除的功能，那么这就是一个定时炸弹，很可能将来又会坑到自己。不幸的是，这台机器上的数据库有14TB，用的16TB的SSD，暂时没有同类型的机器了。只能先苟一下，因此需要研究一下，这个参数能不能让查询在遇到坏页时自动跳过。</p>
+<h2 id="苟且的办法">苟且的办法</h2>
+<p>如下，在本机搭建一个测试集群，配置一主一从。尝试复现该问题，并确定</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># tear down</span>
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d1 stop
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d2 stop
+</span></span><span style="display:flex;"><span>rm -rf /pg/d1 /pg/d2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># master @ port5432</span>
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d1 init
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d1 start
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#34;CREATE USER replication replication;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># slave @ port5433</span>
+</span></span><span style="display:flex;"><span>pg_basebackup -Xs -Pv -R -D /pg/d2 -Ureplication 
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d2 start -o<span style="color:#4e9a06">&#34;-p5433&#34;</span>
+</span></span></code></pre></div><p>连接至主库，创建样例表并插入555条数据，约占据三个页面。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- psql postgres
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXISTS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">varchar</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">8</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ANALYZE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 注意，插入数据之后一定要执行checkpoint确保落盘
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">generate_series</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">555</span><span style="color:#000;font-weight:bold">)::</span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CHECKPOINT</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>现在，让我们模拟出现坏块的情况，首先找出主库中<code>test</code>表的对应文件。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_relation_filepath</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;test&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">12630</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16385</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><pre tabindex="0"><code>$ hexdump /pg/d1/base/12630/16385 | head -n 20
+0000000 00 00 00 00 d0 22 02 03 00 00 00 00 a0 03 c0 03
+0000010 00 20 04 20 00 00 00 00 e0 9f 34 00 c0 9f 34 00
+0000020 a0 9f 34 00 80 9f 34 00 60 9f 34 00 40 9f 34 00
+0000030 20 9f 34 00 00 9f 34 00 e0 9e 34 00 c0 9e 36 00
+0000040 a0 9e 36 00 80 9e 36 00 60 9e 36 00 40 9e 36 00
+0000050 20 9e 36 00 00 9e 36 00 e0 9d 36 00 c0 9d 36 00
+0000060 a0 9d 36 00 80 9d 36 00 60 9d 36 00 40 9d 36 00
+0000070 20 9d 36 00 00 9d 36 00 e0 9c 36 00 c0 9c 36 00
+</code></pre><p><img src="/img/blog/page-corruption-tuple.png" alt=""></p>
+<p>上面已经给出了PostgreSQL判断页面是否“正常”的逻辑，这里我们就修改一下数据页面，让页面变得“不正常”。页面的第12~16字节，也就是这里第一行的最后四个字节<code>a0 03 c0 03</code>，是页面内空闲空间上下界的指针。这里按小端序解释的意思就是本页面内，空闲空间从<code>0x03A0</code>开始，到<code>0x03C0</code>结束。符合逻辑的空闲空间范围当然需要满足上界小于等于下界。这里我们将上界<code>0x03A0</code>修改为<code>0x03D0</code>，超出下界<code>0x03C0</code>，也就是将第一行的倒数第四个字节由<code>A0</code>修改为<code>D0</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># vim打开后使用 :%!xxd 编辑二进制</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 编辑完成后使用 :%!xxd -r转换回二进制，再用:wq保存</span>
+</span></span><span style="display:flex;"><span>vi /pg/d1/base/12630/16385
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 查看修改后的结果。</span>
+</span></span><span style="display:flex;"><span>$ hexdump /pg/d1/base/12630/16385 <span style="color:#000;font-weight:bold">|</span> head -n <span style="color:#0000cf;font-weight:bold">2</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">0000000</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">48</span> <span style="color:#0000cf;font-weight:bold">22</span> <span style="color:#0000cf;font-weight:bold">02</span> <span style="color:#0000cf;font-weight:bold">03</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> d0 <span style="color:#0000cf;font-weight:bold">03</span> c0 <span style="color:#0000cf;font-weight:bold">03</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">0000010</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">20</span> <span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">20</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> e0 9f <span style="color:#0000cf;font-weight:bold">34</span> <span style="color:#0000cf;font-weight:bold">00</span> c0 9f <span style="color:#0000cf;font-weight:bold">34</span> <span style="color:#0000cf;font-weight:bold">00</span>
+</span></span></code></pre></div><p>这里，虽然磁盘上的页面已经被修改，但页面已经缓存到了内存中的共享缓冲池里。因此从主库上仍然可以正常看到页面1中的结果。接下来重启主库，清空其Buffer。不幸的是，当关闭数据库或执行检查点时，内存中的页面会刷写会磁盘中，覆盖我们之前编辑的结果。因此，首先关闭数据库，重新执行编辑后再启动。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_ctl -D /pg/d1 stop
+</span></span><span style="display:flex;"><span>vi /pg/d1/base/12630/16385
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d1 start
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#39;select * from test;&#39;</span>
+</span></span><span style="display:flex;"><span>ERROR:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#34;select * from test where id = &#39;10&#39;;&#34;</span>
+</span></span><span style="display:flex;"><span>ERROR:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#34;select * from test where ctid = &#39;(0,1)&#39;;&#34;</span>
+</span></span><span style="display:flex;"><span>ERROR:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ psql postgres -c <span style="color:#4e9a06">&#34;select * from test where ctid = &#39;(1,1)&#39;;&#34;</span>
+</span></span><span style="display:flex;"><span> id
+</span></span><span style="display:flex;"><span>-----
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">227</span>
+</span></span></code></pre></div><p>可以看到，修改后的0号页面无法被数据库识别出来，但未受影响的页面1仍然可以正常访问。</p>
+<p>虽然主库上的查询因为页面损坏无法访问了，这时候在从库上执行类似的查询，都可以正常返回结果</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ psql -p5433 postgres -c <span style="color:#4e9a06">&#39;select * from test limit 2;&#39;</span>
+</span></span><span style="display:flex;"><span> id
+</span></span><span style="display:flex;"><span>----
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ psql -p5433 postgres -c <span style="color:#4e9a06">&#34;select * from test where id = &#39;10&#39;;&#34;</span>
+</span></span><span style="display:flex;"><span> id
+</span></span><span style="display:flex;"><span>----
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">10</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ psql -p5433 postgres -c <span style="color:#4e9a06">&#34;select * from test where ctid = &#39;(0,1)&#39;;&#34;</span>
+</span></span><span style="display:flex;"><span> id
+</span></span><span style="display:flex;"><span>----
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> row<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span></code></pre></div><p>接下来，让我们打开<code>zero_damaged_pages</code>参数，现在在主库上的查询不报错了。取而代之的是一个警告，页面0中的数据蒸发掉了，返回的结果从第1页开始。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">postgres</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">set</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">zero_damaged_pages</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">on</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">postgres</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">select</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">from</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">test</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">WARNING</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">invalid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">page</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">block</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">of</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relation</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">12630</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16385</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">zeroing</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">out</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">page</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-----
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">227</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">228</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">229</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">230</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">231</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>第0页确实已经被加载到内存缓冲池里了，而且页面里的数据被抹成了0。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">create</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">extension</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_buffercache</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">postgres</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">select</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relblocknumber</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">isdirty</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">usagecount</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">from</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_buffercache</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">where</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relfilenode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16385</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relblocknumber</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">isdirty</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">usagecount</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">----------------+---------+------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">f</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p><code>zero_damaged_pages</code>参数需要在实例级别进行配置：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 确保该选项默认打开，并重启生效</span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#39;ALTER SYSTEM set zero_damaged_pages = on;&#39;</span>
+</span></span><span style="display:flex;"><span>pg_ctl -D /pg/d1 restart
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#39;show zero_damaged_pages;&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zero_damaged_pages
+</span></span><span style="display:flex;"><span>--------------------
+</span></span><span style="display:flex;"><span> on
+</span></span></code></pre></div><p>这里，通过配置<code>zero_damaged_pages</code>，能够让主库即使遇到坏块，也能继续应付一下。</p>
+<p>垃圾页面被加载到内存并抹零之后，如果执行检查点，这个全零的页面是否又会被重新刷回磁盘覆盖原来的数据呢？这一点很重要，因为脏数据也是数据，起码有抢救的价值。为了一时的方便产生永久性无法挽回的损失，那肯定也是无法接受的。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#39;checkpoint;&#39;</span>
+</span></span><span style="display:flex;"><span>hexdump /pg/d1/base/12630/16385 <span style="color:#000;font-weight:bold">|</span> head -n <span style="color:#0000cf;font-weight:bold">2</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">0000000</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">48</span> <span style="color:#0000cf;font-weight:bold">22</span> <span style="color:#0000cf;font-weight:bold">02</span> <span style="color:#0000cf;font-weight:bold">03</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> d0 <span style="color:#0000cf;font-weight:bold">03</span> c0 <span style="color:#0000cf;font-weight:bold">03</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">0000010</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">20</span> <span style="color:#0000cf;font-weight:bold">04</span> <span style="color:#0000cf;font-weight:bold">20</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> <span style="color:#0000cf;font-weight:bold">00</span> e0 9f <span style="color:#0000cf;font-weight:bold">34</span> <span style="color:#0000cf;font-weight:bold">00</span> c0 9f <span style="color:#0000cf;font-weight:bold">34</span> <span style="color:#0000cf;font-weight:bold">00</span>
+</span></span></code></pre></div><p>可以看到，无论是检查点还是重启，这个内存中的全零页面并不会强制替代磁盘上的损坏页面，留下了抢救的希望，又能保证线上的查询可以苟一下。甚好，甚好。这也符合文档中的描述：“抹零的页面并不会强制刷回磁盘”。</p>
+<h2 id="微妙的问题">微妙的问题</h2>
+<p>就当我觉得实验完成，可以安心的把这个开关打开先对付一下时。突然又想起了一个微妙的事情，主库和从库上读到的数据是不一样的，这就很尴尬了。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql -p5432 postgres -Atqc <span style="color:#4e9a06">&#39;select * from test limit 2;&#39;</span>
+</span></span><span style="display:flex;"><span>2018-11-29 22:31:20.777 CST <span style="color:#ce5c00;font-weight:bold">[</span>24175<span style="color:#ce5c00;font-weight:bold">]</span> WARNING:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385<span style="color:#000;font-weight:bold">;</span> zeroing out page
+</span></span><span style="display:flex;"><span>WARNING:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385<span style="color:#000;font-weight:bold">;</span> zeroing out page
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">227</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">228</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>psql -p5433 postgres -Atqc <span style="color:#4e9a06">&#39;select * from test limit 2;&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">2</span>
+</span></span></code></pre></div><p>更尴尬的是，在主库上是看不到第0页中的元组的，也就是说主库认为第0页中的记录都不存在，因此，即使表上存在主键约束，仍然可以插入同一个主键的记录：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 表中已经有主键 id = 1的记录了，但是主库抹零了看不到！</span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#34;INSERT INTO test VALUES(1);&#34;</span>
+</span></span><span style="display:flex;"><span>INSERT <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 从从库上查询，夭寿了！主键出现重复了！</span>
+</span></span><span style="display:flex;"><span>psql postgres -p5433 -c <span style="color:#4e9a06">&#34;SELECT * FROM test;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> id
+</span></span><span style="display:flex;"><span>-----
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">2</span>
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">3</span>
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">555</span>
+</span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># id列真的是主键……</span>
+</span></span><span style="display:flex;"><span>$ psql postgres -p5433 -c <span style="color:#4e9a06">&#34;\d test;&#34;</span>
+</span></span><span style="display:flex;"><span>                      Table <span style="color:#4e9a06">&#34;public.test&#34;</span>
+</span></span><span style="display:flex;"><span> Column <span style="color:#000;font-weight:bold">|</span>         Type         <span style="color:#000;font-weight:bold">|</span> Collation <span style="color:#000;font-weight:bold">|</span> Nullable <span style="color:#000;font-weight:bold">|</span> Default
+</span></span><span style="display:flex;"><span>--------+----------------------+-----------+----------+---------
+</span></span><span style="display:flex;"><span> id     <span style="color:#000;font-weight:bold">|</span> character varying<span style="color:#ce5c00;font-weight:bold">(</span>8<span style="color:#ce5c00;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">|</span>           <span style="color:#000;font-weight:bold">|</span> not null <span style="color:#000;font-weight:bold">|</span>
+</span></span><span style="display:flex;"><span>Indexes:
+</span></span><span style="display:flex;"><span>    <span style="color:#4e9a06">&#34;test_pkey&#34;</span> PRIMARY KEY, btree <span style="color:#ce5c00;font-weight:bold">(</span>id<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span></code></pre></div><p>如果把这个从库Promote成新的主库，这个问题在从库上依然存在：一条主键能返回两条记录！真是夭寿啊……。</p>
+<p>此外，还有一个有趣的问题，VACUUM会如何处理这样的零页面呢？</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 对表进行清理</span>
+</span></span><span style="display:flex;"><span>psql postgres -c <span style="color:#4e9a06">&#39;VACUUM VERBOSE;&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>INFO:  vacuuming <span style="color:#4e9a06">&#34;public.test&#34;</span>
+</span></span><span style="display:flex;"><span>2018-11-29 22:18:05.212 CST <span style="color:#ce5c00;font-weight:bold">[</span>23572<span style="color:#ce5c00;font-weight:bold">]</span> WARNING:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385<span style="color:#000;font-weight:bold">;</span> zeroing out page
+</span></span><span style="display:flex;"><span>2018-11-29 22:18:05.212 CST <span style="color:#ce5c00;font-weight:bold">[</span>23572<span style="color:#ce5c00;font-weight:bold">]</span> WARNING:  relation <span style="color:#4e9a06">&#34;test&#34;</span> page <span style="color:#0000cf;font-weight:bold">0</span> is uninitialized --- fixing
+</span></span><span style="display:flex;"><span>WARNING:  invalid page in block <span style="color:#0000cf;font-weight:bold">0</span> of relation base/12630/16385<span style="color:#000;font-weight:bold">;</span> zeroing out page
+</span></span><span style="display:flex;"><span>WARNING:  relation <span style="color:#4e9a06">&#34;test&#34;</span> page <span style="color:#0000cf;font-weight:bold">0</span> is uninitialized --- fixing
+</span></span><span style="display:flex;"><span>INFO:  index <span style="color:#4e9a06">&#34;test_pkey&#34;</span> now contains <span style="color:#0000cf;font-weight:bold">329</span> row versions in <span style="color:#0000cf;font-weight:bold">5</span> pages
+</span></span><span style="display:flex;"><span>DETAIL:  <span style="color:#0000cf;font-weight:bold">0</span> index row versions were removed.
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">0</span> index pages have been deleted, <span style="color:#0000cf;font-weight:bold">0</span> are currently reusable.
+</span></span><span style="display:flex;"><span>CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s.
+</span></span></code></pre></div><p>VACUUM把这个页面“修好了”？但杯具的是，VACUUM自作主张修好了脏数据页，并不一定是一件好事…。因为当VACUUM完成修复时，这个页面就被视作一个普通的页面了，就会在CHECKPOINT时被刷写回磁盘中……，从而覆盖了原始的脏数据。如果这种修复并不是你想要的结果，那么数据就有可能会丢失。</p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>复制，备份是应对硬件损坏的最佳办法。</li>
+<li>当出现数据页面损坏时，可以找到对应的物理页面，进行比较，尝试修复。</li>
+<li>当页面损坏导致查询无法进行时，参数<code>zero_damaged_pages</code>可以临时用于跳过错误。</li>
+<li>参数<code>zero_damaged_pages</code>极其危险</li>
+<li>打开抹零时，损坏页面会被加载至内存缓冲池中并抹零，且在检查点时不会覆盖磁盘原页面。</li>
+<li>内存中被抹零的页面会被VACUUM尝试修复，修复后的页面会被检查点刷回磁盘，覆盖原页面。</li>
+<li>抹零页面内的内容对数据库不可见，因此可能会出现违反约束的情况出现。</li>
+</ul>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/LFPta3nGD12MRFVyuYEvHA">微信公众号原文地址</a></p>
+</blockquote>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-52e3d650da1255d8d03553de21e3cca2">故障档案：PostgreSQL事务号回卷</h1>
+	<div class="lead">XID WrapAround也许是PostgreSQL特有的一种故障</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2018-07-20" class="text-muted">2018-07-20</time>
+        
+	</div>
+	<p>遇到一次磁盘坏块导致的事务回卷故障：</p>
+<ul>
+<li>主库（PostgreSQL 9.3）磁盘坏块导致几张表上的VACUUM FREEZE执行失败。</li>
+<li>无法回收老旧事务ID，导致整库事务ID濒临用尽，数据库进入自我保护状态不可用。</li>
+<li>磁盘坏块导致手工VACUUM抢救不可行。</li>
+<li>提升从库后，需要紧急VACUUM FREEZE才能继续服务，进一步延长了故障时间。</li>
+<li>主库进入保护状态后提交日志（clog）没有及时复制到从库，从库产生存疑事务拒绝服务。</li>
+</ul>
+<h2 id="摘要">摘要</h2>
+<ul>
+<li>
+<p>这是一个即将下线老旧库，疏于管理。坏块征兆在一周前就已经出现，没有及时跟进年龄。</p>
+</li>
+<li>
+<p>通常AutoVacuum会保证很难出现这种故障，但一旦出现往往意味着祸不单行…让救火更加困难了……</p>
+</li>
+</ul>
+<h2 id="背景">背景</h2>
+<p>PostgreSQL实现了<strong>快照隔离（Snapshot Isolation）</strong>，每个事务开始时都能获取数据库在该时刻的快照（也就是只能看到<strong>过去</strong>事务提交的结果，看不见<strong>后续</strong>事务提交的结果）。这一强大的功能是通过MVCC实现的，但也引入了额外复杂度，例如<strong>事务ID回卷</strong>问题。</p>
+<p>事务ID（<code>xid</code>）是用于标识事务的<strong>32位无符号整型数值</strong>，递增分配，其中值0,1,2为保留值，溢出后回卷为3重新开始。<strong>事务ID之间的大小关系决定了事务的先后顺序</strong>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * TransactionIdPrecedes --- is id1 logically &lt; id2?
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">TransactionIdPrecedes</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">TransactionId</span> <span style="color:#000">id1</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">TransactionId</span> <span style="color:#000">id2</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * If either ID is a permanent XID then we can just do unsigned
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * comparison.  If both are normal, do a modulo-2^32 comparison.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">int32</span>		<span style="color:#000">diff</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">TransactionIdIsNormal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id1</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">||</span> <span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">TransactionIdIsNormal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id2</span><span style="color:#000;font-weight:bold">))</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#204a87;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">id1</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span> <span style="color:#000">id2</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">diff</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">int32</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">id1</span> <span style="color:#ce5c00;font-weight:bold">-</span> <span style="color:#000">id2</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">diff</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><img src="/img/blog/xid-wrap-around.png" alt="xid-wrap-around"></p>
+<p>​	可以将<code>xid</code>的取值域视为一个整数环，但刨除<code>0,1,2</code>三个特殊值。0代表无效事务ID，1代表系统事务ID，2代表冻结事务ID。特殊的事务ID比任何普通事务ID小。而普通事务ID之间的比较可参见上图：它取决于两个事务ID的差值是否超出<code>INT32_MAX</code>。对任意一个事务ID，都有约21亿个位于过去的事务和21亿个位于未来的事务。</p>
+<p>​	xid不仅仅存在于活跃的事务上，xid会影响所有的元组：事务会给自己影响的元组打上自己的xid作为记号。每个元组都会用<code>(xmin, xmax)</code>来标识自己的可见性，<code>xmin</code> 记录了最后写入（<code>INSERT</code>, <code>UPDATE</code>）该元组的事务ID，而<code>xmax</code>记录了删除或锁定该元组的事务ID。每个事务只能看见由先前事务提交（<code>xmin &lt; xid</code>）且未被删除的元组（从而实现快照隔离）。</p>
+<p>​	如果一个元组是由很久很久以前的事务产生的，那么在数据库的例行VACUUM FREEZE时，会找出当前活跃事务中最老的xid，将所有<code>xmin &lt; xid</code>的元组的<code>xmin</code>标记为<code>2</code>，也就是冻结事务ID。这意味着这条元组跳出了这个比较环，比所有普通事务ID都要小，所以能被所有的事务看到。通过清理，数据库中最老的xid会不断追赶当前的xid，从而避免事务回卷。</p>
+<p>​	数据库或表的<strong>年龄（age）</strong>，定义为当前事务ID与数据库/表中存在最老的<code>xid</code>之差。最老的<code>xid</code>可能来自一个持续了几天的超长事务。也可能来自几天前老事务写入，但尚未被冻结的元组中。如果数据库的年龄超过了<code>INT32_MAX</code>，灾难性情况就发生了。过去的事务变成了未来的事务，过去事务写入的元组将变得不可见。</p>
+<p>​	为了避免这种情况，需要避免<strong>超长事务</strong>与定期VACUUM FREEZE冻结老元组。如果单库在平均3万TPS的超高负载下，20亿个事务号一整天内就会用完。在这样的库上就无法执行一个超过一天的超长事务。而如果由于某种原因，自动清理工作无法继续进行，一天之内就可能遇到事务回卷。</p>
+<p>​	9.4之后对FREEZE的机制进行了修改，FREEZE使用元组中单独的标记位来表示。</p>
+<p>​	PostgreSQL应对事务回卷有自我保护机制。当临界事务号还剩<strong>一千万</strong>时，会进入紧急状态。</p>
+<h2 id="查询">查询</h2>
+<p>查询当前所有表的年龄，SQL 语句如下：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">regclass</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">as</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#000">greatest</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">age</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relfrozenxid</span><span style="color:#000;font-weight:bold">),</span><span style="color:#000">age</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">t</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relfrozenxid</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">as</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">age</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">LEFT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">JOIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">reltoastrelid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relkind</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;r&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;m&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">order</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">by</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">desc</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>查询数据库的年龄，SQL语句如下：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">age</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">datfrozenxid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_database</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span></code></pre></div><h4 id="清理">清理</h4>
+<p>执行<code>VACUUM FREEZE</code>可以冻结老旧事务的ID</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">set</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">vacuum_cost_limit</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10000</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">set</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">vacuum_cost_delay</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">VACUUM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FREEZE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VERBOSE</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>可以针对特定的表进行VACUUM FREEZE，抓主要矛盾。</p>
+<h2 id="问题">问题</h2>
+<p>通常来说，PostgreSQL的AutoVacuum机制会自动执行FREEZE操作，冻结老旧事务的ID，从而降低数据库的年龄。因此一旦出现事务ID回卷故障，通常祸不单行，意味着vacuum机制可能被其他的故障挡住了。</p>
+<p>目前遇到过三种触发事务ID回卷故障的情况</p>
+<h3 id="idle-in-transaction">IDLE IN TRANSACTION</h3>
+<p>空闲事务会阻塞VACUUM FREEZE老旧元组。</p>
+<p>解决方法很简单，干掉IDEL IN TRANSACTION的长事务然后执行VACUUM FREEZE即可。</p>
+<h3 id="存疑事务">存疑事务</h3>
+<p>clog损坏，或没有复制到从库，会导致相关表进入事务存疑状态，拒绝服务。</p>
+<p>需要手工拷贝，或使用dd生成虚拟的clog来强行逃生。</p>
+<h3 id="磁盘内存坏块">磁盘/内存坏块</h3>
+<p>因为坏块导致的无法VACUUM比较尴尬。</p>
+<p>需要通过二分法定位并跳过脏数据，或者干脆直接抢救从库。</p>
+<h3 id="注意事项">注意事项</h3>
+<p>紧急抢救的时候，不要整库来，按照年龄大小降序挨个清理表会更快。</p>
+<p>注意当主库进入事务回卷保护状态时，从库也会面临同样的问题。</p>
+<h2 id="解决方案">解决方案</h2>
+<h3 id="autovacuum参数配置">AutoVacuum参数配置</h3>
+<h3 id="年龄监控">年龄监控</h3>
+<p>[未完待续]</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-7ddc661e5d3e6b2cd24c09b0f712ec21">故障档案：序列号消耗过快导致整型溢出</h1>
+	<div class="lead">如果您在表上用了Interger的序列号，最好还是考虑一下可能溢出的情况。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2018-07-20" class="text-muted">2018-07-20</time>
+        
+	</div>
+	<h2 id="0x01-概览">0x01 概览</h2>
+<ul>
+<li>
+<p>故障表现：</p>
+<ul>
+<li>某张使用自增列的表序列号涨至整型上限，无法写入。</li>
+<li>发现表中的自增列存在大量空洞，很多序列号没有对应记录就被消耗掉了。</li>
+</ul>
+</li>
+<li>
+<p>故障影响：非核心业务某表，10分钟左右无法写入。</p>
+</li>
+<li>
+<p>故障原因：</p>
+<ul>
+<li>内因：使用了INTEGER而不是BIGINT作为主键类型。</li>
+<li>外因：业务方不了解<code>SEQUENCE</code>的特性，执行大量违背约束的无效插入，浪费了大量序列号。</li>
+</ul>
+</li>
+<li>
+<p>修复方案：</p>
+<ul>
+<li>紧急操作：降级线上插入函数为直接返回，避免错误扩大。</li>
+<li>应急方案：创建临时表，生成5000万个浪费空洞中的临时ID，修改插入函数，变为先检查再插入，并从该临时ID表中取ID。</li>
+<li>解决方案：执行模式迁移，将所有相关表的主键与外键类型更新为Bigint。</li>
+</ul>
+</li>
+</ul>
+<h2 id="原因分析">原因分析</h2>
+<h3 id="内因类型使用不当">内因：类型使用不当</h3>
+<p>业务使用32位整型作为主键自增ID，而不是Bigint。</p>
+<ul>
+<li>除非有特殊的理由，主键，自增列都应当使用BIGINT类型。</li>
+</ul>
+<h3 id="外因不了解sequence的特性">外因：不了解Sequence的特性</h3>
+<ul>
+<li>非要使用如果会频繁出现无效插入，或频繁使用UPSERT，需要关注Sequence的消耗问题。</li>
+<li>可以考虑使用自定义发号函数（类Snowflake）</li>
+</ul>
+<p>在PostgreSQL中，Sequence是一个比较特殊的类型。特别是，在事务中消耗的序列号不会回滚。因为序列号能被并发地获取，不存在逻辑上合理的回滚操作。</p>
+<p>在生产中，我们就遇到了这样一种故障。有一张表直接使用了Serial作为主键：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mysql" data-lang="mysql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample</span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline">   	</span><span style="color:#000">SERIAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">	</span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline">  	</span><span style="color:#204a87;font-weight:bold">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">value</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#204a87;font-weight:bold">INTEGER</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>而插入的时候是这样的：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">?</span><span style="color:#000;font-weight:bold">,</span><span style="color:#ce5c00;font-weight:bold">?</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>当然，实际上由于<code>name</code>列上的约束，如果插入了重复的<code>name</code>字段，事务就会报错中止并回滚。然而序列号已经被消耗掉了，即使事务回滚了，序列号也不会回滚。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># INSERT INTO sample(name, value) VALUES(&#39;Alice&#39;,1);</span>
+</span></span><span style="display:flex;"><span>INSERT <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># SELECT currval(&#39;sample_id_seq&#39;::RegClass);</span>
+</span></span><span style="display:flex;"><span> currval
+</span></span><span style="display:flex;"><span>---------
+</span></span><span style="display:flex;"><span>       <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> row<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># INSERT INTO sample(name, value) VALUES(&#39;Alice&#39;,1);</span>
+</span></span><span style="display:flex;"><span>ERROR:  duplicate key value violates unique constraint <span style="color:#4e9a06">&#34;sample_name_key&#34;</span>
+</span></span><span style="display:flex;"><span>DETAIL:  Key <span style="color:#ce5c00;font-weight:bold">(</span>name<span style="color:#ce5c00;font-weight:bold">)=(</span>Alice<span style="color:#ce5c00;font-weight:bold">)</span> already exists.
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># SELECT currval(&#39;sample_id_seq&#39;::RegClass);</span>
+</span></span><span style="display:flex;"><span> currval
+</span></span><span style="display:flex;"><span>---------
+</span></span><span style="display:flex;"><span>       <span style="color:#0000cf;font-weight:bold">2</span>
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span> row<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># BEGIN;</span>
+</span></span><span style="display:flex;"><span>BEGIN
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># INSERT INTO sample(name, value) VALUES(&#39;Alice&#39;,1);</span>
+</span></span><span style="display:flex;"><span>ERROR:  duplicate key value violates unique constraint <span style="color:#4e9a06">&#34;sample_name_key&#34;</span>
+</span></span><span style="display:flex;"><span>DETAIL:  Key <span style="color:#ce5c00;font-weight:bold">(</span>name<span style="color:#ce5c00;font-weight:bold">)=(</span>Alice<span style="color:#ce5c00;font-weight:bold">)</span> already exists.
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># ROLLBACK;</span>
+</span></span><span style="display:flex;"><span>ROLLBACK
+</span></span><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># SELECT currval(&#39;sample_id_seq&#39;::RegClass);</span>
+</span></span><span style="display:flex;"><span> currval
+</span></span><span style="display:flex;"><span>---------
+</span></span><span style="display:flex;"><span>       <span style="color:#0000cf;font-weight:bold">3</span>
+</span></span></code></pre></div><p>因此，当执行的插入有大量重复，即有大量的冲突时，可能会导致序列号消耗的非常快。出现大量空洞！</p>
+<p>另一个需要注意的点在于，UPSERT操作也会消耗序列号！从表现上来看，这就意味着即使实际操作是UPDATE而不是INSERT，也会消耗一个序列号。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Alice&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">CONFLICT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXCLUDED</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">currval</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;sample_id_seq&#39;</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">RegClass</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">currval</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">---------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Alice&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">CONFLICT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXCLUDED</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">vonng</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">currval</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;sample_id_seq&#39;</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">RegClass</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">currval</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">---------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h2 id="解决方案">解决方案</h2>
+<p>线上所有查询与插入都使用存储过程。非核心业务，允许接受短暂的写入失效。首先降级插入函数，避免错误影响AppServer。因为该表存在大量依赖，无法直接修改其类型，需要一个临时解决方案。</p>
+<p>检查发现ID列中存在大量空洞，每10000个序列号中实际只有1%被使用。因此使用下列函数生成临时ID表。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample_temp_id</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">INTEGER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 插入约5000w个临时ID，够用十几天了。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample_temp_id</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">SELECTT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">generate_series</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">2000000000</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">2100000000</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">as</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXCEPT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 修改插入的存储过程，从临时表中Pop出ID。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample_temp_id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sample_temp_id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LIMIT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RETURNING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>修改插入存储过程，每次从临时ID表中取一个ID，显式插入表中。</p>
+<h2 id="经验与教训">经验与教训</h2>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-9ccf41f725b7ac3557776e2bab07da81">故障档案:移除负载导致过载</h1>
+	<div class="lead">最近发生了一起匪夷所思的故障，某数据库切走了一半的数据量和负载，结果却因为负载变大被打挂了。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2018-04-08" class="text-muted">2018-04-08</time>
+        
+	</div>
+	<p>最近发生了一起匪夷所思的故障，某数据库切走了一半的数据量和负载。</p>
+<p>其他什么都没变，本来还好；压力减小，却在高峰期陷入濒死状态，完全不符合直觉。</p>
+<p>但正如福尔摩斯所说，<strong>当你排除掉一切不可能之后，剩下的即使再离奇，也是事实。</strong></p>
+<h2 id="一摘要">一、摘要</h2>
+<p>某日凌晨4点，进行了核心库进行分库迁移，拆走一半的表和一半的查询负载，原库节点规模不变。</p>
+<p>当日晚高峰核心库所有热备库（15台）出现连接堆积，压力暴涨，针对性地清理慢查询不再起效。</p>
+<p><strong>无差别持续杀查询</strong>，有立竿见影的救火效果（22:30后），且暂停后故障立刻重现（22:48），杀至高峰期结束。</p>
+<p>匪夷所思的是，移走了表（数据量减半），移走了负载（TPS减半），其他什么都没变竟然会导致压力上升？</p>
+<h2 id="二现象">二、现象</h2>
+<p>CPU使用率的正常水位在25%，警戒水位在45%，极限水位在80%。故障期间所有从库飙升至极限水位。</p>
+<p><img src="../img/download-failure-cpu.png" alt=""></p>
+<p>PostgreSQL连接数发生暴涨，通常5~10个左右的数据库连接就足够撑起所有流量，连接池的最大连接数为100。</p>
+<p><img src="../img/download-failure-pg-conn.png" alt="pg-conn"></p>
+<p>pgbouncer连接池平均响应时间平时在500μs左右，故障期间飙升至百毫秒级别。</p>
+<p><img src="../img/download-failure-pgb-time.png" alt="pgb-time"></p>
+<p>故障期间，数据库TPS发生显著下滑。进行杀查询抢救后恢复，但处于剧烈抖动状态。</p>
+<p><img src="../img/download-failure-tps.png" alt=""></p>
+<p>故障期间，两个函数的执行时间发生显著恶化，从几百微秒劣化至几十毫秒。</p>
+<p><img src="../img/download-failure-functime.png" alt=""></p>
+<p>故障期间，复制延迟显著上升，开始出现GB级别的复制延迟，业务指标出现显著下滑。</p>
+<p>开始杀查询后，大部分指标恢复，但一旦停止马上重新开始出现（22:48尝试性停止故障恢复）。</p>
+<h2 id="三原因分析">三、原因分析</h2>
+<p>【表因】：所有从库连接池被打满，连接被慢查询占据，快查询无法执行，发生连接堆积。</p>
+<p>【主内因】：两个函数的并发数增大到30左右时，性能会发生急剧劣化，变为慢查询（500μs到100ms）。</p>
+<p>【副内因】：后端与数据库没有合理的超时取消机制，断路器会放大故障。</p>
+<p>【外因】：分库后，快查询比例下降，导致特定查询的相对比例上升，并发数增大至临界点。恶化为慢查询。</p>
+<h3 id="表因连接打满">表因：连接打满</h3>
+<p>故障的表因是数据库连接池被打满，产生大量堆积连接。进而新连接无法建立，拒绝服务。</p>
+<h4 id="原理">原理</h4>
+<p>​	数据库配置的最大连接数<code>max_connections = 100</code>，一个连接实质上就是一个数据库进程。机器能够负载的实际数据库进程数目与查询类型高度相关：如果全是在1ms内的快查询，几百上千个链接都是可以的（生产环境中的正常情况）。而如果全都是CPU和IO密集的慢查询，则最大支持的连接数可能只有（<code>48 * 80% ≈ 38</code>）个左右。</p>
+<p>​	在生产环境中使用了连接池，正常情况下5~10个实际数据库连接就可以支撑起所有快查询。然而一旦有大量慢查询持续进入，长期占用了活跃连接，那么快查询就会排队等待发生堆积，连接池进而启动更多实际数据库的连接，而这些连接上的快查询很快就会执行完毕，最终仍然会被不断进入的慢查询占据。最终导致约100个实际数据库连接都在执行CPU/IO密集的慢查询（<code>max_pool_size=100</code>），CPU暴涨，进一步恶化情况。</p>
+<h4 id="证据">证据</h4>
+<h5 id="连接池活跃连接数">连接池活跃连接数</h5>
+<p><img src="../img/download-failure-pgb-active-conn.png" alt="pgb-active-conn-5888653"></p>
+<h5 id="连接池排队连接数"><strong>连接池排队连接数</strong></h5>
+<p><img src="../img/download-failure-pgb-wait-conn.png" alt="pgb-wait-conn"></p>
+<p><strong>数据库后端连接数</strong></p>
+<p><img src="../img/download-failure-pg-conn.png" alt="pg-conn"></p>
+<h4 id="修复">修复</h4>
+<p>持续地无差别杀掉所有数据库活跃连接，能起到很好的治标效果，且对业务指标影响很小。</p>
+<p>但杀掉连接（<code>pg_terminate_backend</code>）会导致连接池重连，更好的做法是取消查询（<code>pg_cancel_backend</code>）</p>
+<p>因为快查询走的快，卡在后端实际连接上执行的查询极大概率都是慢查询，这时候无差别取消所有查询命中的绝大多数都是慢查询。杀查询能将连接释放给快查询使用，让应用苟活下去，但必须持续不断的杀才有效果，因为用不了零点几秒，慢查询就会重新占据活跃连接。</p>
+<p>使用psql执行以下SQL，每隔0.5秒取消所有活跃查询。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_cancel_backend</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">pid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_stat_activity</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">application_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">!=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;psql&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">\</span><span style="color:#000">watch</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>解决方案：调整了连接池的后端最大连接数，进行快慢分离，强制所有批量任务与慢查询走离线从库。</p>
+<h3 id="主内因并行恶化">主内因：并行恶化</h3>
+<p>故障的<strong>主内因</strong>是两个函数的执行时间在<strong>并行数增大</strong>时发生恶化。</p>
+<h4 id="原理-1">原理</h4>
+<p>故障的直接导火索是这两个函数劣化为慢查询。经过单独的压力测试，这两个函数随着并行执行数增高，发生急剧的性能劣化，阈值点为约30个并发进程。（因为所有进程只执行同一个查询，所以可认为并行数等于并发数）</p>
+<h4 id="证据-1">证据</h4>
+<p><strong>图：故障期间函数平均执行时间出现明显飙升</strong></p>
+<p><img src="../img/download-failure-functime.png" alt=""></p>
+<p><strong>图：在不同并行数下压测该函数能达到的最大QPS</strong></p>
+<p><img src="../img/download-failure-degenerate.png" alt="degenerate-5889931"></p>
+<h4 id="修复-1">修复</h4>
+<ul>
+<li>优化函数执行逻辑，将该函数的执行时间优化至原来的一半（最大QPS翻倍）。</li>
+<li>新增五台从库，进一步降低单机负载。</li>
+</ul>
+<h3 id="副内因没有超时">副内因：没有超时</h3>
+<p>故障的副内因在于没有合理的超时取消机制，<strong>查询不会因为超时被取消，是发生堆积的必要条件。</strong></p>
+<h4 id="原理-2">原理</h4>
+<p>发生查询超时时，应用层的合理行为是</p>
+<ul>
+<li>直接返回，报错。</li>
+<li>进行若干次重试（在高峰期可以考虑直接返回错误）</li>
+</ul>
+<p>​	查询等待超出合理范围的时间却不取消，就会导致连接堆积。抛弃返回结果并无法取消已经发出的查询，客户端需要主动Cancel Request。Go1.7后的标准实践是通过<code>context</code>包与<code>database/sql</code>提供的<code>QueryContext/ExecContext</code>进行超时控制。</p>
+<p>​	数据库端和连接池端可以配置<strong>语句超时(statement_timeout)</strong>，但实践表明这样的操作很容易误杀查询。</p>
+<p>手动杀灭能够立竿见影地治标，但它本质上是一种<strong>人工超时取消机制</strong>。稳健的系统应当有自动化的超时取消机制，这需要在数据库、连接池、应用多个层次协同解决。</p>
+<p>检视后端使用的驱动代码，发现<code>pg.v3</code> <code>pg.v5</code>并没有真正意义上的查询超时机制，超时参数不过是为<code>net.Conn</code>加上的TCP超时（通常在分钟级别）。</p>
+<h4 id="修复-2">修复</h4>
+<ul>
+<li>建议使用<code>github.com/jackc/pgx</code>与 <code>github.com/go-pg/pg</code> 第六版驱动替代现有驱动</li>
+<li>使用circuit-breaker会导致故障效应被放大，建议后端使用主动超时替代断路器。</li>
+<li>建议在应用层面对连接的使用进行更精细的控制。</li>
+</ul>
+<h3 id="外因分库迁移">外因：分库迁移</h3>
+<p>分库导致了原库中的快慢查询比例发生变化，诱发了两个函数的劣化。</p>
+<p>问题函数在迁移前后的全局调用次数占比由<code>1/6</code> 变为<code>1/2</code>，导致问题函数的并行数增大。</p>
+<h4 id="原理-3">原理</h4>
+<ul>
+<li>迁走的函数全都是快查询，原本问题函数：普通函数的比例为1：5</li>
+<li>迁移负载后，快查询迁走了大半。问题函数：普通函数超过1：1</li>
+<li>问题函数的比例大幅升高，导致高峰期其并发数超出阈值点，出现劣化。</li>
+</ul>
+<h4 id="证据-2">证据</h4>
+<p>通过分析分库迁移前后的数据库全量日志，回放查询流量进行压测，重现了现象，确认了问题原因。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">指标</th>
+<th style="text-align:center">迁移前</th>
+<th style="text-align:center">迁移后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">问题函数占比</td>
+<td style="text-align:center">1/6</td>
+<td style="text-align:center">5/9</td>
+</tr>
+<tr>
+<td style="text-align:center">最大QPS</td>
+<td style="text-align:center">40k</td>
+<td style="text-align:center">8k</td>
+</tr>
+</tbody>
+</table>
+<p>QPS/TPS是一个极具误导性的指标，只有在负载类型不变的清空下，比较QPS才有意义。当系统负载类型发生变化时，QPS的水位点也需要重新进行评估测试。</p>
+<p>在本例中，在负载变化后，系统的最大QPS水位点已经发生了戏剧性的变化，因为问题函数并发劣化，最大QPS变为原来的五分之一。</p>
+<h4 id="修复-3">修复</h4>
+<p>对问题函数进行了改写优化，提高了一倍的性能。</p>
+<p>通过测试，确定了迁移后的系统水位值，并进行了相应的优化与容量调整。</p>
+<h2 id="四经验与教训">四、经验与教训</h2>
+<p>在故障排查中，走了一些弯路。比如一开始认为是某个离线批量任务拖慢了查询（根据日志中观察到的前后相关性），也排查了API调用量突增，外部恶意访问，其他变更因素，未知线上操作等。虽然分库迁移被列入怀疑对象，但因为直觉上认为负载小了，系统的Capacity怎么可能会下降？就没有列为优先排查对象。现实马上就给我们上了一课：</p>
+<p><strong>当你排除掉一切不可能之后，剩下的即使再离奇，也是事实。</strong></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

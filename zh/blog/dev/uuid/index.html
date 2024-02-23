@@ -1,0 +1,1705 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>UUID性质原理与应用 | Pigsty</title><meta property="og:title" content="UUID性质原理与应用" />
+<meta property="og:description" content="UUID性质原理与应用，以及如何利用PostgreSQL的存储过程操作UUID。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/dev/uuid/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2016-11-06T00:00:00+00:00" />
+<meta property="article:modified_time" content="2023-08-23T10:45:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="UUID性质原理与应用">
+<meta itemprop="description" content="UUID性质原理与应用，以及如何利用PostgreSQL的存储过程操作UUID。
+"><meta itemprop="datePublished" content="2016-11-06T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2023-08-23T10:45:50+08:00" />
+<meta itemprop="wordCount" content="382">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="UUID性质原理与应用"/>
+<meta name="twitter:description" content="UUID性质原理与应用，以及如何利用PostgreSQL的存储过程操作UUID。
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/dev/uuid.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/dev/uuid.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/dev/uuid.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=UUID%e6%80%a7%e8%b4%a8%e5%8e%9f%e7%90%86%e4%b8%8e%e5%ba%94%e7%94%a8" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/dev/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#serial">Serial</a></li>
+        <li><a href="#snowflakeid">SnowflakeID</a></li>
+        <li><a href="#uuid--universally-unique-identifier">UUID  (Universally Unique IDentifier)</a></li>
+        <li><a href="#uuid概览">UUID概览</a></li>
+      </ul>
+    </li>
+    <li><a href="#一些问题">一些问题</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>UUID性质原理与应用</h1>
+	<div class="lead">UUID性质原理与应用，以及如何利用PostgreSQL的存储过程操作UUID。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2016-11-06" class="text-muted">2016-11-06</time>
+	</div>
+	
+	<p>最近一个项目需要生成业务流水号，需求如下：</p>
+<ul>
+<li>ID必须是分布式生成的，不能依赖中心节点分配并保证全局唯一。</li>
+<li>ID必须包含时间戳并尽量依时序递增。（方便阅读，提高索引效率）</li>
+<li>ID尽量散列。（分片，与HBase日志存储需要）</li>
+</ul>
+<p>在造轮子之前，首先要看一下有没有现成的解决方案。</p>
+<h3 id="serial">Serial</h3>
+<p>传统实践上业务流水号经常通过数据库自增序列或者发码服务来实现。
+<code>MySQL</code>的<code>Auto Increment</code>,<code>Postgres</code>的<code>Serial</code>,或者<code>Redis+lua</code>写个小发码服务都是方便快捷的解决方案。这种方案可以保证全局唯一，但会出现中心节点依赖：每个节点需要访问一次数据库才能拿到序列号。这就产生了可用性问题：如果能在本地生成流水号并直接返回响应，那为什么非要用一次网络访问拿ID呢？如果数据库挂了，节点也GG了。所以这并不是一个理想的方案。</p>
+<h3 id="snowflakeid">SnowflakeID</h3>
+<p>然后就是twitter的<a href="http://www.lanindex.com/twitter-snowflake%EF%BC%8C64%E4%BD%8D%E8%87%AA%E5%A2%9Eid%E7%AE%97%E6%B3%95%E8%AF%A6%E8%A7%A3/">SnowflakeID</a>了，SnowflakeID是一个BIGINT，第一位不用，41bit的时间戳，10bit的节点ID，12bit的毫秒内序列号。时间戳，工作机器ID，序列号占用的位域长度是可以根据业务需求不同而变化的。</p>
+<pre tabindex="0"><code>    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |x|                    41-bit timestamp                         |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |       timestamp   |10-bit machine node|    12-bit serial      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</code></pre><p>SnowflakeID可以说基本满足了这四个需求，首先，通过不同的时间戳(精确到毫秒)，节点ID(工作机器ID)，以及毫秒内的序列号，某种意义上确实可以做到唯一。一个比较讨喜的特性是所有ID是依时序递增的，所以索引起来或者拉取数据会非常方便，长整形的索引和存储效率也很高，生成效率也没得说。</p>
+<p>但我认为SnowflakeId存在两个致命问题：</p>
+<ul>
+<li>虽然ID生成不需要中心节点分配，但工作机器ID还是需要手工分配或者提供中心节点协调的，本质上是改善而不是解决问题。</li>
+<li>无法解决时间回溯的问题，一旦服务器时间发生调整，几乎一定会生成出重复ID。</li>
+</ul>
+<h3 id="uuid--universally-unique-identifier">UUID  (Universally Unique IDentifier)</h3>
+<p>其实这种问题早就有经典的解决方案了，譬如：<a href="https://tools.ietf.org/html/rfc4122">UUID by RFC 4122</a>  。著名的IDFA就是一种UUID</p>
+<p>UUID是一种格式，共有5个版本，最后我选择了v1作为最终方案。下面详细简单介绍一下UUID v1的性质。</p>
+<ul>
+<li>可以分布式本地生成。</li>
+<li>保证全局唯一，且可以应对时间回溯或网卡变化导致ID重复生成的问题。</li>
+<li>时间戳(60bit)，精确至0.1微秒(1e-7 s)。蕴含在ID中。</li>
+<li>在一个连续的时间片段(2^32/1e7 s约7min)内，ID单调递增。</li>
+<li>连续生成的ID会被均匀散列，（所以分片起来不要太方便，放在HBase里也可以直接当Rowkey）</li>
+<li>有现成的标准，不需要任何事先配置与参数输入，各个语言均有实现，开箱即用。</li>
+<li>可以直接通过UUID字面值得知大概的业务时间戳。</li>
+<li>PostgreSQL直接内建UUID支持(ver&gt;9.0)。</li>
+</ul>
+<p>综合考虑，这确实是我能找到的最完美的解决方案了。</p>
+<h3 id="uuid概览">UUID概览</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># Shell中生成一个随机UUID的简单方式</span>
+</span></span><span style="display:flex;"><span>$ python -c <span style="color:#4e9a06">&#39;import uuid;print(uuid.uuid4())&#39;</span>
+</span></span><span style="display:flex;"><span>8d6d1986-5ab8-41eb-8e9f-3ae007836a71
+</span></span></code></pre></div><p>我们通常见到的UUID如上所示，通常用<code>'-'</code>分隔的五组十六进制数字表示。但这个字符串只不过是UUID的字符串表示，即所谓的<code>UUID Literal</code>。实际上UUID是一个128bit的整数。也就是16个字节，两个长整形的宽度。</p>
+<p>因为每个字节用2个<code>hex</code>字符表示，所以UUID通常可以表示为32个十六进制数字，按照<code>8-4-4-4-12</code>的形式进行分组。为什么采用这种分组形式？因为最原始版本的UUID v1采用了这种位域划分方式，后面其他版本的UUID虽然可能位域划分跟这个结构已经不同了，依然采用此种字面值表示方法。UUID1是最经典的UUID，所以我着重介绍UUID1。</p>
+<p>下面是UUID版本1的位域划分：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>    <span style="color:#0000cf;font-weight:bold">0</span>                   <span style="color:#0000cf;font-weight:bold">1</span>                   <span style="color:#0000cf;font-weight:bold">2</span>                   <span style="color:#0000cf;font-weight:bold">3</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#0000cf;font-weight:bold">2</span> <span style="color:#0000cf;font-weight:bold">3</span> <span style="color:#0000cf;font-weight:bold">4</span> <span style="color:#0000cf;font-weight:bold">5</span> <span style="color:#0000cf;font-weight:bold">6</span> <span style="color:#0000cf;font-weight:bold">7</span> <span style="color:#0000cf;font-weight:bold">8</span> <span style="color:#0000cf;font-weight:bold">9</span> <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#0000cf;font-weight:bold">2</span> <span style="color:#0000cf;font-weight:bold">3</span> <span style="color:#0000cf;font-weight:bold">4</span> <span style="color:#0000cf;font-weight:bold">5</span> <span style="color:#0000cf;font-weight:bold">6</span> <span style="color:#0000cf;font-weight:bold">7</span> <span style="color:#0000cf;font-weight:bold">8</span> <span style="color:#0000cf;font-weight:bold">9</span> <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#0000cf;font-weight:bold">2</span> <span style="color:#0000cf;font-weight:bold">3</span> <span style="color:#0000cf;font-weight:bold">4</span> <span style="color:#0000cf;font-weight:bold">5</span> <span style="color:#0000cf;font-weight:bold">6</span> <span style="color:#0000cf;font-weight:bold">7</span> <span style="color:#0000cf;font-weight:bold">8</span> <span style="color:#0000cf;font-weight:bold">9</span> <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">|</span>                          <span style="color:#000">time_low</span>                             <span style="color:#ce5c00;font-weight:bold">|</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">|</span>       <span style="color:#000">time_mid</span>                <span style="color:#ce5c00;font-weight:bold">|</span>         <span style="color:#000">time_hi_and_version</span>   <span style="color:#ce5c00;font-weight:bold">|</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#000">clk_seq_hi_res</span> <span style="color:#ce5c00;font-weight:bold">|</span>  <span style="color:#000">clk_seq_low</span>  <span style="color:#ce5c00;font-weight:bold">|</span>         <span style="color:#000">node</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">)</span>            <span style="color:#ce5c00;font-weight:bold">|</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">|</span>                         <span style="color:#000">node</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#000;font-weight:bold">)</span>                            <span style="color:#ce5c00;font-weight:bold">|</span>
+</span></span><span style="display:flex;"><span>   <span style="color:#ce5c00;font-weight:bold">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span>
+</span></span><span style="display:flex;"><span>   
+</span></span><span style="display:flex;"><span> <span style="color:#204a87;font-weight:bold">typedef</span> <span style="color:#204a87;font-weight:bold">struct</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">unsigned32</span>  <span style="color:#000">time_low</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">unsigned16</span>  <span style="color:#000">time_mid</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">unsigned16</span>  <span style="color:#000">time_hi_and_version</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">unsigned8</span>   <span style="color:#000">clock_seq_hi_and_reserved</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">unsigned8</span>   <span style="color:#000">clock_seq_low</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">byte</span>        <span style="color:#000">node</span><span style="color:#000;font-weight:bold">[</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000;font-weight:bold">];</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> <span style="color:#000">uuid_t</span><span style="color:#000;font-weight:bold">;</span>
+</span></span></code></pre></div><p>但位域划分是按照C结构体的表示方便来划分的，从逻辑上UUID1包括五个部分：</p>
+<ul>
+<li>时间戳 :<code>time_low(32)</code>,<code> time_mid(16)</code>,<code>time_high(12)</code>，共60bit。</li>
+<li>UUID版本:<code>version(4)</code></li>
+<li>UUID类型: <code>variant(2)</code></li>
+<li>时钟序列:<code>clock_seq(14)</code></li>
+<li>节点: <code>node(48)</code>，UUID1中为MAC地址。</li>
+</ul>
+<p>这五个部分实际占用的位域如下图所示：</p>
+<pre tabindex="0"><code>    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                          time_low                             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |       time_mid                |  ver  |      time_high        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |var|       clock_seq           |         node (0-1)            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                         node (2-5)                            |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</code></pre><p>在UUID中：</p>
+<ul>
+<li>
+<p><code>version</code>固定等于<code>0b0001</code>,即版本号固定为<code>1</code>。</p>
+<p>反应在字面值上就是：一个合法的UUID v1第三个分组的第一个<code>hex</code>一定是<code>1</code>:</p>
+<ul>
+<li><em>6b54058a-a413-<em><strong>1</strong></em>1e6-b501-a0999b048337</em></li>
+</ul>
+<p>当然，如果这个值是<code>2,3,4,5</code>，也代表着这就是一个版本<code>2,3,4,5</code>的UUID。</p>
+</li>
+<li>
+<p><code>varient</code>是用来和其他类型UUID(如GUID)进行区分的字段，指明了UUID的位域解释方法。这里固定为<code>0b10</code>。</p>
+<p>反应在字面值上，一个合法的UUID v1第四个分组的第一个<code>hex</code>一定是<code>8,9,A,B</code>之一：</p>
+<ul>
+<li><em>6b54058a-a413-11e6-<em><strong>b</strong></em>501-a0999b048337</em></li>
+</ul>
+</li>
+<li>
+<p><code>timestamp</code>由系统时钟获得，形式为60bit的整数，内容是：<em>Coordinated Universal Time (UTC) as a count of 100-   nanosecond intervals since 00:00:00.00, 15 October 1582 (the date of   Gregorian reform to the Christian calendar).</em></p>
+<p>即从1582/10/15 00:00:00至今经过的百纳秒数（100 ns= 1e-7 s）。这么蛋疼的设计是为了让产生良好的散列，让输出ID分布的熵最大化。</p>
+<p>将<code>unix timestamp</code>换算为所需时间戳的公式为:<code>ts * 10000000 + 122192928000000000</code></p>
+<p><code>time_low = (long long)timestamp [32:64)</code> ，将时间戳的最低位的<code>32bit</code>按照同样的顺序填入UUID前32bit</p>
+<p><code>time_mid = (long long)timestamp [16:32)</code> ，将时间戳中间的<code>16bit</code>按照同样的顺序填入UUID的<code>time_mid</code></p>
+<p><code>time_high = (long long)timestamp [4:16)</code> ，将时间戳的最高的<code>12bit</code>按照同样的顺序生成<code>time_hi</code>。</p>
+<p>不过<code>time_hi</code>和<code>version</code>是共享一个<code>short int</code>的，所以其生成方法为：</p>
+<p><code>time_hi_and_version = (long long)timestamp[0:16) &amp; 0x0111 | 0x1000</code></p>
+</li>
+<li>
+<p><code>clock_seq</code>是为了防止网卡变更与时间回溯导致的ID重复问题，当系统时间回溯或网卡状态变更时，<code>clock_seq</code>会自动重置，从而避免ID重复问题。其形式为14个bit，换算成整数即<code>0</code>~<code>16383</code>，一般的UUID库都会自动处理，不在乎的话也可以随机生成或者设为固定值提高性能。</p>
+</li>
+<li>
+<p><code>node</code>字段在UUID1中的涵义等同于机器网卡MAC。48bit正好与MAC地址等长。一般UUID库会自动获取，但因为MAC地址泄露出去可能会有一些安全隐患，所以也有一些库是按照IP地址生成的，或者因为拿不到MAC就用一些系统指纹来生成，总之也不用操心。</p>
+</li>
+</ul>
+<p>所以，其实UUIDv1的所有字段都可以自动获取，压根不用人操心。其实是很方便的。</p>
+<p>阅读UUID v1时也有一些经验和技巧。</p>
+<p>UUID的第一个分组位域宽度为32bit，以百纳秒表示时间的话，也就是<code>(2 ^ 32 / 1e7 s = 429.5 s = 7.1 min)</code>。即每7分钟，第一个分组经历一次重置循环。所以对于随机到达的请求，生成的ID哈希分布应该是很均匀的。</p>
+<p>UUID的第二个分组位域宽度为16bit，也就是<code>2^48 / 1e7 s = 326 Day</code>，也就是说，第二个分组基本上每年循环一次。可以近似的看做年内的业务日期。</p>
+<p>当然，最靠谱的方法还是用程序直接从UUID v1中提取出时间戳来。这也是非常方便的。</p>
+<h2 id="一些问题">一些问题</h2>
+<p>前几天需要合并老的业务日志，老的系统里面日志压根没有流水号这个概念，这就让人蛋疼了。新老日志合并需要为老日志补充生成业务流水ID。</p>
+<p>UUID v1生成起来是非常方便的，但要手工构造一个UUID去补数据就比较蛋疼了。我在中英文互联网,<code>StackOverflow</code>找了很久都没发现现成的<code>python</code>,<code>Node</code>,<code>Go</code>,<code>pl/pgsql</code>库或者函数能完成这个功能，这些包大抵就是提供一个<code>uuid.v1()</code>给外面用，压根没想到还会有回溯生成ID这种功能吧……</p>
+<p>所以我自己写了一个<code>pl/pgsql</code>的存储过程，可以根据业务时间戳和当初工作机器的MAC重新生成UUID1。编写这个函数让我对UUID的实现细节与原理有了更深的了解，还是不错的。</p>
+<p>根据时间戳，时钟序列(非必须)，MAC生成UUID的存储过程，其他语言同理：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- Build UUIDv1 via RFC 4122. 
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- clock_seq is a random 14bit unsigned int with range [0,16384)
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">REPLACE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FUNCTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">form_uuid_v1</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">TIMESTAMPTZ</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">clock_seq</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">INTEGER</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">mac</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">MACADDR</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">RETURNS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">UUID</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DECLARE</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">60</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">:</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">extract</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">EPOCH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ts</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10000000</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">+</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">122192928000000000</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIGINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">60</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">uuid_hi</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">:</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">29</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">32</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">13</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">b</span><span style="color:#4e9a06">&#39;0001&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">                     </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">BEGIN</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">RETURN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lpad</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">to_hex</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">uuid_hi</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">to_hex</span><span style="color:#000;font-weight:bold">((</span><span style="color:#000">b</span><span style="color:#4e9a06">&#39;10&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">clock_seq</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">14</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">INTEGER</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87;font-weight:bold">replace</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">mac</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;:&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LANGUAGE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">plpgsql</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- Usage: SELECT form_uuid_v1(time, 666, &#39;44:88:99:36:57:32&#39;);
+</span></span></span></code></pre></div><p>从UUID1中提取时间戳的存储过程</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">REPLACE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FUNCTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">uuid_v1_timestamp</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">_uuid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">UUID</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">RETURNS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TIMESTAMP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">TIME</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ZONE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">to_timestamp</span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;x&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lpad</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">h</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0&#39;</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIT</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">64</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIGINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DOUBLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRECISION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#0000cf;font-weight:bold">122192928000000000</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10000000</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">u</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">u</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#204a87;font-weight:bold">substring</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">u</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">8</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">h</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">_uuid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">::</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">))</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">u</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">$$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LANGUAGE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SQL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IMMUTABLE</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a  class="btn btn-primary  disabled"><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/dev/pg-recsys/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

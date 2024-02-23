@@ -1,0 +1,1914 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>Go数据库接口教程 | Pigsty</title><meta property="og:title" content="Go数据库接口教程" />
+<meta property="og:description" content="同JDBC类似，Go也有标准的数据库访问接口。本文详细介绍了database/sql的使用方法和注意事项。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/dev/go-database-tutorial/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2017-08-24T00:00:00+00:00" />
+<meta property="article:modified_time" content="2023-08-23T10:45:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="Go数据库接口教程">
+<meta itemprop="description" content="同JDBC类似，Go也有标准的数据库访问接口。本文详细介绍了database/sql的使用方法和注意事项。
+"><meta itemprop="datePublished" content="2017-08-24T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2023-08-23T10:45:50+08:00" />
+<meta itemprop="wordCount" content="666">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Go数据库接口教程"/>
+<meta name="twitter:description" content="同JDBC类似，Go也有标准的数据库访问接口。本文详细介绍了database/sql的使用方法和注意事项。
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/dev/go-database-tutorial.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/dev/go-database-tutorial.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/dev/go-database-tutorial.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=Go%e6%95%b0%e6%8d%ae%e5%ba%93%e6%8e%a5%e5%8f%a3%e6%95%99%e7%a8%8b" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/dev/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-顶层抽象">1. 顶层抽象</a></li>
+    <li><a href="#2-导入驱动">2. 导入驱动</a></li>
+    <li><a href="#3-访问数据">3. 访问数据</a></li>
+    <li><a href="#4-获取结果">4. 获取结果</a>
+      <ul>
+        <li><a href="#41-获取数据">4.1 获取数据</a></li>
+        <li><a href="#42-单行查询">4.2 单行查询</a></li>
+        <li><a href="#43-修改数据">4.3 修改数据</a></li>
+        <li><a href="#44-准备查询">4.4 准备查询</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-使用事务">5. 使用事务</a>
+      <ul>
+        <li><a href="#51-事务基本操作">5.1 事务基本操作</a></li>
+        <li><a href="#52-事务注意事项">5.2 事务注意事项</a></li>
+        <li><a href="#53-tx的其他应用场景">5.3 Tx的其他应用场景</a></li>
+        <li><a href="#54-在事务中准备语句">5.4 在事务中准备语句</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-处理空值">6. 处理空值</a>
+      <ul>
+        <li><a href="#61-使用额外的标记字段">6.1 使用额外的标记字段</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-处理动态列">7. 处理动态列</a></li>
+    <li><a href="#8-连接池">8. 连接池</a></li>
+    <li><a href="#9-微妙行为">9. 微妙行为</a>
+      <ul>
+        <li><a href="#91-资源耗尽">9.1 资源耗尽</a></li>
+        <li><a href="#92-uint64">9.2 Uint64</a></li>
+        <li><a href="#93-不合预期的连接状态">9.3 不合预期的连接状态</a></li>
+        <li><a href="#94-驱动的特殊语法">9.4 驱动的特殊语法</a></li>
+        <li><a href="#95-批量操作">9.5 批量操作</a></li>
+        <li><a href="#96-执行多条语句">9.6 执行多条语句</a></li>
+        <li><a href="#97-事务中的多条语句">9.7 事务中的多条语句</a></li>
+      </ul>
+    </li>
+    <li><a href="#10-其他">10. 其他</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>Go数据库接口教程</h1>
+	<div class="lead">同JDBC类似，Go也有标准的数据库访问接口。本文详细介绍了database/sql的使用方法和注意事项。</div>
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2017-08-24" class="text-muted">2017-08-24</time>
+	</div>
+	
+	<h1 id="go数据库教程-databasesql">Go数据库教程: database/sql</h1>
+<p>​	Go使用SQL与类SQL数据库的惯例是通过标准库<a href="http://golang.org/pkg/database/sql/">database/sql</a>。这是一个对关系型数据库的通用抽象，它提供了标准的、轻量的、面向行的接口。不过<code>database/sql</code>的包文档只讲它做了什么，却对如何使用只字未提。快速指南远比堆砌事实有用，本文讲述了<code>database/sql</code>的使用方法及其注意事项。</p>
+<h2 id="1-顶层抽象">1. 顶层抽象</h2>
+<p>​	在Go中访问数据库需要用到<code>sql.DB</code>接口：它可以创建语句(statement)和事务(transaction)，执行查询，获取结果。</p>
+<p>​	<code>sql.DB</code>并不是数据库连接，也并未在概念上映射到特定的数据库(Database)或模式(schema)。它只是一个抽象的接口，不同的具体驱动有着不同的实现方式。通常而言，<code>sql.DB</code>会处理一些重要而麻烦的事情，例如操作具体的驱动打开/关闭实际底层数据库的连接，按需管理连接池。</p>
+<p>​	<code>sql.DB</code>这一抽象让用户不必考虑如何管理并发访问底层数据库的问题。当一个连接在执行任务时会被标记为正在使用。用完之后会放回连接池中。不过用户如果用完连接后忘记释放，就会产生大量的连接，极可能导致资源耗尽（建立太多连接，打开太多文件，缺少可用网络端口）。</p>
+<h2 id="2-导入驱动">2. 导入驱动</h2>
+<p>使用数据库时，除了<code>database/sql</code>包本身，还需要引入想使用的特定数据库驱动。</p>
+<p>尽管有时候一些数据库特有的功能必需通过驱动的Ad Hoc接口来实现，但通常只要有可能，还是应当尽量只用<code>database/sql</code>中定义的类型。这可以减小用户代码与驱动的耦合，使切换驱动时代码改动最小化，也尽可能地使用户遵循Go的惯用法。本文使用PostgreSQL为例，PostgreSQL的著名的驱动有：</p>
+<ul>
+<li><a href="https://github.com/lib/pq"><code>github.com/lib/pq</code></a></li>
+<li><a href="https://github.com/go-pg/pg"><code>github.com/go-pg/pg</code></a></li>
+<li><a href="%5B%60https://github.com/jackc/pgx%60%5D"><code>github.com/jackc/pgx</code></a>。</li>
+</ul>
+<p>这里以<code>pgx</code>为例，它性能表现不俗，并对PostgreSQL诸多特性与类型有着良好的支持。既可使用Ad-Hoc API，也提供了标准数据库接口的实现：<code>github.com/jackc/pgx/stdlib</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">import</span> <span style="color:#000;font-weight:bold">(</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#4e9a06">&#34;database/sql&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">_</span> <span style="color:#4e9a06">&#34;github.com/jackx/pgx/stdlib&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>使用<code>_</code>别名来匿名导入驱动，驱动的导出名字不会出现在当前作用域中。导入时，驱动的初始化函数会调用<code>sql.Register</code>将自己注册在<code>database/sql</code>包的全局变量<code>sql.drivers</code>中，以便以后通过<code>sql.Open</code>访问。</p>
+<h2 id="3-访问数据">3. 访问数据</h2>
+<p>加载驱动包后，需要使用<code>sql.Open()</code>来创建<code>sql.DB</code>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">func</span> <span style="color:#000">main</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">db</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">sql</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Open</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;pgx&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;postgres://localhost:5432/postgres&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">log</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Fatal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">defer</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Close</span><span style="color:#000;font-weight:bold">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><code>sql.Open</code>有两个参数：</p>
+<ul>
+<li>第一个参数是驱动名称，字符串类型。为避免混淆，一般与包名相同，这里是<code>pgx</code>。</li>
+<li>第二个参数也是字符串，内容依赖于特定驱动的语法。通常是URL的形式，例如<code>postgres://localhost:5432</code>。</li>
+<li>绝大多数情况下都应当检查<code>database/sql</code>操作所返回的错误。</li>
+<li>一般而言，程序需要在退出时通过<code>sql.DB</code>的<code>Close()</code>方法释放数据库连接资源。如果其生命周期不超过函数的范围，则应当使用<code>defer db.Close()</code></li>
+</ul>
+<p>执行<code>sql.Open()</code>并未实际建立起到数据库的连接，也不会验证驱动参数。第一个实际的连接会惰性求值，延迟到第一次需要时建立。用户应该通过<code>db.Ping()</code>来检查数据库是否实际可用。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Ping</span><span style="color:#000;font-weight:bold">();</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// do something about db error
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><code>sql.DB</code>对象是为了长连接而设计的，不要频繁<code>Open()</code>和<code>Close()</code>数据库。而应该为每个待访问的数据库创建<strong>一个</strong><code>sql.DB</code>实例，并在用完前一直保留它。需要时可将其作为参数传递，或注册为全局对象。</p>
+<p>如果没有按照<code>database/sql</code>设计的意图，不把<code>sql.DB</code>当成长期对象来用而频繁开关启停，就可能遭遇各式各样的错误：无法复用和共享连接，耗尽网络资源，由于TCP连接保持在<code>TIME_WAIT</code>状态而间断性的失败等……</p>
+<h2 id="4-获取结果">4. 获取结果</h2>
+<p>有了<code>sql.DB</code>实例之后就可以开始执行查询语句了。</p>
+<p>Go将数据库操作分为两类：<code>Query</code>与<code>Exec</code>。两者的区别在于前者会返回结果，而后者不会。</p>
+<ul>
+<li><code>Query</code>表示查询，它会从数据库获取查询结果（一系列行，可能为空）。</li>
+<li><code>Exec</code>表示执行语句，它不会返回行。</li>
+</ul>
+<p>此外还有两种常见的数据库操作模式：</p>
+<ul>
+<li><code>QueryRow</code>表示只返回一行的查询，作为<code>Query</code>的一个常见特例。</li>
+<li><code>Prepare</code>表示准备一个需要多次使用的语句，供后续执行用。</li>
+</ul>
+<h3 id="41-获取数据">4.1 获取数据</h3>
+<p>让我们看一个如何查询数据库并且处理结果的例子：利用数据库计算从1到10的自然数之和。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">func</span> <span style="color:#000">example</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">var</span> <span style="color:#000">sum</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">n</span> <span style="color:#204a87;font-weight:bold">int32</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// invoke query
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000">rows</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Query</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;SELECT generate_series(1,$1)&#34;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#8f5902;font-style:italic">// handle query error
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#8f5902;font-style:italic">// defer close result set
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#204a87;font-weight:bold">defer</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Close</span><span style="color:#000;font-weight:bold">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// Iter results
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Next</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Scan</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">n</span><span style="color:#000;font-weight:bold">);</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>	<span style="color:#8f5902;font-style:italic">// Handle scan error
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>		<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">sum</span> <span style="color:#ce5c00;font-weight:bold">+=</span> <span style="color:#000">n</span>				<span style="color:#8f5902;font-style:italic">// Use result
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// check iteration error
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Err</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">sum</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><ul>
+<li>
+<p>整体工作流程如下：</p>
+<ol>
+<li>使用<code>db.Query()</code>来发送查询到数据库，获取结果集<code>Rows</code>，并检查错误。</li>
+<li>使用<code>rows.Next()</code>作为循环条件，迭代读取结果集。</li>
+<li>使用<code>rows.Scan</code>从结果集中获取一行结果。</li>
+<li>使用<code>rows.Err()</code>在退出迭代后检查错误。</li>
+<li>使用<code>rows.Close()</code>关闭结果集，释放连接。</li>
+</ol>
+</li>
+<li>
+<p>一些需要详细说明的地方：</p>
+<ol>
+<li>
+<p><code>db.Query</code>会返回结果集<code>*Rows</code>和错误。每个驱动返回的错误都不一样，用错误字符串来判断错误类型并不是明智的做法，更好的方法是对抽象的错误做<code>Type Assertion</code>，利用驱动提供的更具体的信息来处理错误。当然类型断言也可能产生错误，这也是需要处理的。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span><span style="color:#000;font-weight:bold">.(</span><span style="color:#000">pgx</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">PgError</span><span style="color:#000;font-weight:bold">).</span><span style="color:#000">Code</span> <span style="color:#ce5c00;font-weight:bold">==</span> <span style="color:#4e9a06">&#34;0A000&#34;</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// Do something with that type or error
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>``</p>
+</li>
+<li>
+<p><code>rows.Next()</code>会指明是否还有未读取的数据记录，通常用于迭代结果集。迭代中的错误会导致<code>rows.Next()</code>返回<code>false</code>。</p>
+</li>
+<li>
+<p><code>rows.Scan()</code>用于在迭代中获取一行结果。数据库会使用wire protocal通过TCP/UnixSocket传输数据，对Pg而言，每一行实际上对应一条<code>DataRow</code>消息。<code>Scan</code>接受变量地址，解析<code>DataRow</code>消息并填入相应变量中。因为Go语言是强类型的，所以用户需要创建相应类型的变量并在<code>rows.Scan</code>中传入其指针，<code>Scan</code>函数会根据目标变量的类型执行相应转换。例如某查询返回一个单列<code>string</code>结果集，用户可以传入<code>[]byte</code>或<code>string</code>类型变量的地址，Go会将原始二进制数据或其字符串形式填入其中。但如果用户知道这一列始终存储着数字字面值，那么相比传入<code>string</code>地址后手动使用<code>strconv.ParseInt()</code>解析，更推荐的做法是直接传入一个整型变量的地址（如上面所示），Go会替用户完成解析工作。如果解析出错，<code>Scan</code>会返回相应的错误。</p>
+</li>
+<li>
+<p><code>rows.Err()</code>用于在退出迭代后检查错误。正常情况下迭代退出是因为内部产生的EOF错误，使得下一次<code>rows.Next() == false</code>，从而终止循环；在迭代结束后要检查错误，以确保迭代是因为数据读取完毕，而非其他“真正”错误而结束的。遍历结果集的过程实际上是网络IO的过程，可能出现各种错误。健壮的程序应当考虑这些可能，而不能总是假设一切正常。</p>
+</li>
+<li>
+<p><code>rows.Close()</code>用于关闭结果集。结果集引用了数据库连接，并会从中读取结果。读取完之后必须关闭它才能避免资源泄露。只要结果集仍然打开着，相应的底层连接就处于忙碌状态，不能被其他查询使用。</p>
+</li>
+<li>
+<p>因错误(包括EOF)导致的迭代退出会自动调用<code>rows.Close()</code>关闭结果集（和释放底层连接）。但如果程序自行意外地退出了循环，例如中途<code>break &amp; return</code>，结果集就不会被关闭，产生资源泄露。<code>rows.Close</code>方法是幂等的，重复调用不会产生副作用，因此建议使用 <code>defer rows.Close()</code>来关闭结果集。</p>
+</li>
+</ol>
+</li>
+</ul>
+<p>以上就是在Go中使用数据库的标准方式。</p>
+<h3 id="42-单行查询">4.2 单行查询</h3>
+<p>如果一个查询每次最多返回一行，那么可以用快捷的单行查询来替代冗长的标准查询，例如上例可改写为：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">var</span> <span style="color:#000">sum</span> <span style="color:#204a87;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">QueryRow</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;SELECT sum(n) FROM (SELECT generate_series(1,$1) as n) a;&#34;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">).</span><span style="color:#000">Scan</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">sum</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">sum</span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>不同于<code>Query</code>，如果查询发生错误，错误会延迟到调用<code>Scan()</code>时统一返回，减少了一次错误处理判断。同时<code>QueryRow</code>也避免了手动操作结果集的麻烦。</p>
+<p>需要注意的是，对于单行查询，Go将没有结果的情况视为错误。<code>sql</code>包中定义了一个特殊的错误常量<code>ErrNoRows</code>，当结果为空时，<code>QueryRow().Scan()</code>会返回它。</p>
+<h3 id="43-修改数据">4.3 修改数据</h3>
+<p>什么时候用<code>Exec</code>，什么时候用<code>Query</code>，这是一个问题。通常<code>DDL</code>和增删改使用<code>Exec</code>，返回结果集的查询使用<code>Query</code>。但这不是绝对的，这完全取决于用户是否希望想要获取返回结果。例如在PostgreSQL中：<code>INSERT ... RETURNING *;</code>虽然是一条插入语句，但它也有返回结果集，故应当使用<code>Query</code>而不是<code>Exec</code>。</p>
+<p><code>Query</code>和<code>Exec</code>返回的结果不同，两者的签名分别是：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">func</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span> <span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">Stmt</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">Query</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">args</span> <span style="color:#ce5c00;font-weight:bold">...</span><span style="color:#204a87;font-weight:bold">interface</span><span style="color:#000;font-weight:bold">{})</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">Rows</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">func</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span> <span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">Stmt</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">args</span> <span style="color:#ce5c00;font-weight:bold">...</span><span style="color:#204a87;font-weight:bold">interface</span><span style="color:#000;font-weight:bold">{})</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">Result</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span> 
+</span></span></code></pre></div><p><code>Exec</code>不需要返回数据集，返回的结果是<code>Result</code>，<code>Result</code>接口允许获取执行结果的元数据</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">type</span> <span style="color:#000">Result</span> <span style="color:#204a87;font-weight:bold">interface</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// 用于返回自增ID，并不是所有的关系型数据库都有这个功能。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000">LastInsertId</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">int64</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// 返回受影响的行数。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000">RowsAffected</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">int64</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p><code>Exec</code>的用法如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`CREATE TABLE test_users(id INTEGER PRIMARY KEY ,name TEXT);`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`TRUNCATE test_users;`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">stmt</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Prepare</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`INSERT INTO test_users(id,name) VALUES ($1,$2) RETURNING id`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Error</span><span style="color:#000;font-weight:bold">())</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">res</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">stmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">&#34;Alice&#34;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> <span style="color:#204a87;font-weight:bold">else</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">res</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">RowsAffected</span><span style="color:#000;font-weight:bold">())</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">res</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">LastInsertId</span><span style="color:#000;font-weight:bold">())</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>相比之下<code>Query</code>则会返回结果集对象<code>*Rows</code>，使用方式见上节。其特例<code>QueryRow</code>使用方式如下：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`CREATE TABLE test_users(id INTEGER PRIMARY KEY ,name TEXT);`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`TRUNCATE test_users;`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">stmt</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Prepare</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">`INSERT INTO test_users(id,name) VALUES ($1,$2) RETURNING id`</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Error</span><span style="color:#000;font-weight:bold">())</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">var</span> <span style="color:#000">returnID</span> <span style="color:#204a87;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">err</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#000">stmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">QueryRow</span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">&#34;Alice&#34;</span><span style="color:#000;font-weight:bold">).</span><span style="color:#000">Scan</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">returnID</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">!=</span> <span style="color:#204a87;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">err</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> <span style="color:#204a87;font-weight:bold">else</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">fmt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Println</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">returnID</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>同样的语句使用<code>Exec</code>和<code>Query</code>执行有巨大的差别。如上文所述，<code>Query</code>会返回结果集<code>Rows</code>，而存在未读取数据的<code>Rows</code>其实会占用底层连接直到<code>rows.Close()</code>为止。因此，使用<code>Query</code>但不读取返回结果，会导致底层连接永远无法释放。<code>database/sql</code>期望用户能够用完就把连接还回来，所以这样的用法很快就会导致资源耗尽（连接过多）。所以，应该用<code>Exec</code>的语句绝不可用<code>Query</code>来执行。</p>
+<h3 id="44-准备查询">4.4 准备查询</h3>
+<p>在上一节的两个例子中，没有直接使用数据库的<code>Query</code>和<code>Exec</code>方法，而是首先执行了<code>db.Prepare</code>获取准备好的语句(prepared statement)。准备好的语句<code>Stmt</code>和<code>sql.DB</code>一样，都可以执行<code>Query</code>、<code>Exec</code>等方法。</p>
+<h4 id="441-准备语句的优势">4.4.1 准备语句的优势</h4>
+<p>在查询前进行准备是Go语言中的惯用法，多次使用的查询语句应当进行准备（<code>Prepare</code>）。准备查询的结果是一个准备好的语句（prepared statement），语句中可以包含执行时所需参数的占位符（即绑定值）。准备查询比拼字符串的方式好很多，它可以转义参数，避免SQL注入。同时，准备查询对于一些数据库也省去了解析和生成执行计划的开销，有利于性能。</p>
+<h4 id="442-占位符">4.4.2 占位符</h4>
+<p>PostgreSQL使用<code>$N</code>作为占位符，<code>N</code>是一个从1开始递增的整数，代表参数的位置，方便参数的重复使用。MySQL使用<code>?</code>作为占位符，SQLite两种占位符都可以，而Oracle则使用<code>:param1</code>的形式。</p>
+<pre tabindex="0"><code>MySQL               PostgreSQL            Oracle
+=====               ==========            ======
+WHERE col = ?       WHERE col = $1        WHERE col = :col
+VALUES(?, ?, ?)     VALUES($1, $2, $3)    VALUES(:val1, :val2, :val3)
+</code></pre><p>以<code>PostgreSQL</code>为例，在上面的例子中：<code>&quot;SELECT generate_series(1,$1)&quot;</code> 就用到了<code>$N</code>的占位符形式，并在后面提供了与占位符数目匹配的参数个数。</p>
+<h4 id="443-底层内幕">4.4.3 底层内幕</h4>
+<p>准备语句有着各种优点：安全，高效，方便。但Go中实现它的方式可能和用户所设想的有轻微不同，尤其是关于和<code>database/sql</code>内部其他对象交互的部分。</p>
+<p>在数据库层面，准备语句<code>Stmt</code>是与单个数据库连接绑定的。通常的流程是：客户端向服务器发送带有占位符的查询语句用于准备，服务器返回一个语句ID，客户端在实际执行时，只需要传输语句ID和相应的参数即可。因此准备语句无法在连接之间共享，当使用新的数据库连接时，必须重新准备。</p>
+<p><code>database/sql</code>并没有直接暴露出数据库连接。用户是在<code>DB</code>或<code>Tx</code>上执行<code>Prepare</code>，而不是<code>Conn</code>。因此<code>database/sql</code>提供了一些便利处理，例如自动重试。这些机制隐藏在Driver中实现，而不会暴露在用户代码中。其工作原理是：当用户准备一条语句时，它在连接池中的一个连接上进行准备。<code>Stmt</code>对象会引用它实际使用的连接。当执行<code>Stmt</code>时，它会尝试会用引用的连接。如果那个连接忙碌或已经被关闭，它会获取一个新的连接，并在连接上重新准备，然后再执行。</p>
+<p>因为当原有连接忙时，<code>Stmt</code>会在其他连接上重新准备。因此当高并发地访问数据库时，大量的连接处于忙碌状态，这会导致<code>Stmt</code>不断获取新的连接并执行准备，最终导致资源泄露，甚至超出服务端允许的语句数目上限。所以通常应尽量采用扇入的方式减小数据库访问并发数。</p>
+<h4 id="444-查询的微妙之处">4.4.4 查询的微妙之处</h4>
+<p>数据库连接其实是实现了<code>Begin,Close,Prepare</code>方法的接口。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">type</span> <span style="color:#000">Conn</span> <span style="color:#204a87;font-weight:bold">interface</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Prepare</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">query</span> <span style="color:#204a87;font-weight:bold">string</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">Stmt</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Close</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#204a87;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Begin</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">Tx</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>所以连接接口上实际并没有<code>Exec</code>，<code>Query</code>方法，这些方法其实定义在<code>Prepare</code>返回的<code>Stmt</code>上。对于Go而言，这意味着<code>db.Query()</code>实际上执行了三个操作：首先对查询语句做了准备，然后执行查询语句，最后关闭准备好的语句。这对数据库而言，其实是3个来回。设计粗糙的程序与简陋实现驱动可能会让应用与数据库交互的次数增至3倍。好在绝大多数数据库驱动对于这种情况有优化，如果驱动实现<code>sql.Queryer</code>接口：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">type</span> <span style="color:#000">Queryer</span> <span style="color:#204a87;font-weight:bold">interface</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Query</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">query</span> <span style="color:#204a87;font-weight:bold">string</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">args</span> <span style="color:#000;font-weight:bold">[]</span><span style="color:#000">Value</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">Rows</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">error</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>那么<code>database/sql</code>就不会再进行<code>Prepare-Execute-Close</code>的查询模式，而是直接使用驱动实现的<code>Query</code>方法向数据库发送查询。对于查询都是即拼即用，也不担心安全问题的情况下，直接<code>Query</code>可以有效减少性能开销。</p>
+<h2 id="5-使用事务">5. 使用事务</h2>
+<p>事物是关系型数据库的核心特性。Go中事务（Tx）是一个持有数据库连接的对象，它允许用户在<strong>同一个连接</strong>上执行上面提到的各类操作。</p>
+<h3 id="51-事务基本操作">5.1 事务基本操作</h3>
+<p>通过<code>db.Begin()</code>来开启一个事务，<code>Begin</code>方法会返回一个事务对象<code>Tx</code>。在结果变量<code>Tx</code>上调用<code>Commit()</code>或者<code>Rollback()</code>方法会提交或回滚变更，并关闭事务。在底层，<code>Tx</code>会从连接池中获得一个连接并在事务过程中保持对它的独占。事务对象<code>Tx</code>上的方法与数据库对象<code>sql.DB</code>的方法一一对应，例如<code>Query,Exec</code>等。事务对象也可以准备(prepare)查询，由事务创建的准备语句会显式绑定到创建它的事务。</p>
+<h3 id="52-事务注意事项">5.2 事务注意事项</h3>
+<p>使用事务对象时，不应再执行事务相关的SQL语句，例如<code>BEGIN,COMMIT</code>等。这可能产生一些副作用：</p>
+<ul>
+<li><code>Tx</code>对象一直保持打开状态，从而占用了连接。</li>
+<li>数据库状态不再与Go中相关变量的状态保持同步。</li>
+<li>事务提前终止会导致一些本应属于事务内的查询语句不再属于事务的一部分，这些被排除的语句有可能会由别的数据库连接而非原有的事务专属连接执行。</li>
+</ul>
+<p>当处于事务内部时，应当使用<code>Tx</code>对象的方法而非<code>DB</code>的方法，<code>DB</code>对象并不是事务的一部分，直接调用数据库对象的方法时，所执行的查询并不属于事务的一部分，有可能由其他连接执行。</p>
+<h3 id="53-tx的其他应用场景">5.3 Tx的其他应用场景</h3>
+<p>如果需要修改连接的状态，也需要用到<code>Tx</code>对象，即使用户并不需要事务。例如：</p>
+<ul>
+<li>创建仅连接可见的临时表</li>
+<li>设置变量，例如<code>SET @var := somevalue</code></li>
+<li>修改连接选项，例如字符集，超时设置。</li>
+</ul>
+<p>在<code>Tx</code>上执行的方法都保证同一个底层连接执行，这使得对连接状态的修改对后续操作起效。这是Go中实现这种功能的标准方式。</p>
+<h3 id="54-在事务中准备语句">5.4 在事务中准备语句</h3>
+<p>调用<code>Tx.Prepare</code>会创建一个与事务绑定的准备语句。在事务中使用准备语句，有一个特殊问题需要关注：一定要在事务结束前关闭准备语句。</p>
+<p>在事务中使用<code>defer stmt.Close()</code>是相当危险的。因为当事务结束后，它会释放自己持有的数据库连接，但事务创建的未关闭<code>Stmt</code>仍然保留着对事务连接的引用。在事务结束后执行<code>stmt.Close()</code>，如果原来释放的连接已经被其他查询获取并使用，就会产生竞争，极有可能破坏连接的状态。</p>
+<h2 id="6-处理空值">6. 处理空值</h2>
+<p>可空列（Nullable Column）非常的恼人，容易导致代码变得丑陋。如果可以，在设计时就应当尽量避免。因为：</p>
+<ul>
+<li>
+<p>Go语言的每一个变量都有着默认零值，当数据的零值没有意义时，可以用零值来表示空值。但很多情况下，数据的零值和空值实际上有着不同的语义。单独的原子类型无法表示这种情况。</p>
+</li>
+<li>
+<p>标准库只提供了有限的四种<code>Nullable type</code>：：<code>NullInt64, NullFloat64, NullString, NullBool</code>。并没有诸如<code>NullUint64</code>，<code>NullYourFavoriteType</code>，用户需要自己实现。</p>
+</li>
+<li>
+<p>空值有很多麻烦的地方。例如用户认为某一列不会出现空值而采用基本类型接收时却遇到了空值，程序就会崩溃。这种错误非常稀少，难以捕捉、侦测、处理，甚至意识到。</p>
+</li>
+</ul>
+<h3 id="61-使用额外的标记字段">6.1 使用额外的标记字段</h3>
+<p><code>database\sql</code>提供了四种基本可空数据类型：使用基本类型和一个布尔标记的复合结构体表示可空值。例如：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">type</span> <span style="color:#000">NullInt64</span> <span style="color:#204a87;font-weight:bold">struct</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Int64</span> <span style="color:#204a87;font-weight:bold">int64</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#000">Valid</span> <span style="color:#204a87;font-weight:bold">bool</span> <span style="color:#8f5902;font-style:italic">// Valid is true if Int64 is not NULL
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><p>可空类型的使用方法与基本类型一致：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Next</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">var</span> <span style="color:#000">s</span> <span style="color:#000">sql</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">NullString</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">rows</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Scan</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">// check err
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">s</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Valid</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	   <span style="color:#8f5902;font-style:italic">// use s.String
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000;font-weight:bold">}</span> <span style="color:#204a87;font-weight:bold">else</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	   <span style="color:#8f5902;font-style:italic">// handle NULL case
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><h4 id="62-使用指针">6.2 使用指针</h4>
+<p>在Java中通过装箱（boxing）处理可空类型，即把基本类型包装成一个类，并通过指针引用。于是，空值语义可以通过指针为空来表示。Go当然也可以采用这种办法，不过标准库中并没有提供这种实现方式。<code>pgx</code>提供了这种形式的可空类型支持。</p>
+<h4 id="63-使用零值表示空值">6.3 使用零值表示空值</h4>
+<p>如果数据本身从语义上就不会出现零值，或者根本不区分零值和空值，那么最简便的方法就是使用零值来表示空值。驱动<code>go-pg</code>提供了这种形式的支持。</p>
+<h4 id="64-自定义处理逻辑">6.4 自定义处理逻辑</h4>
+<p>任何实现了<code>Scanner</code>接口的类型，都可以作为<code>Scan</code>传入的地址参数类型。这就允许用户自己定制复杂的解析逻辑，实现更丰富的类型支持。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">type</span> <span style="color:#000">Scanner</span> <span style="color:#204a87;font-weight:bold">interface</span> <span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>  		<span style="color:#8f5902;font-style:italic">// Scan 从数据库驱动中扫描出一个值，当不能无损地转换时，应当返回错误
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>  		<span style="color:#8f5902;font-style:italic">// src可能是int64, float64, bool, []byte, string, time.Time，也可能是nil，表示空值。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span>        <span style="color:#000">Scan</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">src</span> <span style="color:#204a87;font-weight:bold">interface</span><span style="color:#000;font-weight:bold">{})</span> <span style="color:#204a87;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><h4 id="65-在数据库层面解决">6.5 在数据库层面解决</h4>
+<p>通过对列添加<code>NOT NULL</code>约束，可以确保任何结果都不会为空。或者，通过在<code>SQL</code>中使用<code>COALESCE</code>来为NULL设定默认值。</p>
+<h2 id="7-处理动态列">7. 处理动态列</h2>
+<p><code>Scan()</code>函数要求传递给它的目标变量的数目，与结果集中的列数正好匹配，否则就会出错。</p>
+<p>但总有一些情况，用户事先并不知道返回的结果到底有多少列，例如调用一个返回表的存储过程时。</p>
+<p>在这种情况下，使用<code>rows.Columns()</code>来获取列名列表。在不知道列类型情况下，应当使用<code>sql.RawBytes</code>作为接受变量的类型。获取结果后自行解析。</p>
+<pre tabindex="0"><code>cols, err := rows.Columns()
+if err != nil {
+	// handle this....
+}
+
+// 目标列是一个动态生成的数组
+dest := []interface{}{
+	new(string),
+	new(uint32),
+	new(sql.RawBytes),
+}
+
+// 将数组作为可变参数传入Scan中。
+err = rows.Scan(dest...)
+// ...
+</code></pre><h2 id="8-连接池">8. 连接池</h2>
+<p><code>database/sql</code>包里实现了一个通用的连接池，它只提供了非常简单的接口，除了限制连接数、设置生命周期基本没有什么定制选项。但了解它的一些特性也是很有帮助的。</p>
+<ul>
+<li>
+<p>连接池意味着：同一个数据库上的连续两条查询可能会打开两个连接，在各自的连接上执行。这可能导致一些让人困惑的错误，例如程序员希望锁表插入时连续执行了两条命令：<code>LOCK TABLE</code>和<code>INSERT</code>，结果却会阻塞。因为执行插入时，连接池创建了一个新的连接，而这条连接并没有持有表锁。</p>
+</li>
+<li>
+<p>在需要时，而且连接池中没有可用的连接时，连接才被创建。</p>
+</li>
+<li>
+<p>默认情况下连接数量没有限制，想创建多少就有多少。但服务器允许的连接数往往是有限的。</p>
+</li>
+<li>
+<p>用<code>db.SetMaxIdleConns(N)</code>来限制连接池中空闲连接的数量，但是这并不会限制连接池的大小。连接回收(recycle)的很快，通过设置一个较大的N，可以在连接池中保留一些空闲连接，供快速复用(reuse)。但保持连接空闲时间过久可能会引发其他问题，比如超时。设置<code>N=0</code>则可以避免连接空闲太久。</p>
+</li>
+<li>
+<p>用<code>db.SetMaxOpenConns(N)</code>来限制连接池中<strong>打开</strong>的连接数量。</p>
+</li>
+<li>
+<p>用<code>db.SetConnMaxLifetime(d time.Duration)</code>来限制连接的生命周期。连接超时后，会在需要时惰性回收复用。</p>
+<p>​</p>
+</li>
+</ul>
+<h2 id="9-微妙行为">9. 微妙行为</h2>
+<p><code>database/sql</code>并不复杂，但某些情况下它的微妙表现仍然会出人意料。</p>
+<h3 id="91-资源耗尽">9.1 资源耗尽</h3>
+<p>不谨慎地使用<code>database/sql</code>会给自己挖许多坑，最常见的问题就是资源枯竭（resource exhaustion）：</p>
+<ul>
+<li>打开和关闭数据库（<code>sql.DB</code>）可能会导致资源枯竭；</li>
+<li>结果集没有读取完毕，或者调用<code>rows.Close()</code>失败，结果集会一直占用池里的连接；</li>
+<li>使用<code>Query()</code>执行一些不返回结果集的语句，返回的未读取结果集会一直占用池里的连接；</li>
+<li>不了解准备语句（Prepared Statement）的工作原理会产生许多额外的数据库访问。</li>
+</ul>
+<h3 id="92-uint64">9.2 Uint64</h3>
+<p>Go底层使用<code>int64</code>来表示整型，使用<code>uint64</code>时应当极其小心。使用超出<code>int64</code>表示范围的整数作为参数，会产生一个溢出错误：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">// Error: constant 18446744073709551615 overflows int
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">_</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;INSERT INTO users(id) VALUES&#34;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">math</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">MaxUint64</span><span style="color:#000;font-weight:bold">)</span> 
+</span></span></code></pre></div><p>这种类型的错误非常不容易发现，它可能一开始表现的很正常，但是溢出之后问题就来了。</p>
+<h3 id="93-不合预期的连接状态">9.3 不合预期的连接状态</h3>
+<p>连接的状态，例如是否处于事务中，所连接的数据库，设置的变量等，应该通过Go的相关类型来处理，而不是通过SQL语句。用户不应当对自己的查询在哪条连接上执行作任何假设，如果需要在同一条连接上执行，需要使用<code>Tx</code>。</p>
+<p>举个例子，通过<code>USE DATABASE</code>改变连接的数据库对于不少人是习以为常的操作，执行这条语句，只影响当前连接的状态，其他连接仍然访问的是原来的数据库。如果没有使用事务<code>Tx</code>，后续的查询并不能保证仍然由当前的连接执行，所以这些查询很可能并不像用户预期的那样工作。</p>
+<p>更糟糕的是，如果用户改变了连接的状态，用完之后它成为空连接又回到了连接池，这会污染其他代码的状态。尤其是直接在SQL中执行诸如<code>BEGIN</code>或<code>COMMIT</code>这样的语句。</p>
+<h3 id="94-驱动的特殊语法">9.4 驱动的特殊语法</h3>
+<p>尽管<code>database/sql</code>是一个通用的抽象，但不同的数据库，不同的驱动仍然会有不同的语法和行为。参数占位符就是一个例子。</p>
+<h3 id="95-批量操作">9.5 批量操作</h3>
+<p>出乎意料的是，标准库没有提供对批量操作的支持。即<code>INSERT INTO xxx VALUES (1),(2),...;</code>这种一条语句插入多条数据的形式。目前实现这个功能还需要自己手动拼SQL。</p>
+<h3 id="96-执行多条语句">9.6 执行多条语句</h3>
+<p><code>database/sql</code>并没有对在一次查询中执行多条SQL语句的显式支持，具体的行为以驱动的实现为准。所以对于</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#000">_</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">err</span> <span style="color:#ce5c00;font-weight:bold">:=</span> <span style="color:#000">db</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Exec</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;DELETE FROM tbl1; DELETE FROM tbl2&#34;</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#8f5902;font-style:italic">// Error/unpredictable result
+</span></span></span></code></pre></div><p>这样的查询，怎样执行完全由驱动说了算，用户并无法确定驱动到底执行了什么，又返回了什么。</p>
+<h3 id="97-事务中的多条语句">9.7 事务中的多条语句</h3>
+<p>因为事务保证在它上面执行的查询都由同一个连接来执行，因此事务中的语句必需按顺序一条一条执行。对于返回结果集的查询，结果集必须<code>Close()</code>之后才能进行下一次查询。用户如果尝试在前一条语句的结果还没读完前就执行新的查询，连接就会失去同步。这意味着事务中返回结果集的语句都会占用一次单独的网络往返。</p>
+<h2 id="10-其他">10. 其他</h2>
+<p>本文主体基于[[Go database/sql tutorial]]([Go database/sql tutorial])，由我翻译并进行一些增删改，修正过时错误的内容。转载保留出处。</p>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/dev/notify-trigger-based-repl/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/dev/maturity-model/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

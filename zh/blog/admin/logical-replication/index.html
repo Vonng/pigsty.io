@@ -1,0 +1,2251 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>Postgres逻辑复制详解 | Pigsty</title><meta property="og:title" content="Postgres逻辑复制详解" />
+<meta property="og:description" content="本文介绍PostgreSQL 13中逻辑复制的相关原理，以及最佳实践。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/admin/logical-replication/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2021-03-03T00:00:00+00:00" />
+<meta property="article:modified_time" content="2022-05-27T15:11:48+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="Postgres逻辑复制详解">
+<meta itemprop="description" content="本文介绍PostgreSQL 13中逻辑复制的相关原理，以及最佳实践。
+"><meta itemprop="datePublished" content="2021-03-03T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2022-05-27T15:11:48+08:00" />
+<meta itemprop="wordCount" content="1141">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Postgres逻辑复制详解"/>
+<meta name="twitter:description" content="本文介绍PostgreSQL 13中逻辑复制的相关原理，以及最佳实践。
+"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://pigsty.cc/doc" target="_blank" ><span>Docs</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://demo.pigsty.cc" target="_blank" ><span>Demo</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Github</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.d686329dccc547f3afea5e8db8ff1f86.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">Blog</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/news/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">新闻</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblognews">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-v09-intro" href="/zh/blog/news/pigsty-v09-intro/">Pigsty 0.9 新功能介绍</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewsaliyun-pigsty" href="/zh/blog/news/aliyun-pigsty/">阿里云PgSQL七天训练营</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-pgconf" href="/zh/blog/news/2020-pgconf/">PG Conf China 2020</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2020-carnival" href="/zh/blog/news/2020-carnival/">2020数据库嘉年华分享</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognews2019-pgconf-fdw" href="/zh/blog/news/2019-pgconf-fdw/">PG Conf China 2019</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblognewspigsty-live" href="/zh/blog/news/pigsty-live/">Pigsty在线直播：开源PG全家桶上手指南</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/post/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpost">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostvector-is-the-new-json" href="/zh/blog/post/vector-is-the-new-json/">向量是新的JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-no1" href="/zh/blog/post/pg-is-no1/">PG：世界上最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostllm-and-pgvector" href="/zh/blog/post/llm-and-pgvector/">AI大模型与向量数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdemand-pyramid" href="/zh/blog/post/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostrethink" href="/zh/blog/post/rethink/">技术反思录：正本清源系列</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostdistributive-bullshit" href="/zh/blog/post/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostmicroservice-bad-idea" href="/zh/blog/post/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-performence" href="/zh/blog/post/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-best" href="/zh/blog/post/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpigsty-intro" href="/zh/blog/post/pigsty-intro/">开箱即用的PG发行版：Pigsty v0.9</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-great" href="/zh/blog/post/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-in-docker" href="/zh/blog/post/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostreason-about-time" href="/zh/blog/post/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-convention" href="/zh/blog/post/pg-convention/">PostgreSQL开发规约</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostpg-is-good" href="/zh/blog/post/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostblockchain-and-database" href="/zh/blog/post/blockchain-and-database/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostconsistency-linearizability" href="/zh/blog/post/consistency-linearizability/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpostwhy-learn-database" href="/zh/blog/post/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey2" href="/zh/blog/cloud/odyssey2/">下云奥德赛：第二弹</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：DHH下云记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">PostgreSQL高级模糊查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevjsonpath" href="/zh/blog/dev/jsonpath/">PgSQL JsonPath</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">PgSQL前后端通信协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">PgSQL事务隔离等级</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">PgSQL变更数据捕获</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">IP地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">PgSQL中的触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevconcurrent-control" href="/zh/blog/dev/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划归属查询</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">PgSQL Distinct On</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">PgSQL Exclude约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">PgSQL 函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">PgSQL审计触发器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">PgSQL 5分钟实现推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">管理</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">PG在线修改列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">PgSQL复制方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">PgSQL备份方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalert-overview" href="/zh/blog/admin/alert-overview/">PgSQL报警方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">PgSQL关系膨胀处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">PgSQL备份恢复概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">PgSQL不停机迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PgSQL日志方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">PgSQL协议分析:网络抓包</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfile_fdw-intro" href="/zh/blog/admin/file_fdw-intro/">FileFDW用例:读取系统信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-iostat" href="/zh/blog/admin/unix-iostat/">Unix命令 iostat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-free" href="/zh/blog/admin/unix-free/">Unix命令: free</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-top" href="/zh/blog/admin/unix-top/">Unix命令: top</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-vmstat" href="/zh/blog/admin/unix-vmstat/">Unix命令: vmstat</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">编译安装PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwal-and-checkpoint" href="/zh/blog/admin/wal-and-checkpoint/">PgSQL: WAL与检查点</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pit/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">故障</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpit">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpittime-travel" href="/zh/blog/pit/time-travel/">故障:时间回溯</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitextension" href="/zh/blog/pit/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpg-dump-failure" href="/zh/blog/pit/pg-dump-failure/">故障:连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitpage-corruption" href="/zh/blog/pit/page-corruption/">故障:页面数据损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitxid-wrap-around" href="/zh/blog/pit/xid-wrap-around/">故障:事务号回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitsequence-overflow" href="/zh/blog/pit/sequence-overflow/">故障:序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpitdownload-failure" href="/zh/blog/pit/download-failure/">故障:移除负载导致过载</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/admin/logical-replication.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/admin/logical-replication.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/admin/logical-replication.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=Postgres%e9%80%bb%e8%be%91%e5%a4%8d%e5%88%b6%e8%af%a6%e8%a7%a3" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/admin/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#逻辑复制">逻辑复制</a></li>
+    <li><a href="#发布publication">发布（Publication）</a>
+      <ul>
+        <li><a href="#复制标识zhblog20210303pg复制标识详解replica-identity"><a href="/zh/blog/2021/03/03/pg%E5%A4%8D%E5%88%B6%E6%A0%87%E8%AF%86%E8%AF%A6%E8%A7%A3replica-identity/">复制标识</a></a></li>
+        <li><a href="#管理发布">管理发布</a></li>
+        <li><a href="#查询发布">查询发布</a></li>
+        <li><a href="#pg_publication-发布定义表"><code>pg_publication</code> 发布定义表</a></li>
+        <li><a href="#pg_publication_tables-发布内容表"><code>pg_publication_tables</code> 发布内容表</a></li>
+      </ul>
+    </li>
+    <li><a href="#订阅">订阅</a>
+      <ul>
+        <li><a href="#管理订阅">管理订阅</a></li>
+        <li><a href="#管理复制槽">管理复制槽</a></li>
+        <li><a href="#订阅查询">订阅查询</a></li>
+        <li><a href="#pg_subscription-订阅定义表"><code>pg_subscription</code> 订阅定义表</a></li>
+        <li><a href="#pg_subscription_rel-订阅内容表"><code>pg_subscription_rel</code> 订阅内容表</a></li>
+        <li><a href="#创建订阅时">创建订阅时</a></li>
+      </ul>
+    </li>
+    <li><a href="#复制冲突">复制冲突</a>
+      <ul>
+        <li><a href="#日志中可能出现的冲突">日志中可能出现的冲突</a></li>
+      </ul>
+    </li>
+    <li><a href="#局限性">局限性</a></li>
+    <li><a href="#架构">架构</a>
+      <ul>
+        <li><a href="#初始快照">初始快照</a></li>
+        <li><a href="#进程结构">进程结构</a></li>
+        <li><a href="#复制槽">复制槽</a></li>
+        <li><a href="#逻辑解码">逻辑解码</a></li>
+        <li><a href="#同步提交">同步提交</a></li>
+        <li><a href="#临时数据">临时数据</a></li>
+      </ul>
+    </li>
+    <li><a href="#监控">监控</a>
+      <ul>
+        <li><a href="#pg_stat_subscription-订阅统计表"><code>pg_stat_subscription</code> 订阅统计表</a></li>
+        <li><a href="#pg_replication_slot-复制槽"><code>pg_replication_slot</code> 复制槽</a></li>
+        <li><a href="#pg_replication_origin-复制源"><code>pg_replication_origin</code> 复制源</a></li>
+        <li><a href="#检测复制冲突">检测复制冲突</a></li>
+      </ul>
+    </li>
+    <li><a href="#安全">安全</a></li>
+    <li><a href="#配置选项">配置选项</a>
+      <ul>
+        <li><a href="#配置参数样例">配置参数样例</a></li>
+      </ul>
+    </li>
+    <li><a href="#快速配置">快速配置</a>
+      <ul>
+        <li><a href="#沙箱样例">沙箱样例</a></li>
+      </ul>
+    </li>
+    <li><a href="#复制流程">复制流程</a></li>
+    <li><a href="#逻辑复制状态机">逻辑复制状态机</a>
+      <ul>
+        <li><a href="#24-等待逻辑复制同步">2.4 等待逻辑复制同步</a></li>
+      </ul>
+    </li>
+    <li><a href="#沙箱样例-1">沙箱样例</a>
+      <ul>
+        <li><a href="#准备逻辑复制">准备逻辑复制</a></li>
+        <li><a href="#创建发布订阅">创建发布订阅</a></li>
+        <li><a href="#观察复制状态">观察复制状态</a></li>
+        <li><a href="#校验复制数据">校验复制数据</a></li>
+      </ul>
+    </li>
+    <li><a href="#逻辑复制实验">逻辑复制实验</a>
+      <ul>
+        <li><a href="#将表加入已有发布">将表加入已有发布</a></li>
+        <li><a href="#将表从发布中移除">将表从发布中移除</a></li>
+        <li><a href="#两端列定义不一致">两端列定义不一致</a></li>
+        <li><a href="#复制身份与索引的正确配置">复制身份与索引的正确配置</a></li>
+      </ul>
+    </li>
+    <li><a href="#其他问题">其他问题</a>
+      <ul>
+        <li><a href="#q逻辑复制准备工作">Q：逻辑复制准备工作</a></li>
+        <li><a href="#q什么样的表可以逻辑复制">Q：什么样的表可以逻辑复制？</a></li>
+        <li><a href="#q监控逻辑复制状态">Q：监控逻辑复制状态</a></li>
+        <li><a href="#q将新表加入发布">Q：将新表加入发布</a></li>
+        <li><a href="#q没有主键的表加入发布">Q：没有主键的表加入发布？</a></li>
+        <li><a href="#q没有复制身份的表如何处理">Q：没有复制身份的表如何处理？</a></li>
+        <li><a href="#qalter-pub的生效方式">Q：ALTER PUB的生效方式</a></li>
+        <li><a href="#q在同一对-发布者-订阅者-上如果存在多对订阅且发布包含的表重叠">Q：在同一对 发布者-订阅者 上如果存在多对订阅，且发布包含的表重叠？</a></li>
+        <li><a href="#q订阅者和发布者的表定义有什么限制">Q：订阅者和发布者的表定义有什么限制？</a></li>
+        <li><a href="#qpg_dump是如何处理订阅的">Q：pg_dump是如何处理订阅的</a></li>
+        <li><a href="#q什么情况下需要手工管理订阅复制槽">Q：什么情况下需要手工管理订阅复制槽？</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>Postgres逻辑复制详解</h1>
+	<div class="lead">本文介绍PostgreSQL 13中逻辑复制的相关原理，以及最佳实践。</div>
+	<div class="td-byline mb-4">
+		
+		<time datetime="2021-03-03" class="text-muted">2021-03-03</time>
+	</div>
+	
+	<h2 id="逻辑复制">逻辑复制</h2>
+<p><strong>逻辑复制（Logical Replication）</strong>，是一种根据数据对象的 <a href="/zh/blog/2021/03/03/pg%E5%A4%8D%E5%88%B6%E6%A0%87%E8%AF%86%E8%AF%A6%E8%A7%A3replica-identity/"><strong>复制标识</strong></a>（Replica Identity）（通常是主键）复制数据对象及其变化的方法。</p>
+<p><strong>逻辑复制</strong> 这个术语与 <strong>物理复制</strong>相对应，物理复制使用精确的块地址与逐字节复制，而逻辑复制则允许对复制过程进行精细的控制。</p>
+<p>逻辑复制基于 <strong>发布（Publication）</strong> 与 <strong>订阅</strong>（<strong>Subscription</strong>）模型：</p>
+<ul>
+<li>一个 <strong>发布者（Publisher）</strong> 上可以有多个<strong>发布</strong>，一个 <strong>订阅者（Subscriber）</strong> 上可以有多个 <strong>订阅</strong> 。</li>
+<li>一个发布可被多个订阅者订阅，一个订阅只能订阅一个<strong>发布者</strong>，但可订阅同发布者上的多个不同发布。</li>
+</ul>
+<p>针对一张表的逻辑复制通常是这样的：订阅者获取发布者数据库上的一个快照，并拷贝表中的存量数据。一旦完成数据拷贝，发布者上的<strong>变更</strong>（增删改清）就会实时发送到订阅者上。订阅者会按照相同的顺序应用这些变更，因此可以保证逻辑复制的事务一致性。这种方式有时候又称为 <strong>事务性复制（transactional  replication）</strong>。</p>
+<p>逻辑复制的典型用途是：</p>
+<ul>
+<li>迁移，跨PostgreSQL大版本，跨操作系统平台进行复制。</li>
+<li>CDC，收集数据库（或数据库的一个子集）中的增量变更，在订阅者上为增量变更触发触发器执行定制逻辑。</li>
+<li>分拆，将多个数据库集成为一个，或者将一个数据库拆分为多个，进行精细的分拆集成与访问控制。</li>
+</ul>
+<p>逻辑订阅者的行为就是一个普通的PostgreSQL实例（主库），逻辑订阅者也可以创建自己的发布，拥有自己的订阅者。</p>
+<p>如果逻辑订阅者只读，那么不会有<strong>冲突</strong>。如果会写入逻辑订阅者的订阅集，那么就可能会出现冲突。</p>
+<h2 id="发布publication">发布（Publication）</h2>
+<p>一个 <strong>发布（Publication）</strong> 可以在物理复制<strong>主库</strong> 上定义。创建发布的节点被称为 <strong>发布者（Publisher）</strong> 。</p>
+<p>一个 <strong>发布</strong> 是 <strong>由一组表构成的变更集合</strong>。也可以被视作一个 <strong>变更集（change set）</strong> 或 <strong>复制集（Replication Set）</strong> 。每个发布都只能在一个 <strong>数据库（Database）</strong> 中存在。</p>
+<p>发布不同于<strong>模式（Schema）</strong>，不会影响表的访问方式。（表纳不纳入发布，自身访问不受影响）</p>
+<p>发布目前只能包含<strong>表</strong>（即：索引，序列号，物化视图这些不会被发布），每个表可以添加到多个发布中。</p>
+<p>除非针对<code>ALL TABLES</code>创建发布，否则发布中的对象（表）只能（通过<code>ALTER PUBLICATION ADD TABLE</code>）被<strong>显式添加</strong>。</p>
+<p>发布可以筛选所需的变更类型：包括<code>INSERT</code>、<code>UPDATE</code>、<code>DELETE</code> 和<code>TRUNCATE</code>的任意组合，类似触发器事件，默认所有变更都会被发布。</p>
+<h3 id="复制标识zhblog20210303pg复制标识详解replica-identity"><a href="/zh/blog/2021/03/03/pg%E5%A4%8D%E5%88%B6%E6%A0%87%E8%AF%86%E8%AF%A6%E8%A7%A3replica-identity/">复制标识</a></h3>
+<p>一个被纳入发布中的表，必须带有 <strong>复制标识（Replica Identity）</strong>，只有这样才可以在订阅者一侧定位到需要更新的行，完成<code>UPDATE</code>与<code>DELETE</code>操作的复制。</p>
+<p>默认情况下，<strong>主键</strong> （Primary Key）是表的复制标识，<strong>非空列上的唯一索引</strong> （UNIQUE NOT NULL）也可以用作复制标识。</p>
+<p>如果没有任何复制标识，可以将复制标识设置为<code>FULL</code>，也就是把整个行当作复制标识。（一种有趣的情况，表中存在多条完全相同的记录，也可以被正确处理，见后续案例）使用<code>FULL</code>模式的复制标识效率很低（因为每一行修改都需要在订阅者上执行全表扫描，很容易把订阅者拖垮），所以这种配置只能是保底方案。使用<code>FULL</code>模式的复制标识还有一个限制，订阅端的表上的复制身份所包含的列，要么与发布者一致，要么比发布者更少。</p>
+<p><code>INSERT</code>操作总是可以无视 复制标识 直接进行（因为插入一条新记录，在订阅者上并不需要定位任何现有记录；而删除和更新则需要通过<strong>复制标识</strong> 定位到需要操作的记录）。如果一个没有 复制标识 的表被加入到带有<code>UPDATE</code>和<code>DELETE</code>的发布中，后续的<code>UPDATE</code>和<code>DELETE</code>会导致发布者上报错。</p>
+<p>表的复制标识模式可以查阅<code>pg_class.relreplident</code>获取，可以通过<code>ALTER TABLE</code>进行修改。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">index_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FULL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOTHING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>尽管各种排列组合都是可能的，然而在实际使用中，只有三种可行的情况。</p>
+<ul>
+<li>表上有主键，使用默认的 <code>default</code> 复制标识</li>
+<li>表上没有主键，但是有非空唯一索引，显式配置 <code>index</code> 复制标识</li>
+<li>表上既没有主键，也没有非空唯一索引，显式配置<code>full</code>复制标识（运行效率非常低，仅能作为兜底方案）</li>
+<li>其他所有情况，都无法正常完成逻辑复制功能。输出的信息不足，可能会报错，也可能不会。</li>
+<li>特别需要注意：如果<code>nothing</code>复制标识的表纳入到逻辑复制中，对其进行删改会导致发布端报错！</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">复制身份模式\表上的约束</th>
+<th style="text-align:center">主键(p)</th>
+<th style="text-align:center">非空唯一索引(u)</th>
+<th style="text-align:center">两者皆无(n)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>d</strong>efault</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>i</strong>ndex</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>f</strong>ull</td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>n</strong>othing</td>
+<td style="text-align:center">xxxx</td>
+<td style="text-align:center">xxxx</td>
+<td style="text-align:center">xxxx</td>
+</tr>
+</tbody>
+</table>
+<h3 id="管理发布">管理发布</h3>
+<p><code>CREATE PUBLICATION</code>用于创建发布，<code>DROP PUBLICATION</code>用于移除发布，<code>ALTER PUBLICATION</code>用于修改发布。</p>
+<p>发布创建之后，可以通过<code>ALTER PUBLICATION</code>动态地向发布中添加或移除表，这些操作都是事务性的。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ONLY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ALL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">TABLES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">publication_parameter</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ONLY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ONLY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ONLY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">publication_parameter</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OWNER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_owner</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CURRENT_USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SESSION_USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">RENAME</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXISTS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...];</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p><code>publication_parameter</code> 主要包括两个选项：</p>
+<ul>
+<li><code>publish</code>：定义要发布的变更操作类型，逗号分隔的字符串，默认为<code>insert, update, delete, truncate</code>。</li>
+<li><code>publish_via_partition_root</code>：13后的新选项，如果为真，分区表将使用根分区的复制标识进行逻辑复制。</li>
+</ul>
+<h3 id="查询发布">查询发布</h3>
+<p>发布可以使用psql元命令<code>\dRp</code>查询。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># \dRp</span>
+</span></span><span style="display:flex;"><span>  Owner   <span style="color:#000;font-weight:bold">|</span> All tables <span style="color:#000;font-weight:bold">|</span> Inserts <span style="color:#000;font-weight:bold">|</span> Updates <span style="color:#000;font-weight:bold">|</span> Deletes <span style="color:#000;font-weight:bold">|</span> Truncates <span style="color:#000;font-weight:bold">|</span> Via root
+</span></span><span style="display:flex;"><span>----------+------------+---------+---------+---------+-----------+----------
+</span></span><span style="display:flex;"><span> postgres <span style="color:#000;font-weight:bold">|</span> t          <span style="color:#000;font-weight:bold">|</span> t       <span style="color:#000;font-weight:bold">|</span> t       <span style="color:#000;font-weight:bold">|</span> t       <span style="color:#000;font-weight:bold">|</span> t         <span style="color:#000;font-weight:bold">|</span> f
+</span></span></code></pre></div><h3 id="pg_publication-发布定义表"><code>pg_publication</code> 发布定义表</h3>
+<p>``pg_publication` 包含了发布的原始定义，每一条记录对应一个发布。</p>
+<pre tabindex="0"><code class="language-mssql" data-lang="mssql"># table pg_publication;
+oid          | 20453
+pubname      | pg_meta_pub
+pubowner     | 10
+puballtables | t
+pubinsert    | t
+pubupdate    | t
+pubdelete    | t
+pubtruncate  | t
+pubviaroot   | f
+</code></pre><ul>
+<li><code>puballtables</code>：是否包含所有的表</li>
+<li><code>pubinsert|update|delete|truncate</code> 是否发布这些操作</li>
+<li><code>pubviaroot</code>：如果设置了该选项，任何分区表（叶表）都会使用最顶层的（被）分区表的<strong>复制身份</strong>。所以可以把整个分区表当成一个表，而不是一系列表进行发布。</li>
+</ul>
+<h3 id="pg_publication_tables-发布内容表"><code>pg_publication_tables</code> 发布内容表</h3>
+<p><code>pg_publication_tables</code>是由<code>pg_publication</code>，<code>pg_class</code>和<code>pg_namespace</code>拼合而成的视图，记录了发布中包含的表信息。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>postgres@meta:5432/meta<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># table pg_publication_tables;</span>
+</span></span><span style="display:flex;"><span>   pubname   <span style="color:#000;font-weight:bold">|</span> schemaname <span style="color:#000;font-weight:bold">|</span>    tablename
+</span></span><span style="display:flex;"><span>-------------+------------+-----------------
+</span></span><span style="display:flex;"><span> pg_meta_pub <span style="color:#000;font-weight:bold">|</span> public     <span style="color:#000;font-weight:bold">|</span> spatial_ref_sys
+</span></span><span style="display:flex;"><span> pg_meta_pub <span style="color:#000;font-weight:bold">|</span> public     <span style="color:#000;font-weight:bold">|</span> t_normal
+</span></span><span style="display:flex;"><span> pg_meta_pub <span style="color:#000;font-weight:bold">|</span> public     <span style="color:#000;font-weight:bold">|</span> t_unique
+</span></span><span style="display:flex;"><span> pg_meta_pub <span style="color:#000;font-weight:bold">|</span> public     <span style="color:#000;font-weight:bold">|</span> t_tricky
+</span></span></code></pre></div><p>使用<code>pg_get_publication_tables</code>可以根据订阅的名字获取订阅表的OID</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_get_publication_tables</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pg_meta_pub&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">p</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">pubname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#000">n</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">nspname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">schemaname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tablename</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_publication</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">p</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87;font-weight:bold">LATERAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_get_publication_tables</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">p</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">pubname</span><span style="color:#000;font-weight:bold">::</span><span style="color:#204a87">text</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">gpt</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">relid</span><span style="color:#000;font-weight:bold">),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87;font-weight:bold">JOIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_namespace</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relnamespace</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">gpt</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relid</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>同时，<code>pg_publication_rel</code> 也提供类似的信息，但采用的是多对多的OID对应视角，包含的是原始数据。</p>
+<pre tabindex="0"><code>  oid  | prpubid | prrelid
+-------+---------+---------
+ 20414 |   20413 |   20397
+ 20415 |   20413 |   20400
+ 20416 |   20413 |   20391
+ 20417 |   20413 |   20394
+</code></pre><p>这两者的区别特别需要注意：当针对<code>ALL TABLES</code>发布时，<code>pg_publication_rel</code>中不会有具体表的OID，但是在<code>pg_publication_tables</code>中可以查询到实际纳入逻辑复制的表列表。所以通常应当以<code>pg_publication_tables</code>为准。</p>
+<p>创建订阅时，数据库会先修改<code>pg_publication</code>目录，然后将发布表的信息填入<code>pg_publication_rel</code>。</p>
+<h2 id="订阅">订阅</h2>
+<p><strong>订阅（Subscription）</strong> 是逻辑复制的下游。定义订阅的节点被称为 <strong>订阅者（Subscriber）</strong> 。</p>
+<p>订阅定义了：如何<strong>连接</strong>到另一个数据库，以及需要订阅目标发布者上的哪些<strong>发布</strong>。</p>
+<p>逻辑订阅者的行为与一个普通的PostgreSQL实例（主库）无异，逻辑订阅者也可以创建自己的发布，拥有自己的订阅者。</p>
+<p>每个订阅者，都会通过一个 <strong>复制槽（Replication）</strong> 来接收变更，在初始数据复制阶段，可能会需要更多的临时复制槽。</p>
+<p>逻辑复制订阅可以作为同步复制的备库，备库的名字默认就是订阅的名字，也可以通过在连接信息中设置<code>application_name</code>来使用别的名字。</p>
+<p>只有超级用户才可以用<code>pg_dump</code>转储订阅的定义，因为只有超级用户才可以访问<code>pg_subscription</code>视图，普通用户尝试转储时会跳过并打印警告信息。</p>
+<p>逻辑复制不会复制DDL变更，因此发布集中的表必须<strong>已经存在</strong>于订阅端上。只有<strong>普通表</strong>上的变更会被复制，视图、物化视图、序列号，索引这些都不会被复制。</p>
+<p>发布与订阅端的表是通过完整限定名（如<code>public.table</code>）进行匹配的，不支持把变更复制到一个名称不同的表上。</p>
+<p>发布与订阅端的表的列也是通过<strong>名称</strong>匹配的。列的顺序无关紧要，数据类型也不一定非得一致，只要两个列的<strong>文本表示</strong>兼容即可，即数据的文本表示可以转换为目标列的类型。订阅端的表可以包含有发布端没有的列，这些新列都会使用默认值填充。</p>
+<h3 id="管理订阅">管理订阅</h3>
+<p><code>CREATE SUBSCRIPTION</code>用于创建订阅，<code>DROP SUBSCRIPTION</code>用于移除订阅，<code>ALTER SUBSCRIPTION</code>用于修改订阅。</p>
+<p>订阅创建之后，可以通过<code>ALTER SUBSCRIPTION</code> 随时<strong>暂停</strong>与<strong>恢复</strong>订阅。</p>
+<p>移除并重建订阅会导致<strong>同步信息丢失</strong>，这意味着相关数据需要重新进行同步。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">subscription_name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">CONNECTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;conninfo&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">publication_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">subscription_parameter</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONNECTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;conninfo&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">publication_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">set_publication_option</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REFRESH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">refresh_option</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ENABLE</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DISABLE</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">subscription_parameter</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">value</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OWNER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_owner</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CURRENT_USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SESSION_USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">RENAME</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXISTS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p><code>subscription_parameter</code>定义了订阅的一些选项，包括：</p>
+<ul>
+<li><code>copy_data(bool)</code>：复制开始后，是否拷贝数据，默认为真</li>
+<li><code>create_slot(bool)</code>：是否在发布者上创建复制槽，默认为真</li>
+<li><code>enabled(bool)</code>：是否启用该订阅，默认为真</li>
+<li><code>connect(bool)</code>：是否尝试连接到发布者，默认为真，置为假会把上面几个选项强制设置为假。</li>
+<li><code>synchronous_commit(bool)</code>：是否启用同步提交，向主库上报自己的进度信息。</li>
+<li><code>slot_name</code>：订阅所关联的复制槽名称，设置为空会取消订阅与复制槽的关联。</li>
+</ul>
+<h3 id="管理复制槽">管理复制槽</h3>
+<p>每个活跃的订阅都会通过<strong>复制槽</strong> 从远程发布者接受变更。</p>
+<p>通常这个远端的<strong>复制槽</strong>是自动管理的，在<code>CREATE SUBSCRIPTION</code>时自动创建，在<code>DROP SUBSCRIPTION</code>时自动删除。</p>
+<p>在特定场景下，可能需要分别操作订阅与底层的复制槽：</p>
+<ul>
+<li>
+<p>创建订阅时，所需的复制槽已经存在。则可以通过<code>create_slot = false</code>关联已有复制槽。</p>
+</li>
+<li>
+<p>创建订阅时，远端不可达或状态不明朗，则可以通过<code>connect = false</code>不访问远程主机，<code>pg_dump</code>就是这么做的。这种情况下，您必须在远端手工创建复制槽后，才能在本地启用该订阅。</p>
+</li>
+<li>
+<p>移除订阅时，需要保留复制槽。这种情况通常是订阅者要搬到另一台机器上去，希望在那里重新开始订阅。这种情况下需要先通过<code>ALTER SUBSCRIPTION</code>解除订阅与复制槽点关联</p>
+</li>
+<li>
+<p>移除订阅时，远端不可达。这种情况下，需要在删除订阅之前使用<code>ALTER SUBSCRIPTION</code>解除复制槽与订阅的关联。</p>
+<p>如果远端实例不再使用那么没事，然而如果远端实例只是暂时不可达，那就应该手动删除其上的复制槽；否则它将继续保留WAL，并可能导致磁盘撑爆。</p>
+</li>
+</ul>
+<h3 id="订阅查询">订阅查询</h3>
+<p>订阅可以使用psql元命令<code>\dRs</code>查询。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># \dRs</span>
+</span></span><span style="display:flex;"><span>     Name     <span style="color:#000;font-weight:bold">|</span>  Owner   <span style="color:#000;font-weight:bold">|</span> Enabled <span style="color:#000;font-weight:bold">|</span>  Publication
+</span></span><span style="display:flex;"><span>--------------+----------+---------+----------------
+</span></span><span style="display:flex;"><span> pg_bench_sub <span style="color:#000;font-weight:bold">|</span> postgres <span style="color:#000;font-weight:bold">|</span> t       <span style="color:#000;font-weight:bold">|</span> <span style="color:#ce5c00;font-weight:bold">{</span>pg_bench_pub<span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span></code></pre></div><h3 id="pg_subscription-订阅定义表"><code>pg_subscription</code> 订阅定义表</h3>
+<p>每一个逻辑订阅都会有一条记录，注意这个视图是跨数据库集簇范畴的，每个数据库中都可以看到整个集簇中的订阅信息。</p>
+<p>只有超级用户才可以访问此视图，因为里面包含有明文密码（连接信息）。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">20421</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subdbid</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">19356</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subname</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_test_sub</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subowner</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subenabled</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subconninfo</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">host</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">user</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">replicator</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">password</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">DBUser</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Replicator</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbname</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subslotname</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_test_sub</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subsynccommit</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">off</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">subpublications</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{</span><span style="color:#000">pg_meta_pub</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><ul>
+<li><code>subenabled</code>：订阅是否启用</li>
+<li><code>subconninfo</code> ：因为包含敏感信息，会针对普通用户进行隐藏。</li>
+<li><code>subslotname</code>：订阅使用的复制槽名称，也会被用作逻辑复制的<strong>源名称（Origin Name）</strong>，用于除重。</li>
+<li><code>subpublications</code>：订阅的发布名称列表。</li>
+<li>其他状态信息：是否启用同步提交等等。</li>
+</ul>
+<h3 id="pg_subscription_rel-订阅内容表"><code>pg_subscription_rel</code> 订阅内容表</h3>
+<p><code>pg_subscription_rel</code> 记录了每张处于订阅中的表的相关信息，包括状态与进度。</p>
+<ul>
+<li><code>srrelid</code> 订阅中关系的OID</li>
+<li><code>srsubstate</code>，订阅中关系的状态：<code>i</code> 初始化中，<code>d</code> 拷贝数据中，<code>s</code> 同步已完成，<code>r</code> 正常复制中。</li>
+<li><code>srsublsn</code>，当处于<code>i|d</code>状态时为空，当处于<code>s|r</code>状态时，远端的LSN位置。</li>
+</ul>
+<h3 id="创建订阅时">创建订阅时</h3>
+<p>当一个新的订阅创建时，会依次执行以下操作：</p>
+<ul>
+<li>将发布的信息存入 <code>pg_subscription</code> 目录中，包括连接信息，复制槽，发布名称，一些配置选项等。</li>
+<li>连接至发布者，检查复制权限，（注意这里<strong>不会检查对应发布是否存在</strong>），</li>
+<li>创建逻辑复制槽：<code>pg_create_logical_replication_slot(name, 'pgoutput')</code></li>
+<li>将复制集中的表注册到订阅端的 <code>pg_subscription_rel</code> 目录中。</li>
+<li>执行初始快照同步，注意订阅测表中的原有数据不会被删除。</li>
+</ul>
+<h2 id="复制冲突">复制冲突</h2>
+<p>逻辑复制的行为类似于正常的DML操作，即使数据在用户节点上的本地发生了变化，数据也会被更新。如果复制来的数据违反了任何约束，复制就会停止，这种现象被称为 <strong>冲突（Conflict）</strong> 。</p>
+<p>当复制<code>UPDATE</code>或<code>DELETE</code>操作时，缺失数据（即要更新/删除的数据已经不存在）不会产生冲突，此类操作直接跳过。</p>
+<p>冲突会导致错误，并中止逻辑复制，逻辑复制管理进程会以5秒为间隔不断重试。冲突不会阻塞订阅端对复制集中表上的SQL。关于冲突的细节可以在用户的服务器日志中找到，<strong>冲突必须由用户手动解决</strong>。</p>
+<h3 id="日志中可能出现的冲突">日志中可能出现的冲突</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">冲突模式</th>
+<th style="text-align:center">复制进程</th>
+<th style="text-align:center">输出日志</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">缺少UPDATE/DELETE对象</td>
+<td style="text-align:center">继续</td>
+<td style="text-align:center">不输出</td>
+</tr>
+<tr>
+<td style="text-align:center">表/行锁等待</td>
+<td style="text-align:center">等待</td>
+<td style="text-align:center">不输出</td>
+</tr>
+<tr>
+<td style="text-align:center">违背主键/唯一/Check约束</td>
+<td style="text-align:center"><strong>中止</strong></td>
+<td style="text-align:center">输出</td>
+</tr>
+<tr>
+<td style="text-align:center">目标表不存在/目标列不存在</td>
+<td style="text-align:center"><strong>中止</strong></td>
+<td style="text-align:center">输出</td>
+</tr>
+<tr>
+<td style="text-align:center">无法将数据转换为目标列类型</td>
+<td style="text-align:center"><strong>中止</strong></td>
+<td style="text-align:center">输出</td>
+</tr>
+</tbody>
+</table>
+<p>解决冲突的方法，可以是改变订阅侧的数据，使其不与进入的变更相冲突，或者跳过与现有数据冲突的事务。</p>
+<p>使用订阅对应的<code>node_name</code>与LSN位置调用函数<code>pg_replication_origin_advance()</code>可以跳过事务，<code>pg_replication_origin_status</code>系统视图中可以看到当前ORIGIN的位置。</p>
+<h2 id="局限性">局限性</h2>
+<p>逻辑复制目前有以下限制，或者说功能缺失。这些问题可能会在未来的版本中解决。</p>
+<p><strong>数据库模式和DDL命令不会被复制</strong>。存量模式可以通过<code>pg_dump --schema-only</code>手动复制，增量模式变更需要手动保持同步（发布订阅两边的模式不需要绝对相同不需要两边的模式绝对相同)。逻辑复制对于对在线DDL变更仍然可靠：在发布数据库中执行DDL变更后，复制的数据到达订阅者但因为表模式不匹配而导致复制出错停止，订阅者的模式更新后复制会继续。在许多情况下，先在订阅者上执行变更可以避免中间的错误。</p>
+<p><strong>序列号数据不会被复制</strong>。<strong>序列号</strong>所服务的标识列与<code>SERIAL</code>类型里面的数据作为表的一部分当然会被复制，但序列号本身仍会在订阅者上保持为初始值。如果订阅者被当成只读库使用，那么通常没事。然而如果打算进行某种形式的切换或Failover到订阅者数据库，那么需要将序列号更新为最新的值，要么通过从发布者复制当前数据（也许可以使用<code>pg_dump -t *seq*</code>），要么从表本身的数据内容确定一个足够高的值（例如<code>max(id)+1000000</code>）。否则如果在新库执行获取序列号作为身份的操作时，很可能会产生冲突。</p>
+<p><strong>逻辑复制支持复制<code>TRUNCATE</code>命令</strong>，但是在<code>TRUNCATE</code>由外键关联的一组表时需要特别小心。当执行<code>TRUNCATE</code>操作时，发布者上与之关联的一组表（通过显式列举或级连关联）都会被<code>TRUNCATE</code>，但是在订阅者上，不在订阅集中的表不会被<code>TRUNCATE</code>。这样的操作在逻辑上是合理的，因为逻辑复制不应该影响到复制集之外的表。但如果有一些不在订阅集中的表通过外键引用订阅集中被<code>TRUNCATE</code>的表，那么<code>TRUNCATE</code>操作就会失败。</p>
+<p><strong>大对象不会被复制</strong></p>
+<p><strong>只有表能被复制（包括分区表）</strong>，尝试复制其他类型的表会导致错误（视图，物化视图，外部表，Unlogged表）。具体来说，只有在<code>pg_class.relkind = 'r'</code>的表才可以参与逻辑复制。</p>
+<p><strong>复制分区表时默认按子表进行复制</strong>。默认情况下，变更是按照分区表的叶子分区触发的，这意味着发布上的每一个分区子表都需要在订阅上存在（当然，订阅者上的这个分区子表不一定是一个分区子表，也可能本身就是一个分区母表，或者一个普通表）。发布可以声明要不要使用分区根表上的复制标识取代分区叶表上的复制标识，这是PG13提供的新功能，可以在创建发布时通过<code>publish_via_partition_root</code> 选项指定。</p>
+<p><strong>触发器的行为表现有所不同</strong>。<strong>行级触发器</strong>会触发，但<code>UPDATE OF cols</code>类型的触发器不触发。而语句级触发器只会在初始数据拷贝时触发。</p>
+<p><strong>日志行为不同</strong>。即使设置<code>log_statement = 'all'</code>，日志中也不会记录由复制产生的SQL语句。</p>
+<p><strong>双向复制需要极其小心</strong>：互为发布与订阅是可行的，只要两遍的表集合不相交即可。但一旦出现表的交集，就会出现WAL无限循环。</p>
+<p><strong>同一实例内的复制</strong>：同一个实例内的逻辑复制需要特别小心，必须<strong>手工创建逻辑复制槽</strong>，并在创建订阅时使用已有的逻辑复制槽，否则会卡死。</p>
+<p><strong>只能在主库上进行</strong>：目前不支持从物理复制的从库上进行逻辑解码，也无法在从库上创建复制槽，所以从库无法作为发布者。但这个问题可能会在未来解决。</p>
+<h2 id="架构">架构</h2>
+<p>逻辑复制始于获取发布者数据库上的快照，基于此快照拷贝表上的存量数据。一旦拷贝完成，发布者上的<strong>变更</strong>（增删改等）就会实时发送到订阅者上。</p>
+<p>逻辑复制采用与物理复制类似的架构，是通过一个<code>walsender</code>和<code>apply</code>进程实现的。发布端端<code>walsender</code>进程会加载逻辑解码插件（<code>pgoutput</code>），并开始逻辑解码WAL日志。<strong>逻辑解码插件（Logical Decoding Plugin）</strong> 会读取WAL中的变更，按照<strong>发布</strong>的定义筛选变更，将变更转变为特定的形式，以逻辑复制协议传输出去。数据会按照流复制协议传输至订阅者一侧的<code>apply</code>进程，该进程会在接收到变更时，将变更映射至本地表上，然后按照事务顺序重新应用这些变更。</p>
+<h3 id="初始快照">初始快照</h3>
+<p>订阅侧的表在初始化与拷贝数据期间，会由一种特殊的<code>apply</code>进程负责。这个进程会创建它自己的<strong>临时复制槽</strong>，并拷贝表中的存量数据。</p>
+<p>一旦数据拷贝完成，这张表会进入到同步模式（<code>pg_subscription_rel.srsubstate = 's'</code>），同步模式确保了 <strong>主apply进程</strong> 可以使用标准的逻辑复制方式应用拷贝数据期间发生的变更。一旦完成同步，表复制的控制权会转交回 <strong>主apply进程</strong>，恢复正常的复制模式。</p>
+<h3 id="进程结构">进程结构</h3>
+<p>逻辑复制的发布端会针对来自订阅端端每一条连接，创建一个对应的 <code>walsender</code> 进程，发送解码的WAL日志。在订阅测，则会</p>
+<h3 id="复制槽">复制槽</h3>
+<p>当创建订阅时，</p>
+<p>一条逻辑复制</p>
+<h3 id="逻辑解码">逻辑解码</h3>
+<h3 id="同步提交">同步提交</h3>
+<p>逻辑复制的同步提交是通过Backend与Walsender之间的SIGUSR1通信完成的。</p>
+<h3 id="临时数据">临时数据</h3>
+<p>逻辑解码的临时数据会落盘为本地日志快照。当walsender接收到walwriter发送的<code>SIGUSR1</code>信号时，就会读取WAL日志并生成相应的逻辑解码快照。当传输结束时会删除这些快照。</p>
+<p>文件地址为：<code>$PGDATA/pg_logical/snapshots/{LSN Upper}-{LSN Lower}.snap</code></p>
+<h2 id="监控">监控</h2>
+<p>逻辑复制采用与物理流复制类似的架构，所以监控一个逻辑复制的<strong>发布者节点</strong>与监控一个物理复制主库差别不大。</p>
+<p>订阅者的监控信息可以通过<code>pg_stat_subscription</code>视图获取。</p>
+<h3 id="pg_stat_subscription-订阅统计表"><code>pg_stat_subscription</code> 订阅统计表</h3>
+<p>每个<strong>活跃订阅</strong>都会在这个视图中有<strong>至少一条</strong> 记录，即Main Worker（负责应用逻辑日志）。</p>
+<p>Main Worker的<code>relid = NULL</code>，如果有负责初始数据拷贝的进程，也会在这里有一行记录，<code>relid</code>为负责拷贝数据的表。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>subid                 <span style="color:#000;font-weight:bold">|</span> <span style="color:#0000cf;font-weight:bold">20421</span>
+</span></span><span style="display:flex;"><span>subname               <span style="color:#000;font-weight:bold">|</span> pg_test_sub
+</span></span><span style="display:flex;"><span>pid                   <span style="color:#000;font-weight:bold">|</span> <span style="color:#0000cf;font-weight:bold">5261</span>
+</span></span><span style="display:flex;"><span>relid                 <span style="color:#000;font-weight:bold">|</span> NULL
+</span></span><span style="display:flex;"><span>received_lsn          <span style="color:#000;font-weight:bold">|</span> 0/2A4F6B8
+</span></span><span style="display:flex;"><span>last_msg_send_time    <span style="color:#000;font-weight:bold">|</span> 2021-02-22 17:05:06.578574+08
+</span></span><span style="display:flex;"><span>last_msg_receipt_time <span style="color:#000;font-weight:bold">|</span> 2021-02-22 17:05:06.583326+08
+</span></span><span style="display:flex;"><span>latest_end_lsn        <span style="color:#000;font-weight:bold">|</span> 0/2A4F6B8
+</span></span><span style="display:flex;"><span>latest_end_time       <span style="color:#000;font-weight:bold">|</span> 2021-02-22 17:05:06.578574+08
+</span></span></code></pre></div><ul>
+<li><code>received_lsn</code> ：最近<strong>收到</strong>的日志位置。</li>
+<li><code>lastest_end_lsn</code>：最后向walsender回报的LSN位置，即主库上的<code>confirmed_flush_lsn</code>。不过这个值更新不太勤快，</li>
+</ul>
+<p>通常情况下一个活跃的订阅会有一个apply进程在运行，被禁用的订阅或崩溃的订阅则在此视图中没有记录。在初始同步期间，被同步的表会有额外的工作进程记录。</p>
+<h3 id="pg_replication_slot-复制槽"><code>pg_replication_slot</code> 复制槽</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>postgres@meta:5432/meta<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># table pg_replication_slots ;</span>
+</span></span><span style="display:flex;"><span>-<span style="color:#ce5c00;font-weight:bold">[</span> RECORD <span style="color:#0000cf;font-weight:bold">1</span> <span style="color:#ce5c00;font-weight:bold">]</span>-------+------------
+</span></span><span style="display:flex;"><span>slot_name           <span style="color:#000;font-weight:bold">|</span> pg_test_sub
+</span></span><span style="display:flex;"><span>plugin              <span style="color:#000;font-weight:bold">|</span> pgoutput
+</span></span><span style="display:flex;"><span>slot_type           <span style="color:#000;font-weight:bold">|</span> logical
+</span></span><span style="display:flex;"><span>datoid              <span style="color:#000;font-weight:bold">|</span> <span style="color:#0000cf;font-weight:bold">19355</span>
+</span></span><span style="display:flex;"><span>database            <span style="color:#000;font-weight:bold">|</span> meta
+</span></span><span style="display:flex;"><span>temporary           <span style="color:#000;font-weight:bold">|</span> f
+</span></span><span style="display:flex;"><span>active              <span style="color:#000;font-weight:bold">|</span> t
+</span></span><span style="display:flex;"><span>active_pid          <span style="color:#000;font-weight:bold">|</span> <span style="color:#0000cf;font-weight:bold">89367</span>
+</span></span><span style="display:flex;"><span>xmin                <span style="color:#000;font-weight:bold">|</span> NULL
+</span></span><span style="display:flex;"><span>catalog_xmin        <span style="color:#000;font-weight:bold">|</span> <span style="color:#0000cf;font-weight:bold">1524</span>
+</span></span><span style="display:flex;"><span>restart_lsn         <span style="color:#000;font-weight:bold">|</span> 0/2A08D40
+</span></span><span style="display:flex;"><span>confirmed_flush_lsn <span style="color:#000;font-weight:bold">|</span> 0/2A097F8
+</span></span><span style="display:flex;"><span>wal_status          <span style="color:#000;font-weight:bold">|</span> reserved
+</span></span><span style="display:flex;"><span>safe_wal_size       <span style="color:#000;font-weight:bold">|</span> NULL
+</span></span></code></pre></div><p>复制槽视图中同时包含了逻辑复制槽与物理复制槽。逻辑复制槽点主要特点是：</p>
+<ul>
+<li><code>plugin</code>字段不为空，标识了使用的逻辑解码插件，逻辑复制默认使用<code>pgoutput</code>插件。</li>
+<li><code>slot_type = logical</code>，物理复制的槽类型为<code>physical</code>。</li>
+<li><code>datoid</code>与<code>database</code>字段不为空，因为物理复制与集簇关联，而逻辑复制与数据库关联。</li>
+</ul>
+<p>逻辑订阅者也会作为一个标准的 <strong>复制从库</strong> ，出现于 <code>pg_stat_replication</code> 视图中。</p>
+<h3 id="pg_replication_origin-复制源"><code>pg_replication_origin</code> 复制源</h3>
+<p>复制源</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_replication_origin_status</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RECORD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#8f5902;font-style:italic">-----------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">local_id</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">external_id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_19378</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">remote_lsn</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">local_lsn</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000">BB53640</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><ul>
+<li><code>local_id</code>：复制源在本地的ID，2字节高效表示。</li>
+<li><code>external_id</code>：复制源的ID，可以跨节点引用。</li>
+<li><code>remote_lsn</code>：源端最近的<strong>提交位点</strong>。</li>
+<li><code>local_lsn</code>：本地已经持久化提交记录的LSN</li>
+</ul>
+<h3 id="检测复制冲突">检测复制冲突</h3>
+<p>最稳妥的检测方法总是从发布与订阅两侧的日志中检测。当出现复制冲突时，发布测上可以看见复制连接中断</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">LOG</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">terminating walsender process due to replication timeout</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">LOG</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">starting logical decoding for slot &#34;pg_test_sub&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">DETAIL</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">streaming transactions committing after 0/xxxxx, reading WAL from 0/xxxx</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>而订阅端则可以看到复制冲突的具体原因，例如：</p>
+<pre tabindex="0"><code class="language-csv" data-lang="csv">logical replication worker PID 4585 exited with exit code 1
+ERROR: duplicate key value violates unique constraint &#34;pgbench_tellers_pkey&#34;,&#34;Key (tid)=(9) already exists.&#34;,,,,&#34;COPY pgbench_tellers, line 31&#34;,,,,&#34;&#34;,&#34;logical replication worker&#34;
+</code></pre><p>此外，一些监控指标也可以反映逻辑复制的状态：</p>
+<p>例如：<code>pg_replication_slots.confirmed_flush_lsn</code> 长期落后于<code>pg_cureent_wal_lsn</code>。或者<code>pg_stat_replication.flush_ag/write_lag</code> 有显著增长。</p>
+<h2 id="安全">安全</h2>
+<p>参与订阅的表，其Ownership与Trigger权限必须控制在超级用户所信任的角色手中（否则修改这些表可能导致逻辑复制中断）。</p>
+<p>在发布节点上，如果不受信任的用户具有建表权限，那么创建发布时应当显式指定表名而非通配<code>ALL TABLES</code>。也就是说，只有当超级用户信任所有 可以在发布或订阅侧具有建表（非临时表）权限的用户时，才可以使用<code>FOR ALL TABLES</code>。</p>
+<p>用于复制连接的用户必须具有<code>REPLICATION</code>权限（或者为SUPERUSER）。如果该角色缺少<code>SUPERUSER</code>与<code>BYPASSRLS</code>，发布者上的行安全策略可能会被执行。如果表的属主在复制启动之后设置了行级安全策略，这个配置可能会导致复制直接中断，而不是策略生效。该用户必须拥有LOGIN权限，而且HBA规则允许其访问。</p>
+<p>为了能够复制初始表数据，用于复制连接的角色必须在已发布的表上拥有<code>SELECT</code>权限（或者属于超级用户）。</p>
+<p>创建发布，需要在数据库中的<code>CREATE</code>权限，创建一个<code>FOR ALL TABLES</code>的发布，需要超级用户权限。</p>
+<p>将表加入到发布中，用户需要具有表的<strong>属主</strong>权限。</p>
+<p>创建订阅需要超级用户权限，因为订阅的apply进程在本地数据库中以超级用户的权限运行。</p>
+<p><strong>权限只会在建立复制连接时检查</strong>，不会在发布端读取每条变更记录时重复检查，也不会在订阅端应用每条记录时检查。</p>
+<h2 id="配置选项">配置选项</h2>
+<p>逻辑复制需要一些配置选项才能正常工作。</p>
+<p>在发布者一侧，<code>wal_level</code> 必须设置为<code>logical</code>，<code>max_replication_slots</code>最少需要设为 订阅的数量+用于表数据同步的数量。<code>max_wal_senders</code>最少需要设置为<code>max_replication_slots</code> + 为物理复制保留的数量，</p>
+<p>在订阅者一侧，也需要设置<code>max_replication_slots</code>，<code>max_replication_slots</code>，最少需要设为订阅数。</p>
+<p><code>max_logical_replication_workers</code>最少需要配置为订阅的数量，再加上一些用于数据同步的工作进程数。</p>
+<p>此外，<code>max_worker_processes</code>需要相应调整，至少应当为<code>max_logical_replication_worker</code> + 1。注意一些扩展插件和并行查询也会从工作进程的池子中获取连接使用。</p>
+<h3 id="配置参数样例">配置参数样例</h3>
+<p>64核机器，1～2个发布与订阅，最多6个同步工作进程，最多8个物理从库的场景，一种样例配置如下所示：</p>
+<p>首先决定Slot数量，2个订阅，6个同步工作进程，8个物理从库，所以配置为16。Sender = Slot + Physical Replica = 24。</p>
+<p>同步工作进程限制为6，2个订阅，所以逻辑复制的总工作进程设置为8。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">wal_level: logical                      # logical	</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_worker_processes: 64                # default 8 -&gt; 64, set to CPU CORE 64</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_parallel_workers: 32                # default 8 -&gt; 32, limit by max_worker_processes</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_parallel_maintenance_workers: 16    # default 2 -&gt; 16, limit by parallel worker</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_parallel_workers_per_gather: 0      # default 2 -&gt; 0,  disable parallel query on OLTP instance</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># max_parallel_workers_per_gather: 16   # default 2 -&gt; 16, enable parallel query on OLAP instance</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_wal_senders: 24                     # 10 -&gt; 24</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_replication_slots: 16               # 10 -&gt; 16 </span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_logical_replication_workers: 8      # 4 -&gt; 8, 6 sync worker + 1~2 apply worker</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">max_sync_workers_per_subscription: 6    # 2 -&gt; 6, 6 sync worker</span>
+</span></span></code></pre></div><h2 id="快速配置">快速配置</h2>
+<p>首先设置发布侧的配置选项 <code>wal_level = logical</code>，该参数需要重启方可生效，其他参数的默认值都不影响使用。</p>
+<p>然后创建复制用户，添加<code>pg_hba.conf</code>配置项，允许外部访问，一种典型配置是：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replicator</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">BYPASSRLS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PASSWORD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;DBUser.Replicator&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>注意，逻辑复制的用户需要具有<code>SELECT</code>权限，在Pigsty中<code>replicator</code>已经被授予了<code>dbrole_readonly</code>角色。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#c4a000">host     all          replicator     0.0.0.0/0     md5</span>
+</span></span><span style="display:flex;"><span><span style="color:#c4a000">host     replicator   replicator     0.0.0.0/0     md5</span>
+</span></span></code></pre></div><p>然后在发布侧的数据库中执行：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">mypub</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&lt;</span><span style="color:#000">tablename</span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>然后在订阅测数据库中执行：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">mysub</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONNECTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;dbname=&lt;pub_db&gt; host=&lt;pub_host&gt; user=replicator&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">mypub</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>以上配置即会开始复制，首先复制表的初始数据，然后开始同步增量变更。</p>
+<h3 id="沙箱样例">沙箱样例</h3>
+<p>以Pigsty标准4节点两集群沙箱为例，有两套数据库集群<code>pg-meta</code>与<code>pg-test</code>。现在将<code>pg-meta-1</code>作为发布者，<code>pg-test-1</code>作为订阅者。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">PGSRC</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;postgres://dbuser_admin@meta-1/meta&#39;</span>           <span style="color:#8f5902;font-style:italic"># 发布者</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">PGDST</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;postgres://dbuser_admin@node-1/test&#39;</span>           <span style="color:#8f5902;font-style:italic"># 订阅者</span>
+</span></span><span style="display:flex;"><span>pgbench -is100 <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span>                               <span style="color:#8f5902;font-style:italic"># 在发布端初始化Pgbench</span>
+</span></span><span style="display:flex;"><span>pg_dump -Oscx -t pgbench* -s <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span> <span style="color:#000;font-weight:bold">|</span> psql <span style="color:#4e9a06">${</span><span style="color:#000">PGDST</span><span style="color:#4e9a06">}</span> <span style="color:#8f5902;font-style:italic"># 在订阅端同步表结构</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 在发布者上创建**发布**，将默认的`pgbench`相关表加入到发布集中。</span>
+</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span> -AXwt <span style="color:#4e9a06">&lt;&lt;-&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">CREATE PUBLICATION &#34;pg_meta_pub&#34; FOR TABLE
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  pgbench_accounts,pgbench_branches,pgbench_history,pgbench_tellers;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 在订阅者上创建**订阅**，订阅发布者上的发布。</span>
+</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGDST</span><span style="color:#4e9a06">}</span> <span style="color:#4e9a06">&lt;&lt;-&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">CREATE SUBSCRIPTION pg_test_sub
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  CONNECTION &#39;host=10.10.10.10 dbname=meta user=replicator&#39; 
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  PUBLICATION pg_meta_pub;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
+</span></span></code></pre></div><h2 id="复制流程">复制流程</h2>
+<p>逻辑复制的订阅创建后，如果一切正常，逻辑复制会自动开始，针对<strong>每张订阅中的表</strong>执行复制状态机逻辑。</p>
+<p>如下图所示。</p>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> init : 表被加入到订阅集中
+    init --> data : 开始同步表的初始快照
+    data --> sync : 存量数据同步完成
+    sync --> ready : 同步期间的增量变更应用完毕，进入就绪状态
+</div>
+<p>当所有的表都完成复制，进入<code>r</code>（ready）状态时，逻辑复制的存量同步阶段便完成了，发布端与订阅端整体进入同步状态。</p>
+<p>因此从逻辑上讲，存在两种状态机：<strong>表级复制小状态机</strong>与<strong>全局复制大状态机</strong>。每一个Sync Worker负责一张表上的小状态机，而一个Apply Worker负责一条逻辑复制的大状态机。</p>
+<h2 id="逻辑复制状态机">逻辑复制状态机</h2>
+<p>逻辑复制有两种Worker：Sync与Apply。Sync</p>
+<p>因此，逻辑复制在逻辑上分为两个部分：<strong>每张表独自进行复制</strong>，当复制进度追赶至最新位置时，由</p>
+<p>当创建或刷新订阅时，表会被加入到 订阅集 中，每一张订阅集中的表都会在<code>pg_subscription_rel</code>视图中有一条对应纪录，展示这张表当前的复制状态。刚加入订阅集的表初始状态为<code>i</code>，即<code>initialize</code>，<strong>初始状态</strong>。</p>
+<p>如果订阅的<code>copy_data</code>选项为真（默认情况），且工作进程池中有空闲的Worker，PostgreSQL会为这张表分配一个同步工作进程，同步这张表上的存量数据，此时表的状态进入<code>d</code>，即<strong>拷贝数据中</strong>。对表做数据同步类似于对数据库集群进行<code>basebackup</code>，Sync Worker会在发布端创建临时的复制槽，获取表上的快照并通过COPY完成基础数据同步。</p>
+<p>当表上的基础数据拷贝完成后，表会进入<code>sync</code>模式，即<strong>数据同步</strong>，同步进程会追赶同步过程中发生的增量变更。当追赶完成时，同步进程会将这张表标记为<code>r</code>（ready）状态，转交逻辑复制主Apply进程管理变更，表示这张表已经处于正常复制中。</p>
+<h3 id="24-等待逻辑复制同步">2.4 等待逻辑复制同步</h3>
+<p>创建订阅后，首先必须监控 发布端与订阅端两侧的数据库日志，<strong>确保没有错误产生</strong>。</p>
+<h4 id="241-逻辑复制状态机">2.4.1 逻辑复制状态机</h4>
+<h4 id="242-同步进度跟踪">2.4.2 同步进度跟踪</h4>
+<p>数据同步（<code>d</code>）阶段可能需要花费一些时间，取决于网卡，网络，磁盘，表的大小与分布，逻辑复制的同步worker数量等因素。</p>
+<p>作为参考，1TB的数据库，20张表，包含有250GB的大表，双万兆网卡，在6个数据同步worker的负责下大约需要6~8小时完成复制。</p>
+<p>在数据同步过程中，每个表同步任务都会源端库上创建临时的复制槽。请确保逻辑复制初始同步期间不要给源端主库施加过大的不必要写入压力，以免WAL撑爆磁盘。</p>
+<p>发布侧的 <code>pg_stat_replication</code>，<code>pg_replication_slots</code>，订阅端的<code>pg_stat_subscription</code>，<code>pg_subscription_rel</code>提供了逻辑复制状态的相关信息，需要关注。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">psql</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">${</span><span style="color:#000">PGDST</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">Xxw</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&lt;&lt;-</span><span style="color:#4e9a06">&#39;EOF&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">subname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">json_object_agg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">srsubstate</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">cnt</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">pg_subscription</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">JOIN</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">srsubid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">srsubstate</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">count</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">cnt</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_subscription_rel</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">GROUP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">srsubid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">srsubstate</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sr</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sr</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">srsubid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">GROUP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">subname</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">EOF</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>可以使用以下SQL确认订阅中表的状态，如果所有表的状态都显示为<code>r</code>，则表示逻辑复制已经成功建立，订阅端可以用于切换。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>   subname   <span style="color:#000;font-weight:bold">|</span> json_object_agg
+</span></span><span style="display:flex;"><span>-------------+-----------------
+</span></span><span style="display:flex;"><span> pg_test_sub <span style="color:#000;font-weight:bold">|</span> <span style="color:#ce5c00;font-weight:bold">{</span> <span style="color:#4e9a06">&#34;r&#34;</span> : <span style="color:#0000cf;font-weight:bold">5</span> <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span></code></pre></div><p>当然，最好的方式始终是通过监控系统来跟踪复制状态。</p>
+<h2 id="沙箱样例-1">沙箱样例</h2>
+<p>以Pigsty标准4节点两集群沙箱为例，有两套数据库集群<code>pg-meta</code>与<code>pg-test</code>。现在将<code>pg-meta-1</code>作为发布者，<code>pg-test-1</code>作为订阅者。</p>
+<p>通常逻辑复制的前提是，发布者上设置有<code>wal_level = logical</code>，并且有一个可以正常访问，具有正确权限的复制用户。</p>
+<p>Pigsty的默认配置已经符合要求，且带有满足条件的复制用户<code>replicator</code>，以下命令均从元节点以<code>postgres</code>用户发起，数据库用户<code>dbuser_admin</code>，带有<code>SUPERUSER</code>权限。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">PGSRC</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;postgres://dbuser_admin@meta-1/meta&#39;</span>        <span style="color:#8f5902;font-style:italic"># 发布者</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">PGDST</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;postgres://dbuser_admin@node-1/test&#39;</span>        <span style="color:#8f5902;font-style:italic"># 订阅者</span>
+</span></span></code></pre></div><h3 id="准备逻辑复制">准备逻辑复制</h3>
+<p>使用<code>pgbench</code>工具，在<code>pg-meta</code>集群的<code>meta</code>数据库中初始化表结构。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pgbench -is100 <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span>
+</span></span></code></pre></div><p>使用<code>pg_dump</code>与<code>psql</code>  <strong>同步</strong> <code>pgbench*</code> 相关表的定义。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_dump -Oscx -t pgbench* -s <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span> <span style="color:#000;font-weight:bold">|</span> psql <span style="color:#4e9a06">${</span><span style="color:#000">PGDST</span><span style="color:#4e9a06">}</span>
+</span></span></code></pre></div><h3 id="创建发布订阅">创建发布订阅</h3>
+<p>在发布者上创建<strong>发布</strong>，将默认的<code>pgbench</code>相关表加入到发布集中。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGSRC</span><span style="color:#4e9a06">}</span> -AXwt <span style="color:#4e9a06">&lt;&lt;-&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">CREATE PUBLICATION &#34;pg_meta_pub&#34; FOR TABLE
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  pgbench_accounts,pgbench_branches,pgbench_history,pgbench_tellers;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
+</span></span></code></pre></div><p>在订阅者上创建<strong>订阅</strong>，订阅发布者上的发布。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGDST</span><span style="color:#4e9a06">}</span> <span style="color:#4e9a06">&lt;&lt;-&#39;EOF&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">CREATE SUBSCRIPTION pg_test_sub
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  CONNECTION &#39;host=10.10.10.10 dbname=meta user=replicator&#39; 
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  PUBLICATION pg_meta_pub;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
+</span></span></code></pre></div><h3 id="观察复制状态">观察复制状态</h3>
+<p>当<code>pg_subscription_rel.srsubstate</code>全部变为<code>r</code> （准备就绪）状态后，逻辑复制就建立起来了。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ psql <span style="color:#4e9a06">${</span><span style="color:#000">PGDST</span><span style="color:#4e9a06">}</span> -c <span style="color:#4e9a06">&#39;TABLE pg_subscription_rel;&#39;</span>
+</span></span><span style="display:flex;"><span> srsubid <span style="color:#000;font-weight:bold">|</span> srrelid <span style="color:#000;font-weight:bold">|</span> srsubstate <span style="color:#000;font-weight:bold">|</span>  srsublsn
+</span></span><span style="display:flex;"><span>---------+---------+------------+------------
+</span></span><span style="display:flex;"><span>   <span style="color:#0000cf;font-weight:bold">20451</span> <span style="color:#000;font-weight:bold">|</span>   <span style="color:#0000cf;font-weight:bold">20433</span> <span style="color:#000;font-weight:bold">|</span> d          <span style="color:#000;font-weight:bold">|</span> NULL
+</span></span><span style="display:flex;"><span>   <span style="color:#0000cf;font-weight:bold">20451</span> <span style="color:#000;font-weight:bold">|</span>   <span style="color:#0000cf;font-weight:bold">20442</span> <span style="color:#000;font-weight:bold">|</span> r          <span style="color:#000;font-weight:bold">|</span> 0/4ECCDB78
+</span></span><span style="display:flex;"><span>   <span style="color:#0000cf;font-weight:bold">20451</span> <span style="color:#000;font-weight:bold">|</span>   <span style="color:#0000cf;font-weight:bold">20436</span> <span style="color:#000;font-weight:bold">|</span> r          <span style="color:#000;font-weight:bold">|</span> 0/4ECCDB78
+</span></span><span style="display:flex;"><span>   <span style="color:#0000cf;font-weight:bold">20451</span> <span style="color:#000;font-weight:bold">|</span>   <span style="color:#0000cf;font-weight:bold">20439</span> <span style="color:#000;font-weight:bold">|</span> r          <span style="color:#000;font-weight:bold">|</span> 0/4ECCDBB0
+</span></span></code></pre></div><h3 id="校验复制数据">校验复制数据</h3>
+<p>可以简单地比较发布与订阅端两侧的表记录条数，与复制标识列的最大最小值来校验数据是否完整地复制。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">function</span> compare_relation<span style="color:#ce5c00;font-weight:bold">(){</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87">local</span> <span style="color:#000">relname</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">$1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87">local</span> <span style="color:#000">identity</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">2</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">&#39;id&#39;</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span>	psql <span style="color:#4e9a06">${</span><span style="color:#000">3</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">${</span><span style="color:#000">PGPUB</span><span style="color:#4e9a06">}}</span> -AXtwc <span style="color:#4e9a06">&#34;SELECT count(*) AS cnt, max(</span><span style="color:#000">$identity</span><span style="color:#4e9a06">) AS max, min(</span><span style="color:#000">$identity</span><span style="color:#4e9a06">) AS min FROM </span><span style="color:#4e9a06">${</span><span style="color:#000">relname</span><span style="color:#4e9a06">}</span><span style="color:#4e9a06">;&#34;</span>
+</span></span><span style="display:flex;"><span>	psql <span style="color:#4e9a06">${</span><span style="color:#000">4</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">${</span><span style="color:#000">PGSUB</span><span style="color:#4e9a06">}}</span> -AXtwc <span style="color:#4e9a06">&#34;SELECT count(*) AS cnt, max(</span><span style="color:#000">$identity</span><span style="color:#4e9a06">) AS max, min(</span><span style="color:#000">$identity</span><span style="color:#4e9a06">) AS min FROM </span><span style="color:#4e9a06">${</span><span style="color:#000">relname</span><span style="color:#4e9a06">}</span><span style="color:#4e9a06">;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>compare_relation pgbench_accounts aid
+</span></span><span style="display:flex;"><span>compare_relation pgbench_branches bid
+</span></span><span style="display:flex;"><span>compare_relation pgbench_history  tid
+</span></span><span style="display:flex;"><span>compare_relation pgbench_tellers  tid
+</span></span></code></pre></div><p>更近一步的验证可以通过在发布者上手工创建一条记录，再从订阅者上读取出来。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ psql <span style="color:#4e9a06">${</span><span style="color:#000">PGPUB</span><span style="color:#4e9a06">}</span> -AXtwc <span style="color:#4e9a06">&#39;INSERT INTO pgbench_accounts(aid,bid,abalance) VALUES (99999999,1,0);&#39;</span>
+</span></span><span style="display:flex;"><span>INSERT <span style="color:#0000cf;font-weight:bold">0</span> <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>$ psql <span style="color:#4e9a06">${</span><span style="color:#000">PGSUB</span><span style="color:#4e9a06">}</span> -AXtwc <span style="color:#4e9a06">&#39;SELECT * FROM pgbench_accounts WHERE aid = 99999999;&#39;</span>
+</span></span><span style="display:flex;"><span>99999999<span style="color:#000;font-weight:bold">|</span>1<span style="color:#000;font-weight:bold">|</span>0<span style="color:#000;font-weight:bold">|</span>
+</span></span></code></pre></div><p>现在已经拥有一个正常工作的逻辑复制了。下面让我们来通过一系列实验来掌握逻辑复制的使用与管理，探索可能遇到的各种离奇问题。</p>
+<h2 id="逻辑复制实验">逻辑复制实验</h2>
+<h3 id="将表加入已有发布">将表加入已有发布</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">BIGSERIAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">TIMESTAMP</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 常规表，带有主键
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_meta_pub</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 将新创建的表加入到发布中
+</span></span></span></code></pre></div><p>如果这张表在订阅端已经存在，那么即可进入正常的逻辑复制流程：<code>i -&gt; d -&gt; s -&gt; r</code>。</p>
+<p>如果向发布加入一张订阅端不存在的表？那么新订阅将会<strong>无法创建</strong>。<strong>已有订阅无法刷新</strong>，但可以保持原有复制继续进行。</p>
+<p>如果订阅<strong>还不存在</strong>，那么创建的时候会报错无法进行：在订阅端找不到这张表。如果订阅<strong>已经存在</strong>，无法执行刷新命令：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SUBSCRIPTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_test_sub</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REFRESH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>如果新加入的表没有任何写入，已有的复制关系不会发生变化，一旦新加入的表发生变更，会立即产生<strong>复制冲突</strong>。</p>
+<h3 id="将表从发布中移除">将表从发布中移除</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PUBLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_meta_pub</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>从发布移除后，订阅端不会有影响。效果上就是这张表的变更似乎消失了。执行订阅刷新后，这张表会从订阅集中被移除。</p>
+<p>另一种情况是<strong>重命名</strong>发布/订阅中的表，在发布端执行表重命名时，发布端的发布集会立刻随之更新。尽管订阅集中的表名不会立刻更新，但只要重命名后的表发生任何变更，而订阅端没有对应的表，那么会立刻出现<strong>复制冲突</strong>。</p>
+<p>同理，在订阅端重命名表时，订阅的关系集也会刷新，但因为发布端的表没有对应物了。如果这张表没有变更，那么一切照旧，一旦发生变更，立刻出现<strong>复制冲突</strong>。</p>
+<p>直接在发布端<code>DROP</code>此表，会顺带<strong>将该表从发布中移除</strong>，不会有报错或影响。但直接在订阅端<code>DROP</code>表则可能出现<strong>问题</strong>，<code>DROP TABLE</code>时该表也会从订阅集中被移除。如果发布端此时这张表上仍有变更产生，则会导致<strong>复制冲突</strong>。</p>
+<p><strong>所以，删表应当先在发布端进行，再在订阅端进行。</strong></p>
+<h3 id="两端列定义不一致">两端列定义不一致</h3>
+<p>发布与订阅端的表的列通过<strong>名称</strong>匹配，列的顺序无关紧要。</p>
+<p><strong>订阅端表的列更多，通常不会有什么影响</strong>。多出来的列会被填充为默认值（通常是<code>NULL</code>）。</p>
+<p>特别需要注意的是，如果要为多出来的列添加<code>NOT NULL</code>约束，那么一定要配置一个默认值，否则变更发生时违反约束会导致复制冲突。</p>
+<p><strong>订阅端如果列要比发布端更少，会产生复制冲突</strong>。在发布端添加一个新列并不会<strong>立刻</strong>导致复制冲突，随后的第一条变更将导致复制冲突。</p>
+<p>所以在执行加列DDL变更时，可以先在订阅者上先执行，然后在发布端进行。</p>
+<p>列的<strong>数据类型不需要完全一致</strong>，只要两个列的<strong>文本表示</strong>兼容即可，即数据的文本表示可以转换为目标列的类型。</p>
+<p>这意味着任何类型都能转换成TEXT类型，<code>BIGINT</code> 只要不出错，也可以转换成<code>INT</code>，不过一旦溢出，还是会出现<strong>复制冲突</strong>。</p>
+<h3 id="复制身份与索引的正确配置">复制身份与索引的正确配置</h3>
+<p>表上的复制标识配置，与表上有没有索引是两件独立的事。尽管各种排列组合都是可能的，然而在实际使用中只有三种可行的情况，其他情况都无法正常完成逻辑复制的功能（如果不报错，通常也是侥幸）</p>
+<ul>
+<li>表上有主键，使用默认的 <code>default</code> 复制标识，不需要额外配置。</li>
+<li>表上没有主键，但是有非空唯一索引，显式配置 <code>index</code> 复制标识。</li>
+<li>表上既没有主键也没有非空唯一索引，显式配置<code>full</code>复制标识（运行效率低，仅作为兜底方案）</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">复制身份模式\表上的约束</th>
+<th style="text-align:center">主键(p)</th>
+<th style="text-align:center">非空唯一索引(u)</th>
+<th style="text-align:center">两者皆无(n)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>d</strong>efault</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>i</strong>ndex</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center"><strong>有效</strong></td>
+<td style="text-align:center">x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>f</strong>ull</td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+<td style="text-align:center"><strong>低效</strong></td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>n</strong>othing</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+<td style="text-align:center">x</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>在所有情况下，<code>INSERT</code>都可以被正常复制。<code>x</code>代表<code>DELETE|UPDATE</code>所需关键信息缺失无法正常完成。</p>
+</blockquote>
+<p>最好的方式当然是事前修复，为所有的表指定主键，以下查询可以用于找出缺失主键或非空唯一索引的表：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">quote_ident</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">nspname</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;.&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">||</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">quote_ident</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">con</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">ri</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">keys</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87;font-weight:bold">CASE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relreplident</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;d&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;default&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;n&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;nothing&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;f&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;full&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;i&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;index&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica_identity</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">JOIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_namespace</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">relnamespace</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">n</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LATERAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">array_agg</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">contype</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ri</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_constraint</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">conrelid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">con</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relkind</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;r&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AND</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">nspname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pg_catalog&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;information_schema&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;monitor&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;repack&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_toast&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>注意，复制身份为<code>nothing</code>的表可以加入到发布中，但在发布者上对其执行<code>UPDATE|DELETE</code>会直接导致报错。</p>
+<h2 id="其他问题">其他问题</h2>
+<h3 id="q逻辑复制准备工作">Q：逻辑复制准备工作</h3>
+<h3 id="q什么样的表可以逻辑复制">Q：什么样的表可以逻辑复制？</h3>
+<h3 id="q监控逻辑复制状态">Q：监控逻辑复制状态</h3>
+<h3 id="q将新表加入发布">Q：将新表加入发布</h3>
+<h3 id="q没有主键的表加入发布">Q：没有主键的表加入发布？</h3>
+<h3 id="q没有复制身份的表如何处理">Q：没有复制身份的表如何处理？</h3>
+<h3 id="qalter-pub的生效方式">Q：ALTER PUB的生效方式</h3>
+<h3 id="q在同一对-发布者-订阅者-上如果存在多对订阅且发布包含的表重叠">Q：在同一对 发布者-订阅者 上如果存在多对订阅，且发布包含的表重叠？</h3>
+<h3 id="q订阅者和发布者的表定义有什么限制">Q：订阅者和发布者的表定义有什么限制？</h3>
+<h3 id="qpg_dump是如何处理订阅的">Q：pg_dump是如何处理订阅的</h3>
+<h3 id="q什么情况下需要手工管理订阅复制槽">Q：什么情况下需要手工管理订阅复制槽？</h3>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/admin/collate/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a  class="btn btn-primary  disabled">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>
