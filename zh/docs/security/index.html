@@ -1,0 +1,1345 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>安全考量 | Pigsty</title><meta property="og:title" content="安全考量" />
+<meta property="og:description" content="Pigsty部署中与安全有关的考量" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/docs/security/" /><meta property="article:section" content="docs" />
+
+<meta property="article:modified_time" content="2024-02-23T17:05:28+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="安全考量">
+<meta itemprop="description" content="Pigsty部署中与安全有关的考量">
+<meta itemprop="dateModified" content="2024-02-23T17:05:28+08:00" />
+<meta itemprop="wordCount" content="373">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="安全考量"/>
+<meta name="twitter:description" content="Pigsty部署中与安全有关的考量"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/docs/" ><span class="active">文档</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/blog/" ><span>Blog</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Repo</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/docs/security/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.53179dbf310787df25f769fe8bee43aa.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.53179dbf310787df25f769fe8bee43aa.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/docs/security/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">文档</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhdocs">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsoverview" href="/zh/docs/overview/">全局概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsinstall" href="/zh/docs/install/">快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsfeature" href="/zh/docs/feature/">亮点特性</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsarch" href="/zh/docs/arch/">系统架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsconfig" href="/zh/docs/config/">声明配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsprovision" href="/zh/docs/provision/">虚机置备</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhdocssecurity" href="/zh/docs/security/">安全考量</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsparam" href="/zh/docs/param/">配置参数</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsplaybook" href="/zh/docs/playbook/">幂等剧本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsfhs" href="/zh/docs/fhs/">文件结构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsreleasenote" href="/zh/docs/releasenote/">发行注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocslicense" href="/zh/docs/license/">开源协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocssupport" href="/zh/docs/support/">商业支持</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsfaq" href="/zh/docs/faq/">常见问题</a>
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/pgsql/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：PGSQL</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocspgsql">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqloverview" href="/zh/docs/pgsql/overview/">全局概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlarch" href="/zh/docs/pgsql/arch/">系统架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlextension" href="/zh/docs/pgsql/extension/">扩展插件</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlconf" href="/zh/docs/pgsql/conf/">集群配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqldb" href="/zh/docs/pgsql/db/">数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqluser" href="/zh/docs/pgsql/user/">用户/角色</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlsvc" href="/zh/docs/pgsql/svc/">服务/接入</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlhba" href="/zh/docs/pgsql/hba/">认证与/HBA</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlacl" href="/zh/docs/pgsql/acl/">访问控制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqladmin" href="/zh/docs/pgsql/admin/">管理预案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlpitr" href="/zh/docs/pgsql/pitr/">备份恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlmonitor" href="/zh/docs/pgsql/monitor/">监控接入</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlmigration" href="/zh/docs/pgsql/migration/">集群迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqldashboard" href="/zh/docs/pgsql/dashboard/">仪表盘</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocspgsqlplaybook" href="/zh/docs/pgsql/playbook/"></a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/node/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：NODE</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsnode">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/infra/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：INFRA</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsinfra">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/redis/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：REDIS</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsredis">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/etcd/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：ETCD</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsetcd">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/minio/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：MINIO</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsminio">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/mongo/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">模块：MONGO</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsmongo">
+      
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/tutorial/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">教学案例</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocstutorial">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialcmdb" href="/zh/docs/tutorial/cmdb/">Pigsty CMDB</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialsop" href="/zh/docs/tutorial/sop/">PG 标准操作流程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialtpch" href="/zh/docs/tutorial/tpch/">TPC-H 性能测试</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialca" href="/zh/docs/tutorial/ca/">CA自签名</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialbackup" href="/zh/docs/tutorial/backup/">PG 备份与恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialha-drill" href="/zh/docs/tutorial/ha-drill/">PG 高可用演练</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialslow-query" href="/zh/docs/tutorial/slow-query/">PG 慢查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialmigration" href="/zh/docs/tutorial/migration/">PG 数据库迁移</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocstutorialtimescaledb" href="/zh/docs/tutorial/timescaledb/">TimescaleDB 快速上手</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/app/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">应用案例</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsapp">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappnginx" href="/zh/docs/app/nginx/">定制Nginx访问端点</a>
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/app/applet/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Applet: 数据分析应用</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsappapplet">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappappletpglog" href="/zh/docs/app/applet/pglog/">PGLOG CSV日志分析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappappletcovid" href="/zh/docs/app/applet/covid/">COVID WHO疫情数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappappletisd" href="/zh/docs/app/applet/isd/">ISD气象数据查询</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/docs/app/docker/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">Docker: 软件应用工具</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhdocsappdocker">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerpgadmin" href="/zh/docs/app/docker/pgadmin/">PGAdmin4 数据库管控</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockergitea" href="/zh/docs/app/docker/gitea/">Gitea 代码托管服务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerwiki" href="/zh/docs/app/docker/wiki/">Wiki 私人维基百科建站</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerminio" href="/zh/docs/app/docker/minio/">Minio 简单对象存储</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerbytebase" href="/zh/docs/app/docker/bytebase/">Bytebase 模式迁移工具</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerpgweb" href="/zh/docs/app/docker/pgweb/">PgWeb 网页客户端</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerpostgrest" href="/zh/docs/app/docker/postgrest/">PostgREST自动后端API</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappdockerkong" href="/zh/docs/app/docker/kong/">Kong API Gateway</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappjupyter" href="/zh/docs/app/jupyter/">Jupyter数据分析</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsappgrafana" href="/zh/docs/app/grafana/">Grafana后端存储</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhdocsapppromscale" href="/zh/docs/app/promscale/">Prometheus换存储</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/docs/security.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/docs/security.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/docs/security.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e5%ae%89%e5%85%a8%e8%80%83%e9%87%8f" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/docs/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#机密性">机密性</a>
+      <ul>
+        <li><a href="#重要文件">重要文件</a></li>
+        <li><a href="#密码">密码</a></li>
+        <li><a href="#ip地址">IP地址</a></li>
+        <li><a href="#网络流量">网络流量</a></li>
+      </ul>
+    </li>
+    <li><a href="#完整性">完整性</a></li>
+    <li><a href="#可用性">可用性</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5" role="main">
+            
+  
+
+            <nav aria-label="breadcrumb" class="d-none d-md-block d-print-none">
+	<ol class="breadcrumb spb-1">
+		
+
+
+
+
+
+
+
+<li class="breadcrumb-item" >
+	<a href="/zh/docs/">文档</a>
+</li>
+
+
+
+
+<li class="breadcrumb-item active" aria-current="page">
+	<a href="/zh/docs/security/">安全考量</a>
+</li>
+
+	</ol>
+</nav	>
+
+            
+<div class="td-content">
+	<h1>安全考量</h1>
+    <div class="lead">Pigsty部署中与安全有关的考量</div>
+	       
+	<p>Pigsty 的默认配置已经足以覆盖绝大多数场景对于安全的需求。</p>
+<p>Pigsty 已经提供了开箱即用的<a href="/zh/docs/pgsql/hba">认证</a>与<a href="/zh/docs/pgsql/acl">访问控制</a>模型，对于绝大多数场景已经足够安全。</p>
+<p><a href="/zh/docs/pgsql/acl"><img src="https://repo.pigsty.cc/img/pigsty-acl.jpg" alt="pigsty-acl.jpg"></a></p>
+<p>如果您希望进一步加固系统的安全性，那么以下建议供您参考：</p>
+<hr>
+<h2 id="机密性">机密性</h2>
+<h3 id="重要文件">重要文件</h3>
+<p><strong>保护你的 pigsty.yml 配置文件或CMDB</strong></p>
+<ul>
+<li><code>pigsty.yml</code> 配置文件通常包含了高度敏感的机密信息，您应当确保它的安全。</li>
+<li>严格控制管理节点的访问权限，仅限 DBA 或者 Infra 管理员访问。</li>
+<li>严格控制 pigsty.yml 配置文件仓库的访问权限（如果您使用 git 进行管理）</li>
+</ul>
+<p><strong>保护你的 CA 私钥和其他证书，这些文件非常重要。</strong></p>
+<ul>
+<li>相关文件默认会在管理节点Pigsty源码目录的 <code>files/pki</code> 内生成。</li>
+<li>你应该定期将它们备份到一个安全的地方存储。</li>
+</ul>
+<br>
+<hr>
+<h3 id="密码">密码</h3>
+<p><strong>在生产环境部署时，必须更改这些密码，不要使用默认值！</strong></p>
+<ul>
+<li><a href="/zh/docs/param#grafana_admin_password"><code>grafana_admin_password</code></a>   : <code>pigsty</code></li>
+<li><a href="/zh/docs/param#pg_admin_password"><code>pg_admin_password</code></a>             : <code>DBUser.DBA</code></li>
+<li><a href="/zh/docs/param#pg_monitor_password"><code>pg_monitor_password</code></a>         : <code>DBUser.Monitor</code></li>
+<li><a href="/zh/docs/param#pg_replication_password"><code>pg_replication_password</code></a> : <code>DBUser.Replicator</code></li>
+<li><a href="/zh/docs/param#patroni_password"><code>patroni_password</code></a>               : <code>Patroni.API</code></li>
+<li><a href="/zh/docs/param#haproxy_admin_password"><code>haproxy_admin_password</code></a>   : <code>pigsty</code></li>
+<li><a href="/zh/docs/param#minio_secret_key"><code>minio_secret_key</code></a>               : <code>minioadmin</code></li>
+</ul>
+<p><strong>如果您使用MinIO，请修改MinIO的默认用户密码，与pgbackrest中的引用</strong></p>
+<ul>
+<li>请修改 MinIO 普通用户的密码：<a href="PARAM#minio_users"><code>minio_users</code>.<code>[pgbacrest]</code>.<code>secret_key</code></a></li>
+<li>请修改 pgbackrest 中对 MinIO 使用的备份用户密码：<a href="/zh/docs/param#pgbackrest_repo"><code>pgbackrest_repo</code>.<code>minio</code>.<code>s3_key_secret</code></a></li>
+</ul>
+<p><strong>如果您使用远程备份仓库，请务必启用备份加密，并设置加解密密码</strong></p>
+<ul>
+<li>设置 <a href="/zh/docs/param#pgbackrest_repo"><code>pgbackrest_repo</code>.<code>*</code>.<code>cipher_type</code></a> 为 <code>aes-256-cbc</code></li>
+<li>设置密码时可以使用 <code>${pg_cluster}</code> 作为密码的一部分，避免所有集群使用同一个密码</li>
+</ul>
+<p><strong>为 PostgreSQL 使用安全可靠的密码加密算法</strong></p>
+<ul>
+<li>使用 <a href="/zh/docs/param#pg_pwd_enc"><code>pg_pwd_enc</code></a> 默认值 <code>scram-sha-256</code> 替代传统的 <code>md5</code></li>
+<li>这是默认行为，如果没有特殊理由（出于对历史遗留老旧客户端的支持），请不要将其修改回 <code>md5</code></li>
+</ul>
+<p><strong>使用 <code>passwordcheck</code> 扩展强制执行强密码</strong>。</p>
+<ul>
+<li>在 <a href="/zh/docs/param#pg_libs"><code>pg_libs</code></a> 中添加 <code>$lib/passwordcheck</code> 来强制密码策略。</li>
+</ul>
+<p><strong>使用加密算法加密远程备份</strong></p>
+<ul>
+<li>在 <a href="/zh/docs/param#pgbackrest_repo"><code>pgbackrest_repo</code></a> 的备份仓库定义中使用 <code>repo_cipher_type</code> 启用加密</li>
+</ul>
+<p><strong>为业务用户配置密码自动过期实践</strong></p>
+<ul>
+<li>
+<p>你应当为每个<a href="/zh/docs/pgsql/user#%E5%AE%9A%E4%B9%89%E7%94%A8%E6%88%B7">业务用户</a>设置一个密码自动过期时间，以满足合规要求。</p>
+</li>
+<li>
+<p>配置自动过期后，请不要忘记在巡检时定期更新这些密码。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_meta , password: Pleas3-ChangeThisPwd ,expire_in: 7300 ,pgbouncer: true ,roles: [ dbrole_admin ]    ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pigsty admin user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_view , password: Make.3ure-Compl1ance  ,expire_in: 7300 ,pgbouncer: true ,roles: [ dbrole_readonly ] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">read-only viewer for meta database }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: postgres     ,superuser: true  ,expire_in: 7300                        ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system superuser }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: replicator ,replication: true  ,expire_in: 7300 ,roles: [pg_monitor, dbrole_readonly]   ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system replicator }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dba   ,superuser: true  ,expire_in: 7300 ,roles: [dbrole_admin]  ,pgbouncer: true ,pool_mode: session, pool_connlimit: 16 , comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql admin user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_monitor ,roles: [pg_monitor] ,expire_in: 7300 ,pgbouncer: true ,parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#204a87;font-weight:bold">log_min_duration_statement: 1000 } ,pool_mode: session ,pool_connlimit: 8 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql monitor user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div></li>
+</ul>
+<p><strong>不要将更改密码的语句记录到 postgres 日志或其他日志中</strong></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>SET log_statement TO <span style="color:#4e9a06">&#39;none&#39;</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>ALTER USER <span style="color:#4e9a06">&#34;{{ user.name }}&#34;</span> PASSWORD <span style="color:#4e9a06">&#39;{{ user.password }}&#39;</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>SET log_statement TO DEFAULT<span style="color:#000;font-weight:bold">;</span>
+</span></span></code></pre></div><br>
+<hr>
+<h3 id="ip地址">IP地址</h3>
+<p><strong>为 postgres/pgbouncer/patroni 绑定指定的 IP 地址，而不是所有地址。</strong></p>
+<ul>
+<li>默认的 <a href="/zh/docs/param#pg_listen"><code>pg_listen</code></a> 地址是 <code>0.0.0.0</code>，即所有 IPv4 地址。</li>
+<li>考虑使用 <code>pg_listen: '${ip},${vip},${lo}'</code> 绑定到特定IP地址（列表）以增强安全性。</li>
+</ul>
+<p><strong>不要将任何端口直接暴露到公网IP上，除了基础设施出口Nginx使用的端口（默认80/443）</strong></p>
+<ul>
+<li>出于便利考虑，Prometheus/Grafana 等组件默认监听所有IP地址，可以直接从公网IP端口访问</li>
+<li>您可以修改它们的配置文件，只监听内网IP地址，限制其只能通过 Nginx 门户通过域名访问，你也可以当使用安全组，防火墙规则来实现这些安全限制。</li>
+<li>出于便利考虑，Redis服务器默认监听所有IP地址，您可以修改 <a href="/zh/docs/param#redis_bind_address"><code>redis_bind_address</code></a> 只监听内网IP地址。</li>
+</ul>
+<p><strong>使用 <a href="/zh/docs/pgsql/hba">HBA</a> 限制 postgres 客户端访问</strong></p>
+<ul>
+<li>有一个增强安全性的配置模板：<a href="https://github.com/Vonng/pigsty/blob/master/files/pigsty/security.yml"><code>security.yml</code></a></li>
+</ul>
+<p><strong>限制 patroni 管理访问权限：仅 infra/admin 节点可调用控制API</strong></p>
+<ul>
+<li>默认情况下，这是通过 <a href="https://github.com/Vonng/pigsty/blob/master/roles/pgsql/templates/oltp.yml#L109"><code>restapi.allowlist</code></a> 限制的。</li>
+</ul>
+<br>
+<hr>
+<h3 id="网络流量">网络流量</h3>
+<p><strong>使用 SSL 和域名，通过Nginx访问基础设施组件</strong></p>
+<ul>
+<li>Nginx SSL 由 <a href="/zh/docs/param#nginx_sslmode"><code>nginx_sslmode</code></a> 控制，默认为 <code>enable</code>。</li>
+<li>Nginx 域名由 <a href="/zh/docs/param#infra_portal"><code>infra_portal.&lt;component&gt;.domain</code></a> 指定。</li>
+</ul>
+<p><strong>使用 SSL 保护 Patroni REST API</strong></p>
+<ul>
+<li><a href="/zh/docs/param#patroni_ssl_enabled"><code>patroni_ssl_enabled</code></a> 默认为禁用。</li>
+<li>由于它会影响健康检查和 API 调用。</li>
+<li>注意这是一个全局选项，在部署前你必须做出决定。</li>
+</ul>
+<p><strong>使用 SSL 保护 Pgbouncer 客户端流量</strong></p>
+<ul>
+<li><a href="/zh/docs/param#pgbouncer_sslmode"><code>pgbouncer_sslmode</code></a> 默认为 <code>disable</code></li>
+<li>它会对 Pgbouncer 有显著的性能影响，所以这里是默认关闭的。</li>
+</ul>
+<hr>
+<h2 id="完整性">完整性</h2>
+<p><strong>为关键场景下的 PostgreSQL 数据库集群配置一致性优先模式（例如与钱相关的库）</strong></p>
+<ul>
+<li><a href="/zh/docs/param#pg_conf"><code>pg_conf</code></a> 数据库调优模板，使用 <code>crit.yml</code> 将以一些可用性为代价，换取最佳的数据一致性。</li>
+</ul>
+<p><strong>使用crit节点调优模板，以获得更好的一致性。</strong></p>
+<ul>
+<li><a href="/zh/docs/param#node_tune"><code>node_tune</code></a> 主机调优模板使用 <code>crit</code> ，可以以减少脏页比率，降低数据一致性风险。</li>
+</ul>
+<p><strong>启用数据校验和，以检测静默数据损坏。</strong></p>
+<ul>
+<li><a href="/zh/docs/param#pg_checksum"><code>pg_checksum</code></a> 默认为 <code>off</code>，但建议开启。</li>
+<li>当启用 <a href="/zh/docs/param#pg_conf"><code>pg_conf</code></a> = <code>crit.yml</code> 数据库模板时，校验和是强制开启的。</li>
+</ul>
+<p><strong>记录建立/切断连接的日志</strong></p>
+<ul>
+<li>该配置默认关闭，但在 <code>crit.yml</code> 配置模板中是默认启用的。</li>
+<li>可以手工<a href="/zh/docs/pgsql/admin#%E9%85%8D%E7%BD%AE%E9%9B%86%E7%BE%A4">配置集群</a>，启用 <code>log_connections</code> 和 <code>log_disconnections</code> 功能参数。</li>
+</ul>
+<p><strong>如果您希望彻底杜绝PG集群在故障转移时脑裂的可能性，请启用watchdog</strong></p>
+<ul>
+<li>如果你的流量走默认推荐的 HAProxy 分发，那么即使你不启用 watchdog，你也不会遇到脑裂的问题。</li>
+<li>如果你的机器假死，Patroni 被 <code>kill -9</code> 杀死，那么 watchdog 可以用来兜底：超时自动关机。</li>
+<li>最好不要在基础设施节点上启用 watchdog。</li>
+</ul>
+<hr>
+<h2 id="可用性">可用性</h2>
+<p><strong>对于关键场景的PostgreSQL数据库集群，请使用足够的节点/实例数量</strong></p>
+<ul>
+<li>你至少需要三个节点（能够容忍一个节点的故障）来实现生产级的高可用性。</li>
+<li>如果你只有两个节点，你可以容忍特定备用节点的故障。</li>
+<li>如果你只有一个节点，请使用外部的 S3/MinIO 进行冷备份和 WAL 归档存储。</li>
+</ul>
+<p><strong>对于 PostgreSQL，在可用性和一致性之间进行权衡</strong></p>
+<ul>
+<li><a href="/zh/docs/param#pg_rpo"><code>pg_rpo</code></a> : <strong>可用性与一致性之间的权衡</strong></li>
+<li><a href="/zh/docs/param#pg_rto"><code>pg_rto</code></a> : <strong>故障概率与影响之间的权衡</strong></li>
+</ul>
+<p><strong>不要直接通过固定的 IP 地址访问数据库；请使用 VIP、DNS、HAProxy 或它们的排列组合</strong></p>
+<ul>
+<li>使用 HAProxy 进行服务<a href="/zh/docs/pgsql/svc#%E6%8E%A5%E5%85%A5%E6%9C%8D%E5%8A%A1">接入</a></li>
+<li>在故障切换/主备切换的情况下，Haproxy 将处理客户端的流量切换。</li>
+</ul>
+<p><strong>在重要的生产部署中使用多个基础设施节点（例如，1~3）</strong></p>
+<ul>
+<li>小规模部署或要求宽松的场景，可以使用单一基础设施节点 / 管理节点。</li>
+<li>大型生产部署建议设置至少两个基础设施节点互为备份。</li>
+</ul>
+<p><strong>使用足够数量的 etcd 服务器实例，并使用奇数个实例（1,3,5,7）</strong></p>
+<ul>
+<li>查看 <a href="/zh/docs/etcd#%E7%AE%A1%E7%90%86">ETCD 管理</a> 了解详细信息。</li>
+</ul>
+
+	
+		<style>
+  .feedback--answer {
+    display: inline-block;
+  }
+  .feedback--answer-no {
+    margin-left: 1em;
+  }
+  .feedback--response {
+    display: none;
+    margin-top: 1em;
+  }
+  .feedback--response__visible {
+    display: block;
+  }
+</style>
+<div class="d-print-none">
+<h2 class="feedback--title">Feedback</h2>
+<p class="feedback--question">Was this page helpful?</p>
+<button class="feedback--answer feedback--answer-yes">Yes</button>
+<button class="feedback--answer feedback--answer-no">No</button>
+<p class="feedback--response feedback--response-yes">
+  Glad to hear it! Please <a href="https://github.com/Vonng/pigsty/issues/new">tell us how we can improve</a>.
+</p>
+<p class="feedback--response feedback--response-no">
+  Sorry to hear that. Please <a href="https://github.com/Vonng/pigsty/issues/new">tell us how we can improve</a>.
+</p>
+</div>
+<script>
+  const yesButton = document.querySelector('.feedback--answer-yes');
+  const noButton = document.querySelector('.feedback--answer-no');
+  const yesResponse = document.querySelector('.feedback--response-yes');
+  const noResponse = document.querySelector('.feedback--response-no');
+  const disableButtons = () => {
+    yesButton.disabled = true;
+    noButton.disabled = true;
+  };
+  const sendFeedback = (value) => {
+    if (typeof ga !== 'function') return;
+    const args = {
+      command: 'send',
+      hitType: 'event',
+      category: 'Helpful',
+      action: 'click',
+      label: window.location.pathname,
+      value: value
+    };
+    ga(args.command, args.hitType, args.category, args.action, args.label, args.value);
+  };
+  yesButton.addEventListener('click', () => {
+    yesResponse.classList.add('feedback--response__visible');
+    disableButtons();
+    sendFeedback(1);
+  });
+  noButton.addEventListener('click', () => {
+    noResponse.classList.add('feedback--response__visible');
+    disableButtons();
+    sendFeedback(0);
+  });
+</script>
+
+		<br />
+	
+	
+	<div class="text-muted mt-5 pt-3 border-top">最后修改 2024-02-23: <a  href="https://github.com/Vonng/pigsty.cc/commit/7fada62a62e8c36282b976359dec29cbe0645c2d">add zh docs back (7fada62)</a>
+</div>
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>
