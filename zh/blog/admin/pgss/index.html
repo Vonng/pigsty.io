@@ -1,0 +1,2026 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>pg_stat_statements 宏观查询优化 | Pigsty</title><meta property="og:title" content="pg_stat_statements 宏观查询优化" />
+<meta property="og:description" content="查询优化是 DBA 的核心工作内容之一，本文介绍了如何使用 pg_stat_statements 提供的指标，针对 PostgreSQL 进行宏观查询优化。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/admin/pgss/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2023-10-26T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-02-24T18:45:23+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="pg_stat_statements 宏观查询优化">
+<meta itemprop="description" content="查询优化是 DBA 的核心工作内容之一，本文介绍了如何使用 pg_stat_statements 提供的指标，针对 PostgreSQL 进行宏观查询优化。"><meta itemprop="datePublished" content="2023-10-26T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-02-24T18:45:23+08:00" />
+<meta itemprop="wordCount" content="755">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="pg_stat_statements 宏观查询优化"/>
+<meta name="twitter:description" content="查询优化是 DBA 的核心工作内容之一，本文介绍了如何使用 pg_stat_statements 提供的指标，针对 PostgreSQL 进行宏观查询优化。"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/docs/" ><span>文档</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">博客</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Repo</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">博客</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pg/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG &amp; Pigsty</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpg">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgjust-use-pg" href="/zh/blog/pg/just-use-pg/">技术极简主义：一切皆用Postgres</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgparadedb" href="/zh/blog/pg/paradedb/">PG生态新玩家：ParadeDB</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-scalability" href="/zh/blog/pg/pg-scalability/"> 令人惊叹的PostgreSQL可伸缩性</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-2024" href="/zh/blog/pg/pg-in-2024/">展望 PostgreSQL 的2024</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-convention" href="/zh/blog/pg/pg-convention/">PostgreSQL 规约（2024版）</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgferretdb" href="/zh/blog/pg/ferretdb/">FerretDB：假扮成MongoDB的PG</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpgsql-x-pigsty" href="/zh/blog/pg/pgsql-x-pigsty/">PGSQL x Pigsty: 数据库全能王</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgvector-json-pg" href="/zh/blog/pg/vector-json-pg/">向量是新的 JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-no1" href="/zh/blog/pg/pg-is-no1/">PostgreSQL：最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-performence" href="/zh/blog/pg/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-best" href="/zh/blog/pg/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpigsty-intro" href="/zh/blog/pg/pigsty-intro/">开箱即用的PG发行版：Pigsty</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-great" href="/zh/blog/pg/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-docker" href="/zh/blog/pg/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-good" href="/zh/blog/pg/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/db/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdb">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrethink" href="/zh/blog/db/rethink/">数据库老司机：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbbad-mysql" href="/zh/blog/db/bad-mysql/">MySQL正确性竟如此垃圾？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-in-k8s" href="/zh/blog/db/db-in-k8s/">数据库应该放入K8S里吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsvdb-is-dead" href="/zh/blog/db/svdb-is-dead/">专用向量数据库凉了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-choke" href="/zh/blog/db/db-choke/">数据库真被卡脖子了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrhel-compatibility" href="/zh/blog/db/rhel-compatibility/">EL系操作系统发行版哪家强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsovereign-dbos" href="/zh/blog/db/sovereign-dbos/">基础软件需要什么样的自主可控？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbpg-vs-mysql" href="/zh/blog/db/pg-vs-mysql/">MySQL vs PGSQL 直播闹剧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdemand-pyramid" href="/zh/blog/db/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdistributive-bullshit" href="/zh/blog/db/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbmicroservice-bad-idea" href="/zh/blog/db/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbreason-about-time" href="/zh/blog/db/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconcurrent-control" href="/zh/blog/db/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbblockchain" href="/zh/blog/db/blockchain/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconsistency" href="/zh/blog/db/consistency/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbwhy-learn-database" href="/zh/blog/db/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit" href="/zh/blog/cloud/cloud-exit/">云计算泥石流：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouduptime" href="/zh/blog/cloud/uptime/">云下高可用秘诀：拒绝复杂度自慰</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouds3" href="/zh/blog/cloud/s3/">扒皮云对象存储：从降本到杀猪</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit-faq" href="/zh/blog/cloud/cloud-exit-faq/">半年下云省千万，DHH下云FAQ</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsmile" href="/zh/blog/cloud/smile/">从降本增笑到真的降本增效</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudbonus" href="/zh/blog/cloud/bonus/">重新拿回计算机硬件的红利</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudaliyun" href="/zh/blog/cloud/aliyun/">阿里云史诗级故障非官方复盘</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcheap-ecs" href="/zh/blog/cloud/cheap-ecs/">薅阿里云羊毛，打造数字家园</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流：用数据解构公有云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：该放弃云计算了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudno-dba-bullshit" href="/zh/blog/cloud/no-dba-bullshit/">驳《再论为什么你不应该招DBA》</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudis-dba-good-job" href="/zh/blog/cloud/is-dba-good-job/">DBA还是一份好工作吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddrop-rds" href="/zh/blog/cloud/drop-rds/">云RDS：从删库到跑路</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddba-vs-rds" href="/zh/blog/cloud/dba-vs-rds/">DBA会被云淘汰吗？</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevllm-and-pgvector" href="/zh/blog/dev/llm-and-pgvector/">AI大模型与PGVector</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">高级模糊查询的实现</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">前后端通信线缆协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">事务隔离等级注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">CDC 变更数据捕获机理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">GeoIP 地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">触发器使用注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-convention" href="/zh/blog/dev/pg-convention/">PostgreSQL开发规约2018版</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化：GIS圈选</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划查询：GIS点找面</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">Distinct On 去除重复数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">用 Exclude 实现互斥约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfile_fdw" href="/zh/blog/dev/file_fdw/">FileFDW用例：读取OS信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">用触发器审计数据变化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">SQL实现ItemCF推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">PG 管理</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogadminpgss" href="/zh/blog/admin/pgss/">pg_stat_statements 宏观查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-filedump" href="/zh/blog/admin/pg-filedump/">如何用 pg_filedump 抢救数据？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintime-travel" href="/zh/blog/admin/time-travel/">故障档案：NTP/Patroni</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">在线修改主键列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标：错误延迟吞吐饱和</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库管理实体与命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminextension" href="/zh/blog/admin/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">常见复制拓扑方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">温备：使用pg_receivewal</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-dump-failure" href="/zh/blog/admin/pg-dump-failure/">故障档案：连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpage-corruption" href="/zh/blog/admin/page-corruption/">故障档案：数据页损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">关系膨胀的监控与治理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB 快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminxid-wrap-around" href="/zh/blog/admin/xid-wrap-around/">故障档案：XID回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsequence-overflow" href="/zh/blog/admin/sequence-overflow/">故障档案：序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmindownload-failure" href="/zh/blog/admin/download-failure/">故障档案：快慢不匀雪崩</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">备份恢复手段概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PG服务器日志常规配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">不停机迁移数据迁移基本原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">Wireshark抓包分析协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-tool" href="/zh/blog/admin/unix-tool/">Linux 常用统计 CLI 工具</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">源码编译安装 PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/kernel/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 内核</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogkernel">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelpg-wal-page-seq" href="/zh/blog/kernel/pg-wal-page-seq/">PG先写脏页还是先写WAL？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch1" href="/zh/blog/kernel/ch1/">第一章 数据库的物理/逻辑结构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch2" href="/zh/blog/kernel/ch2/">第二章 进程和内存架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch3" href="/zh/blog/kernel/ch3/">第三章 查询处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch4" href="/zh/blog/kernel/ch4/">第四章 外部数据包装器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch5" href="/zh/blog/kernel/ch5/">第五章 并发控制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch6" href="/zh/blog/kernel/ch6/">第六章 垃圾清理过程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch7" href="/zh/blog/kernel/ch7/">第七章 堆内元组与仅索引扫描</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch8" href="/zh/blog/kernel/ch8/">第八章 缓冲区管理器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch9" href="/zh/blog/kernel/ch9/">第九章 预写式日志</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch10" href="/zh/blog/kernel/ch10/">第十章 基础备份与时间点恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch11" href="/zh/blog/kernel/ch11/">第十一章 流复制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelwal-and-checkpoint" href="/zh/blog/kernel/wal-and-checkpoint/">WAL与检查点概述</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本发布</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/admin/pgss/index.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/admin/pgss/index.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/admin/pgss/index.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=pg_stat_statements%20%e5%ae%8f%e8%a7%82%e6%9f%a5%e8%af%a2%e4%bc%98%e5%8c%96" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/admin/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#扩展插件pgss">扩展插件：PGSS</a></li>
+    <li><a href="#原始数据">原始数据</a></li>
+    <li><a href="#对时间微分">对时间微分</a></li>
+    <li><a href="#对调用次数微分">对调用次数微分</a></li>
+    <li><a href="#百分比指标">百分比指标</a></li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>pg_stat_statements 宏观查询优化</h1>
+	
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2023-10-26" class="text-muted">2023-10-26</time>
+	</div>
+	
+	<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/VXkpDlUdnKlK3DKtoyg2wA">微信公众号原文</a> | <a href="https://gitlab.com/postgres-ai/postgresql-consulting/postgres-howtos/-/blob/main/0005_pg_stat_statements_part_1.md?ref_type=heads">英文参考</a> by Nikolay Samokhvalov</p>
+</blockquote>
+<p>在线业务数据库中，慢查询不仅影响终端用户体验，还会浪费系统资源、拉高资源饱和度、导致死锁和事务冲突，增加数据库连接压力，导致主从复制延迟等问题。因此，<strong>查询优化</strong>是 DBA 的核心工作内容之一。</p>
+<p><a href="https://mp.weixin.qq.com/s/VXkpDlUdnKlK3DKtoyg2wA"><img src="/hero/pgss.jpg" alt=""></a></p>
+<p>在查询优化这条路上，有两种不同的方法：</p>
+<p><strong>宏观优化</strong>：整体分析工作负载，对其进行剖分下钻，自上而下地识别并改进其中表现最糟糕的部分。</p>
+<p><strong>微观优化</strong>：分析并改进一条特定的查询，这便需要记录慢查询日志，掌握 EXPLAIN 的玄机，领悟执行计划的奥妙。</p>
+<p>今天我们先来说说前者，<strong>宏观优化</strong>有三个主要目标与动机：</p>
+<p><strong>减少资源消耗</strong>：降低资源饱和的风险，优化CPU/内存/IO，通常以查询<strong>总耗时/总IO</strong>作为优化目标。</p>
+<p><strong>改善用户体验</strong>：最常见的优化目标，在OLTP系统中通常以降低<strong>查询平均响应时间</strong>作为优化目标。</p>
+<p><strong>平衡工作负载</strong>：确保不同查询组之间的资源使用/性能表现的比例关系得当。</p>
+<p>实现这些目标的关键在于<strong>数据支撑</strong>，但是数据从哪里来？</p>
+<p>—— <strong>pg_stat_statements</strong>**！**</p>
+<p><img src="pgss-1.png" alt="pgss-1.png"></p>
+<hr>
+<h2 id="扩展插件pgss">扩展插件：PGSS</h2>
+<p><strong>pg_stat_statements</strong>，以下简称 <strong>PGSS</strong> ，是践行观宏之道的核心工具。</p>
+<p>PGSS 出自 PostgreSQL 全球开发组官方之手，以第一方扩展插件的形式，随数据库内核本体一并发行，提供了跟踪 SQL 查询语句级别指标的方法。</p>
+<p>PostgreSQL 生态中有许许多多的扩展，但如果说有哪一个是“<strong>必选</strong>”的，我必定会毫不犹豫的回答：<strong>PGSS</strong>。这也是在 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486135&amp;idx=1&amp;sn=7d9c4920e94efba5d0e0b6af467f596c&amp;chksm=fe4b3f6cc93cb67ac570d5280b37328aed392598b13df88545ff0a06f99630801fc999db8de5&amp;scene=21#wechat_redirect"><strong>Pigsty</strong></a> 中，我们宁愿“自作主张”，也要默认启用并主动加载的两个扩展之一。（另一个是用于微观优化的 auto_explain）</p>
+<p>PGSS 需要在 <strong>shared_preload_library</strong> 中显式指定加载，并在数据库中通过 <strong>CREATE EXTENSION</strong> 显式创建。创建扩展后即可通过视图 <strong>pg_stat_statements</strong> 访问查询的统计信息。</p>
+<p>在 <strong>PGSS</strong> 中，系统中的每一类查询（即抽取变量后，执行计划相同的查询）都会被分配一个查询ID，紧接着是调用次数，执行总耗时，以及各种其他指标，其完整模式定义如下（PG15+）：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_stat_statements</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">userid</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#000">OID</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic">-- （标签值）执行此语句的用户 OID（标签值）
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">dbid</span><span style="color:#f8f8f8;text-decoration:underline">                   </span><span style="color:#000">OID</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic">-- （标签值）此语句所在的数据库 OID（标签值）
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">toplevel</span><span style="color:#f8f8f8;text-decoration:underline">               </span><span style="color:#000">BOOL</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">-- （标签值）此语句是否是顶层 SQL 语句（标签值）
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">queryid</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （标签值）查询ID：标准化查询的哈希值（标签值）
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">query</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#204a87">TEXT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">-- （标签值）标准化查询语句的文本内容
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">plans</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）此语句被 PLAN 的次数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">total_plan_time</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）此语句花费在 PLAN 上的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">min_plan_time</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）PLAN 的最小时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">max_plan_time</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）PLAN 的最大时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">mean_plan_time</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）PLAN 的平均时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">stddev_plan_time</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）PLAN 时间的标准差
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">calls</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）此语句被调用执行的次数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">total_exec_time</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）此语句花费在执行上的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">min_exec_time</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）执行的最小时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">max_exec_time</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）执行的最大时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">mean_exec_time</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）执行的平均时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">stddev_exec_time</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （测量值）执行时间的标准差
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">rows</span><span style="color:#f8f8f8;text-decoration:underline">                   </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）执行此语句返回的总行数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">shared_blks_hit</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）命中的共享缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">shared_blks_read</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）读取的共享缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">shared_blks_dirtied</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）写脏的共享缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">shared_blks_written</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）写入磁盘的共享缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">local_blks_hit</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）命中的本地缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">local_blks_read</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）读取的本地缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">local_blks_dirtied</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）写脏的本地缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">local_blks_written</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）写入磁盘的本地缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">temp_blks_read</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）读取的临时缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">temp_blks_written</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）写入磁盘的临时缓冲区总块数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">blk_read_time</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）读取块花费的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">blk_write_time</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）写入块花费的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">wal_records</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）生成 WAL 的记录总数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">wal_fpi</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）生成的 WAL全页镜像总数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">wal_bytes</span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#204a87">NUMERIC</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- （累积量）生成的 WAL 字节总数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_functions</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）JIT 编译的函数数量
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_generation_time</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）生成 JIT 字节码的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_inlining_count</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）函数被内联的次数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_inlining_time</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）花费在内联函数上的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_optimization_count</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）查询被 JIT优化的次数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_optimization_time</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）花费在JIT优化上的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_emission_count</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#204a87">BIGINT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">-- （累积量）代码被 JIT Emit的次数
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">jit_emission_time</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87">FLOAT</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#8f5902;font-style:italic">-- （累积量）花费在 JIT Emit上的总时长
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">userid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">queryid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">toplevel</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>PGSS 视图的 SQL 定义（PG 15+版本）</p>
+<p><strong>PGSS</strong> 也有一些局限性：首先，<strong>正在执行中</strong>的查询语句并不会纳入这里的统计，而需要从 <strong>pg_stat_activity</strong> 中查看获取。其次，执行失败的查询（例如，因为 statement_timeout 超时被取消的语句）也不会被计入这里的统计 —— 这是<strong>错误分析</strong>要解决的问题，而不是<strong>查询优化</strong>所关心的目标。</p>
+<p>最后，查询标识符 <strong>queryid</strong> 的稳定性需要特别注意：当数据库二进制版本和系统数据目录完全相同时，同一类查询会具有相同的 <strong>queryid</strong> （即在物理复制的主从上，同类查询的 <strong>queryid</strong> 默认是相同的），然而对于逻辑复制则不然。但用户不应当对这一性质抱有过度的依赖与假设。</p>
+<hr>
+<h2 id="原始数据">原始数据</h2>
+<p><strong>PGSS</strong> 视图中的列可以分为三类：</p>
+<p><strong>描述性的标签列（Label）</strong>：查询ID（queryid）、数据库 ID（dbid）、用户（userid），一个顶层查询标记，和标准化的查询文本（query）。</p>
+<p><strong>测量性的指标（Gauge）</strong>：与最小、最大、均值标准差有关的八列统计量，以 min，max，mean，stddev 作为前缀，以 plan_time 与 exec_time 作为后缀。</p>
+<p><strong>累积性的指标（Counter）</strong>：除了上面八列与标签列的<strong>其他指标</strong>，例如 calls、rows 等，最重要、最有用的指标都在这一类里。</p>
+<p>首先解释一下 queryid：queryid 是查询语句被解析后，剥离常量后生成规范化查询的哈希值，因此可以用来标识<strong>同一类查询</strong>。不同的查询语句可能有着同样的 queryid （规范化后结构一样），同样的查询语句也可能有着不同的 queryid （例如因为 search_path 不同，导致实际查询的表不懂）。</p>
+<p>同样的查询可能会在不同的数据库中被不同的用户所执行。因此在 PGSS 视图中，queryid，dbid，userid，toplevel 四个标签列，共同组成了唯一标识一条记录的“主键”。</p>
+<p>对于指标列而言，**测量性质的指标（GAUGE）**主要是执行时间与计划时间相关的八个统计量，然而用户没有办法很好地控制这些统计量的统计范围，所以实用价值并不大。</p>
+<p>真正重要的指标是<strong>累积性的指标（Counter）</strong>，例如：</p>
+<p><strong>calls</strong> ：此查询组发生了多少次调用。</p>
+<p><strong>total_exec_time</strong> + <strong>total_plan_time</strong>：查询组累计耗费时间。</p>
+<p><strong>rows</strong>：查询组累计返回了多少行。</p>
+<p><strong>shared_blks_hit</strong> + <strong>shared_blks_read</strong>：缓冲池累计命中和读取操作次数。</p>
+<p><strong>wal_bytes</strong>：此组中的查询累计生成的 WAL 字节数。</p>
+<p><strong>blk_read_time</strong> 和 <strong>blk_write_time</strong>：累计花费在块读写IO上的时间</p>
+<p>这里，最有意义的指标是 <strong>calls</strong> 与 <strong>total_exec_time</strong>，可以用于计算查询组的核心指标 <strong>QPS</strong> （吞吐量）与 <strong>RT</strong>（延迟/响应时间），但其他的指标也很有参考价值。</p>
+<p><img src="pgss-2.png" alt="pgss-2.png"></p>
+<p>可视化展现 PGSS 视图的某个查询组快照</p>
+<p>要解读累积性指标数据，只有某一个时刻的数据是不够的。<strong>我们需要对比至少两个时刻的<strong><strong>快照</strong></strong>，才能得到有意义的结论</strong>。</p>
+<p>作为特例，如果您感兴趣的范围正好是从统计周期伊始（通常是启用此扩展时）至今，那么确实不需要对比“两个快照”。但用户感兴趣的时间粒度通常并不会这么粗放，而往往是以分钟、小时、天为单位。</p>
+<p><img src="pgss-3.png" alt="pgss-3.png"></p>
+<blockquote>
+<p>根据多个 PGSS 查询组快照计算历史时序指标</p>
+</blockquote>
+<p>好在类似 <a href="https://pigsty.cc">Pigsty</a> 监控系统这样的工具会定期（默认每隔10s）截取头部查询（耗时Top256）的快照。有了许多不同类型的累积指标 M（etrics）在不同时刻的快照之后，我们就能计算出某个累积性指标的三种重要派生指标：</p>
+<p><strong>dM/dt</strong> ：指标 M 基于时间的微分，即每秒的增量。</p>
+<p><strong>dM/dc</strong>：指标 M 基于调用次数的微分，即每次调用的平均增量。</p>
+<p><strong>%M</strong>：指标 M 在整个工作负载中所占的百分比。</p>
+<p>这三类指标正好与宏观优化的三类目标相对应，对时间的微分 <strong>dM/dt</strong> 揭示了<strong>每秒资源使用量</strong>，通常用于减少资源消耗的优化目标。对调用次数的微分 <strong>dM/dc</strong> 揭示了<strong>每次调用的资源使用量</strong>，通常用于改善用户体验的优化目标。而百分比指标 <strong>%M</strong> 展示了查询组在整个工作负载中所占的百分比，通常用于平衡工作负载的优化目标。</p>
+<hr>
+<h2 id="对时间微分">对时间微分</h2>
+<p>让我们首先来看第一类指标：对时间的微分。在这里，我们可以使用的指标 M 包括：calls，total_exec_time，rows，wal_bytes，shared_blks_hit + shared_blks_read，以及 blk_read_time + blk_write_time。其他的指标也有参考意义，但让我们从最重要的开始。</p>
+<p><img src="pgss-4.png" alt="pgss-4.png"></p>
+<blockquote>
+<p>可视化展现对时间的微分指标 dM/dt</p>
+</blockquote>
+<p>计算这些指标的方式其实很简单，我们只需要：</p>
+<ul>
+<li>首先计算两个快照之间的指标值 M 的差值：<strong>M2 - M1</strong></li>
+<li>然后计算两个快照之间的时间差值：<strong>t2 - t1</strong></li>
+<li>最终计算 <strong>(M2 - M1) / (t2 - t1)</strong> 即可</li>
+</ul>
+<p>生产环境通常会使用 5s，10s，15s，30s，60s 这样的数据采样间隔。对于负载分析通常会使用 1m， 5m，15m 作为常用的分析窗口大小。</p>
+<p>例如，当我们计算 QPS 时，就会分别计算最近 1分钟，5分钟，15分钟的 QPS。窗口越长曲线就越平稳，更能反映长期变化趋势；但是会隐藏短期波动细节，不利于发现瞬时异常波动，所以不同粒度的指标需要结合来看。</p>
+<p><img src="pgss-5.png" alt="pgss-5.png"></p>
+<blockquote>
+<p>展示特定查询组 1/5/15 分钟窗口下的 QPS</p>
+</blockquote>
+<p>如果您使用 Pigsty / Prometheus 来采集监控数据，那么可以使用 PromQL 简单地完成这些计算工作。例如，计算所有查询最近1分钟的 QPS 指标，使用以下语句就可以了： rate(pg_query_calls{}[1m])</p>
+<p><strong>QPS</strong></p>
+<p>当 M 是 calls 时，对时间求导的结果是 QPS，它的单位是每秒查询数（req/s），这是一个非常基础的指标。查询 QPS 属于吞吐量指标，直接反应了业务施加的负载状况，如果一个查询的吞吐量过高（例如，10000+）或者过低（例如，1-），有可能是值得关注的。</p>
+<p><img src="pgss-6.png" alt="pgss-6.png"></p>
+<blockquote>
+<p>QPS：1/5/15 分钟 µ/CV， ±1/3σ分布</p>
+</blockquote>
+<p>如果我们把所有查询组的 QPS 指标累加起来（且没超过PGSS的收集范围），就会得到所谓的 “全局QPS”。另一种获得全局 QPS 的方式是在客户端打点，在类似 Pgbouncer 的连接池中间件上采集，或者使用 ebpf 探测。但都不如 PGSS 方便。</p>
+<p>请注意，QPS 指标并不具备负载意义上的<strong>横向可比性</strong>。不同查询组可能有着同样的 QPS，而单个查询的耗时却天差地别。甚至同一个查询组在不同时间点上产生的负载水平，也可能因为执行计划不同而发生巨大变化。每秒执行时长是一个更好的衡量负载的指标。</p>
+<p><strong>每秒执行时长</strong></p>
+<p>当 M 是 total_exec_time （+ total_plan_time，可选 ）时，我们就会得到宏观优化中最重要的指标之一：在查询组上耗费的的执行时间，有意思的是，这个导数的单位是 秒/每秒，所以分子分母相互约掉了，使得它实际上是一个无量纲的指标。</p>
+<p>这个指标的涵义是：服务器每秒钟花费多少秒来处理这个查询组中的查询，例如 2 s/s 意味着服务器每秒花费两秒执行时间在这组查询上；对于多核CPU，这当然是有可能的：把两个CPU核的全部时间都拿来就行了。</p>
+<p><img src="pgss-7.png" alt="pgss-7.png"></p>
+<blockquote>
+<p>每秒执行时长：1/5/15 分钟均值</p>
+</blockquote>
+<p>因此这里的值也可以理解为一个百分比：可以超过 100%，在这种视角下，它是一个类似于主机 load1, load5, load15 的指标，揭示了该查询组产生的<strong>负载水平</strong>。如果除以 CPU 核数，甚至可以得到归一化的查询负载贡献度指标。</p>
+<p>但是我们需要注意的是，执行时间中包括了等待锁，等待I/O的时间。所以确实可能出现这样的情况：查询执行时间很长，但却没有对 CPU 负载产生影响。所以如果要精细分析慢查询，我们还要参考<strong>等待事件</strong>来进一步分析才行。</p>
+<p><strong>每秒行数</strong></p>
+<p>当 M 是 rows 时，我们会得到每秒该查询组返回的行数，单位是行/每秒（rows/s）。例如 10000 rows/s 意味着该类查询每秒向客户端吐出1万行数据。返回的行需要耗费客户端的处理资源，当我们需要检视应用客户端的数据处理压力时，这是一个非常有参考意义的指标。</p>
+<p><img src="pgss-8.png" alt="pgss-8.png"></p>
+<blockquote>
+<p>每秒返回的行数：1/5/15 分钟均值</p>
+</blockquote>
+<p><strong>共享缓冲区访问带宽</strong></p>
+<p>当 M 是 shared_blks_hit + shared_blks_read 时，我们会得到每秒命中/读取的共享缓冲区块数，如果将其乘以默认块大小 8KiB（极少情况下有可能会是其他的大小，例如32KiB），我们就会得到一类查询“访问”内存磁盘的带宽：单位是字节/秒。</p>
+<p>举个例子，如果某一类查询每秒访问50万次共享缓冲区，折合 3.8 GiB/s 的内部访问数据流：那么这就是一个显著负载，也许会是一个很好的优化候选项。也许你应该检查一下这个查询，看看它是否配得上这些“资源消耗”。</p>
+<p><img src="pgss-9.png" alt="pgss-9.png"></p>
+<blockquote>
+<p>共享缓冲区访问带宽与缓冲区命中率</p>
+</blockquote>
+<p>另一个值得参考的衍生指标是缓冲区命中率：即 hit / (hit + read) ，它可以用于分析性能变化的可能原因 —— 缓存未命中。当然，重复访问同一个共享缓冲池里的块，并不会真的重新读取，即使真的去读取，也不一定是读取磁盘，有可能是读内存中的FS Cache。所以这里只是一个参考值，但它确实是一个非常重要的宏观查询优化参考指标。</p>
+<p><strong>WAL日志量</strong></p>
+<p>当 M 是 wal_bytes 时，我们得到了该查询生成 WAL 的速率，单位是字节/每秒（B/s）。这个指标是在 PostgreSQL 13 新引入的，可以用来定量揭示查询产生的 WAL 大小：写入的 WAL 越多越快，刷写磁盘、物理复制/逻辑复制、日志归档的压力就会越大。</p>
+<p>一个典型的例子是：<strong>BEGIN;</strong> <strong>DELETE FROM xxx</strong>**; ROLLBACK;** 。这样的事务删了很多数据，产生了大量 WAL 却没有执行任何有用的工作，通过这个指标可以将其揪出来。</p>
+<p><img src="pgss-10.png" alt="pgss-10.png"></p>
+<blockquote>
+<p>WAL字节率：1/5/15 分钟均值</p>
+</blockquote>
+<p>这里有两个注意事项：上面我们说过，PGSS 无法跟踪执行失败的语句，但这里事务虽然 <strong>ROLLBACK</strong> 失败了，但是语句却是成功执行了的，所以会被 PGSS 跟踪记录。</p>
+<p>第二件事是：在 PostgreSQL 中并非仅仅是 INSERT/UPDATE/DELETE 会产生 WAL 日志，SELECT 操作也有可能产生 WAL 日志，因为 SELECT 可能会修改元组上的标记（Hint Bit）让页面校验和出现变化，触发 WAL 日志写入。</p>
+<p>甚至存在这种可能，如果读取负载非常大，它会有较大概率导致 FPI 镜像生成，产生可观的 WAL 日志量。你可以通过进一步检查 wal_fpi 指标。</p>
+<p><img src="pgss-11.png" alt="pgss-11.png"></p>
+<blockquote>
+<p>共享缓冲区写脏/写回带宽</p>
+</blockquote>
+<p>对于 13 以下的版本，共享缓冲区写脏/写回带宽指标可以作为一个近似下位替代，用于分析查询组的写入负载特征。</p>
+<p><strong>I/O耗时</strong></p>
+<p>当 M 是 blks_read_time + blks_write_time ，我们会得到查询组花费在块 I/O 上的耗时比例，单位是 “秒/每秒”，与每秒执行时长指标一样，它也反映出一样操作占用的时间比例。</p>
+<blockquote>
+<p>I/O 耗时对于分析查询毛刺原因很有帮助</p>
+</blockquote>
+<p>因为 PostgreSQL 会使用操作系统提供的 FS Cache，所以即使这里执行了块读取/写入，可能在文件系统层面上仍然是发生在内存中的缓冲操作。所以它只能作为一个参考指标，使用时需要谨慎，需要与主机节点上的磁盘 I/O 监控相互对照。</p>
+<p><strong>对时间微分的指标</strong> <strong>dM/dt</strong>，可以展现出一个数据库实例/集群内部工作负载的全貌，对于优化资源使用的场景来说尤其有用。但是如果您的优化目标是改善用户体验，那么可能另一组指标 —— <strong>对调用次数的微分 dM/dc</strong>，会更有参考意义。</p>
+<hr>
+<h2 id="对调用次数微分">对调用次数微分</h2>
+<p>上面我们已经计算了六类重要指标对于<strong>时间</strong>的微分，另一类衍生指标计算方式是对 “<strong>调用次数</strong>” 进行微分，也就是分母从时间差变成了 QPS。</p>
+<p>这类指标重要性相比前者甚至更高，因为它提供了直接关乎用户体验的几个核心指标，比如最重要的 —— <strong>查询响应时间</strong>**（RT，Response Time）<strong>，或曰</strong>延迟（Latency）**。</p>
+<p>计算这些指标的方式也很简单，我们只需要：</p>
+<ul>
+<li>计算两个快照之间的指标值 M 的差值：<strong>M2 - M1</strong></li>
+<li>然后计算两个快照之间的 calls 差值：<strong>c2 - c1</strong></li>
+<li>然后计算 <strong>(M2 - M1) / (c2 - c1)</strong> 即可</li>
+</ul>
+<p>对于 PromQL 实现来说，对于<strong>调用次数的微分指标 dM/dc</strong>，可以用“<strong>对时间的微分指标 dM/dt</strong>” 计算得到。例如要计算 RT，就可以使用 <strong>每秒执行时长</strong> <strong>/</strong> <strong>每秒查询数</strong> ，两指标相除即可：</p>
+<pre tabindex="0"><code>rate(pg_query_exec_time{}[1m]) / rate(pg_query_calls{}[1m])
+</code></pre><p><img src="pgss-12.png" alt="pgss-12.png"></p>
+<blockquote>
+<p>dM/dt 可以用于计算 dM/dc</p>
+</blockquote>
+<p><strong>调用次数</strong></p>
+<p>当 M 是 calls 时，对自己微分没有任何意义（结果会恒为 1）。</p>
+<p><strong>平均延迟/响应时间/RT</strong></p>
+<p>当 M 是 total_exec_time 时，对调用次数求导的结果是 <strong>RT</strong>，或响应时间/延迟。它的单位是秒（s）。<strong>RT 直接反映了用户体验，是宏观性能分析中最重要的指标</strong>。这个指标的含义是：此查询组在服务器上的平均查询响应时间。如果条件允许启用 pg_stat_statements.track_planning，还可以加上 total_plan_time 一起计算，结果会更精确更具有代表性。</p>
+<p><img src="pgss-13.png" alt="pgss-13.png"></p>
+<blockquote>
+<p>RT：1/5/15 分钟 µ/CV， ±1/3σ分布</p>
+</blockquote>
+<p>这里要特别强调两种特殊情况：第一：PGSS不跟踪失败/执行中的语句；第二：PGSS的统计数据受（pg_stat_statements.max）参数限制，可能出现部分采样偏差。尽管有这些局限性，但想要获取至关重要的查询语句组延迟数据，PGSS 毫无疑问是最为稳妥可靠的来源。正如上面所述，在其他观测点位也有办法采集查询 RT 数据，但会麻烦得多。</p>
+<p>你可以在客户端侧打点，采集语句执行时间，通过指标或者日志上报；你也可以尝试使用 ebpf 来探测语句 RT，这对基础设施和工程师要求会比较高。Pgbouncer 和 PostgreSQL （14+） 倒是也提供了 RT 指标，只可惜粒度都是数据库级别，没有一个能做到 PGSS 查询语句组级别的指标收集。</p>
+<p><img src="pgss-14.png" alt="pgss-14.png"></p>
+<blockquote>
+<p>RT：语句级/连接池级/数据库级</p>
+</blockquote>
+<p>不同于 QPS 这样的吞吐量指标，<strong>RT 是具有横向可比性的</strong>：例如某个查询组平时的 RT 都在1毫秒内，那么超过 10ms 的事件应当被视作严重的偏差进行分析。</p>
+<p>当出现故障时， RT 视图对于定位原因也很有帮助：如果所有查询整体 RT 变慢，那么最有可能与资源不足有关。如果只是特定查询组的 RT 发生变化，那就更有可能是某些慢查询导致了问题，应当进一步调查分析。如果 RT 变化的时间点与应用发布部署吻合，则应当考虑是否要回滚这些部署。</p>
+<p>此外，在性能分析，压力测试，基准测试时，<strong>RT 也是最重要的指标</strong>。你可以通过对比典型查询在不同环境（例如不同PG大版本、不同硬件、不同配置参数）下的延迟表现来评估系统的性能，并以此为依据不断对系统性能进行调整与改进。</p>
+<p>RT 是如此重要，以至于 RT 本身又会衍生出许多下游指标来：1分钟/5分钟/15分钟的均值µ与标准差σ自然必不可少；过去15分钟的 ±σ，±3σ 可以用来衡量 RT 的波动范围，过去1小时的 95，99 分位点也很有参考价值。</p>
+<p>RT 是评估 OLTP工作负载的核心指标，怎么强调它的重要性都不为过。</p>
+<p><strong>平均返回行数</strong></p>
+<p>当 M 是 rows 时，我们会得到每次查询<strong>平均返回的行数</strong>，单位是行/每查询。对于 OLTP 工作负载来说，典型查询模式为点查，即每次查询返回几条数据。</p>
+<p><img src="pgss-15.png" alt="pgss-15.png"></p>
+<blockquote>
+<p>按照主键查询单条记录，平均返回行数稳定为1</p>
+</blockquote>
+<p>如果一个查询组每次查询向客户端吐出几百甚至成千上万行记录，那么应当对其进行审视。如果这是有意而为之的设计，比如批量加载任务/数据转储，那么不需要做什么。如果这是由应用/客户端发起的请求，那么可能存在错误，比如语句缺少 LIMIT 限制，查询缺少分页设计，这样的查询应该进行调整修复。</p>
+<p><strong>平均共享缓冲区读取/命中</strong></p>
+<p>当 M 是 shared_blks_hit + shared_blks_read 时，我们会得到每条查询“命中”与“读取”共享缓冲区的平均次数，如果将其乘以默认块大小 8KiB，我们就会得到这类查询每次执行的“带宽”，单位是 B/s：每次查询平均会访问/读取多少 MB 数据 ？</p>
+<p><img src="pgss-16.png" alt="pgss-16.png"></p>
+<blockquote>
+<p>按照主键查询单条记录，平均返回行数稳定为1</p>
+</blockquote>
+<p>查询平均访问的数据量通常与平均返回的行数相匹配，如果你的查询平均只返回了几行，却访问了成M上G的数据块，那你就需要特别注意了：这样的查询对于数据冷热状态非常敏感，如果所有的块都在缓冲区中，它的性能可能还说的过去，但如果从磁盘冷启动，执行时间可能会出现戏剧性的变化。</p>
+<p>当然，不要忘记 PostgreSQL 双缓存问题，所谓“读取”的数据可能已经在操作系统文件系统层面被缓存过一次了。所以你需要与操作系统监控指标，或者 pg_stat_kcache ，pg_stat_io 这些系统视图相互参照进行分析。</p>
+<p>另一种值得关注的模式是此指标的突变，这通常意味着该查询组的<strong>执行计划可能出现了翻转/劣化</strong>，非常值得关注与进一步研究。</p>
+<p><strong>平均WAL日志量</strong></p>
+<p>当 M 是 wal_bytes 时，我们得到了每条查询平均生成 WAL 的大小，这是 PostgreSQL 13 新引入的字段。这个指标可以衡量查询的变更足迹大小，并计算读写比例等重要评估参数。</p>
+<p><img src="pgss-17.png" alt="pgss-17.png"></p>
+<blockquote>
+<p>稳定的QPS却有着周期性WAL波动，可推断是 FPI 的影响</p>
+</blockquote>
+<p>另一个用途是优化检查点/Checkpoint：如果你观察到此指标周期性的起伏（周期约等于 checkpoint_timeout），那么可以通过调整检查点间距，来优化查询产生 WAL 的数量。</p>
+<p><strong>对调用次数进行微分的指标 dM/dc</strong>，可以展现出一类查询的工作负载特性，对于优化用户体验来说非常有用。特别是 RT 乃是性能优化的黄金指标，怎样强调其重要性都不为过。</p>
+<p><strong>dM/dc</strong> 这样的指标为我们提供类似重要的绝对值指标，但如果想要找出哪些查询的优化潜在收益最大，还需要用到 <strong>%M 百分比指标</strong>。</p>
+<hr>
+<h2 id="百分比指标">百分比指标</h2>
+<p>现在我们来研究第三类指标，<strong>百分比指标</strong>。即某个查询组相对于整体工作负载所占的比例。</p>
+<p><strong>百分比指标 M%</strong> 为我们提供了某个查询组相对于整体工作负载的比例，帮助我们在频次、时间、I/O时间/次数上时识别出“主要参与者”，找出潜在优化收益最大的候选查询组，作为优先级评定的重要依据。</p>
+<p><img src="pgss-18.png" alt="pgss-18.png"></p>
+<p>常用百分比指标 %M 一览</p>
+<p>举个例子，如果某个查询组有 1000 QPS  的绝对值，看上去不少；但如果它只占整个工作负载的 3%，那么优化此查询的收益与优先级就没那么高了；反之，如果它占据了整个工作负载的 50% 还要多 —— 如果你有办法把它优化掉就可以砍掉整个实例吞吐量的半壁江山，优化它的优先级就会非常之高。</p>
+<p>常见的优化策略是这样的：首先把所有查询组分别按照上面提到的重要指标：calls，total_exec_time，rows，wal_bytes，shared_blks_hit + shared_blks_read，以及 blk_read_time + blk_write_time 在一段时间内的 <strong>dM/dt</strong> 值进行排序取 TopN （比如 N=10 或者更多），加入优化候选列表中。</p>
+<p><img src="pgss-19.png" alt="pgss-19.png"></p>
+<blockquote>
+<p>按照特定标准，选取待优化的 TopSQL</p>
+</blockquote>
+<p>然后，对于优化候选列表中的每个查询组，依次分析其 <strong>dM/dc</strong> 指标，结合具体的查询语句与慢查询日志/等待事件进行分析，决定这是不是一个值得优化的查询。对于决定（Plan）进行优化的查询，就可以使用后续篇**“微观优化”**将要介绍的技巧进行调优（Do），并使用监控系统评估优化的效果（Check），总结分析后进入下一个 PDCA 戴明循环，持续进行管理优化。</p>
+<p>除了对指标取 TopN 之外，还可以使用可视化的方式。可视化非常有助于从工作负载中识别 “主要贡献者”，复杂的判断算法可能还远比不上人类DBA对监控图形模式的直觉。想要形成比例感，我们可以借助饼图，树图或者堆叠的时序图。</p>
+<p><img src="pgss-20.png" alt="pgss-20.png"></p>
+<p>将所有查询组的 QPS 进行堆叠</p>
+<p>例如，我们可以使用饼图来标识过去1小时内耗时/IO使用最大的查询，使用二维树图（大小代表总耗时，颜色代表平均RT）来展示一个额外的维度。并用堆叠时序图来展示比例随时间的变化关系。</p>
+<p>我们也可以直接分析当下的 PGSS 快照，按照不同的关注点进行排序，按照您自己的标准选择有待优化的查询即可。</p>
+<p><img src="pgss-21.png" alt="pgss-21.png"></p>
+<p>I/O 耗时对于分析查询毛刺原因很有帮助</p>
+<hr>
+<h2 id="总结">总结</h2>
+<p>最后，让我们对上面的内容做一个总结。</p>
+<p>PGSS提供了丰富的指标，其中最重要的累积指标可以使用三种方式进行加工处理：</p>
+<p><strong>dM/dt</strong> ：指标 M 基于时间的微分，揭示了<strong>每秒资源使用量</strong>，通常用于减少资源消耗的优化目标。</p>
+<p><strong>dM/dc</strong>：指标 M 基于调用次数的微分，揭示了<strong>每次调用的资源使用量</strong>，通常用于改善用户体验的优化目标。</p>
+<p><strong>%M</strong> ：百分比指标展示了查询组在整个工作负载中所占的百分比，通常用于平衡工作负载的优化目标。</p>
+<p>通常，我们会根据 <strong>%M</strong> ：百分比指标 Top 查询选择高价值的备选优化查询，并使用 <strong>dM/dt *<em>dM/dc*</em></strong> 指标进行进一步的评估，确认是否有优化空间和可行性，并评估优化后的效果。如此往复，不断循环。</p>
+<p>理解了宏观优化的方法论后，我们就可以用这样的方法去定位优化慢查询了。这里给出了一个具体的 《 <a href="/zh/blog/admin/pgss/">利用监控系统诊断PG慢查询</a>》的例子。在下一篇中，我们将介绍关于 PostgreSQL查询 <strong>微观优化</strong> 的经验技巧。</p>
+<hr>
+<h2 id="参考">参考</h2>
+<p><code>[1]</code> <a href="https://gitlab.com/postgres-ai/postgresql-consulting/postgres-howtos/">PostgreSQL HowTO: pg_stat_statements</a> by Nikolay Samokhvalov</p>
+<p><code>[2]</code> <a href="https://www.postgresql.org/docs/current/pgstatstatements.html">pg_stat_statements</a></p>
+<p><code>[3]</code> <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484478&amp;idx=1&amp;sn=ea44675df79b60a12273e78b358bb557&amp;chksm=fe4b31e5c93cb8f325ba1e4389874112bd5441280492c87e259a32aa67e00c7e0028e7dc51eb&amp;scene=21#wechat_redirect">利用监控系统诊断PG慢查询</a></p>
+<p><code>[4]</code> <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486169&amp;idx=1&amp;sn=697ab3c172fe6cc28e12cff7297bb343&amp;chksm=fe4b3f02c93cb614bbd1d5075120e074cebb5214d3a1a516363582bcee294e02bf5fd0e051ee&amp;scene=21#wechat_redirect">如何用Pigsty监控现有PostgreSQL (RDS/PolarDB/自建)？</a></p>
+<p><code>[5]</code> <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486283&amp;idx=1&amp;sn=4b63f438df33291a3deb1052bea31347&amp;chksm=fe4b3e90c93cb786a54407a4f7e552b2c8b28478b28df852e41f5d9e2c991761dddbc9a5a813&amp;scene=21#wechat_redirect">Pigsty v2.5 发布：Ubuntu/Debian支持与监控改版/新扩展</a></p>
+<p><code>[6]</code> <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484189&amp;idx=1&amp;sn=19d4381c7ec4bc4498bd56c5ee9f916b&amp;chksm=fe4b36c6c93cbfd06fba1c7a1ad3c5cba8d0060f82acb56e96f0e64694f79c2df9299f0b1115&amp;scene=21#wechat_redirect">PostgreSQL监控系统Pigsty概述</a></p>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/admin/pg-filedump/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/admin/logical-replication/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

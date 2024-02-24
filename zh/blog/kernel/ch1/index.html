@@ -1,0 +1,2165 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>第一章 数据库的物理/逻辑结构 | Pigsty</title><meta property="og:title" content="第一章 数据库的物理/逻辑结构" />
+<meta property="og:description" content="第一章和第二章简单介绍了一些PostgreSQL的基础知识，有助于读者理解后续章节的内容。本章包括以下几个主题：
+ 数据库集簇（database cluster） 的逻辑结构 数据库集簇的物理结构 堆表（heap table） 文件的内部布局 从表中读写数据的方式  如果你已经熟悉这些内容，可以跳过本章。
+1.1 数据库集簇的逻辑结构 数据库集簇（database cluster） 是一组 数据库（database） 的集合，由一个PostgreSQL服务器管理。第一次听到这个定义也许会令人疑惑，PostgreSQL中的术语“数据库集簇”，并非 意味着“一组数据库服务器”。 一个PostgreSQL服务器只会在单机上运行并管理单个数据库集簇。
+图1.1展示了一个数据库集簇的逻辑结构。 数据库（database） 是 数据库对象（database objects） 的集合。 在关系型数据库理论中，数据库对象是用于存储或引用数据的数据结构。 （堆）表是一个典型的例子，还有更多种对象，例如索引，序列，视图，函数等。 在PostgreSQL中数据库本身也是数据库对象，并在逻辑上彼此分离。 所有其他的数据库对象（例如表，索引等）归属于各自相应的数据库。
+图1.1 数据库集簇的逻辑结构
+在PostgreSQL内部，所有的数据库对象都通过相应的 对象标识符（Object Identifiers, OID） 进行管理，这些标识符是无符号的4字节整型。数据库对象与相应OID之间的关系存储在相应的系统目录中，依具体的对象类型而异。 例如数据库和堆表对象的OID分别存储在pg_database和pg_class中，因此当你希望找出OID时，可以执行以下查询：
+sampledb=#SELECTdatname,oidFROMpg_databaseWHEREdatname=&#39;sampledb&#39;;datname|oid----------&#43;------- sampledb|16384(1row)sampledb=#SELECTrelname,oidFROMpg_classWHERErelname=&#39;sampletbl&#39;;relname|oid-----------&#43;------- sampletbl|18740(1row)1.2 数据库集簇的物理结构 数据库集簇在本质上就是一个文件目录，名曰 基础目录（base directory） ，包含着一系列子目录与文件。 执行 initdb 命令会在指定目录下创建基础目录从而初始化一个新的数据库集簇。 通常会将基础目录的路径配置到环境变量PGDATA中，但这并不是必须的。
+图1.2 展示了一个PostgreSQL数据库集簇的例子。 base子目录中的每一个子目录都对应一个数据库，数据库中每个表和索引都会在相应子目录下存储为（至少）一个文件；还有几个包含特定数据的子目录，以及配置文件。 虽然PostgreSQL支持表空间（Tablespace），但该术语的含义与其他RDBMS不同。 PostgreSQL中的表空间对应一个包含基础目录之外数据的目录。
+图1.2 数据库集簇示例
+后续小节将描述数据库集簇的布局，数据库的布局，表和索引对应的文件布局，以及PostgreSQL中表空间的布局。
+1.2.1 数据库集簇的布局 官方文档中描述了数据库集簇的布局。 表1.1中列出了主要的文件与子目录：
+表 1.1 基本目录下的数据库文件和子目录的布局（参考官方文档）
+   文件 描述     PG_VERSION 包含PostgreSQL主版本号   pg_hba." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/kernel/ch1/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2018-01-11T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-02-24T18:45:23+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="第一章 数据库的物理/逻辑结构">
+<meta itemprop="description" content="第一章和第二章简单介绍了一些PostgreSQL的基础知识，有助于读者理解后续章节的内容。本章包括以下几个主题：
+ 数据库集簇（database cluster） 的逻辑结构 数据库集簇的物理结构 堆表（heap table） 文件的内部布局 从表中读写数据的方式  如果你已经熟悉这些内容，可以跳过本章。
+1.1 数据库集簇的逻辑结构 数据库集簇（database cluster） 是一组 数据库（database） 的集合，由一个PostgreSQL服务器管理。第一次听到这个定义也许会令人疑惑，PostgreSQL中的术语“数据库集簇”，并非 意味着“一组数据库服务器”。 一个PostgreSQL服务器只会在单机上运行并管理单个数据库集簇。
+图1.1展示了一个数据库集簇的逻辑结构。 数据库（database） 是 数据库对象（database objects） 的集合。 在关系型数据库理论中，数据库对象是用于存储或引用数据的数据结构。 （堆）表是一个典型的例子，还有更多种对象，例如索引，序列，视图，函数等。 在PostgreSQL中数据库本身也是数据库对象，并在逻辑上彼此分离。 所有其他的数据库对象（例如表，索引等）归属于各自相应的数据库。
+图1.1 数据库集簇的逻辑结构
+在PostgreSQL内部，所有的数据库对象都通过相应的 对象标识符（Object Identifiers, OID） 进行管理，这些标识符是无符号的4字节整型。数据库对象与相应OID之间的关系存储在相应的系统目录中，依具体的对象类型而异。 例如数据库和堆表对象的OID分别存储在pg_database和pg_class中，因此当你希望找出OID时，可以执行以下查询：
+sampledb=#SELECTdatname,oidFROMpg_databaseWHEREdatname=&#39;sampledb&#39;;datname|oid----------&#43;------- sampledb|16384(1row)sampledb=#SELECTrelname,oidFROMpg_classWHERErelname=&#39;sampletbl&#39;;relname|oid-----------&#43;------- sampletbl|18740(1row)1.2 数据库集簇的物理结构 数据库集簇在本质上就是一个文件目录，名曰 基础目录（base directory） ，包含着一系列子目录与文件。 执行 initdb 命令会在指定目录下创建基础目录从而初始化一个新的数据库集簇。 通常会将基础目录的路径配置到环境变量PGDATA中，但这并不是必须的。
+图1.2 展示了一个PostgreSQL数据库集簇的例子。 base子目录中的每一个子目录都对应一个数据库，数据库中每个表和索引都会在相应子目录下存储为（至少）一个文件；还有几个包含特定数据的子目录，以及配置文件。 虽然PostgreSQL支持表空间（Tablespace），但该术语的含义与其他RDBMS不同。 PostgreSQL中的表空间对应一个包含基础目录之外数据的目录。
+图1.2 数据库集簇示例
+后续小节将描述数据库集簇的布局，数据库的布局，表和索引对应的文件布局，以及PostgreSQL中表空间的布局。
+1.2.1 数据库集簇的布局 官方文档中描述了数据库集簇的布局。 表1.1中列出了主要的文件与子目录：
+表 1.1 基本目录下的数据库文件和子目录的布局（参考官方文档）
+   文件 描述     PG_VERSION 包含PostgreSQL主版本号   pg_hba."><meta itemprop="datePublished" content="2018-01-11T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-02-24T18:45:23+08:00" />
+<meta itemprop="wordCount" content="598">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="第一章 数据库的物理/逻辑结构"/>
+<meta name="twitter:description" content="第一章和第二章简单介绍了一些PostgreSQL的基础知识，有助于读者理解后续章节的内容。本章包括以下几个主题：
+ 数据库集簇（database cluster） 的逻辑结构 数据库集簇的物理结构 堆表（heap table） 文件的内部布局 从表中读写数据的方式  如果你已经熟悉这些内容，可以跳过本章。
+1.1 数据库集簇的逻辑结构 数据库集簇（database cluster） 是一组 数据库（database） 的集合，由一个PostgreSQL服务器管理。第一次听到这个定义也许会令人疑惑，PostgreSQL中的术语“数据库集簇”，并非 意味着“一组数据库服务器”。 一个PostgreSQL服务器只会在单机上运行并管理单个数据库集簇。
+图1.1展示了一个数据库集簇的逻辑结构。 数据库（database） 是 数据库对象（database objects） 的集合。 在关系型数据库理论中，数据库对象是用于存储或引用数据的数据结构。 （堆）表是一个典型的例子，还有更多种对象，例如索引，序列，视图，函数等。 在PostgreSQL中数据库本身也是数据库对象，并在逻辑上彼此分离。 所有其他的数据库对象（例如表，索引等）归属于各自相应的数据库。
+图1.1 数据库集簇的逻辑结构
+在PostgreSQL内部，所有的数据库对象都通过相应的 对象标识符（Object Identifiers, OID） 进行管理，这些标识符是无符号的4字节整型。数据库对象与相应OID之间的关系存储在相应的系统目录中，依具体的对象类型而异。 例如数据库和堆表对象的OID分别存储在pg_database和pg_class中，因此当你希望找出OID时，可以执行以下查询：
+sampledb=#SELECTdatname,oidFROMpg_databaseWHEREdatname=&#39;sampledb&#39;;datname|oid----------&#43;------- sampledb|16384(1row)sampledb=#SELECTrelname,oidFROMpg_classWHERErelname=&#39;sampletbl&#39;;relname|oid-----------&#43;------- sampletbl|18740(1row)1.2 数据库集簇的物理结构 数据库集簇在本质上就是一个文件目录，名曰 基础目录（base directory） ，包含着一系列子目录与文件。 执行 initdb 命令会在指定目录下创建基础目录从而初始化一个新的数据库集簇。 通常会将基础目录的路径配置到环境变量PGDATA中，但这并不是必须的。
+图1.2 展示了一个PostgreSQL数据库集簇的例子。 base子目录中的每一个子目录都对应一个数据库，数据库中每个表和索引都会在相应子目录下存储为（至少）一个文件；还有几个包含特定数据的子目录，以及配置文件。 虽然PostgreSQL支持表空间（Tablespace），但该术语的含义与其他RDBMS不同。 PostgreSQL中的表空间对应一个包含基础目录之外数据的目录。
+图1.2 数据库集簇示例
+后续小节将描述数据库集簇的布局，数据库的布局，表和索引对应的文件布局，以及PostgreSQL中表空间的布局。
+1.2.1 数据库集簇的布局 官方文档中描述了数据库集簇的布局。 表1.1中列出了主要的文件与子目录：
+表 1.1 基本目录下的数据库文件和子目录的布局（参考官方文档）
+   文件 描述     PG_VERSION 包含PostgreSQL主版本号   pg_hba."/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/docs/" ><span>文档</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">博客</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Repo</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">博客</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pg/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG &amp; Pigsty</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpg">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgjust-use-pg" href="/zh/blog/pg/just-use-pg/">技术极简主义：一切皆用Postgres</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgparadedb" href="/zh/blog/pg/paradedb/">PG生态新玩家：ParadeDB</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-scalability" href="/zh/blog/pg/pg-scalability/"> 令人惊叹的PostgreSQL可伸缩性</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-2024" href="/zh/blog/pg/pg-in-2024/">展望 PostgreSQL 的2024</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-convention" href="/zh/blog/pg/pg-convention/">PostgreSQL 规约（2024版）</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgferretdb" href="/zh/blog/pg/ferretdb/">FerretDB：假扮成MongoDB的PG</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpgsql-x-pigsty" href="/zh/blog/pg/pgsql-x-pigsty/">PGSQL x Pigsty: 数据库全能王</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgvector-json-pg" href="/zh/blog/pg/vector-json-pg/">向量是新的 JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-no1" href="/zh/blog/pg/pg-is-no1/">PostgreSQL：最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-performence" href="/zh/blog/pg/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-best" href="/zh/blog/pg/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpigsty-intro" href="/zh/blog/pg/pigsty-intro/">开箱即用的PG发行版：Pigsty</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-great" href="/zh/blog/pg/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-docker" href="/zh/blog/pg/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-good" href="/zh/blog/pg/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/db/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdb">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrethink" href="/zh/blog/db/rethink/">数据库老司机：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbbad-mysql" href="/zh/blog/db/bad-mysql/">MySQL正确性竟如此垃圾？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-in-k8s" href="/zh/blog/db/db-in-k8s/">数据库应该放入K8S里吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsvdb-is-dead" href="/zh/blog/db/svdb-is-dead/">专用向量数据库凉了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-choke" href="/zh/blog/db/db-choke/">数据库真被卡脖子了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrhel-compatibility" href="/zh/blog/db/rhel-compatibility/">EL系操作系统发行版哪家强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsovereign-dbos" href="/zh/blog/db/sovereign-dbos/">基础软件需要什么样的自主可控？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbpg-vs-mysql" href="/zh/blog/db/pg-vs-mysql/">MySQL vs PGSQL 直播闹剧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdemand-pyramid" href="/zh/blog/db/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdistributive-bullshit" href="/zh/blog/db/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbmicroservice-bad-idea" href="/zh/blog/db/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbreason-about-time" href="/zh/blog/db/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconcurrent-control" href="/zh/blog/db/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbblockchain" href="/zh/blog/db/blockchain/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconsistency" href="/zh/blog/db/consistency/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbwhy-learn-database" href="/zh/blog/db/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit" href="/zh/blog/cloud/cloud-exit/">云计算泥石流：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouduptime" href="/zh/blog/cloud/uptime/">云下高可用秘诀：拒绝复杂度自慰</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouds3" href="/zh/blog/cloud/s3/">扒皮云对象存储：从降本到杀猪</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit-faq" href="/zh/blog/cloud/cloud-exit-faq/">半年下云省千万，DHH下云FAQ</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsmile" href="/zh/blog/cloud/smile/">从降本增笑到真的降本增效</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudbonus" href="/zh/blog/cloud/bonus/">重新拿回计算机硬件的红利</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudaliyun" href="/zh/blog/cloud/aliyun/">阿里云史诗级故障非官方复盘</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcheap-ecs" href="/zh/blog/cloud/cheap-ecs/">薅阿里云羊毛，打造数字家园</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流：用数据解构公有云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：该放弃云计算了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudno-dba-bullshit" href="/zh/blog/cloud/no-dba-bullshit/">驳《再论为什么你不应该招DBA》</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudis-dba-good-job" href="/zh/blog/cloud/is-dba-good-job/">DBA还是一份好工作吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddrop-rds" href="/zh/blog/cloud/drop-rds/">云RDS：从删库到跑路</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddba-vs-rds" href="/zh/blog/cloud/dba-vs-rds/">DBA会被云淘汰吗？</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevllm-and-pgvector" href="/zh/blog/dev/llm-and-pgvector/">AI大模型与PGVector</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">高级模糊查询的实现</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">前后端通信线缆协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">事务隔离等级注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">CDC 变更数据捕获机理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">GeoIP 地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">触发器使用注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-convention" href="/zh/blog/dev/pg-convention/">PostgreSQL开发规约2018版</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化：GIS圈选</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划查询：GIS点找面</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">Distinct On 去除重复数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">用 Exclude 实现互斥约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfile_fdw" href="/zh/blog/dev/file_fdw/">FileFDW用例：读取OS信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">用触发器审计数据变化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">SQL实现ItemCF推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgss" href="/zh/blog/admin/pgss/">pg_stat_statements 宏观查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-filedump" href="/zh/blog/admin/pg-filedump/">如何用 pg_filedump 抢救数据？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintime-travel" href="/zh/blog/admin/time-travel/">故障档案：NTP/Patroni</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">在线修改主键列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标：错误延迟吞吐饱和</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库管理实体与命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminextension" href="/zh/blog/admin/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">常见复制拓扑方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">温备：使用pg_receivewal</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-dump-failure" href="/zh/blog/admin/pg-dump-failure/">故障档案：连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpage-corruption" href="/zh/blog/admin/page-corruption/">故障档案：数据页损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">关系膨胀的监控与治理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB 快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminxid-wrap-around" href="/zh/blog/admin/xid-wrap-around/">故障档案：XID回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsequence-overflow" href="/zh/blog/admin/sequence-overflow/">故障档案：序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmindownload-failure" href="/zh/blog/admin/download-failure/">故障档案：快慢不匀雪崩</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">备份恢复手段概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PG服务器日志常规配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">不停机迁移数据迁移基本原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">Wireshark抓包分析协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-tool" href="/zh/blog/admin/unix-tool/">Linux 常用统计 CLI 工具</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">源码编译安装 PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/kernel/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">PG 内核</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogkernel">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelpg-wal-page-seq" href="/zh/blog/kernel/pg-wal-page-seq/">PG先写脏页还是先写WAL？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogkernelch1" href="/zh/blog/kernel/ch1/">第一章 数据库的物理/逻辑结构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch2" href="/zh/blog/kernel/ch2/">第二章 进程和内存架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch3" href="/zh/blog/kernel/ch3/">第三章 查询处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch4" href="/zh/blog/kernel/ch4/">第四章 外部数据包装器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch5" href="/zh/blog/kernel/ch5/">第五章 并发控制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch6" href="/zh/blog/kernel/ch6/">第六章 垃圾清理过程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch7" href="/zh/blog/kernel/ch7/">第七章 堆内元组与仅索引扫描</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch8" href="/zh/blog/kernel/ch8/">第八章 缓冲区管理器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch9" href="/zh/blog/kernel/ch9/">第九章 预写式日志</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch10" href="/zh/blog/kernel/ch10/">第十章 基础备份与时间点恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch11" href="/zh/blog/kernel/ch11/">第十一章 流复制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelwal-and-checkpoint" href="/zh/blog/kernel/wal-and-checkpoint/">WAL与检查点概述</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本发布</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/kernel/ch1.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/kernel/ch1.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/kernel/ch1.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e7%ac%ac%e4%b8%80%e7%ab%a0%20%e6%95%b0%e6%8d%ae%e5%ba%93%e7%9a%84%e7%89%a9%e7%90%86/%e9%80%bb%e8%be%91%e7%bb%93%e6%9e%84" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/kernel/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#11-数据库集簇的逻辑结构">1.1 数据库集簇的逻辑结构</a></li>
+    <li><a href="#12-数据库集簇的物理结构">1.2 数据库集簇的物理结构</a>
+      <ul>
+        <li><a href="#121-数据库集簇的布局">1.2.1 数据库集簇的布局</a></li>
+        <li><a href="#122-数据库布局">1.2.2 数据库布局</a></li>
+        <li><a href="#123-表与索引相关文件的布局">1.2.3 表与索引相关文件的布局</a></li>
+        <li><a href="#124-表空间">1.2.4 表空间</a></li>
+      </ul>
+    </li>
+    <li><a href="#13-堆表文件的内部布局">1.3 堆表文件的内部布局</a></li>
+    <li><a href="#14-读写元组的方式">1.4 读写元组的方式</a>
+      <ul>
+        <li><a href="#141-写入堆元组">1.4.1 写入堆元组</a></li>
+        <li><a href="#142-读取堆元组">1.4.2 读取堆元组</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>第一章 数据库的物理/逻辑结构</h1>
+	
+	<div class="td-byline mb-4">
+		著： <b><a href="https://www.interdb.jp/pg/">Hironobu SUZUKI</a> ，译者：<a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2018-01-11" class="text-muted">2018-01-11</time>
+	</div>
+	
+	<p>第一章和第二章简单介绍了一些PostgreSQL的基础知识，有助于读者理解后续章节的内容。本章包括以下几个主题：</p>
+<ul>
+<li><strong>数据库集簇（database cluster）</strong> 的逻辑结构</li>
+<li>数据库集簇的物理结构</li>
+<li><strong>堆表（heap table）</strong> 文件的内部布局</li>
+<li>从表中读写数据的方式</li>
+</ul>
+<p>如果你已经熟悉这些内容，可以跳过本章。</p>
+<h2 id="11-数据库集簇的逻辑结构">1.1 数据库集簇的逻辑结构</h2>
+<p><strong>数据库集簇（database cluster）</strong> 是一组 <strong>数据库（database）</strong> 的集合，由一个PostgreSQL服务器管理。第一次听到这个定义也许会令人疑惑，PostgreSQL中的术语“数据库集簇”，<strong>并非</strong> 意味着“一组数据库服务器”。 一个PostgreSQL服务器只会在单机上运行并管理单个数据库集簇。</p>
+<p>图1.1展示了一个数据库集簇的逻辑结构。 <strong>数据库（database）</strong> 是 <strong>数据库对象（database objects）</strong> 的集合。 在关系型数据库理论中，数据库对象是用于存储或引用数据的数据结构。 （堆）表是一个典型的例子，还有更多种对象，例如索引，序列，视图，函数等。 在PostgreSQL中数据库本身也是数据库对象，并在逻辑上彼此分离。 所有其他的数据库对象（例如表，索引等）归属于各自相应的数据库。</p>
+<p><strong>图1.1 数据库集簇的逻辑结构</strong></p>
+<p><img src="/img/kernel/fig-1-01.png" alt=""></p>
+<p>在PostgreSQL内部，所有的数据库对象都通过相应的 <strong>对象标识符（Object Identifiers, OID）</strong> 进行管理，这些标识符是无符号的4字节整型。数据库对象与相应OID之间的关系存储在相应的<a href="https://www.postgresql.org/docs/current/static/catalogs.html"><strong>系统目录</strong></a>中，依具体的对象类型而异。 例如数据库和堆表对象的OID分别存储在<code>pg_database</code>和<code>pg_class</code>中，因此当你希望找出OID时，可以执行以下查询：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">datname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_database</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">datname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;sampledb&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">datname</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">  
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">----------+-------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampledb</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16384</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;sampletbl&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">  
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-----------+-------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">18740</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h2 id="12-数据库集簇的物理结构">1.2 数据库集簇的物理结构</h2>
+<p>数据库集簇在本质上就是一个文件目录，名曰 <strong>基础目录（base directory）</strong> ，包含着一系列子目录与文件。 执行 <a href="https://www.postgresql.org/docs/current/static/app-initdb.html"><code>initdb</code></a> 命令会在指定目录下创建基础目录从而初始化一个新的数据库集簇。 通常会将基础目录的路径配置到环境变量<code>PGDATA</code>中，但这并不是必须的。</p>
+<p>图1.2 展示了一个PostgreSQL数据库集簇的例子。 <code>base</code>子目录中的每一个子目录都对应一个数据库，数据库中每个表和索引都会在相应子目录下存储为（至少）一个文件；还有几个包含特定数据的子目录，以及配置文件。 虽然PostgreSQL支持<strong>表空间（Tablespace）</strong>，但该术语的含义与其他RDBMS不同。 PostgreSQL中的表空间对应一个包含基础目录之外数据的目录。</p>
+<p><strong>图1.2 数据库集簇示例</strong></p>
+<p><img src="/img/kernel/fig-1-02.png" alt=""></p>
+<p>后续小节将描述数据库集簇的布局，数据库的布局，表和索引对应的文件布局，以及PostgreSQL中表空间的布局。</p>
+<h3 id="121-数据库集簇的布局">1.2.1 数据库集簇的布局</h3>
+<p><a href="https://www.postgresql.org/docs/current/static/storage-file-layout.html">官方文档</a>中描述了数据库集簇的布局。 表1.1中列出了主要的文件与子目录：</p>
+<p><strong>表 1.1 基本目录下的数据库文件和子目录的布局（参考官方文档）</strong></p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PG_VERSION</code></td>
+<td>包含PostgreSQL主版本号</td>
+</tr>
+<tr>
+<td><code>pg_hba.conf</code></td>
+<td>控制PosgreSQL客户端认证</td>
+</tr>
+<tr>
+<td><code>pg_ident.conf</code></td>
+<td>控制PostgreSQL用户名映射</td>
+</tr>
+<tr>
+<td><code>postgresql.conf</code></td>
+<td>配置参数</td>
+</tr>
+<tr>
+<td><code>postgresql.auto.conf</code></td>
+<td>存储使用<code>ALTER SYSTEM</code>修改的配置参数（9.4或更新版本）</td>
+</tr>
+<tr>
+<td><code>postmaster.opts</code></td>
+<td>记录服务器上次启动的命令行选项</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>子目录</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base/</code></td>
+<td>每个数据库对应的子目录存储于此</td>
+</tr>
+<tr>
+<td><code>global/</code></td>
+<td>数据库集簇范畴的表（例如<code>pg_database</code>），以及<code>pg_control</code>文件。</td>
+</tr>
+<tr>
+<td><code>pg_commit_ts/</code></td>
+<td>事务提交的时间戳数据（9.5及更新版本）。</td>
+</tr>
+<tr>
+<td><code>pg_clog/ (9.6-)</code></td>
+<td>事务提交状态数据（9.6及更老版本），在版本10中被重命名为<code>pg_xact</code>。CLOG将在<a href="ch5.md">5.4节</a>中描述</td>
+</tr>
+<tr>
+<td><code>pg_dynshmem/</code></td>
+<td>动态共享内存子系统中使用的文件（9.4或更新版本）。</td>
+</tr>
+<tr>
+<td><code>pg_logical/</code></td>
+<td>逻辑解码的状态数据（9.4或更新版本）。</td>
+</tr>
+<tr>
+<td><code>pg_multixact/</code></td>
+<td>多事务状态数据</td>
+</tr>
+<tr>
+<td><code>pg_notify/</code></td>
+<td><code>LISTEN</code>/<code>NOTIFY</code>状态数据</td>
+</tr>
+<tr>
+<td><code>pg_repslot/</code></td>
+<td>复制槽数据（9.4或更新版本）。</td>
+</tr>
+<tr>
+<td><code>pg_serial/</code></td>
+<td>已提交的可串行化事务相关信息（9.1或更新版本）</td>
+</tr>
+<tr>
+<td><code>pg_snapshots/</code></td>
+<td>导出快照（9.2或更新版本）。 PostgreSQL函数<code>pg_export_snapshot</code>在此子目录中创建快照信息文件。</td>
+</tr>
+<tr>
+<td><code>pg_stat/</code></td>
+<td>统计子系统的永久文件</td>
+</tr>
+<tr>
+<td><code>pg_stat_tmp/</code></td>
+<td>统计子系统的临时文件</td>
+</tr>
+<tr>
+<td><code>pg_subtrans/</code></td>
+<td>子事务状态数据</td>
+</tr>
+<tr>
+<td><code>pg_tblspc/</code></td>
+<td>指向表空间的符号链接</td>
+</tr>
+<tr>
+<td><code>pg_twophase/</code></td>
+<td>两阶段事务（prepared transactions）的状态文件</td>
+</tr>
+<tr>
+<td><code>pg_wal/ (10+)</code></td>
+<td>WAL（ Write Ahead Logging）段文件（10或更新版本），从<code>pg_xlog</code>重命名而来。</td>
+</tr>
+<tr>
+<td><code>pg_xact/ (10+)</code></td>
+<td>事务提交状态数据，（10或更新版本），从<code>pg_clog</code>重命名而来。CLOG将在<a href="ch5.md">5.4节</a>中描述。</td>
+</tr>
+<tr>
+<td>pg_xlog/ (9.6-)</td>
+<td><strong>WAL（Write Ahead Logging）</strong> 段文件（9.6及更老版本），它在版本10中被重命名为<code>pg_wal</code>。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="122-数据库布局">1.2.2 数据库布局</h3>
+<p>一个数据库与<code>base</code>子目录下的一个子目录对应；且该子目录的名称与相应数据库的OID相同。 例如当数据库<code>sampledb</code>的OID为16384时，它对应的子目录名称即为16384。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ <span style="color:#204a87">cd</span> <span style="color:#000">$PGDATA</span>
+</span></span><span style="display:flex;"><span>$ ls -ld base/16384
+</span></span><span style="display:flex;"><span>drwx------  <span style="color:#0000cf;font-weight:bold">213</span> postgres postgres  <span style="color:#0000cf;font-weight:bold">7242</span>  <span style="color:#0000cf;font-weight:bold">8</span> <span style="color:#0000cf;font-weight:bold">26</span> 16:33 <span style="color:#0000cf;font-weight:bold">16384</span>
+</span></span></code></pre></div><h3 id="123-表与索引相关文件的布局">1.2.3 表与索引相关文件的布局</h3>
+<p>每个小于1GB的表或索引都在相应的数据库目录中存储为单个文件。在数据库内部，表和索引作为数据库对象是通过OID来管理的，而这些数据文件则由变量<code>relfilenode</code>管理。 表和索引的<code>relfilenode</code>值通常与其OID一致，但也有例外，下面将详细展开。</p>
+<p>让我们看一看表<code>sampletbl</code>的<code>oid</code>和<code>relfilenode</code>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relfilenode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;sampletbl&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relfilenode</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-----------+-------+-------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">18740</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#0000cf;font-weight:bold">18740</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>从上面的结果可以看出<code>oid</code>和<code>relfilenode</code>值相等。还可以看到表<code>sampletbl</code>的数据文件路径是<code>base/16384/18740</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ <span style="color:#204a87">cd</span> <span style="color:#000">$PGDATA</span>
+</span></span><span style="display:flex;"><span>$ ls -la base/16384/18740
+</span></span><span style="display:flex;"><span>-rw------- <span style="color:#0000cf;font-weight:bold">1</span> postgres postgres <span style="color:#0000cf;font-weight:bold">8192</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:21 base/16384/18740
+</span></span></code></pre></div><p>表和索引的<code>relfilenode</code>值会被一些命令（例如<code>TRUNCATE</code>，<code>REINDEX</code>，<code>CLUSTER</code>）所改变。 例如对表 <code>sampletbl</code>执行<code>TRUNCATE</code>，PostgreSQL会为表分配一个新的<code>relfilenode</code>（18812），删除旧的数据文件（18740），并创建一个新的数据文件（18812）。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TRUNCATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">TRUNCATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relfilenode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_class</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;sampletbl&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">relname</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">oid</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relfilenode</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-----------+-------+-------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">18740</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">       </span><span style="color:#0000cf;font-weight:bold">18812</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><blockquote>
+<p>在9.0或更高版本中，内建函数<code>pg_relation_filepath</code>能够根据OID或名称返回关系对应的文件路径，非常实用。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_relation_filepath</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;sampletbl&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">pg_relation_filepath</span><span style="color:#f8f8f8;text-decoration:underline"> 
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">----------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16384</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">18812</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div></blockquote>
+<p>当表和索引的文件大小超过1GB时，PostgreSQL会创建并使用一个名为<code>relfilenode.1</code>的新文件。如果新文件也填满了，则会创建下一个名为<code>relfilenode.2</code>的新文件，依此类推。</p>
+<blockquote>
+<p>译者注：数据库系统中的 <strong>表（Table）</strong> 与关系代数中的 <strong>关系（Relation）</strong> 关系紧密但又不尽相同。在PostgreSQL中，表，索引，TOAST表都归类为关系。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#a40000">$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">cd</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">$</span><span style="color:#000">PGDATA</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ls</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">la</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">h</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">base</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16384</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">19427</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">rw</span><span style="color:#8f5902;font-style:italic">------- 1 postgres postgres 1.0G  Apr  21 11:16 data/base/16384/19427
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">rw</span><span style="color:#8f5902;font-style:italic">------- 1 postgres postgres  45M  Apr  21 11:20 data/base/16384/19427.1
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><blockquote>
+<p>在构建PostgreSQL时，可以使用配置选项<code>--with-segsize</code>更改表和索引的最大文件大小。</p>
+</blockquote>
+<p>仔细观察数据库子目录就会发现，每个表都有两个与之相关联的文件，后缀分别为<code>_fsm</code>和<code>_vm</code>。这些实际上是<strong>空闲空间映射（free space map）<strong>和</strong>可见性映射（visibility map）</strong> 文件，分别存储了表文件每个页面上的空闲空间信息与可见性信息（更多细节见<a href="ch5.md">第5.3.4节</a>和<a href="ch6.md">第6.2节</a>）。索引没有可见性映射文件，只有空闲空间映射文件。</p>
+<p>一个具体的示例如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ <span style="color:#204a87">cd</span> <span style="color:#000">$PGDATA</span>
+</span></span><span style="display:flex;"><span>$ ls -la base/16384/18751*
+</span></span><span style="display:flex;"><span>-rw------- <span style="color:#0000cf;font-weight:bold">1</span> postgres postgres  <span style="color:#0000cf;font-weight:bold">8192</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:21 base/16384/18751
+</span></span><span style="display:flex;"><span>-rw------- <span style="color:#0000cf;font-weight:bold">1</span> postgres postgres <span style="color:#0000cf;font-weight:bold">24576</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:18 base/16384/18751_fsm
+</span></span><span style="display:flex;"><span>-rw------- <span style="color:#0000cf;font-weight:bold">1</span> postgres postgres  <span style="color:#0000cf;font-weight:bold">8192</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:18 base/16384/18751_vm
+</span></span></code></pre></div><p>在数据库系统内部，这些文件（主体数据文件，空闲空间映射文件，可见性映射文件等）也被称为相应关系的 <strong>分支（fork）</strong> ；空闲空间映射是表/索引数据文件的第一个分支（分支编号为1），可见性映射表是数据文件的第二个分支（分支编号为2），数据文件的分支编号为0。</p>
+<blockquote>
+<p>译者注：每个 <strong>关系（relation）</strong> 可能会有四种分支，分支编号分别为0，1，2，3，0号分支<code>main</code>为关系数据文件本体，1号分支<code>fsm</code>保存了<code>main</code>分支中空闲空间的信息，2号分支<code>vm</code>保存了<code>main</code>分支中可见性的信息，3号分支<code>init</code>是很少见的特殊分支，通常用于不被日志记录（unlogged）的表与索引。</p>
+<p>每个分支都会被存储为磁盘上的一到多个文件：PostgreSQL会将过大的分支文件切分为若干个段，以免文件的尺寸超过某些特定文件系统允许的大小，也便于一些归档工具进行并发复制，默认的段大小为1GB。</p>
+</blockquote>
+<h3 id="124-表空间">1.2.4 表空间</h3>
+<p>PostgreSQL中的 <strong>表空间（Tablespace）</strong> 是基础目录之外的附加数据区域。 在8.0版本中引入了该功能。</p>
+<p>图1.3展示了表空间的内部布局，以及表空间与主数据区域的关系。</p>
+<p><strong>图 1.3 数据库集簇的表空间</strong></p>
+<p><img src="/img/kernel/fig-1-03.png" alt=""></p>
+<p>执行<a href="https://www.postgresql.org/docs/current/static/sql-createtablespace.html"><code>CREATE TABLESPACE</code></a>语句会在指定的目录下创建表空间。而在该目录下还会创建版本特定的子目录（例如<code>PG_9.4_201409291</code>）。版本特定的命名方式为：</p>
+<pre tabindex="0"><code>PG_主版本号_目录版本号
+</code></pre><p>举个例子，如果在<code>/home/postgres/tblspc</code>中创建一个表空间<code>new_tblspc</code>，其oid为16386，则会在表空间下创建一个名如<code>PG_9.4_201409291</code>的子目录。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -l /home/postgres/tblspc/
+</span></span><span style="display:flex;"><span>total <span style="color:#0000cf;font-weight:bold">4</span>
+</span></span><span style="display:flex;"><span>drwx------ <span style="color:#0000cf;font-weight:bold">2</span> postgres postgres <span style="color:#0000cf;font-weight:bold">4096</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:08 PG_9.4_201409291
+</span></span></code></pre></div><p>表空间目录通过<code>pg_tblspc</code>子目录中的符号链接寻址，链接名称与表空间的OID值相同。</p>
+<pre tabindex="0"><code>$ ls -l $PGDATA/pg_tblspc/
+total 0
+lrwxrwxrwx 1 postgres postgres 21 Apr 21 10:08 16386 -&gt; /home/postgres/tblspc
+</code></pre><p>如果在该表空间下创建新的数据库（OID为16387），则会在版本特定的子目录下创建相应目录。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ ls -l /home/postgres/tblspc/PG_9.4_201409291/
+</span></span><span style="display:flex;"><span>total <span style="color:#0000cf;font-weight:bold">4</span>
+</span></span><span style="display:flex;"><span>drwx------ <span style="color:#0000cf;font-weight:bold">2</span> postgres postgres <span style="color:#0000cf;font-weight:bold">4096</span> Apr <span style="color:#0000cf;font-weight:bold">21</span> 10:10 <span style="color:#0000cf;font-weight:bold">16387</span>
+</span></span></code></pre></div><p>如果在该表空间内创建一个新表，但新表所属的数据库却创建在基础目录下，那么PG会首先在版本特定的子目录下创建名称与现有数据库OID相同的新目录，然后将新表文件放置在刚创建的目录下。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">newtbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(.....)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">TABLESPACE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_tblspc</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_relation_filepath</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;newtbl&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#000">pg_relation_filepath</span><span style="color:#f8f8f8;text-decoration:underline">             
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">----------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_tblspc</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16386</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">PG_9</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000">_201409291</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">16384</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#0000cf;font-weight:bold">18894</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h2 id="13-堆表文件的内部布局">1.3 堆表文件的内部布局</h2>
+<p>在数据文件（堆表，索引，也包括空闲空间映射和可见性映射）内部，它被划分为固定长度的<strong>页（pages）</strong>，或曰 <strong>区块（blocks）</strong>，大小默认为8192字节（8KB）。 每个文件中的页从0开始按顺序编号，这些数字称为<strong>区块号（block numbers）</strong>。 如果文件已填满，PostgreSQL通过在文件末尾追加一个新的空页来增长文件。</p>
+<p>页面内部的布局取决于数据文件的类型。本节会描述表的页面布局，因为理解接下来的几章需要这些知识。</p>
+<p><strong>图 1.4. 堆表文件的页面布局</strong></p>
+<p><img src="/img/kernel/fig-1-04.png" alt=""></p>
+<p>表的页面包含了三种类型的数据：</p>
+<ol>
+<li>
+<p><strong>堆元组（heap tuples）</strong> —— 堆元组就是数据记录本身。它们从页面底部开始依序堆叠。<a href="ch5.md">第5.2节</a>与<a href="ch9.md">第9章</a>会描述元组的内部结构，这一知识对于理解PostgreSQL并发控制与WAL机制是必须的。</p>
+</li>
+<li>
+<p><strong>行指针（line pointer）</strong> —— 每个行指针占4个字节，保存着指向堆元组的指针。它们也被称为<strong>项目指针（item pointer）</strong>。行指针简单地组织为一个数组，扮演了元组索引的角色。每个索引项从1开始依次编号，称为<strong>偏移号（offset number）</strong>。当向页面中添加新元组时，一个相应的新行指针也会被放入数组中，并指向新添加的元组。</p>
+</li>
+<li>
+<p><strong>首部数据（header data）</strong>  —— 页面的起始位置分配了由结构<code>PageHeaderData</code>定义的首部数据。它的大小为24个字节，包含关于页面的元数据。该结构的主要成员变量为：</p>
+<ul>
+<li><code>pd_lsn</code> —— 本页面最近一次变更所写入XLOG记录对应的LSN。它是一个8字节无符号整数，与WAL机制相关，<a href="ch9.md">第9章</a>将详细展开。</li>
+<li><code>pd_checksum</code> —— 本页面的校验和值。（注意只有在9.3或更高版本才有此变量，早期版中该字段用于存储页面的时间线标识）</li>
+<li><code>pd_lower</code>，<code>pd_upper</code> —— <code>pd_lower</code>指向行指针的末尾，<code>pd_upper</code>指向最新堆元组的起始位置。</li>
+<li><code>pd_special</code> —— 在索引页中会用到该字段。在堆表页中它指向页尾。（在索引页中它指向特殊空间的起始位置，特殊空间是仅由索引使用的特殊数据区域，包含特定的数据，具体内容依索引的类型而定，如B树，GiST，GiN等。</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* @src/include/storage/bufpage.h */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 磁盘页面布局
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 对任何页面都适用的通用空间管理信息
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_lsn		- 本页面最近变更对应xlog记录的标识。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_checksum - 页面校验和
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_flags	- 标记位
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_lower	- 空闲空间开始位置
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_upper	- 空闲空间结束位置
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_special	- 特殊空间开始位置
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_pagesize_version - 页面的大小，以及页面布局的版本号
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		pd_prune_xid - 本页面中可以修剪的最老的元组中的XID.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 缓冲管理器使用LSN来强制实施WAL的基本规则：&#34;WAL需先于数据写入&#34;。直到xlog刷盘位置超过
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 本页面的LSN之前，不允许将缓冲区的脏页刷入磁盘。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * pd_checksum 存储着页面的校验和，如果本页面配置了校验。0是一个合法的校验和值。如果页面
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 没有使用校验和，我们就不会设置这个字段的值；通常这意味着该字段值为0，但如果数据库是从早于
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 9.3版本从 pg_upgrade升级而来，也可能会出现非零的值。因为那时候这块地方用于存储页面最后
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 更新时的时间线标识。 注意，并没有标识告诉你页面的标识符到底是有效还是无效的，也没有与之关
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 联的标记为。这是特意设计成这样的，从而避免了需要依赖页面的具体内容来决定是否校验页面本身。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * pd_prune_xid是一个提示字段，用于帮助确认剪枝是否有用。目前对于索引页没用。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 页面版本编号与页面尺寸被打包成了单个uint16字段，这是有历史原因的：在PostgreSQL7.3之前
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 并没有页面版本编号这个概念，这样做能让我们假装7.3之前的版本的页面版本编号为0。我们约束页面
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 的尺寸必须为256的倍数，留下低8位用于页面版本编号。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 最小的可行页面大小可能是64字节，能放下页的首部，空闲空间，以及一个最小的元组。当然在实践中
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 肯定要大得多(默认为8192字节)，所以页面大小必需是256的倍数并不是一个重要限制。而在另一端，
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 我们最大只能支持32KB的页面，因为 lp_off/lp_len字段都是15bit。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">typedef</span> <span style="color:#204a87;font-weight:bold">struct</span> <span style="color:#000">PageHeaderData</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">PageXLogRecPtr</span> 	<span style="color:#000">pd_lsn</span><span style="color:#000;font-weight:bold">;</span>			<span style="color:#8f5902;font-style:italic">/* 最近应用至本页面XLog记录的LSN */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">uint16</span>			<span style="color:#000">pd_checksum</span><span style="color:#000;font-weight:bold">;</span>	<span style="color:#8f5902;font-style:italic">/* 校验和 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">uint16</span>		  	<span style="color:#000">pd_flags</span><span style="color:#000;font-weight:bold">;</span>		<span style="color:#8f5902;font-style:italic">/* 标记位，详情见下 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">LocationIndex</span> 	<span style="color:#000">pd_lower</span><span style="color:#000;font-weight:bold">;</span>		<span style="color:#8f5902;font-style:italic">/* 空闲空间起始位置 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">LocationIndex</span> 	<span style="color:#000">pd_upper</span><span style="color:#000;font-weight:bold">;</span>		<span style="color:#8f5902;font-style:italic">/* 空闲空间终止位置 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">LocationIndex</span> 	<span style="color:#000">pd_special</span><span style="color:#000;font-weight:bold">;</span>		<span style="color:#8f5902;font-style:italic">/* 特殊用途空间的开始位置 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">uint16</span>		  	<span style="color:#000">pd_pagesize_version</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">TransactionId</span> 	<span style="color:#000">pd_prune_xid</span><span style="color:#000;font-weight:bold">;</span> 	<span style="color:#8f5902;font-style:italic">/* 最老的可修剪XID, 如果没有设置为0 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">ItemIdData</span>		<span style="color:#000">pd_linp</span><span style="color:#000;font-weight:bold">[</span><span style="color:#000">FLEXIBLE_ARRAY_MEMBER</span><span style="color:#000;font-weight:bold">];</span> <span style="color:#8f5902;font-style:italic">/* 行指针的数组 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> <span style="color:#000">PageHeaderData</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* 缓冲区页中的项目指针(item pointer)，也被称为行指针(line pointer)。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 在某些情况下，项目指针处于 “使用中”的状态，但在本页中没有任何相关联的存储区域。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * 按照惯例，lp_len == 0 表示该行指针没有关联存储。独立于其lp_flags的状态. 
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">typedef</span> <span style="color:#204a87;font-weight:bold">struct</span> <span style="color:#000">ItemIdData</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">unsigned</span>	<span style="color:#f57900">lp_off</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">15</span><span style="color:#000;font-weight:bold">,</span>		<span style="color:#8f5902;font-style:italic">/* 元组偏移量 (相对页面起始处) */</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#f57900">lp_flags</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">,</span>		<span style="color:#8f5902;font-style:italic">/* 行指针的状态，见下 */</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#f57900">lp_len</span><span style="color:#000;font-weight:bold">:</span><span style="color:#0000cf;font-weight:bold">15</span><span style="color:#000;font-weight:bold">;</span>		<span style="color:#8f5902;font-style:italic">/* 元组的长度，以字节计 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span> <span style="color:#000">ItemIdData</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* lp_flags有下列可能的状态，LP_UNUSED的行指针可以立即重用，而其他状态的不行。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#define LP_UNUSED		0		</span><span style="color:#8f5902;font-style:italic">/* unused (lp_len必需始终为0) */</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#define LP_NORMAL		1		</span><span style="color:#8f5902;font-style:italic">/* used (lp_len必需始终&gt;0) */</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#define LP_REDIRECT		2		</span><span style="color:#8f5902;font-style:italic">/* HOT 重定向 (lp_len必需为0) */</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#define LP_DEAD			3		</span><span style="color:#8f5902;font-style:italic">/* 死元组，有没有对应的存储尚未可知 */</span><span style="color:#8f5902;font-style:italic">
+</span></span></span></code></pre></div></li>
+</ol>
+<p>行指针的末尾与最新元组起始位置之间的空余空间称为<strong>空闲空间（free space）<strong>或</strong>空洞（hole）</strong>。</p>
+<p>为了识别表中的元组，数据库内部会使用<strong>元组标识符（tuple identifier, TID）</strong>。TID由一对值组成：元组所属页面的<strong>区块号</strong>，及指向元组的行指针的<strong>偏移号</strong>。TID的一种典型用途是索引，更多细节参见<a href="ch1.md">第1.4.2节</a>。</p>
+<blockquote>
+<p>结构体<code>PageHeaderData</code>定义于<a href="https://github.com/postgres/postgres/blob/master/src/include/storage/bufpage.h"><code>src/include/storage/bufpage.h</code></a>中。</p>
+</blockquote>
+<p>此外，大小超过约2KB（8KB的四分之一）的堆元组会使用一种称为 <strong>TOAST（The Oversized-Attribute Storage Technique，超大属性存储技术）</strong> 的方法来存储与管理。详情请参阅<a href="https://www.postgresql.org/docs/current/static/storage-toast.html">PostgreSQL文档</a>。</p>
+<h2 id="14-读写元组的方式">1.4 读写元组的方式</h2>
+<p>本章的最后将描述读取与写入堆元组的方式。</p>
+<h3 id="141-写入堆元组">1.4.1 写入堆元组</h3>
+<p>让我们假设有一个表，仅由一个页面组成，且该页面只包含一个堆元组。 此页面的<code>pd_lower</code>指向第一个行指针，而该行指针和<code>pd_upper</code>都指向第一个堆元组。 如图1.5(a)所示。</p>
+<p>当第二个元组被插入时，它会被放在第一个元组之后。第二个行指针被插入到第一个行指针的后面，并指向第二个元组。 <code>pd_lower</code>更改为指向第二个行指针，<code>pd_upper</code>更改为指向第二个堆元组，如图1.5(b)。 页面内的首部数据（例如<code>pd_lsn</code>，<code>pg_checksum</code>，<code>pg_flag</code>）也会被改写为适当的值，细节在<a href="ch5.md">第5.3节</a>和<a href="ch9.md">第9章</a>中描述。</p>
+<p><strong>图1.5 堆元组的写入</strong></p>
+<p><img src="/img/kernel/fig-1-05.png" alt=""></p>
+<h3 id="142-读取堆元组">1.4.2 读取堆元组</h3>
+<p>这里简述两种典型的访问方式：顺序扫描与B树索引扫描：</p>
+<ul>
+<li><strong>顺序扫描</strong> —— 通过扫描每一页中的行指针，依序读取所有页面中的所有元组，如图1.6(a)。</li>
+<li><strong>B树索引扫描</strong> —— 索引文件包含着索引元组，索引元组由一个键值对组成，键为被索引的列值，值为目标堆元组的TID。进行索引查询时，首先使用键进行查找，如果找到了对应的索引元组，PostgreSQL就会根据相应值中的TID来读取对应的堆元组 （使用B树索引找到索引元组的方法请参考相关资料，这一部分属于数据库系统的通用知识，限于篇幅这里不再详细展开）。例如在图1.6(b)中，所获索引元组中TID的值为（区块号 = 7，偏移号 = 2）， 这意味着目标堆元组是表中第7页的第2个元组，因而PostgreSQL可以直接读取所需的堆元组，而避免对页面做不必要的扫描。</li>
+</ul>
+<p><strong>图 1.6 顺序扫描和索引扫描</strong></p>
+<p><img src="/img/kernel/fig-1-06.png" alt=""></p>
+<blockquote>
+<p>PostgreSQL还支持<strong>TID扫描</strong>，<strong>位图扫描（<a href="https://wiki.postgresql.org/wiki/Bitmap_Indexes">Bitmap-Scan</a>）<strong>和</strong>仅索引扫描（Index-Only-Scan）</strong>。</p>
+<p>TID扫描是一种通过使用所需元组的TID直接访问元组的方法。 例如要在表中找到第0个页面中的第1个元组，可以执行以下查询：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">data</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;(0,1)&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#204a87;font-weight:bold">data</span><span style="color:#f8f8f8;text-decoration:underline">    
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-------+-----------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">AAAAAAAAA</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">row</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">sampledb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXPLAIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">data</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;(0,1)&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">                        </span><span style="color:#000">QUERY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PLAN</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">----------------------------------------------------------
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Tid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Scan</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">on</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sampletbl</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">cost</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">00</span><span style="color:#000;font-weight:bold">..</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">11</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">rows</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">width</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">38</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">   </span><span style="color:#000">TID</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Cond</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ctid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;(0,1)&#39;</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">tid</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>仅索引扫描将在<a href="ch7.md">第7章</a>中详细介绍。</p>
+</blockquote>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/kernel/ch2/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/kernel/pg-wal-page-seq/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,1872 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>我们能从阿里云全球故障中学到什么? | Pigsty</title><meta property="og:title" content="我们能从阿里云全球故障中学到什么?" />
+<meta property="og:description" content="阿里云双十一后的史诗级全球故障创下行业记录，我们该如何评价看待这场故障，又可以从中学到什么经验与教训呢？" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/cloud/aliyun/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2023-11-13T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-02-24T16:38:50+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="我们能从阿里云全球故障中学到什么?">
+<meta itemprop="description" content="阿里云双十一后的史诗级全球故障创下行业记录，我们该如何评价看待这场故障，又可以从中学到什么经验与教训呢？"><meta itemprop="datePublished" content="2023-11-13T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-02-24T16:38:50+08:00" />
+<meta itemprop="wordCount" content="318">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="我们能从阿里云全球故障中学到什么?"/>
+<meta name="twitter:description" content="阿里云双十一后的史诗级全球故障创下行业记录，我们该如何评价看待这场故障，又可以从中学到什么经验与教训呢？"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/docs/" ><span>文档</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">博客</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Repo</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">博客</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pg/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG &amp; Pigsty</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpg">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgjust-use-pg" href="/zh/blog/pg/just-use-pg/">技术极简主义：一切皆用Postgres</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgparadedb" href="/zh/blog/pg/paradedb/">PG生态新玩家：ParadeDB</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-scalability" href="/zh/blog/pg/pg-scalability/"> 令人惊叹的PostgreSQL可伸缩性</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-2024" href="/zh/blog/pg/pg-in-2024/">展望 PostgreSQL 的2024</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-convention" href="/zh/blog/pg/pg-convention/">PostgreSQL 规约（2024版）</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgferretdb" href="/zh/blog/pg/ferretdb/">FerretDB：假扮成MongoDB的PG</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpgsql-x-pigsty" href="/zh/blog/pg/pgsql-x-pigsty/">PGSQL x Pigsty: 数据库全能王</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgvector-json-pg" href="/zh/blog/pg/vector-json-pg/">向量是新的 JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-no1" href="/zh/blog/pg/pg-is-no1/">PostgreSQL：最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-performence" href="/zh/blog/pg/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-best" href="/zh/blog/pg/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpigsty-intro" href="/zh/blog/pg/pigsty-intro/">开箱即用的PG发行版：Pigsty</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-great" href="/zh/blog/pg/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-docker" href="/zh/blog/pg/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-good" href="/zh/blog/pg/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/db/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdb">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrethink" href="/zh/blog/db/rethink/">数据库老司机：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbbad-mysql" href="/zh/blog/db/bad-mysql/">MySQL正确性竟如此垃圾？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-in-k8s" href="/zh/blog/db/db-in-k8s/">数据库应该放入K8S里吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsvdb-is-dead" href="/zh/blog/db/svdb-is-dead/">专用向量数据库凉了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-choke" href="/zh/blog/db/db-choke/">数据库真被卡脖子了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrhel-compatibility" href="/zh/blog/db/rhel-compatibility/">EL系操作系统发行版哪家强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsovereign-dbos" href="/zh/blog/db/sovereign-dbos/">基础软件需要什么样的自主可控？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbpg-vs-mysql" href="/zh/blog/db/pg-vs-mysql/">MySQL vs PGSQL 直播闹剧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdemand-pyramid" href="/zh/blog/db/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdistributive-bullshit" href="/zh/blog/db/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbmicroservice-bad-idea" href="/zh/blog/db/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbreason-about-time" href="/zh/blog/db/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconcurrent-control" href="/zh/blog/db/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbblockchain" href="/zh/blog/db/blockchain/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconsistency" href="/zh/blog/db/consistency/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbwhy-learn-database" href="/zh/blog/db/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit" href="/zh/blog/cloud/cloud-exit/">云计算泥石流：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouduptime" href="/zh/blog/cloud/uptime/">云下高可用秘诀：拒绝复杂度自慰</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouds3" href="/zh/blog/cloud/s3/">扒皮云对象存储：从降本到杀猪</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit-faq" href="/zh/blog/cloud/cloud-exit-faq/">半年下云省千万，DHH下云FAQ</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsmile" href="/zh/blog/cloud/smile/">从降本增笑到真的降本增效</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudbonus" href="/zh/blog/cloud/bonus/">重新拿回计算机硬件的红利</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogcloudaliyun" href="/zh/blog/cloud/aliyun/">阿里云史诗级故障非官方复盘</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcheap-ecs" href="/zh/blog/cloud/cheap-ecs/">薅阿里云羊毛，打造数字家园</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流：用数据解构公有云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：该放弃云计算了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudno-dba-bullshit" href="/zh/blog/cloud/no-dba-bullshit/">驳《再论为什么你不应该招DBA》</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudis-dba-good-job" href="/zh/blog/cloud/is-dba-good-job/">DBA还是一份好工作吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddrop-rds" href="/zh/blog/cloud/drop-rds/">云RDS：从删库到跑路</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddba-vs-rds" href="/zh/blog/cloud/dba-vs-rds/">DBA会被云淘汰吗？</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevllm-and-pgvector" href="/zh/blog/dev/llm-and-pgvector/">AI大模型与PGVector</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">高级模糊查询的实现</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">前后端通信线缆协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">事务隔离等级注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">CDC 变更数据捕获机理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">GeoIP 地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">触发器使用注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-convention" href="/zh/blog/dev/pg-convention/">PostgreSQL开发规约2018版</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化：GIS圈选</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划查询：GIS点找面</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">Distinct On 去除重复数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">用 Exclude 实现互斥约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfile_fdw" href="/zh/blog/dev/file_fdw/">FileFDW用例：读取OS信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">用触发器审计数据变化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">SQL实现ItemCF推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgss" href="/zh/blog/admin/pgss/">pg_stat_statements 宏观查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-filedump" href="/zh/blog/admin/pg-filedump/">如何用 pg_filedump 抢救数据？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintime-travel" href="/zh/blog/admin/time-travel/">故障档案：NTP/Patroni</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">在线修改主键列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标：错误延迟吞吐饱和</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库管理实体与命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminextension" href="/zh/blog/admin/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">常见复制拓扑方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">温备：使用pg_receivewal</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-dump-failure" href="/zh/blog/admin/pg-dump-failure/">故障档案：连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpage-corruption" href="/zh/blog/admin/page-corruption/">故障档案：数据页损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">关系膨胀的监控与治理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB 快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminxid-wrap-around" href="/zh/blog/admin/xid-wrap-around/">故障档案：XID回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsequence-overflow" href="/zh/blog/admin/sequence-overflow/">故障档案：序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmindownload-failure" href="/zh/blog/admin/download-failure/">故障档案：快慢不匀雪崩</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">备份恢复手段概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PG服务器日志常规配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">不停机迁移数据迁移基本原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">Wireshark抓包分析协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-tool" href="/zh/blog/admin/unix-tool/">Linux 常用统计 CLI 工具</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">源码编译安装 PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/kernel/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 内核</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogkernel">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelpg-wal-page-seq" href="/zh/blog/kernel/pg-wal-page-seq/">PG先写脏页还是先写WAL？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch1" href="/zh/blog/kernel/ch1/">第一章 数据库的物理/逻辑结构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch2" href="/zh/blog/kernel/ch2/">第二章 进程和内存架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch3" href="/zh/blog/kernel/ch3/">第三章 查询处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch4" href="/zh/blog/kernel/ch4/">第四章 外部数据包装器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch5" href="/zh/blog/kernel/ch5/">第五章 并发控制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch6" href="/zh/blog/kernel/ch6/">第六章 垃圾清理过程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch7" href="/zh/blog/kernel/ch7/">第七章 堆内元组与仅索引扫描</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch8" href="/zh/blog/kernel/ch8/">第八章 缓冲区管理器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch9" href="/zh/blog/kernel/ch9/">第九章 预写式日志</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch10" href="/zh/blog/kernel/ch10/">第十章 基础备份与时间点恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch11" href="/zh/blog/kernel/ch11/">第十一章 流复制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelwal-and-checkpoint" href="/zh/blog/kernel/wal-and-checkpoint/">WAL与检查点概述</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本发布</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/cloud/aliyun.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/cloud/aliyun.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/cloud/aliyun.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e6%88%91%e4%bb%ac%e8%83%bd%e4%bb%8e%e9%98%bf%e9%87%8c%e4%ba%91%e5%85%a8%e7%90%83%e6%95%85%e9%9a%9c%e4%b8%ad%e5%ad%a6%e5%88%b0%e4%bb%80%e4%b9%88?" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/cloud/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#事实是什么">事实是什么？</a></li>
+    <li><a href="#原因是什么">原因是什么？</a></li>
+    <li><a href="#影响是什么">影响是什么？</a></li>
+    <li><a href="#评论与观点">评论与观点？</a></li>
+    <li><a href="#能学到什么">能学到什么？</a></li>
+    <li><a href="#参考阅读">参考阅读</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>我们能从阿里云全球故障中学到什么?</h1>
+	
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2023-11-13" class="text-muted">2023-11-13</time>
+	</div>
+	
+	<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ">微信公众号原文</a> | <a href="https://vonng.com/cn/blog/cloud/aliyun/">Vonng博客</a></p>
+</blockquote>
+<p>时隔一年阿里云又出大故障，并创造了云计算行业闻所未闻的新记录 —— 全球所有区域/所有服务同时异常。阿里云不愿意发布故障复盘报告，那我就来替他复盘 —— 我们应当如何看待这一史诗级故障案例，以及，能从中学习到什么经验与教训？</p>
+<ul>
+<li><a href="#%E4%BA%8B%E5%AE%9E%E6%98%AF%E4%BB%80%E4%B9%88">事实是什么？</a></li>
+<li><a href="#%E5%8E%9F%E5%9B%A0%E6%98%AF%E4%BB%80%E4%B9%88">原因是什么？</a></li>
+<li><a href="#%E5%BD%B1%E5%93%8D%E6%98%AF%E4%BB%80%E4%B9%88">影响是什么？</a></li>
+<li><a href="#%E8%AF%84%E8%AE%BA%E4%B8%8E%E8%A7%82%E7%82%B9">评论与观点？</a></li>
+<li><a href="#%E8%83%BD%E5%AD%A6%E5%88%B0%E4%BB%80%E4%B9%88">能学到什么？</a></li>
+</ul>
+<p><a href="https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ"><img src="/hero/aliyun.jpg" alt=""></a></p>
+<hr>
+<h2 id="事实是什么">事实是什么？</h2>
+<p>2023年11月12日，双十一后第一天，阿里云出了一场<a href="https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w">史诗级大翻车</a>。<strong>全球所有区域同时出现故障</strong>，创造了闻所未闻的行业新记录。根据阿里云官方的<a href="https://status.aliyun.com/#/">服务状态页</a>，全球所有区域/可用区 ✖️ 所有服务全部出现异常，时间范围从 17:44 到 21: 11 ，共计三个半小时。</p>
+<p><img src="/img/cloud/alicloud-status-page.jpg" alt="status-page.jpg"></p>
+<blockquote>
+<p>阿里云 <strong>Status Page</strong></p>
+</blockquote>
+<p><a href="https://help.aliyun.com/noticelist/articleid/1064981333.html?spm=a2c4g.789004748.n2.6.3ebb1865LCNVhx">阿里云公告</a>称：</p>
+<blockquote>
+<p>“云产品控制台、管控API等功能受到影响，OSS、OTS、SLS、MNS等产品的服务受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响”。</p>
+</blockquote>
+<p><img src="announce.png" alt=""></p>
+<p>大量依赖阿里云服务的应用 APP，包括阿里系自己的一系列应用：淘宝，钉钉，闲鱼，…… 都出现了问题。产生了显著的外部影响，APP崩了的新闻组团冲上了热搜。</p>
+<p><img src="/img/cloud/alicloud-yunpan.png" alt="yunpan.png"></p>
+<p>淘宝刷不出聊天图片，闪送上传不了接单凭据，充电桩用不了，原神发不出验证码，饿了么下不了单，骑手进不了系统，点不了外卖、停车场不抬杆、超市无法结账。甚至有的学校因此无法用智能公共洗衣机和开水机。无数在周末休息中的研发与运维人员被喊起来加班排障……</p>
+<p>包括金融云、政务云在内的区域也没有幸免。阿里云应该感到万幸：故障不是发生在双十一当天，也不在衙门与钱庄的工作时间段，否则大家说不定能上电视看故障复盘了。</p>
+<hr>
+<h2 id="原因是什么">原因是什么？</h2>
+<p>尽管阿里云至今仍未给出一份事后故障复盘报告，但老司机根据爆炸半径，就足以判断出问题在哪里了 —— <strong>Auth</strong> （认证 / 鉴权 / RAM）。</p>
+<p>存储计算硬件故障、机房断电这些问题最多影响单个可用区（AZ），网络故障最多影响一个区域（Region），能让全球所有区域同时出问题的肯定不会是这些问题，而是跨区域共用的云基础设施组件。 —— 极大概率是 <strong>Auth</strong>，低概率是其他诸如计量付费之类的全局性服务。</p>
+<p><img src="/img/cloud/alicloud-notice.jpg" alt=""></p>
+<blockquote>
+<p>阿里云的事件进展公告：出问题的是某个底层服务组件，而不是网络、机房硬件的问题。</p>
+</blockquote>
+<p>根因出在 <strong>Auth</strong> 上的可能性最大，最直接的证明就是：深度与 <strong>Auth</strong> 集成的云服务：对象存储 <strong>OSS</strong> （类 S3），表格存储 <strong>OTS</strong> （类 DynamoDB），以及其他深度依赖 <strong>Auth</strong> 的服务本身可用性直接受到影响。而本身运行不依赖 <strong>Auth</strong> 的云资源，比如云服务器 <strong>ECS</strong> / 云数据库 <strong>RDS</strong> 以及网络仍然可以“正常”运行，用户只是无法通过控制台与API对其进行管理与变更。此外，一个可以排除的<strong>计量付费</strong>服务出问题的现象是：故障期间还有用户成功付款<a href="/zh/blog/cloud/aliyun-ecs-pigsty/">薅下了ECS的羊毛</a>。</p>
+<p>尽管上面的分析过程只是一种推断，但它与流传出来的内部消息相吻合：<strong>认证</strong>挂了导致所有服务异常。至于认证服务本身到底是怎么挂的，在尸检报告出来前我们也只能猜测：<strong>人为配置失误</strong>的可能性最大 —— 因为故障不在常规变更发布窗口中，也没有灰度生效，不太像是代码/二进制发布。但具体是哪里配置失误：证书，黑白名单，循环依赖死锁，还是什么其他东西，就不知道了。</p>
+<p>关于根因的小道消息也漫天飞舞，比如，有人说 ”权限系统推了个黑名单规则，黑名单规则维护在OSS上，访问OSS叉需要访问权限系统，然后权限系统又要访问OSS，就尬住了“。”。还有人说 “这次双11期间，技术人员连续一周加班加点，双11一过，大家都松懈了。有个新手写了一段代码，更新了组件，导致了本次的断网“，还有人说：”阿里云所有服务用的都是同一个通配符证书，证书换错了“。</p>
+<p>如果是因为这些原因导致 <strong>Auth</strong> 挂掉，那可真是<a href="https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ">草台班子</a>到家了。尽管听上去很离谱，但这样的先例并不少。再次强调，这些路边社消息仅供参考，具体事故原因请以阿里云官方给出的复盘分析报告为准。</p>
+<hr>
+<h2 id="影响是什么">影响是什么？</h2>
+<p><strong>认证/鉴权</strong>是服务的基石，像这样的基础性组件一旦出现问题，影响是<strong>全局性</strong>、<strong>灾难性</strong>的。这会导致整个<strong>云管控面</strong>不可用，伤害会直接冲击控制台，API，以及深度依赖 <strong>Auth</strong> 基础设施的服务 —— 比如公有云上的另一个基石性服务，对象存储 <strong>OSS</strong>。</p>
+<p>从阿里云公告上来看，好像只有 “<em>几个服务（ <strong>OSS、OTS、SLS、MNS</strong>）受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响</em> ”。但对象存储 <strong>OSS</strong> 这样的基石性服务出了问题，带来的爆炸半径是难以想象的，绝非“个别服务受到影响” 就能敷衍过去 —— 这就像汽车的油箱都着火了，说发动机和轮子仍然在转是没有意义的。</p>
+<p><img src="/img/cloud/alicloud-auth.png" alt=""></p>
+<p>对象存储 <strong>OSS</strong> 这样的服务是通过云厂商包装的 HTTP API 对外提供服务的，因此必然深度依赖认证组件：你需要AK/SK/IAM 签名才能使用这些 HTTP API，而 Auth 故障将导致这类服务本身不可用。</p>
+<p><strong>对象存储 OSS 实在是太重要了</strong>，可以说是云计算的“定义性服务”，也许是唯一能在所有云上基本达成共识标准的服务。云厂商的各种“上层”服务或多或少都直接/间接地依赖 OSS，例如 ECS/ RDS 虽然可以运行，但 ECS 快照和 RDS 备份显然是深度依赖 OSS 的，CDN 回源是依赖 OSS 的，各个服务的日志往往也是写入 OSS 的。</p>
+<p>从现象上看，核心功能跟 OSS 深度绑定的阿里云盘就挂的很惨烈，核心功能跟 OSS 关系不大的服务，比如高德地图就没听说有什么大影响。大部分相关应用的状态是，主体可以正常打开运行，但是和图片展示，文件上传/下载文件这类有关的功能就不可用了。</p>
+<p>有一些实践减轻了对 OSS 的冲击：比如通常被认为是不安全的 —— 不走认证的 Public 存储桶就不受影响；CDN 的使用也缓释了 OSS 的问题：淘宝商品图片走 CDN 缓存还可以正常看到，但是买家聊天记录里实时发送的图片直接走 OSS 就挂了。</p>
+<p>不仅仅是 OSS，其他深度集成依赖 Auth 的云服务也会有这样的问题，比如 <strong>OTS，SLS，MNS</strong> 等等。例如对标 DynamoDB 的表格存储服务 <strong>OTS</strong> 同样出现了问题。这里有一个非常鲜明的对比，像 <strong>RDS</strong> for PostgreSQL / MySQL 这样的云数据库服务使用的是数据库自身的认证机制，所以不受云厂商 Auth 服务故障影响。然而 OTS 没有自己的权限系统，而是直接使用 IAM/RAM，与云厂商的 Auth 深度绑定，因此受到了冲击。</p>
+<p>技术上的影响是一方面，更重要的是业务影响。根据阿里云的 <strong>服务等级协议（SLA）</strong>，3个半小时的故障使得当月各服务可用性指标降至 99.5%。落入绝大多数服务赔偿标准的中间档位上，也就是赔偿用户月度服务费用 25% ~ 30% 的<strong>代金券</strong>。特殊的是这一次故障的区域范围和服务范围是<strong>全部</strong>！</p>
+<p><img src="/img/cloud/alicloud-oss-sla.png" alt=""></p>
+<blockquote>
+<p>阿里云 OSS SLA</p>
+</blockquote>
+<p>当然阿里云也可以主张说虽然 <strong>OSS / OTS</strong> 这些服务挂了，但他们的 <strong>ECS</strong>/<strong>RDS</strong> 只挂了<strong>管控面</strong>，不影响正在运行的服务,所以不影响 SLA。不过这种补偿即便真的全部落地也没几个钱，更像是一种安抚性的姿态：<strong>毕竟</strong>和用户的业务损失比，赔个服务月消 25%代金券简直就是一种<strong>羞辱</strong>。</p>
+<p>比起用户信任、技术声望以及商誉折损而言，赔的那点代金券真的算不上三瓜两枣。这次事件如果处理不当，会成为<strong>公有云拐点级别的标志性事件</strong>。</p>
+<hr>
+<h2 id="评论与观点">评论与观点？</h2>
+<p>马斯克的推特 X 和 DHH 的 37 Signal <a href="/zh/blog/cloud/cloud-exit/">通过下云省下了千万美元真金白银</a>，创造了降本增效的“奇迹”，让下云开始成为一种潮流。云上的用户在对着账单犹豫着是否要下云，未上云的用户更是内心纠结。在这样的背景下，作为本土云领导者的阿里云发生如此重大故障，对于犹豫观望者的信心无疑是沉重的打击。恐怕此次故障会成为公有云<strong>拐点级别的标志性事件</strong>。</p>
+<p>阿里云一向以安全稳定高可用自居，上周还刚在云栖大会上吹极致稳定性之类的牛逼。但是无数所谓的的灾备，高可用，多活，多中心，降级方案，被一次性全部击穿，打破了N个9神话。如此大范围、长时间、影响面如此广的故障，更是创下了云计算行业的历史记录。</p>
+<p>这次故障揭示出关键基础设施的巨大风险，大量依托于公有云的网络服务<strong>缺乏最基本的自主可控</strong>能力：当故障发生时没有任何自救能力，除了等死做不了别的事情。甚至包括金融云和政务云在内也同样出现了服务不可用。同时，它也反映出了<strong>垄断中心化基础设施的脆弱性</strong>：互联网这个<strong>去中心化</strong>的世界奇观现在主要是在少数几个大公司/云厂商拥有的服务器上运行 —— 某个云厂商本身成为了最大的业务单点，这可不是互联网设计的初衷！</p>
+<p>更为严峻的挑战恐怕还在后面，全球用户追索赔钱事还小，真正要命的是在各个国家都在强调<strong>数据主权</strong>的时候，如果因为在中国境内的某个控制中心配置失当导致全球故障的话，（即：你真的卡了别人的脖子）很多海外客户会立即采取行动迁移到别的云供应商上：<strong>这关乎合规性，与可用性无关</strong>。</p>
+<p>根据海恩法则，一次严重故障的背后有几十次轻微事故，几百起未遂先兆，以及上千条事故隐患。去年十二月阿里云香港机房的大故障已经暴露出来许多问题，然而一年后又给了用户一个更大的惊喜（吓！）。这样的事故对于阿里云的品牌形象绝对是致命打击，甚至<strong>对整个行业的声誉都有严重的损害</strong>。阿里云应该尽快给用户一个解释与交代，发布详细的故障复盘报告，讲清楚后续改进措施，挽回用户的信任。</p>
+<p><img src="/img/cloud/alicloud-cf-post-moterm.png" alt="cf-post-moterm.png"></p>
+<p>毕竟这种规模的故障，不是“找个临时工背锅，杀个程序员祭天” 能解决的事，CEO 得亲自出面道歉解决。Cloudflare 月初的管控面故障后，CEO 立即撰写了详细的<a href="https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/">事后复盘分析</a>，挽回了一些声誉。可不幸的是，阿里云经过了几轮裁员，一年连换三轮 CEO ，恐怕已经难有能出来扛事背责的人了。</p>
+<hr>
+<h2 id="能学到什么">能学到什么？</h2>
+<p>往者不可留，逝者不可追，比起哀悼无法挽回的损失，更重要的是从损失中吸取教训 —— 要是能从别人的损失中吸取教训那就更好了。所以，我们能从阿里云这场史诗级故障中学到什么？</p>
+<hr>
+<p><strong>不要把鸡蛋放在同一个篮子里</strong>，准备好 PlanB，比如，业务域名解析一定要套一层 CNAME，且 CNAME 域名用不同服务商的解析服务。这个中间层对于阿里云这样的故障非常重要，用另外一个 DNS 供应商，至少可以给你一个把流量切到别的地方去的选择，而不是干坐在屏幕前等死，毫无自救能力。</p>
+<hr>
+<p><strong>区域优先使用杭州与北京</strong>，阿里云故障恢复明显有优先级，阿里云总部所在地的杭州（华东1）和北京（华北2）故障修复的速度明显要比其他区域快很多，别的可用区故障恢复用了三个小时，这两个可用区一个小时就修复了。这两个区域可以考虑优先使用，虽然同样是吃故障，但你可以和阿里自家业务享受同种婆罗门待遇。</p>
+<hr>
+<p><strong>谨慎使用需要云认证的服务</strong>：Auth 是云服务的基石，大家都期待它可以始终正常工作 —— 然而越是人们感觉不可能出现故障的东西，真的出现故障时产生的杀伤力就越是毁天灭地。如无必要，勿增实体，更多的依赖意味着更多的失效点，更低的可靠性：正如在这次故障中，使用自身认证机制的 ECS/RDS 本身就没有受到直接冲击。深度使用云厂商提供的 AK/SK/IAM 不仅会让自己陷入供应商锁定，更是将自己暴露在公用基础设施的单点风险里。</p>
+<hr>
+<p><strong>谨慎使用云服务，优先使用纯资源</strong>。在本次故障中，<strong>云服务</strong>受到影响，但<strong>云资源</strong>仍然可用。类似 ECS/ESSD 这样的<strong>纯资源</strong>，以及单纯使用这两者的 RDS，可以不受管控面故障影响可以继续运行。基础云资源（ECS/EBS）是所有云厂商的提供服务的<strong>最大公约数</strong>，只用资源有利于用户在不同公有云、以及本地自建中间择优而选。不过，很难想象在公有云上却不用对象存储 —— 在 ECS 和天价 ESSD 上用 MinIO 自建对象存储服务并不是真正可行的选项，这涉及到公有云商业模式的核心秘密：<a href="/zh/blog/cloud/s3">廉价S3获客</a>，<a href="/zh/blog/cloud/ebs/">天价EBS杀猪</a></p>
+<hr>
+<p><strong>自建是掌握自身命运的终极道路</strong>：如果用户想真正掌握自己的命运，最终恐怕早晚会走上自建这条路。互联网先辈们平地起高楼创建了这些服务，而现在做这件事只会容易得多：IDC 2.0 解决硬件资源问题，开源平替解决软件问题，大裁员释放出的专家解决了人力问题。短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择。稍微有点规模的用户<a href="/zh/blog/cloud/finops/">下云省下的钱</a>，可以换几个从大厂出来的资深SRE 还能盈余不少。更重要的是，自家人出问题你可以进行奖惩激励督促其改进，但是云出问题能赔给你几毛代金券？ —— <em>“你算老几能让高P舔你？”</em></p>
+<hr>
+<p><strong>明确云厂商的 SLA 是营销工具，而非战绩承诺</strong></p>
+<p>在云计算的世界里，<a href="/zh/blog/cloud/sla/"><strong>服务等级协议</strong></a>（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。</p>
+<hr>
+<p><strong>最后，尊重技术，善待工程师</strong></p>
+<p>阿里云这两年在大力搞“降本增效”：学人家马斯克推特大裁员，人裁几千你裁几万。但人家推挂来挂去用户捏着鼻子继续凑合用，ToB 业务跟着连环裁员连环挂，企业用户可忍得了这个？队伍动荡，人心不稳，稳定性自然会受到影响。</p>
+<p>很难说这跟企业文化没有关系：996 修福报，大把时间内耗在无穷的会议汇报上。领导不懂技术，负责汇总周报写PPT 吹牛逼，P9 出嘴；P8 带队，真正干活的都是567，晋升没指望，裁员先找你；真正能打的顶尖人才根本不吃这一套 PUA 窝囊气，成批成批地出来创业单干 —— 环境盐碱地化：学历门槛越来越高，人才密度却越来越低。</p>
+<p>我亲自见证的例子是，一个独立开源贡献者单人搞的 <a href="https://mp.weixin.qq.com/s/-E_-HZ7LvOze5lmzy3QbQA"><strong>开源 RDS</strong></a> for PostgreSQL，可以<a href="https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A"><strong>骑脸输出</strong></a>几十人 RDS 团队的产品，而对方团队甚至连发声辩白反驳的勇气都没有 —— 阿里云确实不缺足够优秀的产品经理和工程师，但请问这种事情为什么可能会发生呢？这是应该反思的问题。</p>
+<p>阿里云作为本土公有云中的领导者，应当是一面旗帜 —— 所以它可以做的更好，而不应该是现在这幅样子。作为曾经的阿里人，我希望阿里云能吸取这次故障的教训，尊重技术，踏实做事，善待工程师。更不要沉迷于<a href="/zh/blog/cloud/profit"><strong>杀猪盘快钱</strong></a>而忘记了自己的初心愿景 —— <strong>提供物美价廉的公共计算服务，让存算资源像水电一样普及</strong>。</p>
+<h2 id="参考阅读">参考阅读</h2>
+<p><a href="/zh/blog/cloud/cloud-exit/">是时候放弃云计算了吗？</a></p>
+<p><a href="/zh/blog/cloud/odyssey/">下云奥德赛</a></p>
+<p><a href="/zh/blog/cloud/finops/">FinOps的终点是下云</a></p>
+<p><a href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a></p>
+<p><a href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a></p>
+<p><a href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a></p>
+<p><a href="/zh/blog/cloud/rds/">云数据库是不是智商税？</a></p>
+<p><a href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a></p>
+<p><a href="/zh/blog/cloud/cdn/">腾讯云CDN：从入门到放弃</a></p>
+<hr>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908#rd">【阿里】云计算史诗级大翻车来了</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486438&amp;idx=1&amp;sn=b2c489675134d4e84fbc249089777cb4&amp;chksm=fe4b3e3dc93cb72b5d0d90ef61011dda5a09e5f08d96c8cca87148706451c859777162bd18da#rd">阿里云的羊毛抓紧薅，五千的云服务器三百拿</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;chksm=fe4b3e68c93cb77ed5b627c8caf78666cab9deafc18dacf528e51411682e616b4df1deab87f9&amp;scene=21#wechat_redirect">云厂商眼中的客户：又穷又闲又缺爱</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483770&amp;idx=1&amp;sn=723c865ff27fd0ceace1d8fb2c76ddca&amp;chksm=c0ca8db0f7bd04a63f79aba185e093bbb0ab5763b1f91f58cfc86551daf7e47bd6627dd8c73b#rd">阿里云的故障在其他云也可能发生,并且可能丢数据</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483764&amp;idx=1&amp;sn=8aebb4053257fac48f71b75a957153ad&amp;chksm=c0ca8dbef7bd04a816feba238a2232abdc02b5ccdb405f32217455dc3bf3a1811bd4ff8815af#rd">中国云服务走向全球？先把 Status Page 搞定</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483759&amp;idx=1&amp;sn=eb12dfe4df37c22aadd120676391f4cb&amp;chksm=c0ca8da5f7bd04b3a024111b5c3be9f273c70087cc986937e72e12d7a0fe496753a88568afe9#rd">我们可以信任阿里云的故障处理吗?</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483762&amp;idx=1&amp;sn=903405e0b64037f1b7d44b23f0c9b08d&amp;chksm=c0ca8db8f7bd04ae55f719df891d811d05269dac3a8e0a894d23292e06674058c943712672f5#rd">给阿里云的一封公开信</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484048&amp;idx=1&amp;sn=b57839c9dc85fe3dc6eaac01ff37b995&amp;chksm=c0ca8e5af7bd074ca5221de40c47b82378a8ca20f348ab1c80de7d244679733ee80e29cb3381#rd">平台软件应该像数学一样严谨 &mdash; 和阿里云RAM团队商榷</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484025&amp;idx=1&amp;sn=5c6f1b0035b7f9a657a5d24d68699943&amp;chksm=c0ca8eb3f7bd07a550325dd691c5761cbf99a9b4644d14c9bbb512dc9ecd27033622bb83e58e#rd">被医药业吊打的中国软件从业者</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484019&amp;idx=1&amp;sn=5dbe25e5c8d39a67bf9e9573ba2e9b98&amp;chksm=c0ca8eb9f7bd07af03f6d1228d73153fc37479a132a697c310851bfbffcf997ce991a7c2f010#rd">腾讯的错别字文化</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484064&amp;idx=1&amp;sn=cedf630065c88b936133001f84690c75&amp;chksm=c0ca8e6af7bd077c417aae032cc91281808e8768ea4f103dd1c71039986079c49bbd0aa03507#rd">云为什么留不住客户 — 以腾讯云 CAM 为例</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483883&amp;idx=1&amp;sn=f2644e9ff54790b319d63a1ffb26e717&amp;chksm=c0ca8d21f7bd0437b3be51f1d093ff45fac4e36552cdbf8b27c8d0ec5470e85ac46dd7f136a3#rd">腾讯云团队为什么用阿里云的服务名？</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483846&amp;idx=1&amp;sn=9a2f3cd59147d2444b7432ecf50af9ba&amp;chksm=c0ca8d0cf7bd041a3f56fcf0bb4adbde8434d81818009f9906c0fa3d1121017996f572b0237e#rd">究竟是客户差劲，还是腾讯云差劲？</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483694&amp;idx=1&amp;sn=618a3aa4f196c30eb9e89969643b06e9&amp;chksm=c0ca8de4f7bd04f25b277942fb41da2092c073f3db55fb92020ba66f21e14522e823a8a3346c#rd">百度腾讯阿里真的是高科技企业吗？</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483663&amp;idx=1&amp;sn=27f37af0dc4e755d7a64f341de6d8aad&amp;chksm=c0ca8dc5f7bd04d3f4a4437a63958eb93be56722ed32c43385bf41631c86a869bdeada35af04#rd">云计算厂商们，你们辜负了中国的用户</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483712&amp;idx=1&amp;sn=acdb5adf0d588d9617ed72b5ffca8dd3&amp;chksm=c0ca8d8af7bd049c0a69cfebb950c07f599a807876a5d0748122e9a0b0528d216a8d5d968197#rd">除了打折虚拟机, 云计算用户究竟在用什么高阶云服务?</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483743&amp;idx=1&amp;sn=9f329de1649fac75f69e57270978d047&amp;chksm=c0ca8d95f7bd0483d6af4940ca342e2544135e9de0b56fa1a6f299c887800aae04c11b0551bd#rd">腾讯云阿里云做的真的是云计算吗?&ndash;从客户成功案例的视角</a></p>
+<p><a href="http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483828&amp;idx=1&amp;sn=e03403d98876700134be4d1127371fe2&amp;chksm=c0ca8d7ef7bd0468677fc02cc47c530cdad242ac56ee485cb7b16667afafabc2339af0a995c6#rd">本土云厂家究竟在服务谁？</a></p>
+
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/cloud/cheap-ecs/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a href="/zh/blog/cloud/bonus/" class="btn btn-primary ">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>

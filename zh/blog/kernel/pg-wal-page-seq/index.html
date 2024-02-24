@@ -1,0 +1,2012 @@
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+
+<script>var _hmt = _hmt || [];(function() {var hm = document.createElement("script");hm.src = "https://hm.baidu.com/hm.js?3aa65794e93ce7bbcd78e6c2306db59e"; var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(hm, s);})();</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>window.dataLayer = window.dataLayer || [];function gtag() {dataLayer.push(arguments);};gtag('js', new Date());gtag('config', 'G-LG1V9WTKGE');</script>
+
+<meta name="generator" content="Hugo 0.99.1" /><META NAME="ROBOTS" CONTENT="INDEX, FOLLOW">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>PG先写脏页还是先写WAL？ | Pigsty</title><meta property="og:title" content="PG先写脏页还是先写WAL？" />
+<meta property="og:description" content="WAL 就是 Write Ahead Log / 预写式日志 的缩写，那从逻辑上说，好像是先写 WAL 再写数据页才对。实际上在内存中，先写脏数据页再写 WAL记录。在刷盘时，先刷 WAL 记录再刷脏数据页。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="/zh/blog/kernel/pg-wal-page-seq/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2023-09-10T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-02-24T18:45:23+08:00" /><meta property="og:site_name" content="Pigsty" />
+
+<meta itemprop="name" content="PG先写脏页还是先写WAL？">
+<meta itemprop="description" content="WAL 就是 Write Ahead Log / 预写式日志 的缩写，那从逻辑上说，好像是先写 WAL 再写数据页才对。实际上在内存中，先写脏数据页再写 WAL记录。在刷盘时，先刷 WAL 记录再刷脏数据页。"><meta itemprop="datePublished" content="2023-09-10T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-02-24T18:45:23+08:00" />
+<meta itemprop="wordCount" content="1483">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="PG先写脏页还是先写WAL？"/>
+<meta name="twitter:description" content="WAL 就是 Write Ahead Log / 预写式日志 的缩写，那从逻辑上说，好像是先写 WAL 再写数据页才对。实际上在内存中，先写脏数据页再写 WAL记录。在刷盘时，先刷 WAL 记录再刷脏数据页。"/>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'G-LG1V9WTKGE', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+<link rel="preload" href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" as="style">
+<link href="/scss/main.min.b1c33291a3224fbbb7391489e1f84c02a9fa05549757d5a6c3d9410cc80abf97.css" rel="stylesheet" integrity="">
+
+
+<script
+  src="/js/jquery-3.5.1.min.js"
+  integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+  crossorigin="anonymous"></script>
+
+<script
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+<script src="/js/mermaid.min.js"></script>
+
+
+
+
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      
+<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+        <a class="navbar-brand" href="/zh/">
+		<span class="navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="text-uppercase font-weight-bold">Pigsty</span>
+	</a>
+	<div class="td-navbar-nav-scroll ml-md-auto" id="main_navbar">
+		<ul class="navbar-nav mt-2 mt-lg-0">
+			
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/about/" ><span>关于</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link" href="/zh/docs/" ><span>文档</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				
+				
+				<a  class="nav-link active" href="/zh/blog/" ><span class="active">博客</span></a>
+			</li>
+			
+			<li class="nav-item mr-4 mb-2 mb-lg-0">
+				
+				
+				
+				
+				<a  class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" ><span>Repo</span></a>
+			</li>
+			
+			
+			
+			<li class="nav-item dropdown d-none d-lg-block">
+				
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+			</li>
+			
+		</ul>
+	</div>
+	<div class="navbar-nav d-none d-lg-block">
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+</div>
+</nav>
+
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <div class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            
+
+
+
+
+<div id="td-sidebar-menu" class="td-sidebar__inner">
+  
+  <form class="td-sidebar__search d-flex align-items-center">
+    
+
+
+
+<input
+  type="search"
+  class="form-control td-search-input"
+  placeholder="&#xf002; 站内搜索…"
+  aria-label="站内搜索…"
+  autocomplete="off"
+  
+  data-offline-search-index-json-src="/offline-search-index.522ff6c36a02bcc4d112cd3cc7331dcf.json"
+  data-offline-search-base-href="/"
+  data-offline-search-max-results="10"
+>
+
+
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ml-3 fas fa-bars" type="button" data-toggle="collapse" data-target="#td-section-nav" aria-controls="td-docs-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  
+  <nav class="collapse td-sidebar-nav" id="td-section-nav">
+    
+    <div class="nav-item dropdown d-block d-lg-none">
+      
+
+<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+	中文/ZH
+</a>
+<div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+	
+	<a class="dropdown-item" href="/en/">English</a>
+	
+</div>
+    </div>
+    
+    
+    
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/" class="align-left pl-0 pr-2 td-sidebar-link td-sidebar-link__section">博客</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblog">
+      
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/pg/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG &amp; Pigsty</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogpg">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgjust-use-pg" href="/zh/blog/pg/just-use-pg/">技术极简主义：一切皆用Postgres</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgparadedb" href="/zh/blog/pg/paradedb/">PG生态新玩家：ParadeDB</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-scalability" href="/zh/blog/pg/pg-scalability/"> 令人惊叹的PostgreSQL可伸缩性</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-2024" href="/zh/blog/pg/pg-in-2024/">展望 PostgreSQL 的2024</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-convention" href="/zh/blog/pg/pg-convention/">PostgreSQL 规约（2024版）</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgferretdb" href="/zh/blog/pg/ferretdb/">FerretDB：假扮成MongoDB的PG</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpgsql-x-pigsty" href="/zh/blog/pg/pgsql-x-pigsty/">PGSQL x Pigsty: 数据库全能王</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgvector-json-pg" href="/zh/blog/pg/vector-json-pg/">向量是新的 JSON</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-no1" href="/zh/blog/pg/pg-is-no1/">PostgreSQL：最成功的数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-performence" href="/zh/blog/pg/pg-performence/">PostgreSQL 到底有多强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-best" href="/zh/blog/pg/pg-is-best/">为什么PG是最成功的数据库？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpigsty-intro" href="/zh/blog/pg/pigsty-intro/">开箱即用的PG发行版：Pigsty</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-great" href="/zh/blog/pg/pg-is-great/">为什么PostgreSQL前途无量？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-in-docker" href="/zh/blog/pg/pg-in-docker/">容器化数据库是个好主意吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogpgpg-is-good" href="/zh/blog/pg/pg-is-good/">PostgreSQL好处都有啥</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/db/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">数据库</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdb">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrethink" href="/zh/blog/db/rethink/">数据库老司机：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbbad-mysql" href="/zh/blog/db/bad-mysql/">MySQL正确性竟如此垃圾？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-in-k8s" href="/zh/blog/db/db-in-k8s/">数据库应该放入K8S里吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsvdb-is-dead" href="/zh/blog/db/svdb-is-dead/">专用向量数据库凉了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdb-choke" href="/zh/blog/db/db-choke/">数据库真被卡脖子了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbrhel-compatibility" href="/zh/blog/db/rhel-compatibility/">EL系操作系统发行版哪家强？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbsovereign-dbos" href="/zh/blog/db/sovereign-dbos/">基础软件需要什么样的自主可控？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbpg-vs-mysql" href="/zh/blog/db/pg-vs-mysql/">MySQL vs PGSQL 直播闹剧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdemand-pyramid" href="/zh/blog/db/demand-pyramid/">数据库需求层次金字塔</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbdistributive-bullshit" href="/zh/blog/db/distributive-bullshit/">分布式数据库是不是伪需求？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbmicroservice-bad-idea" href="/zh/blog/db/microservice-bad-idea/">微服务是不是个蠢主意？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbreason-about-time" href="/zh/blog/db/reason-about-time/">理解时间：时间时区那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconcurrent-control" href="/zh/blog/db/concurrent-control/">并发异常那些事</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbblockchain" href="/zh/blog/db/blockchain/">区块链与分布式数据库</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbconsistency" href="/zh/blog/db/consistency/">一致性：过载的术语</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdbwhy-learn-database" href="/zh/blog/db/why-learn-database/">为什么要学习数据库原理</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/cloud/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">云计算</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogcloud">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit" href="/zh/blog/cloud/cloud-exit/">云计算泥石流：合订本</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouduptime" href="/zh/blog/cloud/uptime/">云下高可用秘诀：拒绝复杂度自慰</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouds3" href="/zh/blog/cloud/s3/">扒皮云对象存储：从降本到杀猪</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcloud-exit-faq" href="/zh/blog/cloud/cloud-exit-faq/">半年下云省千万，DHH下云FAQ</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsmile" href="/zh/blog/cloud/smile/">从降本增笑到真的降本增效</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudbonus" href="/zh/blog/cloud/bonus/">重新拿回计算机硬件的红利</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudaliyun" href="/zh/blog/cloud/aliyun/">阿里云史诗级故障非官方复盘</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcheap-ecs" href="/zh/blog/cloud/cheap-ecs/">薅阿里云羊毛，打造数字家园</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddebris" href="/zh/blog/cloud/debris/">云计算泥石流：用数据解构公有云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudodyssey" href="/zh/blog/cloud/odyssey/">下云奥德赛：该放弃云计算了吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudfinops" href="/zh/blog/cloud/finops/">FinOps终点是下云</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudprofit" href="/zh/blog/cloud/profit/">云计算为啥还没挖沙子赚钱？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudsla" href="/zh/blog/cloud/sla/">云SLA是不是安慰剂？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudebs" href="/zh/blog/cloud/ebs/">云盘是不是杀猪盘？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudcdn" href="/zh/blog/cloud/cdn/">垃圾腾讯云CDN：从入门到放弃？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudno-dba-bullshit" href="/zh/blog/cloud/no-dba-bullshit/">驳《再论为什么你不应该招DBA》</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudparadigm" href="/zh/blog/cloud/paradigm/">范式转移：从云到本地优先</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudrds" href="/zh/blog/cloud/rds/">云数据库是不是智商税</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogcloudis-dba-good-job" href="/zh/blog/cloud/is-dba-good-job/">DBA还是一份好工作吗？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddrop-rds" href="/zh/blog/cloud/drop-rds/">云RDS：从删库到跑路</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogclouddba-vs-rds" href="/zh/blog/cloud/dba-vs-rds/">DBA会被云淘汰吗？</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/dev/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 开发</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogdev">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevllm-and-pgvector" href="/zh/blog/dev/llm-and-pgvector/">AI大模型与PGVector</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfuzzymatch" href="/zh/blog/dev/fuzzymatch/">高级模糊查询的实现</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevwire-protocol" href="/zh/blog/dev/wire-protocol/">前后端通信线缆协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevisolation-level" href="/zh/blog/dev/isolation-level/">事务隔离等级注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevlogical-decoding" href="/zh/blog/dev/logical-decoding/">CDC 变更数据捕获机理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-lock" href="/zh/blog/dev/pg-lock/">PostgreSQL中的锁</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgin" href="/zh/blog/dev/gin/">GIN搜索的O(n2)负载度</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgeoip" href="/zh/blog/dev/geoip/">GeoIP 地理逆查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-trigger" href="/zh/blog/dev/sql-trigger/">触发器使用注意事项</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevcharacter-encoding" href="/zh/blog/dev/character-encoding/">理解字符编码原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-convention" href="/zh/blog/dev/pg-convention/">PostgreSQL开发规约2018版</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevknn-optimize" href="/zh/blog/dev/knn-optimize/">KNN极致优化：GIS圈选</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevadcode-geodecode" href="/zh/blog/dev/adcode-geodecode/">行政区划查询：GIS点找面</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-distinct-on" href="/zh/blog/dev/sql-distinct-on/">Distinct On 去除重复数据</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-func-volatility" href="/zh/blog/dev/sql-func-volatility/">函数易变性等级分类</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevsql-exclude" href="/zh/blog/dev/sql-exclude/">用 Exclude 实现互斥约束</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevmaturity-model" href="/zh/blog/dev/maturity-model/">架构成熟度模型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevfile_fdw" href="/zh/blog/dev/file_fdw/">FileFDW用例：读取OS信息</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevgo-database-tutorial" href="/zh/blog/dev/go-database-tutorial/">Go数据库接口教程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevnotify-trigger-based-repl" href="/zh/blog/dev/notify-trigger-based-repl/">GO与PG实现缓存同步</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevaudit-change" href="/zh/blog/dev/audit-change/">用触发器审计数据变化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevpg-recsys" href="/zh/blog/dev/pg-recsys/">SQL实现ItemCF推荐系统</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogdevuuid" href="/zh/blog/dev/uuid/">UUID性质原理与应用</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/admin/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">PG 管理</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogadmin">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogical-replication" href="/zh/blog/admin/logical-replication/">Postgres逻辑复制详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgss" href="/zh/blog/admin/pgss/">pg_stat_statements 宏观查询优化</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-filedump" href="/zh/blog/admin/pg-filedump/">如何用 pg_filedump 抢救数据？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmincollate" href="/zh/blog/admin/collate/">PG中的本地化排序规则</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplica-identity" href="/zh/blog/admin/replica-identity/">PG复制标识详解</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintime-travel" href="/zh/blog/admin/time-travel/">故障档案：NTP/Patroni</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminslow-query" href="/zh/blog/admin/slow-query/">PG慢查询诊断方法论</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminalter-type" href="/zh/blog/admin/alter-type/">在线修改主键列类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmingolden-metrics" href="/zh/blog/admin/golden-metrics/">黄金监控指标：错误延迟吞吐饱和</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminentity-and-naming" href="/zh/blog/admin/entity-and-naming/">数据库管理实体与命名规范</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-load" href="/zh/blog/admin/pg-load/">PostgreSQL的KPI</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigrate-column-type" href="/zh/blog/admin/migrate-column-type/">在线修改PG字段类型</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminextension" href="/zh/blog/admin/extension/">故障:扩展导致拒绝连接</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminreplication-plan" href="/zh/blog/admin/replication-plan/">常见复制拓扑方案</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-plan" href="/zh/blog/admin/backup-plan/">温备：使用pg_receivewal</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpg-dump-failure" href="/zh/blog/admin/pg-dump-failure/">故障档案：连接池污染</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpage-corruption" href="/zh/blog/admin/page-corruption/">故障档案：数据页损坏</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbloat" href="/zh/blog/admin/bloat/">关系膨胀的监控与治理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpipeline-intro" href="/zh/blog/admin/pipeline-intro/">PipelineDB快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmintimescale-install" href="/zh/blog/admin/timescale-install/">TimescaleDB 快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminxid-wrap-around" href="/zh/blog/admin/xid-wrap-around/">故障档案：XID回卷</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsequence-overflow" href="/zh/blog/admin/sequence-overflow/">故障档案：序列号溢出</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmon-table-size" href="/zh/blog/admin/mon-table-size/">监控PG中的表大小</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgadmin-install" href="/zh/blog/admin/pgadmin-install/">PgAdmin安装配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadmindownload-failure" href="/zh/blog/admin/download-failure/">故障档案：快慢不匀雪崩</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpsql-and-bash" href="/zh/blog/admin/psql-and-bash/">Bash与psql小技巧</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminroutine-maintain" href="/zh/blog/admin/routine-maintain/">PgSQL例行维护任务</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminbackup-overview" href="/zh/blog/admin/backup-overview/">备份恢复手段概览</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbackrest" href="/zh/blog/admin/pgbackrest/">PgBackRest2中文文档</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpgbouncer-usage" href="/zh/blog/admin/pgbouncer-usage/">Pgbouncer快速上手</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminlogging" href="/zh/blog/admin/logging/">PG服务器日志常规配置</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmigration-without-downtime" href="/zh/blog/admin/migration-without-downtime/">不停机迁移数据迁移基本原理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfio" href="/zh/blog/admin/fio/">使用FIO测试磁盘性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminsysbench" href="/zh/blog/admin/sysbench/">使用sysbench测试性能</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminfind-dummy-index" href="/zh/blog/admin/find-dummy-index/">找出没用过的索引</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminssh-add-key" href="/zh/blog/admin/ssh-add-key/">批量配置SSH免密登录</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminwireshark-capture" href="/zh/blog/admin/wireshark-capture/">Wireshark抓包分析协议</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminunix-tool" href="/zh/blog/admin/unix-tool/">Linux 常用统计 CLI 工具</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminpostgis-install" href="/zh/blog/admin/postgis-install/">源码编译安装 PostGIS</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogadminmongo_fdw-install" href="/zh/blog/admin/mongo_fdw-install/">MongoFDW安装部署</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/kernel/" class="align-left pl-0 pr-2 active td-sidebar-link td-sidebar-link__section">PG 内核</a>
+  </li>
+  <ul>
+    <li class="collapse show" id="zhblogkernel">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page  active" id="m-zhblogkernelpg-wal-page-seq" href="/zh/blog/kernel/pg-wal-page-seq/">PG先写脏页还是先写WAL？</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch1" href="/zh/blog/kernel/ch1/">第一章 数据库的物理/逻辑结构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch2" href="/zh/blog/kernel/ch2/">第二章 进程和内存架构</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch3" href="/zh/blog/kernel/ch3/">第三章 查询处理</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch4" href="/zh/blog/kernel/ch4/">第四章 外部数据包装器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch5" href="/zh/blog/kernel/ch5/">第五章 并发控制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch6" href="/zh/blog/kernel/ch6/">第六章 垃圾清理过程</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch7" href="/zh/blog/kernel/ch7/">第七章 堆内元组与仅索引扫描</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch8" href="/zh/blog/kernel/ch8/">第八章 缓冲区管理器</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch9" href="/zh/blog/kernel/ch9/">第九章 预写式日志</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch10" href="/zh/blog/kernel/ch10/">第十章 基础备份与时间点恢复</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelch11" href="/zh/blog/kernel/ch11/">第十一章 流复制</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogkernelwal-and-checkpoint" href="/zh/blog/kernel/wal-and-checkpoint/">WAL与检查点概述</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+      
+        
+          
+
+
+
+
+
+
+<ul class="td-sidebar-nav__section pr-md-3">
+  <li class="td-sidebar-nav__section-title">
+    <a  href="/zh/blog/releases/" class="align-left pl-0 pr-2 collapsed td-sidebar-link td-sidebar-link__section">版本发布</a>
+  </li>
+  <ul>
+    <li class="collapse " id="zhblogreleases">
+      
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv260" href="/zh/blog/releases/v2.6.0/">v2.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv250" href="/zh/blog/releases/v2.5.0/">v2.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv240" href="/zh/blog/releases/v2.4.0/">v2.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv230" href="/zh/blog/releases/v2.3.0/">v2.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv220" href="/zh/blog/releases/v2.2.0/">v2.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv210" href="/zh/blog/releases/v2.1.0/">v2.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv200" href="/zh/blog/releases/v2.0.0/">v2.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv150" href="/zh/blog/releases/v1.5.0/">v1.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv140" href="/zh/blog/releases/v1.4.0/">v1.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv130" href="/zh/blog/releases/v1.3.0/">v1.3.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv120" href="/zh/blog/releases/v1.2.0/">v1.2.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv110" href="/zh/blog/releases/v1.1.0/">v1.1.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv100" href="/zh/blog/releases/v1.0.0/">v1.0.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv090" href="/zh/blog/releases/v0.9.0/">v0.9.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv080" href="/zh/blog/releases/v0.8.0/">v0.8.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv070" href="/zh/blog/releases/v0.7.0/">v0.7.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv060" href="/zh/blog/releases/v0.6.0/">v0.6.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv050" href="/zh/blog/releases/v0.5.0/">v0.5.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv040" href="/zh/blog/releases/v0.4.0/">v0.4.0 发布注记</a>
+        
+      
+      
+      
+        
+          
+          
+          <a class="td-sidebar-link td-sidebar-link__page " id="m-zhblogreleasesv030" href="/zh/blog/releases/v0.3.0/">v0.3.0 发布注记</a>
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+        
+      
+      
+    </li>
+  </ul>
+</ul>
+
+  </nav>
+</div>
+
+
+
+
+          </div>
+          <div class="d-none d-xl-block col-xl-2 td-toc d-print-none">
+            
+<div class="td-page-meta ml-2 pb-1 pt-2 mb-0">
+  <a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/kernel/pg-wal-page-seq.md" class="td-page-meta--view" target="_blank" rel="noopener"><i class="fa fa-file-alt fa-fw"></i> 查阅此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/kernel/pg-wal-page-seq.md" class="td-page-meta--edit" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 编辑此页</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/kernel/pg-wal-page-seq.md?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child" target="_blank" rel="noopener"><i class="fa fa-edit fa-fw"></i> 添加子页面</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=PG%e5%85%88%e5%86%99%e8%84%8f%e9%a1%b5%e8%bf%98%e6%98%af%e5%85%88%e5%86%99WAL%ef%bc%9f" class="td-page-meta--issue" target="_blank" rel="noopener"><i class="fab fa-github fa-fw"></i> 提交文档问题</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project-issue" target="_blank" rel="noopener"><i class="fas fa-tasks fa-fw"></i> 提交项目问题</a>
+  <a id="print" href="/zh/blog/kernel/_print/"><i class="fa fa-print fa-fw"></i> 打印完整章节</a>
+  
+</div>
+
+
+
+
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#insert的内存修改">INSERT的内存修改</a></li>
+    <li><a href="#如何强制wal先于脏页刷盘">如何强制WAL先于脏页刷盘？</a></li>
+    <li><a href="#wal是如何刷盘的">WAL是如何刷盘的？</a></li>
+    <li><a href="#关于内核原理">关于内核原理</a></li>
+  </ul>
+</nav>
+
+
+
+          </div>
+          <main class="col-12 col-md-9 col-xl-8 pl-md-5 pr-md-4" role="main">
+            
+<div class="td-content">
+	<h1>PG先写脏页还是先写WAL？</h1>
+	
+	<div class="td-byline mb-4">
+		著： <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2023-09-10" class="text-muted">2023-09-10</time>
+	</div>
+	
+	<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g">微信公众号原文</a></p>
+</blockquote>
+<p><a href="https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g"><img src="/hero/pg-wal-page-seq.jpg" alt=""></a></p>
+<p>昨天在群里遇到一个有趣的关于 PostgreSQL 的问题：</p>
+<p><em>”写脏数据页和写入WAL缓冲区的先后顺序是什么？“</em></p>
+<p>我们都知道， WAL 就是 <strong>Write Ahead Log</strong> / <strong>预写式日志</strong> 的缩写，那从逻辑上说，好像是先写 WAL 再写数据页才对。</p>
+<p>但其实这个问题有趣在，写入其实是发生在两个地方的：<strong>内存与磁盘</strong>。而这对这两者的写入顺序是不一样的：<strong>在内存中，先写脏数据页，再写 WAL记录。在刷盘时，先刷 WAL 记录，再刷脏数据页。</strong></p>
+<p>我们可以用一个简单的例子来说明，当你执行一条 <code>INSERT</code> 时到底发生了什么？以及，数据库是如何确保这条插入的数据被正确持久化的。</p>
+<hr>
+<h2 id="insert的内存修改">INSERT的内存修改</h2>
+<p>当你执行 INSERT 语句时（不包括前后隐含的 BEGIN / COMMIT），修改首先在内存中发生：</p>
+<p>1.首先排它锁定并钉住目标数据页面，准备修改。2.进入临界区，不允许打断，出错就 PANIC。3.修改<strong>内存</strong>中的数据页面。4.将修改的内存数据页面标记为<strong>脏页</strong>。5.生成一条包含修改内容的 WAL记录 ，写入内存中的 WAL 缓冲区。6.从临界区出来，以上3个操作都是内存中的高速操作7.解锁解钉数据页面。</p>
+<p>完成这些任务之后，内存中的缓冲池数据页包含了 INSERT 后的结果，WAL缓冲区中则包含了 INSERT 的 XLogRecord 操作记录。这里我们可以看出，在内存中是先写数据页，再写 WAL 的。原因其实很简单，PostgreSQL默认使用物理复制，记录的是页面内的二进制数据变化，所以只有先把数据写入页面里，才会知道具体的页面变化到底是什么。</p>
+<p>内存中的操作非常快，而且这里 3 和 6 中间使用了临界区（Critical Zone），确保数据页/WAL的修改整体是原子性的。不过，内存中的修改要落到磁盘上，才算真正持久化了。所以，还会涉及到 WAL 记录与 脏数据页刷盘的问题。</p>
+<p>而这里，才是 Write-Ahead 真正约束的地方：脏数据页刷盘应当晚于WAL缓冲区刷盘。</p>
+<p><strong>下面是一个具体的例子，一条由单一 INSERT 语句构成的事务：</strong></p>
+<blockquote>
+<p>参考阅读《<a href="http://localhost:1313/zh/blog/kernel/ch9/#95-wal%E8%AE%B0%E5%BD%95%E7%9A%84%E5%86%99%E5%85%A5">PostgreSQL指南：内幕探索</a>》 9.5</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">testdb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INSERT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INTO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VALUES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;A&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>执行上述语句时，内部函数<code>exec_simple_query()</code>会被调用，其伪代码如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#000">exec_simple_query</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#a40000">@</span><span style="color:#000">postgres</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">ExtendCLOG</span><span style="color:#000;font-weight:bold">()</span>    <span style="color:#a40000">@</span><span style="color:#000">clog</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>     <span style="color:#8f5902;font-style:italic">/* 将当前事务的状态&#34;IN_PROGRESS&#34;写入CLOG */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">heap_insert</span><span style="color:#000;font-weight:bold">()</span>    <span style="color:#a40000">@</span><span style="color:#000">heapam</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>    <span style="color:#8f5902;font-style:italic">/* 插入元组，创建一条XLOG记录并调用函XLogInsert. */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">)</span>   <span style="color:#000">XLogInsert</span><span style="color:#000;font-weight:bold">()</span>    <span style="color:#a40000">@</span><span style="color:#000">xlog</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>     <span style="color:#8f5902;font-style:italic">/* (9.5 以及后续的版本为 xloginsert.c) */</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#8f5902;font-style:italic">/* 将插入元组的XLOG记录写入WAL缓冲区，更新页面的 pd_lsn */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">4</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">finish_xact_command</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#a40000">@</span><span style="color:#000">postgres</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>    <span style="color:#8f5902;font-style:italic">/* 执行提交 */</span>   
+</span></span><span style="display:flex;"><span>      <span style="color:#000">XLogInsert</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#a40000">@</span><span style="color:#000">xlog</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>              <span style="color:#8f5902;font-style:italic">/* (9.5 以及后续的版本为 xloginsert.c) */</span>
+</span></span><span style="display:flex;"><span>                                        <span style="color:#8f5902;font-style:italic">/* 将该提交行为的XLOG记录写入WAL缓冲区 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">5</span><span style="color:#000;font-weight:bold">)</span>   <span style="color:#000">XLogWrite</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#a40000">@</span><span style="color:#000">xlog</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>                <span style="color:#8f5902;font-style:italic">/* 将WAL缓冲区中所有的XLOG刷写入WAL段中 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">(</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">TransactionIdCommitTree</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#a40000">@</span><span style="color:#000">transam</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">c</span>    
+</span></span><span style="display:flex;"><span>                            <span style="color:#8f5902;font-style:italic">/* 在CLOG中将当前事务的状态由&#34;IN_PROGRESS&#34;修改为&#34;COMMITTED&#34; /*
+</span></span></span></code></pre></div><p><img src="/img/kernel/fig-9-11.png" alt=""></p>
+<ol>
+<li>函数<code>ExtendCLOG()</code>将当前事务的状态<code>IN_PROGRESS</code>写入内存中的CLOG。</li>
+<li>函数<code>heap_insert()</code>向共享缓冲池的目标页面中插入堆元组，创建当前页面的XLOG记录，并执行函数<code>XLogInsert()</code>。</li>
+<li>函数<code>XLogInsert()</code>会将<code>heap_insert()</code>创建的XLOG记录写入WAL缓冲区<code>LSN_1</code>处，并将被修改页面的<code>pd_lsn</code>从<code>LSN_0</code>更新为<code>LSN_1</code>。</li>
+<li>函数<code>finish_xact_command()</code>会在该事务被提交时被调用，用于创建该提交动作的XLOG记录，而这里的<code>XLogInsert()</code>函数会将该记录写入WAL缓冲区<code>LSN_2</code>处。</li>
+<li>函数<code>XLogWrite()</code>会冲刷WAL缓冲区，并将所有内容写入WAL段文件中。如果<code>wal_sync_method</code>参数被配置为<code>open_sync</code>或<code>open_datasync</code>，记录会被同步写入（译者注：而不是提交才会刷新WAL缓冲区），因为函数会使用带有<code>O_SYNC</code>或<code>O_DSYNC</code>标记的<code>open()</code>系统调用。如果该参数被配置为<code>fsync</code>，<code>fsync_writethrough</code>，<code>fdatasync</code>，相应的系统调用就是<code>fsync()</code>，带有<code>F_FULLSYNC</code>选项的<code>fcntl()</code>，以及<code>fdatasync()</code>。无论哪一种情况，所有的XLOG记录都会被确保写入存储之中。</li>
+<li>函数<code>TransactionIdCommitTree()</code>将提交日志clog中当前事务的状态从<code>IN_PROGRESS</code>更改为<code>COMMITTED</code>。</li>
+</ol>
+<h2 id="如何强制wal先于脏页刷盘">如何强制WAL先于脏页刷盘？</h2>
+<p>那么，先刷WAL，再刷磁盘这条规则具体是怎么确保的呢？</p>
+<p>每一个内存中的数据页上都保存了一个状态：最后一次对本数据页进行修改的 WAL 记录 LSN：<code>pd_lsn</code>，因此如果要把内存中的脏页刷入磁盘中，首先需要确保最后一次对这个页面进行修改的 WAL 已经被刷入磁盘中了。</p>
+<p>所以我们可以在在 <code>backend/storage/buffer/bufmgr.c#FlushBuffer</code> （L3350）中看到，刷脏页的过程中会调用 <code>XLogFlush</code> 函数来确保这一点，<code>XLogFlush</code> 函数会检查当前的 WAL 刷盘位置是不是已经大于页面的 LSN，如果不是，则会推动 WAL 刷盘。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#000">recptr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">BufferGetLSN</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">buf</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">XLogFlush</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">recptr</span><span style="color:#000;font-weight:bold">);</span>
+</span></span></code></pre></div><p>谁会刷脏页呢？主要是BGWriter与Checkpointer，但普通的后端进程也可以刷脏页。一个脏页具体是被哪个进程刷盘比较随机，大家都有机会出力，但通常来说刷脏页的主力是，后台刷盘进程 BGWriter。不管是哪个进程刷脏页，都会确保最后修改数据页的WAL已经落盘，从而满足 Write Ahead 的约束条件。</p>
+<p>脏页会在什么时间被刷盘呢？首先，数据页不能被锁定，其次，数据页不能被钉住。也就是说在上面 INSERT 的例子中，只有完成步骤 7 解锁解钉数据页 后，数据页才有可能被刷盘。而这一行为是异步的，具体时间是不确定的：PostgreSQL 能提供的保证是：在下次 Checkpoint（存盘点/检查点）之前，这个脏页肯定会被刷盘。（<code>bufmgr.c</code>）</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * FlushBuffer
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *		Physically write out a shared buffer.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * NOTE: this actually just passes the buffer contents to the kernel; the
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * real write to disk won&#39;t happen until the kernel feels like it.  This
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * is okay from our point of view since we can redo the changes from WAL.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * However, we will need to force the changes to disk via fsync before
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * we can checkpoint WAL.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * The caller must hold a pin on the buffer and have share-locked the
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * buffer contents.  (Note: a share-lock does not prevent updates of
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * hint bits in the buffer, so the page could change while the write
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * is in progress, but we assume that that will not invalidate the data
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * written.)
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * If the caller has an smgr reference for the buffer&#39;s relation, pass it
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * as the second parameter.  If not, pass NULL.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">static</span> <span style="color:#204a87;font-weight:bold">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">FlushBuffer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">BufferDesc</span> <span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">buf</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">SMgrRelation</span> <span style="color:#000">reln</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">IOObject</span> <span style="color:#000">io_object</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#000">IOContext</span> <span style="color:#000">io_context</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">XLogRecPtr</span>	<span style="color:#000">recptr</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">ErrorContextCallback</span> <span style="color:#000">errcallback</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">instr_time</span>	<span style="color:#000">io_start</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">Block</span>		<span style="color:#000">bufBlock</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">char</span>	   <span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000">bufToWrite</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">uint32</span>		<span style="color:#000">buf_state</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#8f5902;font-style:italic">/* ... */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">recptr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">BufferGetLSN</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">buf</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/* To check if block content changes while flushing. - vadim 01/17/97 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">buf_state</span> <span style="color:#ce5c00;font-weight:bold">&amp;=</span> <span style="color:#ce5c00;font-weight:bold">~</span><span style="color:#000">BM_JUST_DIRTIED</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">UnlockBufHdr</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">buf</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">buf_state</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * Force XLOG flush up to buffer&#39;s LSN.  This implements the basic WAL
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * rule that log updates must hit disk before any of the data-file changes
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * they describe do.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * However, this rule does not apply to unlogged relations, which will be
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * lost after a crash anyway.  Most unlogged relation pages do not bear
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * LSNs since we never emit WAL records for them, and therefore flushing
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * up through the buffer LSN would be useless, but harmless.  However,
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * GiST indexes use LSNs internally to track page-splits, and therefore
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * unlogged GiST pages bear &#34;fake&#34; LSNs generated by
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * GetFakeLSNForUnloggedRel.  It is unlikely but possible that the fake
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * LSN counter could advance past the WAL insertion point; and if it did
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * happen, attempting to flush WAL through that location would fail, with
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * disastrous system-wide consequences.  To make sure that can&#39;t happen,
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * skip the flush if the buffer isn&#39;t permanent.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">buf_state</span> <span style="color:#ce5c00;font-weight:bold">&amp;</span> <span style="color:#000">BM_PERMANENT</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">XLogFlush</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">recptr</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#8f5902;font-style:italic">/* ... */</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><h2 id="wal是如何刷盘的">WAL是如何刷盘的？</h2>
+<p>我们已经知道了，刷脏数据页这件事通常是异步进行的，且肯定晚于对应的 WAL 记录刷盘。那么新的问题就是，WAL 是由谁在什么时间点来刷盘的呢：从内存中的 WAL 缓冲区刷入磁盘中？</p>
+<p>要回答这个问题，首先要理解 WAL 的模型。WAL 在逻辑上是一个长度无限的文件，任何一个<strong>改变数据库系统状态的操作</strong>，都会生成相应的 XLogRecord，即 WAL记录。每一条 WAL 记录都会使用其起始位置的文件偏移量作为自己的唯一标识符，即 LSN（逻辑日志位点）。</p>
+<p><img src="/img/kernel/fig-9-09.png" alt=""></p>
+<p>各种各样修改系统状态的行为都会产生 WAL记录：例如 BEGIN 有一条 WAL记录，INSERT 有一条 WAL记录，COMMIT 也有一条WAL记录，而WAL记录会首先被写入内存中的 WAL缓冲区（最大16MB）。</p>
+<p>PostgreSQL 支持多个客户端并发修改，所以同一时刻会有各种进程往内存中的 WAL缓冲区（最大16MB）写东西。所以不同进程、不同事务产生的 XLogRecord 会在同一个逻辑文件中相互交织。每次写入都是原子性的，一条记录一条记录的写。</p>
+<p>内存里的WAL缓冲区中的内容，会被各种进程写入/刷入持久化磁盘上的WAL文件里。当前写入内存WAL缓冲区的逻辑日志位置点称作 INSERT LSN。写入操作系统缓冲区的日志位点叫 WRITE LSN，已经使用 FSYNC 之类的 API 确保已经成功持久化的日志位点叫 FLUSH LSN。这里面的关系是 INSERT_LSN &gt;= WRITE_LSN &gt;= FLUSH_LSN。原理很简单：内存中的东西最新，写入可能稍微滞后些，刷盘则可能比写入更滞后一些。</p>
+<p>刷盘的主力是 WAL Writer 进程，但其实各种进程都可以刷写。刷盘靠 <code>XLogFlush</code> 函数 （backend/access/transam/xlog.c#XLogFlush），这里的逻辑很简单，就是指定一个位置点，把这个位置点及之前的 WAL 从缓冲区全刷至磁盘。具体的实现逻辑是死循环抢自旋锁，如果目标 LSN 已经被别的进程刷盘了就退出循环，否则就亲自上阵把 WAL 日志刷盘到指定位点。（<code>xlog.c</code>）</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * Ensure that all XLOG data through the given position is flushed to disk.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * NOTE: this differs from XLogWrite mainly in that the WALWriteLock is not
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * already held, and we try to avoid acquiring it if possible.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">void</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">XLogFlush</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">XLogRecPtr</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">XLogRecPtr</span>	<span style="color:#000">WriteRqstPtr</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">XLogwrtRqst</span> <span style="color:#000">WriteRqst</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">TimeLineID</span>	<span style="color:#000">insertTLI</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">XLogCtl</span><span style="color:#ce5c00;font-weight:bold">-&gt;</span><span style="color:#000">InsertTimeLineID</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * During REDO, we are reading not writing WAL.  Therefore, instead of
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * trying to flush the WAL, we should update minRecoveryPoint instead. We
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * test XLogInsertAllowed(), not InRecovery, because we need checkpointer
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * to act this way too, and because when it tries to write the
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * end-of-recovery checkpoint, it should indeed flush.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">XLogInsertAllowed</span><span style="color:#000;font-weight:bold">())</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">UpdateMinRecoveryPoint</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">record</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87">false</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#204a87;font-weight:bold">return</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/* Quick exit if already known flushed */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">record</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#000">LogwrtResult</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Flush</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#204a87;font-weight:bold">return</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">START_CRIT_SECTION</span><span style="color:#000;font-weight:bold">();</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * Since fsync is usually a horribly expensive operation, we try to
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * piggyback as much data as we can on each fsync: if we see any more data
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * entered into the xlog buffer, we&#39;ll write and fsync that too, so that
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * the final value of LogwrtResult.Flush is as large as possible. This
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * gives us some chance of avoiding another fsync immediately after.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/* initialize to given target; may increase below */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">WriteRqstPtr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * Now wait until we get the write lock, or someone else does the flush
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * for us.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000;font-weight:bold">(;;)</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">{</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#8f5902;font-style:italic">/* ... */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">END_CRIT_SECTION</span><span style="color:#000;font-weight:bold">();</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/* wake up walsenders now that we&#39;ve released heavily contended locks */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#000">WalSndWakeupProcessRequests</span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87">true</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#ce5c00;font-weight:bold">!</span><span style="color:#000">RecoveryInProgress</span><span style="color:#000;font-weight:bold">());</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#8f5902;font-style:italic">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * If we still haven&#39;t flushed to the request point then we have a
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * problem; most likely, the requested flush point is past end of XLOG.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * This has been seen to occur when a disk page has a corrupted LSN.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * Formerly we treated this as a PANIC condition, but that hurts the
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * system&#39;s robustness rather than helping it: we do not want to take down
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * the whole system due to corruption on one data page.  In particular, if
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * the bad page is encountered again during recovery then we would be
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * unable to restart the database at all!  (This scenario actually
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * happened in the field several times with 7.1 releases.)	As of 8.4, bad
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * LSNs encountered during recovery are UpdateMinRecoveryPoint&#39;s problem;
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * the only time we can reach here during recovery is while flushing the
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * end-of-recovery checkpoint record, and we don&#39;t expect that to have a
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * bad LSN.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * Note that for calls from xact.c, the ERROR will be promoted to PANIC
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * since xact.c calls this routine inside a critical section.  However,
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * calls from bufmgr.c are not within critical sections and so we will not
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 * force a restart for a bad LSN on a data page.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">LogwrtResult</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Flush</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">elog</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>			 <span style="color:#4e9a06">&#34;xlog flush request %X/%X is not satisfied --- flushed only to %X/%X&#34;</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>			 <span style="color:#000">LSN_FORMAT_ARGS</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">record</span><span style="color:#000;font-weight:bold">),</span>
+</span></span><span style="display:flex;"><span>			 <span style="color:#000">LSN_FORMAT_ARGS</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">LogwrtResult</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">Flush</span><span style="color:#000;font-weight:bold">));</span>
+</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
+</span></span></code></pre></div><h2 id="关于内核原理">关于内核原理</h2>
+<p>关于 PostgreSQL 的内核原理，我认为有几个学习材料非常值得参考。</p>
+<p>第一本是《PG Internal》，鈴木啓修写的，基于 PostgreSQL 9.6 与 11 的代码，讲解PG内核原理。我之前翻译了中文版《PostgreSQL指南：内部探索》。第二本是 《PostgreSQL 14 Internal》，是俄罗斯 Postgres Pro 公司 Egor Rogov 写的，基于 PostgreSQL 14 进行架构讲解。</p>
+<p>当然我认为最有学习价值的还是 PostgreSQL 源代码，特别是源代码中的 README，比如本文中的这个问题，就在事务管理器源码 README 中详细介绍了。PostgreSQL 的源代码是自我解释的，你只需要懂英文大致就能理解这里面的逻辑。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000">The</span> <span style="color:#000">general</span> <span style="color:#000">schema</span> <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">executing</span> <span style="color:#000">a</span> <span style="color:#000">WAL</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">logged</span> <span style="color:#000">action</span> <span style="color:#000">is</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">1.</span> <span style="color:#000">Pin</span> <span style="color:#000">and</span> <span style="color:#000">exclusive</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">lock</span> <span style="color:#000">the</span> <span style="color:#000">shared</span> <span style="color:#000">buffer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">containing</span> <span style="color:#000">the</span> <span style="color:#000">data</span> <span style="color:#000">page</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">to</span> <span style="color:#000">be</span> <span style="color:#000">modified</span><span style="color:#000;font-weight:bold">.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">2.</span> <span style="color:#000">START_CRIT_SECTION</span><span style="color:#000;font-weight:bold">()</span>  <span style="color:#000;font-weight:bold">(</span><span style="color:#000">Any</span> <span style="color:#000">error</span> <span style="color:#000">during</span> <span style="color:#000">the</span> <span style="color:#000">next</span> <span style="color:#000">three</span> <span style="color:#000">steps</span> <span style="color:#000">must</span> <span style="color:#000">cause</span> <span style="color:#000">a</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">PANIC</span> <span style="color:#000">because</span> <span style="color:#000">the</span> <span style="color:#000">shared</span> <span style="color:#000">buffers</span> <span style="color:#000">will</span> <span style="color:#000">contain</span> <span style="color:#000">unlogged</span> <span style="color:#000">changes</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">which</span> <span style="color:#000">we</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">have</span> <span style="color:#000">to</span> <span style="color:#000">ensure</span> <span style="color:#000">don</span><span style="color:#a40000">&#39;</span><span style="color:#000">t</span> <span style="color:#000">get</span> <span style="color:#000">to</span> <span style="color:#000">disk</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">Obviously</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">you</span> <span style="color:#000">should</span> <span style="color:#000">check</span> <span style="color:#000">conditions</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">such</span> <span style="color:#000">as</span> <span style="color:#000">whether</span> <span style="color:#000">there</span><span style="color:#a40000">&#39;</span><span style="color:#000">s</span> <span style="color:#000">enough</span> <span style="color:#000">free</span> <span style="color:#000">space</span> <span style="color:#000">on</span> <span style="color:#000">the</span> <span style="color:#000">page</span> <span style="color:#000">before</span> <span style="color:#000">you</span> <span style="color:#000">start</span> <span style="color:#000">the</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">critical</span> <span style="color:#000">section</span><span style="color:#000;font-weight:bold">.)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">3.</span> <span style="color:#000">Apply</span> <span style="color:#000">the</span> <span style="color:#000">required</span> <span style="color:#000">changes</span> <span style="color:#000">to</span> <span style="color:#000">the</span> <span style="color:#000">shared</span> <span style="color:#000">buffer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">4.</span> <span style="color:#000">Mark</span> <span style="color:#000">the</span> <span style="color:#000">shared</span> <span style="color:#000">buffer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">as</span> <span style="color:#000">dirty</span> <span style="color:#000">with</span> <span style="color:#000">MarkBufferDirty</span><span style="color:#000;font-weight:bold">().</span>  <span style="color:#000;font-weight:bold">(</span><span style="color:#000">This</span> <span style="color:#000">must</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">happen</span> <span style="color:#000">before</span> <span style="color:#000">the</span> <span style="color:#000">WAL</span> <span style="color:#000">record</span> <span style="color:#000">is</span> <span style="color:#000">inserted</span><span style="color:#000;font-weight:bold">;</span> <span style="color:#000">see</span> <span style="color:#000">notes</span> <span style="color:#000">in</span> <span style="color:#000">SyncOneBuffer</span><span style="color:#000;font-weight:bold">().)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">Note</span> <span style="color:#000">that</span> <span style="color:#000">marking</span> <span style="color:#000">a</span> <span style="color:#000">buffer</span> <span style="color:#000">dirty</span> <span style="color:#000">with</span> <span style="color:#000">MarkBufferDirty</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#000">should</span> <span style="color:#000">only</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">happen</span> <span style="color:#000">iff</span> <span style="color:#000">you</span> <span style="color:#000">write</span> <span style="color:#000">a</span> <span style="color:#000">WAL</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">;</span> <span style="color:#000">see</span> <span style="color:#000">Writing</span> <span style="color:#000">Hints</span> <span style="color:#000">below</span><span style="color:#000;font-weight:bold">.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">5.</span> <span style="color:#000">If</span> <span style="color:#000">the</span> <span style="color:#000">relation</span> <span style="color:#000">requires</span> <span style="color:#000">WAL</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">logging</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">build</span> <span style="color:#000">a</span> <span style="color:#000">WAL</span> <span style="color:#000">record</span> <span style="color:#000">using</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">XLogBeginInsert</span> <span style="color:#000">and</span> <span style="color:#000">XLogRegister</span><span style="color:#ce5c00;font-weight:bold">*</span> <span style="color:#000">functions</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">and</span> <span style="color:#000">insert</span> <span style="color:#000">it</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000;font-weight:bold">(</span><span style="color:#000">See</span>
+</span></span><span style="display:flex;"><span><span style="color:#4e9a06">&#34;Constructing a WAL record&#34;</span> <span style="color:#000">below</span><span style="color:#000;font-weight:bold">).</span>  <span style="color:#000">Then</span> <span style="color:#000">update</span> <span style="color:#000">the</span> <span style="color:#000">page</span><span style="color:#a40000">&#39;</span><span style="color:#000">s</span> <span style="color:#000">LSN</span> <span style="color:#000">using</span> <span style="color:#000">the</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">returned</span> <span style="color:#000">XLOG</span> <span style="color:#000">location</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">For</span> <span style="color:#000">instance</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">XLogBeginInsert</span><span style="color:#000;font-weight:bold">();</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">XLogRegisterBuffer</span><span style="color:#000;font-weight:bold">(...)</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">XLogRegisterData</span><span style="color:#000;font-weight:bold">(...)</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">recptr</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">XLogInsert</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">rmgr_id</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">info</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#000">PageSetLSN</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">dp</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">recptr</span><span style="color:#000;font-weight:bold">);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">6.</span> <span style="color:#000">END_CRIT_SECTION</span><span style="color:#000;font-weight:bold">()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">7.</span> <span style="color:#000">Unlock</span> <span style="color:#000">and</span> <span style="color:#000">unpin</span> <span style="color:#000">the</span> <span style="color:#000">buffer</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">s</span><span style="color:#000;font-weight:bold">).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000">Complex</span> <span style="color:#000">changes</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">such</span> <span style="color:#000">as</span> <span style="color:#000">a</span> <span style="color:#000">multilevel</span> <span style="color:#000">index</span> <span style="color:#000">insertion</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000">normally</span> <span style="color:#000">need</span> <span style="color:#000">to</span> <span style="color:#000">be</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">described</span> <span style="color:#000">by</span> <span style="color:#000">a</span> <span style="color:#000">series</span> <span style="color:#000">of</span> <span style="color:#000">atomic</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">action</span> <span style="color:#000">WAL</span> <span style="color:#000">records</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">The</span> <span style="color:#000">intermediate</span> <span style="color:#000">states</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">must</span> <span style="color:#000">be</span> <span style="color:#000">self</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">consistent</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">so</span> <span style="color:#000">that</span> <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">the</span> <span style="color:#000">replay</span> <span style="color:#000">is</span> <span style="color:#000">interrupted</span> <span style="color:#000">between</span> <span style="color:#000">any</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">two</span> <span style="color:#000">actions</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">the</span> <span style="color:#000">system</span> <span style="color:#000">is</span> <span style="color:#000">fully</span> <span style="color:#000">functional</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">In</span> <span style="color:#000">btree</span> <span style="color:#000">indexes</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">example</span><span style="color:#000;font-weight:bold">,</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">a</span> <span style="color:#000">page</span> <span style="color:#000">split</span> <span style="color:#000">requires</span> <span style="color:#000">a</span> <span style="color:#000">new</span> <span style="color:#000">page</span> <span style="color:#000">to</span> <span style="color:#000">be</span> <span style="color:#000">allocated</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">and</span> <span style="color:#000">an</span> <span style="color:#000">insertion</span> <span style="color:#000">of</span> <span style="color:#000">a</span> <span style="color:#000">new</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">key</span> <span style="color:#000">in</span> <span style="color:#000">the</span> <span style="color:#000">parent</span> <span style="color:#000">btree</span> <span style="color:#000">level</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">but</span> <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">locking</span> <span style="color:#000">reasons</span> <span style="color:#000">this</span> <span style="color:#000">has</span> <span style="color:#000">to</span> <span style="color:#000">be</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">reflected</span> <span style="color:#000">by</span> <span style="color:#000">two</span> <span style="color:#000">separate</span> <span style="color:#000">WAL</span> <span style="color:#000">records</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">Replaying</span> <span style="color:#000">the</span> <span style="color:#000">first</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">to</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">allocate</span> <span style="color:#000">the</span> <span style="color:#000">new</span> <span style="color:#000">page</span> <span style="color:#000">and</span> <span style="color:#000">move</span> <span style="color:#000">tuples</span> <span style="color:#000">to</span> <span style="color:#000">it</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">sets</span> <span style="color:#000">a</span> <span style="color:#000">flag</span> <span style="color:#000">on</span> <span style="color:#000">the</span> <span style="color:#000">page</span> <span style="color:#000">to</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">indicate</span> <span style="color:#000">that</span> <span style="color:#000">the</span> <span style="color:#000">key</span> <span style="color:#000">has</span> <span style="color:#000">not</span> <span style="color:#000">been</span> <span style="color:#000">inserted</span> <span style="color:#000">to</span> <span style="color:#000">the</span> <span style="color:#000">parent</span> <span style="color:#000">yet</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">Replaying</span> <span style="color:#000">the</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">second</span> <span style="color:#000">record</span> <span style="color:#000">clears</span> <span style="color:#000">the</span> <span style="color:#000">flag</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">This</span> <span style="color:#000">intermediate</span> <span style="color:#000">state</span> <span style="color:#000">is</span> <span style="color:#000">never</span> <span style="color:#000">seen</span> <span style="color:#000">by</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">other</span> <span style="color:#000">backends</span> <span style="color:#000">during</span> <span style="color:#000">normal</span> <span style="color:#000">operation</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">because</span> <span style="color:#000">the</span> <span style="color:#000">lock</span> <span style="color:#000">on</span> <span style="color:#000">the</span> <span style="color:#000">child</span> <span style="color:#000">page</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">is</span> <span style="color:#000">held</span> <span style="color:#000">across</span> <span style="color:#000">the</span> <span style="color:#000">two</span> <span style="color:#000">actions</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">but</span> <span style="color:#000">will</span> <span style="color:#000">be</span> <span style="color:#000">seen</span> <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">the</span> <span style="color:#000">operation</span> <span style="color:#000">is</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">interrupted</span> <span style="color:#000">before</span> <span style="color:#000">writing</span> <span style="color:#000">the</span> <span style="color:#000">second</span> <span style="color:#000">WAL</span> <span style="color:#000">record</span><span style="color:#000;font-weight:bold">.</span>  <span style="color:#000">The</span> <span style="color:#000">search</span> <span style="color:#000">algorithm</span> <span style="color:#000">works</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">with</span> <span style="color:#000">the</span> <span style="color:#000">intermediate</span> <span style="color:#000">state</span> <span style="color:#000">as</span> <span style="color:#000">normal</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">but</span> <span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">an</span> <span style="color:#000">insertion</span> <span style="color:#000">encounters</span> <span style="color:#000">a</span> <span style="color:#000">page</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">with</span> <span style="color:#000">the</span> <span style="color:#000">incomplete</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">split</span> <span style="color:#000">flag</span> <span style="color:#000">set</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">it</span> <span style="color:#000">will</span> <span style="color:#000">finish</span> <span style="color:#000">the</span> <span style="color:#000">interrupted</span> <span style="color:#000">split</span> <span style="color:#000">by</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">inserting</span> <span style="color:#000">the</span> <span style="color:#000">key</span> <span style="color:#000">to</span> <span style="color:#000">the</span> <span style="color:#000">parent</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">before</span> <span style="color:#000">proceeding</span><span style="color:#000;font-weight:bold">.</span>
+</span></span></code></pre></div>
+	
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/kernel/ch1/" class="btn btn-primary "><span class="mr-1">←</span> 上一页</a>
+  </li>
+    <a  class="btn btn-primary  disabled">下一页 <span class="ml-1">→</span></a>
+  </li>
+</ul>
+
+</div>
+
+
+          </main>
+        </div>
+      </div>
+      
+<footer class="bg-dark py-5 row d-print-none">
+  <div class="container-fluid mx-sm-5">
+    <div class="row">
+      <div class="col-6 col-sm-4 text-xs-center order-sm-2">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Mail" aria-label="Mail">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="mailto:rh@vonng.com">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="GitHub" aria-label="GitHub">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://github.com/Vonng/pigsty">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Twitter" aria-label="Twitter">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://example.org/twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-6 col-sm-4 text-right text-xs-center order-sm-3">
+        
+        
+        
+<ul class="list-inline mb-0">
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="WeChat" aria-label="WeChat">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="/zh/docs/biz/community">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Discord" aria-label="Discord">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://discord.gg/wDzt5VyWEz">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="list-inline-item mx-2 h3" data-toggle="tooltip" data-placement="top" title="Telegram" aria-label="Telegram">
+    <a class="text-white" target="_blank" rel="noopener noreferrer" href="https://t.me/joinchat/gV9zfZraNPM3YjFh">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+        
+        
+      </div>
+      <div class="col-12 col-sm-4 text-center py-2 order-sm-2">
+        <small class="text-white">&copy; 2024 Vonng (rh@vonng.com) 版权所有</small>
+        <small class="ml-1"><a href="https://beian.miit.gov.cn/" target="_blank">隐私政策</a></small>
+	
+
+  
+    <p class="mt-2"><a href="http://beian.miit.gov.cn/">浙ICP备15016890号</a></p>
+  
+
+</div>
+    </div>
+  </div>
+</footer>
+
+
+    </div>
+    <script src="/js/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="/js/bootstrap.min.js" integrity="sha384-w1Q4orYjBQndcko6MimVbzY0tgp4pWB4lZ7lr30WKz0vr/aWKhXdBNmNb5D92v7s" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="/js/main.min.1ac197d360d55e8b38abee5bab5e8bf7547bc3092fd2f4eac9db1f8d050d21fd.js" integrity="sha256-GsGX02DVXos4q&#43;5bq16L91R7wwkv0vTqydsfjQUNIf0=" crossorigin="anonymous"></script>
+
+
+
+
+  </body>
+</html>
