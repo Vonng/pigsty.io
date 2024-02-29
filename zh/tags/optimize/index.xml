@@ -1,0 +1,97 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Optimize</title>
+    <link>/zh/tags/optimize/</link>
+    <description>Recent content in Optimize on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    <lastBuildDate>Fri, 06 Nov 2020 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="/zh/tags/optimize/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: PG 慢查询优化</title>
+      <link>/zh/docs/tasks/slow-query/</link>
+      <pubDate>Fri, 06 Nov 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/tasks/slow-query/</guid>
+      <description>
+        
+        
+        &lt;p&gt;下面以Pigsty自带的沙箱环境为例，介绍一个使用Pigsty监控系统处理慢查询的过程。&lt;/p&gt;
+&lt;h2 id=&#34;慢查询模拟&#34;&gt;慢查询：模拟&lt;/h2&gt;
+&lt;p&gt;因为没有实际的业务系统，这里我们以一种简单快捷的方式模拟系统中的慢查询。即pgbench自带的&lt;code&gt;tpc-c&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;在主库上执行以下命令&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;ALTER&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;TABLE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgbench_accounts&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DROP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CONSTRAINT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgbench_accounts_pkey&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;该命令会移除 pgbench_accounts 表上的主键，导致相关查询变慢，系统瞬间雪崩过载。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-1.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图1：单个从库实例的QPS从500下降至7，Query RT下降至300ms&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-2.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图2：系统负载达到200%，触发机器负载过大，与查询响应时间过长的报警规则。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;慢查询定位&#34;&gt;慢查询：定位&lt;/h2&gt;
+&lt;p&gt;首先，使用&lt;a href=&#34;/zh/docs/monitoring/cluster/pg-cluster/&#34;&gt;PG Cluster&lt;/a&gt;面板定位慢查询所在的具体实例，这里以 pg-test-2为例&lt;/p&gt;
+&lt;p&gt;然后，使用&lt;a href=&#34;/zh/docs/monitoring/database/pg-query/&#34;&gt;PG Query&lt;/a&gt;面板定位具体的慢查询：编号为 &lt;strong&gt;-6041100154778468427&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-3.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图3：从查询总览中发现异常慢查询&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;该查询表现出：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;响应时间显著上升： 17us 升至 280ms&lt;/li&gt;
+&lt;li&gt;QPS 显著下降：       从500下降到 7&lt;/li&gt;
+&lt;li&gt;花费在该查询上的时间占比显著增加&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;可以确定，就是这个查询变慢了！&lt;/p&gt;
+&lt;p&gt;接下来，利用&lt;a href=&#34;/zh/docs/monitoring/instance/pg-stat-statements/&#34;&gt;PG Stat Statements&lt;/a&gt;面板或&lt;a href=&#34;/zh/docs/monitoring/database/pg-query-detail/&#34;&gt;PG Query Detail&lt;/a&gt;，根据查询ID定位慢查询的具体语句。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-4.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图4：定位的查询是&lt;code&gt;SELECT abalance FROM pgbench_accounts WHERE aid = $1&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;慢查询猜想&#34;&gt;慢查询：猜想&lt;/h2&gt;
+&lt;p&gt;接下来，我们需要推断慢查询产生的原因。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SELECT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;abalance&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgbench_accounts&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;WHERE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;aid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#a40000&#34;&gt;$&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;该查询以 &lt;code&gt;aid&lt;/code&gt; 作为过滤条件查询 &lt;code&gt;pgbench_accounts&lt;/code&gt; 表，如此简单的查询变慢，大概率是这张表上的索引出了问题。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;用屁股想都知道是索引少了，因为就是我们自己删掉的嘛！&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;分析查询后&lt;strong&gt;提出猜想&lt;/strong&gt;： 该查询变慢是&lt;code&gt;pgbench_accounts&lt;/code&gt;表上&lt;code&gt;aid&lt;/code&gt;列缺少索引&lt;/p&gt;
+&lt;p&gt;下一步，查阅 &lt;a href=&#34;/zh/docs/monitoring/database/pg-table-detail/&#34;&gt;PG Table Detail&lt;/a&gt; 面板，检查 &lt;code&gt;pgbench_accounts&lt;/code&gt; 表上的访问，来验证我们的猜想&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-5.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图5： &lt;code&gt;pgbench_accounts&lt;/code&gt; 表上的访问情况&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;通过观察，我们发现表上的&lt;strong&gt;索引扫描&lt;/strong&gt;归零，与此同时&lt;strong&gt;顺序扫描&lt;/strong&gt;却有相应增长。这印证了我们的猜想！&lt;/p&gt;
+&lt;h2 id=&#34;慢查询解决&#34;&gt;慢查询：解决&lt;/h2&gt;
+&lt;p&gt;确定了问题根源后，我们将着手解决。&lt;/p&gt;
+&lt;p&gt;尝试在 &lt;code&gt;pgbench_accounts&lt;/code&gt; 表上为 &lt;code&gt;aid&lt;/code&gt; 列添加索引，看看能否解决这个问题。&lt;/p&gt;
+&lt;p&gt;加上索引后，神奇的事情发生了。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-6.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图6：可以看到，查询的响应时间与QPS已经恢复正常。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-7.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图7：系统的负载也恢复正常&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id=&#34;慢查询样例&#34;&gt;慢查询：样例&lt;/h2&gt;
+&lt;p&gt;通过这篇教程，您已经掌握了慢查询优化的一般方法论。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/tutorial/slow-query-8.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;图8：一个慢查询优化的实际例子，将系统的饱和度从40%降到了4%&lt;/p&gt;
+&lt;/blockquote&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

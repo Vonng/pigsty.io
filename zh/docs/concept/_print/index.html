@@ -1,0 +1,1203 @@
+<!doctype html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="canonical" type="text/html" href="/zh/docs/concept/">
+<meta name="robots" content="noindex, nofollow">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>概念 | Pigsty</title>
+<meta name="description" content="了解 Pigsty 的重要概念：整体架构、逻辑模型，基础设施，以及数据库 HA，PITR，服务接入的原理。">
+<meta property="og:title" content="概念" />
+<meta property="og:description" content="了解 Pigsty 的重要概念：整体架构、逻辑模型，基础设施，以及数据库 HA，PITR，服务接入的原理。" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="/zh/docs/concept/" />
+
+<meta itemprop="name" content="概念">
+<meta itemprop="description" content="了解 Pigsty 的重要概念：整体架构、逻辑模型，基础设施，以及数据库 HA，PITR，服务接入的原理。"><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="概念"/>
+<meta name="twitter:description" content="了解 Pigsty 的重要概念：整体架构、逻辑模型，基础设施，以及数据库 HA，PITR，服务接入的原理。"/>
+
+
+
+
+<link rel="preload" href="/scss/main.min.f05409ce591cab57b6dfe15c051eaef5a9b241fc5562927ada7a043946e667d4.css" as="style">
+<link href="/scss/main.min.f05409ce591cab57b6dfe15c051eaef5a9b241fc5562927ada7a043946e667d4.css" rel="stylesheet" integrity="">
+
+<script
+  src="https://code.jquery.com/jquery-3.6.3.min.js"
+  integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
+  crossorigin="anonymous"></script>
+<script defer
+  src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+  </head>
+  <body class="td-section">
+    <header>
+      <nav class="td-navbar navbar-dark js-navbar-scroll">
+<div class="container-fluid flex-column flex-md-row">
+  <a class="navbar-brand" href="/zh/"><span class="navbar-brand__logo navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="navbar-brand__name">Pigsty</span></a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link active" href="/zh/docs/"><i class='fa-solid fa-book'></i><span>文档</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/zh/blog/"><i class="fas fa-blog"></i><span>博客</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" rel="noopener"><i class='fab fa-github'></i><span>GitHub</span></a>
+      </li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/concept/">English</a></li>
+    </ul>
+</div>
+</li>
+      </ul>
+  </div>
+  <div class="d-none d-lg-block">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+  </div>
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <main class="col-12 col-md-9 col-xl-8 ps-md-5" role="main">
+            
+
+
+
+
+<div class="td-content">
+<div class="pageinfo pageinfo-primary d-print-none">
+<p>
+This is the multi-page printable view of this section.
+<a href="#" onclick="print();return false;">Click here to print</a>.
+</p><p>
+<a href="/zh/docs/concept/">Return to the regular view of this page</a>.
+</p>
+</div>
+
+
+
+<h1 class="title">概念</h1>
+<div class="lead">了解 Pigsty 的重要概念：整体架构、逻辑模型，基础设施，以及数据库 HA，PITR，服务接入的原理。</div>
+
+
+
+
+    <ul>
+    
+  
+  
+  
+  
+
+  
+    
+    
+	
+<li>1: <a href="#pg-6a8affb0541c18d4e9d29f408d0d1e80">系统架构</a></li>
+
+
+    
+  
+    
+    
+	
+<li>2: <a href="#pg-b6e18358c874d9d65209973819faed9a">集群模型</a></li>
+
+
+    
+  
+    
+    
+	
+<li>3: <a href="#pg-640213fc983ef0aae5180ea5bbbfb2d3">监控系统</a></li>
+
+
+    
+  
+    
+    
+	
+<li>4: <a href="#pg-a2af4580848e7a62549ec377b62ac71e">本地 CA</a></li>
+
+
+    
+  
+    
+    
+	
+<li>5: <a href="#pg-e4bef574b3856f296b026321cf35f1f9">基础设施即代码</a></li>
+
+
+    
+  
+    
+    
+	
+<li>6: <a href="#pg-316ebbf072075b20f0f8bf290998d747">数据库高可用</a></li>
+
+
+    
+  
+    
+    
+	
+<li>7: <a href="#pg-397dc822a55434d21cd8ee3a6f846291">时间点恢复</a></li>
+
+
+    
+  
+    
+    
+	
+<li>8: <a href="#pg-76a748b4626218b8ec1cb5db2047eae1">服务接入</a></li>
+
+
+    
+  
+    
+    
+	
+<li>9: <a href="#pg-5c7e49f373a8b6df52fbd9bec4787528">访问控制</a></li>
+
+
+    
+  
+
+    </ul>
+
+
+<div class="content">
+      
+</div>
+</div>
+
+
+  
+  
+  
+  
+
+  
+  
+
+  
+    
+    
+	
+    
+
+<div class="td-content" style="">
+    
+	<h1 id="pg-6a8affb0541c18d4e9d29f408d0d1e80">1 - 系统架构</h1>
+    <div class="lead">Pigsty的模块化架构：用声明的方式来组合模块</div>
+	<p>Pigsty 使用 <strong>模块化架构</strong> 与 <strong>声明式接口</strong>。</p>
+<ul>
+<li>Pigsty 使用<a href="/zh/docs/setup/config">配置清单</a>描述整套部署环境，并通过 ansible <a href="/zh/docs/setup/playbook">剧本</a>实现。</li>
+<li>Pigsty 在可以在任意节点上运行，无论是物理裸机还是虚拟机，只要操作系统<a href="/zh/docs/setup/install#%E8%A6%81%E6%B1%82">兼容</a>即可。</li>
+<li>Pigsty 的行为由配置参数控制，具有幂等性的剧本 会将节点调整到配置所描述的状态。</li>
+<li>Pigsty 采用模块化设计，可自由组合以适应不同场景。使用剧本将模块安装到配置指定的节点上。</li>
+</ul>
+<hr>
+<h2 id="模块">模块</h2>
+<p>Pigsty 采用模块化设计，有六个主要的默认模块：<a href="/zh/docs/pgsql"><code>PGSQL</code></a>、<a href="/zh/docs/infra"><code>INFRA</code></a>、<a href="/zh/docs/node"><code>NODE</code></a>、<a href="/zh/docs/etcd"><code>ETCD</code></a>、<a href="/zh/docs/redis"><code>REDIS</code></a> 和 <a href="/zh/docs/minio"><code>MINIO</code></a>。</p>
+<ul>
+<li><a href="/zh/docs/pgsql"><code>PGSQL</code></a>：由 Patroni、Pgbouncer、HAproxy、PgBackrest 等驱动的自治高可用 Postgres 集群。</li>
+<li><a href="/zh/docs/infra"><code>INFRA</code></a>：本地软件仓库、Prometheus、Grafana、Loki、AlertManager、PushGateway、Blackbox Exporter&hellip;</li>
+<li><a href="/zh/docs/node"><code>NODE</code></a>：调整节点到所需状态、名称、时区、NTP、ssh、sudo、haproxy、docker、promtail、keepalived</li>
+<li><a href="/zh/docs/etcd"><code>ETCD</code></a>：分布式键值存储，用作高可用 Postgres 集群的 DCS：共识选主/配置管理/服务发现。</li>
+<li><a href="/zh/docs/redis"><code>REDIS</code></a>：Redis 服务器，支持独立主从、哨兵、集群模式，并带有完整的监控支持。</li>
+<li><a href="/zh/docs/minio"><code>MINIO</code></a>：与 S3 兼容的简单对象存储服务器，可作为 PG数据库备份的可选目的地。</li>
+</ul>
+<p>你可以声明式地自由组合它们。如果你想要主机监控，在基础设施节点上安装<a href="/zh/docs/infra"><code>INFRA</code></a>模块，并在纳管节点上安装 <a href="/zh/docs/node"><code>NODE</code></a> 模块就足够了。
+<a href="/zh/docs/etcd"><code>ETCD</code></a> 和 <a href="/zh/docs/pgsql"><code>PGSQL</code></a> 模块用于搭建高可用 PG 集群，将模块安装在多个节点上，可以自动形成一个高可用的数据库集群。
+您可以复用 Pigsty 基础架构并开发您自己的模块，<a href="/zh/docs/redis"><code>REDIS</code></a> 和 <a href="/zh/docs/minio"><code>MINIO</code></a> 可以作为一个样例。后续还会有更多的模块加入，例如对 Mongo 与 MySQL 的初步支持已经提上了日程。</p>
+<p>请注意，所有模块都强依赖 <code>NODE</code> 模块：在 Pigsty 中节点必须先安装 <code>NODE</code> 模块，被 Pigsty 纳管后方可部署其他模块。
+当节点（默认）使用本地软件源进行安装时，<code>NODE</code> 模块对 <code>INFRA</code> 模块有弱依赖。因此安装 <code>INFRA</code> 模块的管理节点/基础设施节点会在 [<code>install.yml</code>] 剧本中完成 Bootstrap 过程，解决循环依赖。</p>
+<p><a href="/zh/docs/setup/provision"><img alt="pigsty-sandbox.jpg" src="/img/pigsty/sandbox.jpg"></a></p>
+<hr>
+<h2 id="单机安装">单机安装</h2>
+<p>默认情况下，Pigsty 将在单个 <strong>节点</strong> (物理机/虚拟机) 上安装。<a href="https://github.com/Vonng/pigsty/blob/master/install.yml"><code>install.yml</code></a> 剧本将在<strong>当前</strong>节点上安装 <a href="/zh/docs/infra"><code>INFRA</code></a>、<a href="/zh/docs/etcd"><code>ETCD</code></a>、<a href="/zh/docs/pgsql"><code>PGSQL</code></a> 和可选的 <a href="/zh/docs/minio"><code>MINIO</code></a> 模块，
+这将为你提供一个功能完备的可观测性技术栈全家桶 (Prometheus、Grafana、Loki、AlertManager、PushGateway、BlackboxExporter 等) ，以及一个内置的 PostgreSQL 单机实例作为 CMDB，也可以开箱即用。 (集群名 <code>pg-meta</code>，库名为 <code>meta</code>)。</p>
+<p>这个节点现在会有完整的自我监控系统、可视化工具集，以及一个自动配置有 PITR 的 Postgres 数据库（HA不可用，因为你只有一个节点）。你可以使用此节点作为开发箱、测试、运行演示以及进行数据可视化和分析。或者，还可以把这个节点当作管理节点，部署纳管更多的节点！</p>
+<p><a href="/zh/docs/infra/"><img alt="pigsty-arch.jpg" src="/img/pigsty/arch.jpg"></a></p>
+<hr>
+<h2 id="监控">监控</h2>
+<p>安装的 <a href="/zh/docs/concept/arch/#单机安装">单机元节点</a> 可用作<strong>管理节点</strong>和<strong>监控中心</strong>，以将更多节点和数据库服务器置于其监视和控制之下。</p>
+<p>Pigsty 的监控系统可以独立使用，如果你想安装 Prometheus / Grafana 可观测性全家桶，Pigsty 为你提供了最佳实践！
+它为 <a href="https://demo.pigsty.cc/d/node-overview">主机节点</a> 和 <a href="https://demo.pigsty.cc/d/pgsql-overview">PostgreSQL数据库</a> 提供了丰富的仪表盘。
+无论这些节点或 PostgreSQL 服务器是否由 Pigsty 管理，只需简单的配置，你就可以立即拥有生产级的监控和告警系统，并将现有的主机与PostgreSQL纳入监管。</p>
+<p><a href="/zh/docs/pgsql/dashboard"><img alt="pigsty-dashboard.jpg" src="/img/pigsty/dashboard.jpg"></a></p>
+<hr>
+<h2 id="高可用pg集群">高可用PG集群</h2>
+<p>Pigsty 帮助您在任何地方 <strong>拥有</strong> 您自己的生产级高可用 PostgreSQL RDS 服务。</p>
+<p>要创建这样一个高可用 PostgreSQL 集群/RDS服务，你只需用简短的配置来描述它，并运行剧本来创建即可：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg-test</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.11</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 2, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 3, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-test }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ bin/pgsql-add pg-test  <span style="color:#8f5902;font-style:italic"># 初始化集群 &#39;pg-test&#39;</span>
+</span></span></code></pre></div><p>不到10分钟，您将拥有一个服务接入，监控，备份PITR，高可用配置齐全的 PostgreSQL 数据库集群。</p>
+<p><a href="/zh/docs/concept/ha"><img alt="pigsty-ha.png" src="/img/pigsty/ha.png"></a></p>
+<p>硬件故障由 patroni、etcd 和 haproxy 提供的自愈高可用架构来兜底，在主库故障的情况下，默认会在 30 秒内执行自动故障转移（Failover）。
+客户端无需修改配置重启应用：Haproxy 利用 patroni 健康检查进行流量分发，读写请求会自动分发到新的集群主库中，并避免脑裂的问题。
+这一过程十分丝滑，例如在从库故障，或主动切换（switchover）的情况下，客户端只有一瞬间的当前查询闪断，</p>
+<p>软件故障、人为错误和 数据中心级灾难由 pgbackrest 和可选的 <a href="/zh/docs/minio">MinIO</a> 集群来兜底。这为您提供了本地/云端的 PITR 能力，并在数据中心失效的情况下提供了跨地理区域复制，与异地容灾功能。</p>
+<hr>
+<h2 id="数据库即代码">数据库即代码</h2>
+<p>Pigsty 遵循 IaC（基础设施即代码）与 GitOPS 理念：Pigsty 的部署由声明式的<a href="/zh/docs/setup/config#%E9%85%8D%E7%BD%AE%E6%B8%85%E5%8D%95">配置清单</a>描述，并通过幂等<a href="/zh/docs/setup/playbook">剧本</a>来实现。</p>
+<p>用户用声明的方式通过<a href="/zh/docs/reference/param">参数</a>来描述自己期望的状态，而剧本则以幂等的方式调整目标节点以达到这个状态。这就像 Kubernetes 的 CRD &amp; Operator，但 Pigsty 在裸机和虚拟机上实现了这一点。</p>
+<p><a href="/zh/docs/setup/config/"><img alt="pigsty-iac.jpg" src="/img/pigsty/iac.jpg"></a></p>
+<p>以下面的默认配置片段为例，这段配置描述了一个节点 <code>10.10.10.10</code>，其上安装了 <a href="/zh/docs/infra"><code>INFRA</code></a>、<a href="/zh/docs/node"><code>NODE</code></a>、<a href="/zh/docs/etcd"><code>ETCD</code></a> 和 <a href="/zh/docs/pgsql"><code>PGSQL</code></a> 模块。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 监控、告警、DNS、NTP 等基础设施集群...</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">infra</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">infra_seq</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># minio 集群，兼容 s3 的对象存储</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">minio</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">minio_seq: 1 } }, vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">minio_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">minio } }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># etcd 集群，用作 PostgreSQL 高可用所需的 DCS</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">etcd</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">etcd_seq: 1 } }, vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">etcd_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">etcd } }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># PGSQL 示例集群: pg-meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg-meta</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role: primary }, vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-meta } }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>要真正创建这些集群，执行以下剧本：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -l infra    <span style="color:#8f5902;font-style:italic"># 在 &#39;infra&#39; 分组上初始化 infra 模块</span>
+</span></span><span style="display:flex;"><span>./etcd.yml  -l etcd     <span style="color:#8f5902;font-style:italic"># 在 &#39;etcd&#39;  分组上初始化 etcd 模块</span>
+</span></span><span style="display:flex;"><span>./minio.yml -l minio    <span style="color:#8f5902;font-style:italic"># 在 &#39;minio&#39; 分组上初始化 minio 模块</span>
+</span></span><span style="display:flex;"><span>./pgsql.yml -l pg-meta  <span style="color:#8f5902;font-style:italic"># 在 &#39;pgsql&#39; 分组上初始化 pgsql 模块</span>
+</span></span></code></pre></div><p>执行常规的管理任务常简单。例如，如果你希望向现有的高可用 PostgreSQL 集群中添加一个新的从库/数据库/用户，你只需要在配置中添加一条主机记录，并在其上运行该剧本即可，例如：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg-test</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.11</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 2, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 3, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># &lt;-- add new instance</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-test }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 向 pg-test 集群中添加 10.10.10.13 作为新从库</span>
+</span></span><span style="display:flex;"><span>$ bin/pgsql-add  pg-test  10.10.10.13
+</span></span></code></pre></div><p>您还可以使用这种方法来管理许多 PostgreSQL 中的实体对象：用户/角色、数据库、服务、HBA 规则、扩展、模式等&hellip;</p>
+<p>更多信息，请参阅 <a href="/zh/docs/pgsql/config">PGSQL配置</a>。</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-b6e18358c874d9d65209973819faed9a">2 - 集群模型</h1>
+    <div class="lead">Pigsty 是如何将不同种类的功能抽象成为模块的，以及这些模块的逻辑模型。</div>
+	<p>在 Pigsty 中，功能模块是以 “集群” 的方式组织起来的。每一个集群都是一个 Ansible 分组，包含有若干节点资源，定义有实例</p>
+<blockquote>
+<p>PGSQL 模块总览：关键概念与架构细节</p>
+</blockquote>
+<p>PGSQL模块在生产环境中以<strong>集群</strong>的形式组织，这些<strong>集群</strong>是由一组由<strong>主-备</strong>关联的数据库<strong>实例</strong>组成的<strong>逻辑实体</strong>。
+每个<strong>数据库集群</strong>都是一个<strong>自治</strong>的业务服务单元，由至少一个 <strong>数据库（主库）实例</strong> 组成。</p>
+<hr>
+<h2 id="实体概念图">实体概念图</h2>
+<p>让我们从ER图开始。在Pigsty的PGSQL模块中，有四种核心实体：</p>
+<ul>
+<li><strong>集群</strong>（Cluster）：自治的PostgreSQL业务单元，用作其他实体的顶级命名空间。</li>
+<li><strong>服务</strong>（Service）：集群能力的命名抽象，路由流量，并使用节点端口暴露postgres服务。</li>
+<li><strong>实例</strong>（Instance）：一个在单个节点上的运行进程和数据库文件组成的单一postgres服务器。</li>
+<li><strong>节点</strong>（Node）：硬件资源的抽象，可以是裸金属、虚拟机或甚至是k8s pods。</li>
+</ul>
+<p><img src="/img/pigsty/er.jpg"></p>
+<p><strong>命名约定</strong></p>
+<ul>
+<li>集群名应为有效的 DNS 域名，不包含任何点号，正则表达式为：<code>[a-zA-Z0-9-]+</code></li>
+<li>服务名应以集群名为前缀，并以特定单词作为后缀：<code>primary</code>、<code>replica</code>、<code>offline</code>、<code>delayed</code>，中间用<code>-</code>连接。</li>
+<li>实例名以集群名为前缀，以正整数实例号为后缀，用<code>-</code>连接，例如<code>${cluster}-${seq}</code>。</li>
+<li>节点由其首要内网IP地址标识，因为PGSQL模块中数据库与主机1:1部署，所以主机名通常与实例名相同。</li>
+</ul>
+<hr>
+<h2 id="身份参数">身份参数</h2>
+<p>Pigsty使用<strong>身份参数</strong>来识别实体：<a href="/zh/docs/reference/param#pg_id"><code>PG_ID</code></a>。</p>
+<p>除了节点IP地址，<a href="/zh/docs/reference/param#pg_cluster"><code>pg_cluster</code></a>、<a href="/zh/docs/reference/param#pg_role"><code>pg_role</code></a>和<a href="/zh/docs/reference/param#pg_seq"><code>pg_seq</code></a>三个参数是定义postgres集群所必需的最小参数集。
+以<a href="/zh/docs/setup/provision#%E6%B2%99%E7%AE%B1%E7%8E%AF%E5%A2%83">沙箱环境</a>测试集群<code>pg-test</code>为例：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg-test</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.11</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 2, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 3, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replica }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-test</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>集群的三个成员如下所示：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">集群</th>
+<th style="text-align:center">序号</th>
+<th style="text-align:center">角色</th>
+<th style="text-align:center">主机 / IP</th>
+<th style="text-align:center">实例</th>
+<th style="text-align:center">服务</th>
+<th style="text-align:center">节点名</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><code>pg-test</code></td>
+<td style="text-align:center"><code>1</code></td>
+<td style="text-align:center"><code>primary</code></td>
+<td style="text-align:center"><code>10.10.10.11</code></td>
+<td style="text-align:center"><code>pg-test-1</code></td>
+<td style="text-align:center"><code>pg-test-primary</code></td>
+<td style="text-align:center"><code>pg-test-1</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><code>pg-test</code></td>
+<td style="text-align:center"><code>2</code></td>
+<td style="text-align:center"><code>replica</code></td>
+<td style="text-align:center"><code>10.10.10.12</code></td>
+<td style="text-align:center"><code>pg-test-2</code></td>
+<td style="text-align:center"><code>pg-test-replica</code></td>
+<td style="text-align:center"><code>pg-test-2</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><code>pg-test</code></td>
+<td style="text-align:center"><code>3</code></td>
+<td style="text-align:center"><code>replica</code></td>
+<td style="text-align:center"><code>10.10.10.13</code></td>
+<td style="text-align:center"><code>pg-test-3</code></td>
+<td style="text-align:center"><code>pg-test-replica</code></td>
+<td style="text-align:center"><code>pg-test-3</code></td>
+</tr>
+</tbody>
+</table>
+<p>这里包含了：</p>
+<ul>
+<li>一个集群：该集群命名为<code>pg-test</code>。</li>
+<li>两种角色：<code>primary</code>和<code>replica</code>。</li>
+<li>三个实例：集群由三个实例组成：<code>pg-test-1</code>、<code>pg-test-2</code>、<code>pg-test-3</code>。</li>
+<li>三个节点：集群部署在三个节点上：<code>10.10.10.11</code>、<code>10.10.10.12</code>和<code>10.10.10.13</code>。</li>
+<li>四个服务：
+<ul>
+<li>读写服务：<a href="/zh/docs/pgsql/svc#primary%E6%9C%8D%E5%8A%A1"><code>pg-test-primary</code></a></li>
+<li>只读服务：<a href="/zh/docs/pgsql/svc#replica%E6%9C%8D%E5%8A%A1"><code>pg-test-replica</code></a></li>
+<li>直接连接的管理服务：<a href="/zh/docs/pgsql/svc#default%E6%9C%8D%E5%8A%A1"><code>pg-test-default</code></a></li>
+<li>离线读服务：<a href="/zh/docs/pgsql/svc#offline%E6%9C%8D%E5%8A%A1"><code>pg-test-offline</code></a></li>
+</ul>
+</li>
+</ul>
+<p>在监控系统（Prometheus/Grafana/Loki）中，相应的指标将会使用这些身份参数进行标记：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#000">pg_up{cls=&#34;pg-meta&#34;, ins=&#34;pg-meta-1&#34;, ip=&#34;10.10.10.10&#34;, job=&#34;pgsql&#34;}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">pg_up{cls=&#34;pg-test&#34;, ins=&#34;pg-test-1&#34;, ip=&#34;10.10.10.11&#34;, job=&#34;pgsql&#34;}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">pg_up{cls=&#34;pg-test&#34;, ins=&#34;pg-test-2&#34;, ip=&#34;10.10.10.12&#34;, job=&#34;pgsql&#34;}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">pg_up{cls=&#34;pg-test&#34;, ins=&#34;pg-test-3&#34;, ip=&#34;10.10.10.13&#34;, job=&#34;pgsql&#34;}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-640213fc983ef0aae5180ea5bbbfb2d3">3 - 监控系统</h1>
+    <div class="lead">Pigsty 的监控系统是如何架构与实现的，被监控的目标对象又是如何被自动纳入管理的。</div>
+	
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-a2af4580848e7a62549ec377b62ac71e">4 - 本地 CA</h1>
+    <div class="lead">Pigsty 带有一套自签名的 CA 公私钥基础设施，用于签发 SSL 证书，加密网络通信流量。</div>
+	<hr>
+<h2 id="本地ca">本地CA</h2>
+<p>Pigsty默认会在初始化时，在管理节点本机 Pigsty 源码目录中生成一个自签名的CA，当您需要使用 SSL，数字签名，高级安全特性时，可以使用此 CA。</p>
+<p>CA密钥放置于元节点的 <code>/etc/pigsty/pki/ca</code> 目录中。</p>
+<p>如果您已经有了自己的 CA 公私钥，将其放置于 <code>files/ca/pki</code> 目录，并将 <a href="/zh/docs/pgsql/config#ca_method"><code>ca_method</code></a> 修改为 <code>copy</code>，则Pigsty会使用用户提供的CA证书与私钥，而不是重新生成一个新的</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/etc/pki              <span style="color:#8f5902;font-style:italic"># 证书目录</span>
+</span></span><span style="display:flex;"><span>/etc/pki/ca           <span style="color:#8f5902;font-style:italic"># CA 目录</span>
+</span></span><span style="display:flex;"><span>/etc/pki/ca/ca.crt    <span style="color:#8f5902;font-style:italic"># CA 证书</span>
+</span></span><span style="display:flex;"><span>/etc/pki/ca/ca.key    <span style="color:#8f5902;font-style:italic"># CA 私钥</span>
+</span></span></code></pre></div><hr>
+<h2 id="查看证书内容">查看证书内容</h2>
+<p>使用以下命令，可以查阅 Pigsty CA 证书的内容</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openssl x509 -text -in /etc/pigsty/ca/ca.crt
+</span></span></code></pre></div><p>结果为：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate:
+</span></span><span style="display:flex;"><span>    Data:
+</span></span><span style="display:flex;"><span>        Version: 3 (0x2)
+</span></span><span style="display:flex;"><span>        Serial Number:
+</span></span><span style="display:flex;"><span>            0b:e1:0b:39:c9:67:56:e5:b2:3d:6d:db:6a:b4:74:c5:50:0e:00:4e
+</span></span><span style="display:flex;"><span>    Signature Algorithm: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>        Issuer: O=Pigsty CA, CN=pigsty-ca
+</span></span><span style="display:flex;"><span>        Validity
+</span></span><span style="display:flex;"><span>            Not Before: Jul 13 07:52:21 2022 GMT
+</span></span><span style="display:flex;"><span>            Not After : Jun 19 07:52:21 2122 GMT
+</span></span><span style="display:flex;"><span>        Subject: O=Pigsty CA, CN=pigsty-ca
+</span></span><span style="display:flex;"><span>        Subject Public Key Info:
+</span></span><span style="display:flex;"><span>            Public Key Algorithm: rsaEncryption
+</span></span><span style="display:flex;"><span>                Public-Key: (4096 bit)
+</span></span><span style="display:flex;"><span>                Modulus:
+</span></span><span style="display:flex;"><span>                    ........................................
+</span></span><span style="display:flex;"><span>                    73:09:b5
+</span></span><span style="display:flex;"><span>                Exponent: 65537 (0x10001)
+</span></span><span style="display:flex;"><span>        X509v3 extensions:
+</span></span><span style="display:flex;"><span>            X509v3 Subject Alternative Name:
+</span></span><span style="display:flex;"><span>                DNS:pigsty-ca
+</span></span><span style="display:flex;"><span>            X509v3 Key Usage:
+</span></span><span style="display:flex;"><span>                Digital Signature, Certificate Sign, CRL Sign
+</span></span><span style="display:flex;"><span>            X509v3 Basic Constraints: critical
+</span></span><span style="display:flex;"><span>                CA:TRUE, pathlen:1
+</span></span><span style="display:flex;"><span>            X509v3 Subject Key Identifier:
+</span></span><span style="display:flex;"><span>                ........................................
+</span></span><span style="display:flex;"><span>    Signature Algorithm: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>         ........................................
+</span></span><span style="display:flex;"><span>-----BEGIN CERTIFICATE-----
+</span></span><span style="display:flex;"><span>........................................
+</span></span><span style="display:flex;"><span>-----END CERTIFICATE-----
+</span></span></code></pre></div><hr>
+<h2 id="常用操作">常用操作</h2>
+<p>如果您希望通过客户端证书认证，那么可以使用本地 CA 与<a href="https://github.com/Vonng/pigsty/blob/master/cert.yml">cert.yml</a> 剧本手工签发PostgreSQL 客户端证书。</p>
+<p>将证书的 <code>CN</code> 字段设置为数据库用户名即可：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./cert.yml -e <span style="color:#000">cn</span><span style="color:#ce5c00;font-weight:bold">=</span>dbuser_dba
+</span></span><span style="display:flex;"><span>./cert.yml -e <span style="color:#000">cn</span><span style="color:#ce5c00;font-weight:bold">=</span>dbuser_monitor
+</span></span></code></pre></div><p>签发的证书会默认生成在 <code>files/pki/misc/&lt;cn&gt;.{key,crt}</code> 路径下。</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-e4bef574b3856f296b026321cf35f1f9">5 - 基础设施即代码</h1>
+    <div class="lead">基础设施即代码，Infra as Code，简称 IaC。Pigsty 使用 IaC 的方式管理整套部署环境中的所有组件。</div>
+	<hr>
+<h2 id="基础设施即代码">基础设施即代码</h2>
+<p>基础设施即代码，Infra as Code，简称 IaC。</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-316ebbf072075b20f0f8bf290998d747">6 - 数据库高可用</h1>
+    <div class="lead">Pigsty 使用 Patroni 实现了 PostgreSQL 的高可用，确保主库不可用时自动进行故障转移，由从库接管。</div>
+	<blockquote>
+<p>主库故障恢复时间目标 (RTO) ≈ 30s，数据恢复点目标 (RPO) &lt; 1MB，从库故障 RTO ≈ 0 (闪断重置当前故障实例连接)</p>
+</blockquote>
+<p>Pigsty 的 PostgreSQL 集群带有开箱即用的高可用方案，由 <a href="https://patroni.readthedocs.io/en/latest/">patroni</a>、<a href="https://etcd.io/">etcd</a> 和 <a href="http://www.haproxy.org/">haproxy</a> 强力驱动。</p>
+<p><img src="/img/pigsty/ha.png"></p>
+<p>当主库故障时，将触发新一轮领导者竞选，集群中最为健康的从库将胜出，并被提升为新的主库。读写流量将立即路由至新的主库。主库故障影响是：默认情况下写入查询将被阻塞 15 ~ 40s，直到选出新的领导者来。</p>
+<p>当从库故障时，只读流量将路由至其他从库，如果所有从库都故障，只读流量才会最终由主库承载。从库故障的影响非常小：查询闪断：该从库上正在运行查询将由于连接重置而中止。</p>
+<p>故障检测由 <code>patroni</code> 和 <code>etcd</code> 完成，集群领导者将持有一个租约，如果它因为故障而没有及时续租（10s），租约将会被释放，新一轮集群选举会被触发。</p>
+<hr>
+<h2 id="高可用中的利弊权衡">高可用中的利弊权衡</h2>
+<p>您可以使用 <a href="/zh/docs/reference/param#pg_rto"><code>pg_rto</code></a> 参数调整集群的 TTL，默认 RTO 配置为 30s，增大它将导致更长的故障转移等待时间，而减少它将增加误报故障转移率（例如，网络抖动）。</p>
+<p>Pigsty 默认使用<strong>可用性优先</strong>模式，这意味着当主库故障时，它将尽快进行故障转移，尚未复制到从库的数据可能会丢失（常规万兆网络下，复制延迟在通常在几KB到100KB）。</p>
+<p>最大潜在数据丢失由 <a href="/zh/docs/reference/param#pg_rpo"><code>pg_rpo</code></a> 控制，默认为 1MB，减小这个值将会减少故障恢复时的可能数据损失，但也会增加故障时因为从库不够健康（落后太久）而拒绝自动切换的概率。</p>
+<p>RTO 与 RPO 是高可用集群设计时需要仔细权衡的两个参数，您应当根据您的硬件水平，网络质量，业务需求来合理调整它们。</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-397dc822a55434d21cd8ee3a6f846291">7 - 时间点恢复</h1>
+    <div class="lead">Pigsty 使用 pgBackRest 实现了 PostgreSQL 时间点恢复，允许用户回滚至备份策略容许范围内的任意时间点。</div>
+	<hr>
+<h2 id="时间点恢复">时间点恢复</h2>
+<blockquote>
+<p>您可以将集群恢复回滚至过去任意时刻，避免软件缺陷与人为失误导致的数据损失。</p>
+</blockquote>
+<p>Pigsty 的 PostgreSQL 集群带有自动配置的时间点恢复（PITR）方案，基于 <a href="https://pgbackrest.org/">pgBackRest</a> 与可选的 <a href="https://min.io/">MinIO</a>。</p>
+<p>高可用可以解决硬件故障，软件缺陷与人为失误导致的数据删除/覆盖写入却无能为力：因为变更操作会立即同步至从库应用。时间点恢复（Point in Time Recovery, PITR）可以解决这个问题。此外当您只有单个实例时，PITR也可以代替高可用，为最坏的情况兜底。</p>
+<p>如果想将集群恢复至某个备份，用户需要提前定期做好基础备份，如果想将集群恢复至任意时间点，用户还需要从备份时刻迄今的 WAL归档。这两项工作 Pigsty 为您自动进行了兜底配置。
+Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓库可以进行灵活配置（<a href="/zh/docs/reference/param#pgbackrest_repo"><code>pgbackrest_repo</code></a>）：默认使用主库本地文件系统（<code>local</code>），但也可以使用其他磁盘路径，或使用自带的可选 <a href="/zh/docs/minio">MinIO</a> 服务（<code>minio</code>）与云上 S3 服务。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pgbackrest_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#8f5902;font-style:italic"># 在 pgsql 主机上启用 pgBackRest 吗？</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pgbackrest_clean</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># 初始化时删除 pg 备份数据？</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pgbackrest_log_dir</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/pg/log/pgbackrest</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># pgbackrest 日志目录，默认为 `/pg/log/pgbackrest`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pgbackrest_method</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">local         </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># pgbackrest 仓库方法：local, minio, [用户定义...]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pgbackrest_repo</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#8f5902;font-style:italic"># pgbackrest 仓库：https://pgbackrest.org/configuration.html#section-repository</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">local</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                          </span><span style="color:#8f5902;font-style:italic"># 默认使用本地 posix 文件系统的 pgbackrest 仓库</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">path</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/pg/backup             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 本地备份目录，默认为 `/pg/backup`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full_type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">count   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 按计数保留完整备份</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#8f5902;font-style:italic"># 使用本地文件系统仓库时，最多保留 3 个完整备份，至少保留 2 个</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">minio</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                          </span><span style="color:#8f5902;font-style:italic"># pgbackrest 的可选 minio 仓库</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s3                     </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio 是与 s3 兼容的，所以使用 s3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sss.pigsty      </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio 端点域名，默认为 `sss.pigsty`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_region</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">us-east-1         </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio 区域，默认为 us-east-1，对 minio 无效</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_bucket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio 桶名称，默认为 `pgsql`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_key</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbackrest           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># pgbackrest 的 minio 用户访问密钥</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_key_secret</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">S3User.Backup </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># pgbackrest 的 minio 用户秘密密钥</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">s3_uri_style</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">path           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 对 minio 使用路径风格的 uri，而不是主机风格</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">path</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/pgbackrest            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio 备份路径，默认为 `/pgbackrest`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">storage_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">9000</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># minio 端口，默认为 9000</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">storage_ca_file</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/etc/pki/ca.crt </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># minio ca 文件路径，默认为 `/etc/pki/ca.crt`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">bundle</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">y</span><span style="color:#f8f8f8;text-decoration:underline">                     </span><span style="color:#8f5902;font-style:italic"># 将小文件打包成一个文件</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">cipher_type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">aes-256-cbc     </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 为远程备份仓库启用 AES 加密</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">cipher_pass</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgBackRest      </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># AES 加密密码，默认为 &#39;pgBackRest&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full_type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">time    </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 在 minio 仓库上按时间保留完整备份</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">14</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># 保留过去 14 天的完整备份</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>默认情况下，Pigsty提供了两种预置<a href="/zh/docs/pgsql/pitr#%E5%A4%87%E4%BB%BD%E7%AD%96%E7%95%A5">备份策略</a>：默认使用本地文件系统备份仓库，在这种情况下每天进行一次全量备份，确保用户任何时候都能回滚至一天内的任意时间点。备选策略使用专用的 MinIO 集群或S3存储备份，每周一全备，每天一增备，默认保留两周的备份与WAL归档。</p>
+<hr>
+<h2 id="基础备份与wal归档">基础备份与WAL归档</h2>
+<p>如果想将集群恢复⾄某个备份，⽤户需要提前做好：<strong>基础备份</strong>；如果想将集群恢复⾄任意时间点，⽤户还需要从备份时刻迄今的 <strong>WAL归档</strong>。</p>
+<p>Pisgty 使⽤ pgbackrest 管理备份，备份默认使⽤主库本地⽂件系统，但可以配置为：其他磁盘，或使⽤⾃带的 MinIO 与云上 S3 服务</p>
+<p>Pigsty 中的所有数据库集群，默认都启⽤了 WAL 归档，并使⽤ pgbackrest 推送 WAL 段⽂件，（默认只在主库上应⽤）</p>
+<hr>
+<h2 id="使用专用备份存储仓库">使用专用备份存储仓库</h2>
+<hr>
+<h2 id="使用pitr回滚至任意时间点">使用PITR回滚至任意时间点</h2>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-76a748b4626218b8ec1cb5db2047eae1">8 - 服务接入</h1>
+    <div class="lead">Pigsty 使用 HAProxy 提供服务接入，并提供可选的 pgBouncer 池化连接，以及可选的 L2 VIP 与 DNS 接入。</div>
+	<blockquote>
+<p>分离读写操作，正确路由流量，稳定可靠地交付 PostgreSQL 集群提供的能力。</p>
+</blockquote>
+<p><a href="/zh/docs/concept/svc/#服务概述">服务</a>是一种抽象：它是数据库集群对外提供能力的形式，并封装了底层集群的细节。</p>
+<p>服务对于生产环境中的<a href="/zh/docs/concept/svc/#接入服务">稳定接入</a>至关重要，在<a href="/zh/docs/concept/ha">高可用</a>集群自动故障时方显其价值，<a href="%E5%8D%95%E6%9C%BA%E7%94%A8%E6%88%B7">单机用户</a>通常不需要操心这个概念。</p>
+<hr>
+<h2 id="单机用户">单机用户</h2>
+<p>“服务” 的概念是给生产环境用的，个人用户/单机集群可以不折腾，直接拿实例名/IP地址访问数据库。</p>
+<p>例如，Pigsty 默认的单节点 <code>pg-meta</code>.<code>meta</code> 数据库，就可以直接用下面三个不同的用户连接上去。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql postgres://dbuser_dba:DBUser.DBA@10.10.10.10/meta     <span style="color:#8f5902;font-style:italic"># 直接用 DBA 超级用户连上去</span>
+</span></span><span style="display:flex;"><span>psql postgres://dbuser_meta:DBUser.Meta@10.10.10.10/meta   <span style="color:#8f5902;font-style:italic"># 用默认的业务管理员用户连上去</span>
+</span></span><span style="display:flex;"><span>psql postgres://dbuser_view:DBUser.View@pg-meta/meta       <span style="color:#8f5902;font-style:italic"># 用默认的只读用户走实例域名连上去</span>
+</span></span></code></pre></div><hr>
+<h2 id="服务概述">服务概述</h2>
+<p>在真实世界生产环境中，我们会使用基于复制的主从数据库集群。集群中有且仅有一个实例作为领导者（<a href="/zh/docs/pgsql/config#%E8%AF%BB%E5%86%99%E4%B8%BB%E5%BA%93">主库</a>）可以接受写入。
+而其他实例（<a href="/zh/docs/pgsql/config#%E5%8F%AA%E8%AF%BB%E4%BB%8E%E5%BA%93">从库</a>）则会从持续从集群领导者获取变更日志，与领导者保持一致。同时，从库还可以承载只读请求，在读多写少的场景下可以显著分担主库的负担，
+因此对集群的写入请求与只读请求进行区分，是一种十分常见的实践。</p>
+<p>此外对于高频短连接的生产环境，我们还会通过连接池中间件（Pgbouncer）对请求进行池化，减少连接与后端进程的创建开销。但对于ETL与变更执行等场景，我们又需要绕过连接池，直接访问数据库。
+同时，高可用集群在故障时会出现故障切换（Failover），故障切换会导致集群的领导者出现变更。因此高可用的数据库方案要求写入流量可以自动适配集群的领导者变化。
+这些不同的访问需求（读写分离，池化与直连，故障切换自动适配）最终抽象出 <strong>服务</strong> （Service）的概念。</p>
+<p>通常来说，数据库集群都必须提供这种最基础的服务：</p>
+<ul>
+<li><strong>读写服务（primary）</strong> ：可以读写数据库</li>
+</ul>
+<p>对于生产数据库集群，至少应当提供这两种服务：</p>
+<ul>
+<li><strong>读写服务（primary）</strong> ：写入数据：只能由主库所承载。</li>
+<li><strong>只读服务（replica）</strong> ：读取数据：可以由从库承载，没有从库时也可由主库承载</li>
+</ul>
+<p>此外，根据具体的业务场景，可能还会有其他的服务，例如：</p>
+<ul>
+<li><strong>默认直连服务（default）</strong> ：允许（管理）用户，绕过连接池直接访问数据库的服务</li>
+<li><strong>离线从库服务（offline）</strong> ：不承接线上只读流量的专用从库，用于ETL与分析查询</li>
+<li><strong>同步从库服务（standby）</strong> ：没有复制延迟的只读服务，由<a href="/zh/docs/pgsql/config#%E5%90%8C%E6%AD%A5%E5%A4%87%E5%BA%93">同步备库</a>/主库处理只读查询</li>
+<li><strong>延迟从库服务（delayed）</strong> ：访问同一个集群在一段时间之前的旧数据，由<a href="/zh/docs/pgsql/config#%E5%BB%B6%E8%BF%9F%E9%9B%86%E7%BE%A4">延迟从库</a>来处理</li>
+</ul>
+<hr>
+<h2 id="接入服务">接入服务</h2>
+<p>Pigsty的服务交付边界止步于集群的HAProxy，用户可以用各种手段访问这些负载均衡器。</p>
+<p>典型的做法是使用 DNS 或 VIP 接入，将其绑定在集群所有或任意数量的负载均衡器上。</p>
+<p><img alt="pigsty-access.jpg" src="/img/pigsty/access.jpg"></p>
+<p>你可以使用不同的 主机 &amp; 端口 组合，它们以不同的方式提供 PostgreSQL 服务。</p>
+<p><strong>主机</strong></p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>样例</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>集群域名</td>
+<td><code>pg-test</code></td>
+<td>通过集群域名访问（由 dnsmasq @ infra 节点解析）</td>
+</tr>
+<tr>
+<td>集群 VIP 地址</td>
+<td><code>10.10.10.3</code></td>
+<td>通过由 <code>vip-manager</code> 管理的 L2 VIP 地址访问，绑定到主节点</td>
+</tr>
+<tr>
+<td>实例主机名</td>
+<td><code>pg-test-1</code></td>
+<td>通过任何实例主机名访问（由 dnsmasq @ infra 节点解析）</td>
+</tr>
+<tr>
+<td>实例 IP 地址</td>
+<td><code>10.10.10.11</code></td>
+<td>访问任何实例的 IP 地址</td>
+</tr>
+</tbody>
+</table>
+<p><strong>端口</strong></p>
+<p>Pigsty 使用不同的 <strong>端口</strong> 来区分 <a href="/zh/docs/concept/svc/#服务概述">pg services</a></p>
+<table>
+<thead>
+<tr>
+<th>端口</th>
+<th>服务</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5432</td>
+<td>postgres</td>
+<td>数据库</td>
+<td>直接访问 postgres 服务器</td>
+</tr>
+<tr>
+<td>6432</td>
+<td>pgbouncer</td>
+<td>中间件</td>
+<td>访问 postgres 前先通过连接池中间件</td>
+</tr>
+<tr>
+<td>5433</td>
+<td>primary</td>
+<td>服务</td>
+<td>访问主 pgbouncer (或 postgres)</td>
+</tr>
+<tr>
+<td>5434</td>
+<td>replica</td>
+<td>服务</td>
+<td>访问备份 pgbouncer (或 postgres)</td>
+</tr>
+<tr>
+<td>5436</td>
+<td>default</td>
+<td>服务</td>
+<td>访问主 postgres</td>
+</tr>
+<tr>
+<td>5438</td>
+<td>offline</td>
+<td>服务</td>
+<td>访问离线 postgres</td>
+</tr>
+</tbody>
+</table>
+<p><strong>组合</strong></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 通过集群域名访问</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test:5432/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; 主直接连接</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test:6432/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; 主连接池 -&gt; 主</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test:5433/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; HAProxy -&gt; 主连接池 -&gt; 主</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test:5434/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; HAProxy -&gt; 备份连接池 -&gt; 备份</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_dba@pg-test:5436/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; HAProxy -&gt; 主直接连接 (用于管理员)</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_stats@pg-test:5438/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; L2 VIP -&gt; HAProxy -&gt; 离线直接连接 (用于 ETL/个人查询)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 通过集群 VIP 直接访问</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.3:5432/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; 主直接访问</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.3:6432/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; 主连接池 -&gt; 主</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.3:5433/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; HAProxy -&gt; 主连接池 -&gt; 主</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.3:5434/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; HAProxy -&gt; 备份连接池 -&gt; 备份</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_dba@10.10.10.3:5436/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; HAProxy -&gt; 主直接连接 (用于管理员)</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_stats@10.10.10.3::5438/test <span style="color:#8f5902;font-style:italic"># L2 VIP -&gt; HAProxy -&gt; 离线直接连接 (用于 ETL/个人查询)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 直接指定任何集群实例名</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test-1:5432/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; 数据库实例直接连接 (单例访问)</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test-1:6432/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; 连接池 -&gt; 数据库</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test-1:5433/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; HAProxy -&gt; 连接池 -&gt; 数据库读/写</span>
+</span></span><span style="display:flex;"><span>postgres://test@pg-test-1:5434/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; HAProxy -&gt; 连接池 -&gt; 数据库只读</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_dba@pg-test-1:5436/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; HAProxy -&gt; 数据库直接连接</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_stats@pg-test-1:5438/test <span style="color:#8f5902;font-style:italic"># DNS -&gt; HAProxy -&gt; 数据库离线读/写</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 直接指定任何集群实例 IP 访问</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:5432/test <span style="color:#8f5902;font-style:italic"># 数据库实例直接连接 (直接指定实例, 没有自动流量分配)</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:6432/test <span style="color:#8f5902;font-style:italic"># 连接池 -&gt; 数据库</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:5433/test <span style="color:#8f5902;font-style:italic"># HAProxy -&gt; 连接池 -&gt; 数据库读/写</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:5434/test <span style="color:#8f5902;font-style:italic"># HAProxy -&gt; 连接池 -&gt; 数据库只读</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_dba@10.10.10.11:5436/test <span style="color:#8f5902;font-style:italic"># HAProxy -&gt; 数据库直接连接</span>
+</span></span><span style="display:flex;"><span>postgres://dbuser_stats@10.10.10.11:5438/test <span style="color:#8f5902;font-style:italic"># HAProxy -&gt; 数据库离线读-写</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 智能客户端：自动进行读写分离</span>
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:6432,10.10.10.12:6432,10.10.10.13:6432/test?target_session_attrs<span style="color:#ce5c00;font-weight:bold">=</span>primary
+</span></span><span style="display:flex;"><span>postgres://test@10.10.10.11:6432,10.10.10.12:6432,10.10.10.13:6432/test?target_session_attrs<span style="color:#ce5c00;font-weight:bold">=</span>prefer-standby
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-5c7e49f373a8b6df52fbd9bec4787528">9 - 访问控制</h1>
+    <div class="lead">Pigsty 提供了标准的安全实践：密码与证书认证，开箱即用的权限模型，SSL加密网络流量，加密远程冷备份等。</div>
+	<blockquote>
+<p>Pigsty 提供了一套开箱即用的，基于<a href="/zh/docs/concept/ac/#角色系统">角色系统</a>和<a href="/zh/docs/concept/ac/#权限系统">权限系统</a>的访问控制模型。</p>
+</blockquote>
+<p>权限控制很重要，但很多用户做不好。因此 Pigsty 提供了一套开箱即用的精简访问控制模型，为您的集群安全性提供一个兜底。</p>
+<hr>
+<h2 id="角色系统">角色系统</h2>
+<p>Pigsty 默认的角色系统包含四个<a href="/zh/docs/concept/ac/#默认角色">默认角色</a>和四个<a href="/zh/docs/concept/ac/#默认用户">默认用户</a>：</p>
+<table>
+<thead>
+<tr>
+<th>角色名称</th>
+<th>属性</th>
+<th>所属</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dbrole_readonly</code></td>
+<td><code>NOLOGIN</code></td>
+<td></td>
+<td>角色：全局只读访问</td>
+</tr>
+<tr>
+<td><code>dbrole_readwrite</code></td>
+<td><code>NOLOGIN</code></td>
+<td>dbrole_readonly</td>
+<td>角色：全局读写访问</td>
+</tr>
+<tr>
+<td><code>dbrole_admin</code></td>
+<td><code>NOLOGIN</code></td>
+<td>pg_monitor,dbrole_readwrite</td>
+<td>角色：管理员/对象创建</td>
+</tr>
+<tr>
+<td><code>dbrole_offline</code></td>
+<td><code>NOLOGIN</code></td>
+<td></td>
+<td>角色：受限的只读访问</td>
+</tr>
+<tr>
+<td><code>postgres</code></td>
+<td><code>SUPERUSER</code></td>
+<td></td>
+<td>系统超级用户</td>
+</tr>
+<tr>
+<td><code>replicator</code></td>
+<td><code>REPLICATION</code></td>
+<td>pg_monitor,dbrole_readonly</td>
+<td>系统复制用户</td>
+</tr>
+<tr>
+<td><code>dbuser_dba</code></td>
+<td><code>SUPERUSER</code></td>
+<td>dbrole_admin</td>
+<td>pgsql 管理用户</td>
+</tr>
+<tr>
+<td><code>dbuser_monitor</code></td>
+<td></td>
+<td>pg_monitor</td>
+<td>pgsql 监控用户</td>
+</tr>
+</tbody>
+</table>
+<p>这些<a href="/zh/docs/pgsql/user#%E5%AE%9A%E4%B9%89%E7%94%A8%E6%88%B7">角色与用户</a>的详细定义如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_default_roles</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># 全局默认的角色与系统用户</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_readonly  ,login: false ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for global read-only access     }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_offline   ,login: false ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for restricted read-only access }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_readwrite ,login: false ,roles: [dbrole_readonly] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for global read-write access }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_admin     ,login: false ,roles: [pg_monitor, dbrole_readwrite] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for object creation }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: postgres     ,superuser: true  ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system superuser }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: replicator ,replication: true  ,roles: [pg_monitor, dbrole_readonly] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system replicator }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dba   ,superuser: true  ,roles: [dbrole_admin]  ,pgbouncer: true ,pool_mode: session, pool_connlimit: 16 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql admin user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_monitor ,roles: [pg_monitor] ,pgbouncer: true ,parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#204a87;font-weight:bold">log_min_duration_statement: 1000 } ,pool_mode: session ,pool_connlimit: 8 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql monitor user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="默认角色">默认角色</h2>
+<p>Pigsty 中有四个默认角色：</p>
+<ul>
+<li>业务只读 (<code>dbrole_readonly</code>): 用于全局只读访问的角色。如果别的业务想要此库只读访问权限，可以使用此角色。</li>
+<li>业务读写 (<code>dbrole_readwrite</code>): 用于全局读写访问的角色，主属业务使用的生产账号应当具有数据库读写权限</li>
+<li>业务管理员 (<code>dbrole_admin</code>): 拥有DDL权限的角色，通常用于业务管理员，或者需要在应用中建表的场景（比如各种业务软件）</li>
+<li>离线只读访问 (<code>dbrole_offline</code>): 受限的只读访问角色（只能访问 <a href="/zh/docs/pgsql/config#%E7%A6%BB%E7%BA%BF%E4%BB%8E%E5%BA%93">offline</a> 实例，通常是个人用户，ETL工具账号）</li>
+</ul>
+<p>默认角色在 <a href="/zh/docs/reference/param#pg_default_roles"><code>pg_default_roles</code></a> 中定义，除非您确实知道自己在干什么，建议不要更改默认角色的名称。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_readonly  , login: false , comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for global read-only access  }                           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 生产环境的只读角色</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_offline ,   login: false , comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for restricted read-only access (offline instance) }     </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 受限的只读角色</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_readwrite , login: false , roles: [dbrole_readonly], comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for global read-write access } </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 生产环境的读写角色</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbrole_admin , login: false , roles: [pg_monitor, dbrole_readwrite] , comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">role for object creation }</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 生产环境的 DDL 更改角色</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="默认用户">默认用户</h2>
+<p>Pigsty 也有四个默认用户（系统用户）：</p>
+<ul>
+<li>超级用户 (<code>postgres</code>)，集群的所有者和创建者，与操作系统 dbsu 名称相同。</li>
+<li>复制用户 (<code>replicator</code>)，用于主-从复制的系统用户。</li>
+<li>监控用户 (<code>dbuser_monitor</code>)，用于监控数据库和连接池指标的用户。</li>
+<li>管理用户 (<code>dbuser_dba</code>)，执行日常操作和数据库更改的管理员用户。</li>
+</ul>
+<p>这4个默认用户的用户名/密码通过4对专用参数进行定义，并在很多地方引用：</p>
+<ul>
+<li><a href="/zh/docs/reference/param#pg_dbsu"><code>pg_dbsu</code></a>：操作系统 dbsu 名称，默认为 postgres，最好不要更改它</li>
+<li><a href="/zh/docs/reference/param#pg_dbsu_password"><code>pg_dbsu_password</code></a>：dbsu 密码，默认为空字符串意味着不设置 dbsu 密码，最好不要设置。</li>
+<li><a href="/zh/docs/reference/param#pg_replication_username"><code>pg_replication_username</code></a>：postgres 复制用户名，默认为 <code>replicator</code></li>
+<li><a href="/zh/docs/reference/param#pg_replication_password"><code>pg_replication_password</code></a>：postgres 复制密码，默认为 <code>DBUser.Replicator</code></li>
+<li><a href="/zh/docs/reference/param#pg_admin_username"><code>pg_admin_username</code></a>：postgres 管理员用户名，默认为 <code>dbuser_dba</code></li>
+<li><a href="/zh/docs/reference/param#pg_admin_password"><code>pg_admin_password</code></a>：postgres 管理员密码的明文，默认为 <code>DBUser.DBA</code></li>
+<li><a href="/zh/docs/reference/param#pg_monitor_username"><code>pg_monitor_username</code></a>：postgres 监控用户名，默认为 <code>dbuser_monitor</code></li>
+<li><a href="/zh/docs/reference/param#pg_monitor_password"><code>pg_monitor_password</code></a>：postgres 监控密码，默认为 <code>DBUser.Monitor</code></li>
+</ul>
+<blockquote>
+<p><strong>在生产部署中记得更改这些密码，不要使用默认值！</strong></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_dbsu</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">postgres                            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 数据库超级用户名，这个用户名建议不要修改。</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_dbsu_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">                          </span><span style="color:#8f5902;font-style:italic"># 数据库超级用户密码，这个密码建议留空！禁止dbsu密码登陆。</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_replication_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replicator          </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统复制用户名</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_replication_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.Replicator   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统复制密码，请务必修改此密码！</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_monitor_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbuser_monitor          </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统监控用户名</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_monitor_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.Monitor          </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统监控密码，请务必修改此密码！</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_admin_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbuser_dba                </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统管理用户名</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_admin_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.DBA                </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 系统管理密码，请务必修改此密码！</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>如果您修改默认用户的参数，在 <a href="/zh/docs/reference/param#pg_default_roles"><code>pg_default_roles</code></a> 中修改相应的角色<a href="/zh/docs/pgsql/user#%E5%AE%9A%E4%B9%89%E7%94%A8%E6%88%B7">定义</a>即可：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: postgres     ,superuser: true                                          ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system superuser }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: replicator ,replication: true  ,roles: [pg_monitor, dbrole_readonly]   ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system replicator }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dba   ,superuser: true  ,roles: [dbrole_admin]  ,pgbouncer: true ,pool_mode: session, pool_connlimit: 16 , comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql admin user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_monitor   ,roles: [pg_monitor, dbrole_readonly] ,pgbouncer: true ,parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#204a87;font-weight:bold">log_min_duration_statement: 1000 } ,pool_mode: session ,pool_connlimit: 8 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql monitor user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="权限系统">权限系统</h2>
+<p>Pigsty 拥有一套开箱即用的权限模型，该模型与<a href="/zh/docs/concept/ac/#default-roles">默认角色</a>一起配合工作。</p>
+<ul>
+<li>所有用户都可以访问所有模式。</li>
+<li>只读用户（<code>dbrole_readonly</code>）可以从所有表中读取数据。（SELECT，EXECUTE）</li>
+<li>读写用户（<code>dbrole_readwrite</code>）可以向所有表中写入数据并运行 DML。（INSERT，UPDATE，DELETE）。</li>
+<li>管理员用户（<code>dbrole_admin</code>）可以创建对象并运行 DDL（CREATE，USAGE，TRUNCATE，REFERENCES，TRIGGER）。</li>
+<li>离线用户（<code>dbrole_offline</code>）类似只读用户，但访问受到限制，只允许访问<a href="/zh/docs/pgsql/config#%E7%A6%BB%E7%BA%BF%E4%BB%8E%E5%BA%93">离线实例</a>（<code>pg_role = 'offline'</code> 或 <code>pg_offline_query = true</code>）</li>
+<li>由管理员用户创建的对象将具有正确的权限。</li>
+<li>所有数据库上都配置了默认权限，包括模板数据库。</li>
+<li>数据库连接权限由数据库<a href="/zh/docs/pgsql/db#%E5%AE%9A%E4%B9%89%E6%95%B0%E6%8D%AE%E5%BA%93">定义</a>管理。</li>
+<li>默认撤销<code>PUBLIC</code>在数据库和<code>public</code>模式下的<code>CREATE</code>权限。</li>
+</ul>
+<hr>
+<h2 id="对象权限">对象权限</h2>
+<p>数据库中新建对象的默认权限由参数 <a href="/zh/docs/reference/param#pg_default_privileges"><code>pg_default_privileges</code></a> 所控制：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- <span style="color:#000">GRANT USAGE      ON SCHEMAS   TO dbrole_readonly</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT SELECT     ON TABLES    TO dbrole_readonly</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT SELECT     ON SEQUENCES TO dbrole_readonly</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT EXECUTE    ON FUNCTIONS TO dbrole_readonly</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT USAGE      ON SCHEMAS   TO dbrole_offline</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT SELECT     ON TABLES    TO dbrole_offline</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT SELECT     ON SEQUENCES TO dbrole_offline</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT EXECUTE    ON FUNCTIONS TO dbrole_offline</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT INSERT     ON TABLES    TO dbrole_readwrite</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT UPDATE     ON TABLES    TO dbrole_readwrite</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT DELETE     ON TABLES    TO dbrole_readwrite</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT USAGE      ON SEQUENCES TO dbrole_readwrite</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT UPDATE     ON SEQUENCES TO dbrole_readwrite</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT TRUNCATE   ON TABLES    TO dbrole_admin</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT REFERENCES ON TABLES    TO dbrole_admin</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT TRIGGER    ON TABLES    TO dbrole_admin</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#000">GRANT CREATE     ON SCHEMAS   TO dbrole_admin</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>由管理员<strong>新创建</strong>的对象，默认将会上述权限。使用 <code>\ddp+</code> 可以查看这些默认权限：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>访问权限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>函数</td>
+<td>=X</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_readonly=X</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_offline=X</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_admin=X</td>
+</tr>
+<tr>
+<td>模式</td>
+<td>dbrole_readonly=U</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_offline=U</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_admin=UC</td>
+</tr>
+<tr>
+<td>序列号</td>
+<td>dbrole_readonly=r</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_offline=r</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_readwrite=wU</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_admin=rwU</td>
+</tr>
+<tr>
+<td>表</td>
+<td>dbrole_readonly=r</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_offline=r</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_readwrite=awd</td>
+</tr>
+<tr>
+<td></td>
+<td>dbrole_admin=arwdDxt</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="默认权限">默认权限</h2>
+<p>SQL 语句 <a href="https://www.postgresql.org/docs/current/sql-alterdefaultprivileges.html"><code>ALTER DEFAULT PRIVILEGES</code></a> 允许您设置将来创建的对象的权限。 它不会影响已经存在对象的权限，也不会影响非管理员用户创建的对象。</p>
+<p>在 Pigsty 中，默认权限针对三个角色进行定义：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_default_privileges</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIVILEGES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ROLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_dbsu</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}}</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}}</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">endfor</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_default_privileges</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIVILEGES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ROLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_admin_username</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}}</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}}</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">endfor</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- 对于其他业务管理员而言，它们应当在执行 DDL 前执行 SET ROLE dbrole_admin，从而使用对应的默认权限配置。
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_default_privileges</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFAULT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIVILEGES</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ROLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;dbrole_admin&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">{{</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">priv</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">}}</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#a40000">{</span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">endfor</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#a40000">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>这些内容将会被 PG集群初始化模板 <a href="https://github.com/Vonng/pigsty/blob/master/roles/pgsql/templates/pg-init-template.sql"><code>pg-init-template.sql</code></a> 所使用，在集群初始化的过程中渲染并输出至 <code>/pg/tmp/pg-init-template.sql</code>。
+该命令会在 <code>template1</code> 与 <code>postgres</code> 数据库中执行，新创建的数据库会通过模板 <code>template1</code> 继承这些默认权限配置。</p>
+<p>也就是说，为了维持正确的对象权限，您必须用<strong>管理员用户</strong>来执行 DDL，它们可以是：</p>
+<ol>
+<li><a href="/zh/docs/reference/param#pg_dbsu"><code>{{ pg_dbsu }}</code></a>，默认为 <code>postgres</code></li>
+<li><a href="/zh/docs/reference/param#pg_admin_username"><code>{{ pg_admin_username }}</code></a>，默认为 <code>dbuser_dba</code></li>
+<li>授予了 <code>dbrole_admin</code> 角色的业务管理员用户（通过 <code>SET ROLE</code> 切换为 <code>dbrole_admin</code> 身份）。</li>
+</ol>
+<p>使用 <code>postgres</code> 作为全局对象所有者是明智的。如果您希望以业务管理员用户身份创建对象，创建之前必须使用 <code>SET ROLE dbrole_admin</code> 来维护正确的权限。</p>
+<p>当然，您也可以在数据库中通过 <code>ALTER DEFAULT PRIVILEGE FOR ROLE &lt;some_biz_admin&gt; XXX</code> 来显式对业务管理员授予默认权限。</p>
+<hr>
+<h2 id="数据库权限">数据库权限</h2>
+<p>在 Pigsty 中，数据库（Database）层面的权限在<a href="/zh/docs/concept/ac/#定义数据库">数据库定义</a>中被涵盖。</p>
+<p>数据库有三个级别的权限：<code>CONNECT</code>、<code>CREATE</code>、<code>TEMP</code>，以及一个特殊的&rsquo;权限&rsquo;：<code>OWNERSHIP</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- <span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">meta        </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 必选，`name` 是数据库定义中唯一的必选字段</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">owner</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">postgres   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 可选，数据库所有者，默认为 postgres</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">allowconn</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic"># 可选，是否允许连接，默认为 true。显式设置 false 将完全禁止连接到此数据库</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">revokeconn</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># 可选，撤销公共连接权限。默认为 false，设置为 true 时，属主和管理员之外用户的 CONNECT 权限会被回收</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><ul>
+<li>如果 <code>owner</code> 参数存在，它作为数据库属主，替代默认的 <a href="/zh/docs/reference/param#pg_dbsu"><code>{{ pg_dbsu }}</code></a>（通常也就是<code>postgres</code>）</li>
+<li>如果 <code>revokeconn</code> 为 <code>false</code>，所有用户都有数据库的 <code>CONNECT</code> 权限，这是默认的行为。</li>
+<li>如果显式设置了 <code>revokeconn</code> 为 <code>true</code>：
+<ul>
+<li>数据库的 <code>CONNECT</code> 权限将从 <code>PUBLIC</code> 中撤销：普通用户无法连接上此数据库</li>
+<li><code>CONNECT</code> 权限将被显式授予 <code>{{ pg_replication_username }}</code>、<code>{{ pg_monitor_username }}</code> 和 <code>{{ pg_admin_username }}</code></li>
+<li><code>CONNECT</code> 权限将 <code>GRANT OPTION</code> 被授予数据库属主，数据库属主用户可以自行授权其他用户连接权限。</li>
+</ul>
+</li>
+<li><code>revokeconn</code> 选项可用于在同一个集群间隔离跨数据库访问，您可以为每个数据库创建不同的业务用户作为属主，并为它们设置 <code>revokeconn</code> 选项。</li>
+</ul>
+<details><summary>示例：数据库隔离</summary>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg-infra</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.40</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.41</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 2, pg_role: replica , pg_offline_query</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-infra</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_users</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_confluence, password: mc2iohos , pgbouncer: true, roles</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbrole_admin ] }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_gitlab, password: sdf23g22sfdd , pgbouncer: true, roles</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbrole_readwrite ] }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_jira, password: sdpijfsfdsfdfs , pgbouncer: true, roles</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbrole_admin ] }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_databases</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: confluence , revokeconn: true, owner: dbuser_confluence , connlimit</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">100</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: gitlab , revokeconn: true, owner: dbuser_gitlab, connlimit</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">100</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: jira , revokeconn: true, owner: dbuser_jira , connlimit</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">100</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div></details>
+<hr>
+<h2 id="create权限">CREATE权限</h2>
+<p>出于安全考虑，Pigsty 默认从 <code>PUBLIC</code> 撤销数据库上的 <code>CREATE</code> 权限，从 PostgreSQL 15 开始这也是默认行为。</p>
+<p>数据库属主总是可以根据实际需要，来自行调整 CREATE 权限。</p>
+
+</div>
+
+
+
+    
+	
+  
+
+
+
+          </main>
+        </div>
+      </div>
+      <footer class="td-footer row d-print-none">
+  <div class="container-fluid">
+    <div class="row mx-md-2">
+      <div class="td-footer__left col-6 col-sm-4 order-sm-1">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Mail" aria-label="Mail">
+    <a target="_blank" rel="noopener" href="mailto:rh@vonng.com" aria-label="Mail">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="GitHub" aria-label="GitHub">
+    <a target="_blank" rel="noopener" href="https://github.com/Vonng/pigsty" aria-label="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Twitter" aria-label="Twitter">
+    <a target="_blank" rel="noopener" href="https://twitter.com/GobeUncleWang" aria-label="Twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__right col-6 col-sm-4 order-sm-3">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="WeChat" aria-label="WeChat">
+    <a target="_blank" rel="noopener" href="/zh/docs/ref/wechat" aria-label="WeChat">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Discord" aria-label="Discord">
+    <a target="_blank" rel="noopener" href="https://discord.gg/wDzt5VyWEz" aria-label="Discord">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Telegram" aria-label="Telegram">
+    <a target="_blank" rel="noopener" href="https://t.me/joinchat/gV9zfZraNPM3YjFh" aria-label="Telegram">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__center col-12 col-sm-4 py-2 order-sm-2">
+        <span class="td-footer__copyright">&copy;
+    2018&ndash;2024
+    <span class="td-footer__authors">Ruohang Feng</span></span><span class="td-footer__all_rights_reserved">All Rights Reserved</span></span><span class="ms-2"><a href="https://vonng.com/en/" target="_blank" rel="noopener">@Vonng</a></span>
+<br><span>Pigsty® distributed under <a href="/docs/ref/license" target="_blank" rel="noopener">AGPLv3</a></span>
+<br><span class="ms-2"><a href="/docs/ref/privacy" target="_blank" rel="noopener">Privacy Policy</a></span>
+<span><a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备15016890号</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <script src="/js/main.min.248655eb216150e39da254c2f7aa5357805d0ec66bdb741b591cd35fb5f629ab.js" integrity="sha256-JIZV6yFhUOOdolTC96pTV4BdDsZr23QbWRzTX7X2Kas=" crossorigin="anonymous"></script>
+<script defer src="/js/click-to-copy.min.f724d3de49218995223b7316aa2e53e2b34bf42026bf399ebb21bb02212402d1.js" integrity="sha256-9yTT3kkhiZUiO3MWqi5T4rNL9CAmvzmeuyG7AiEkAtE=" crossorigin="anonymous"></script>
+<script src='/js/tabpane-persist.js'></script>
+
+  </body>
+</html>

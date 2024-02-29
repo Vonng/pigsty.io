@@ -1,89 +1,135 @@
 #!/bin/bash
-set -euo pipefail
-
+set -o pipefail
 #==============================================================#
 # File      :   install
-# Ctime     :   2021-04-29
-# Mtime     :   2021-04-29
-# Desc      :   Get latest pigsty source code to ~/pigsty
-# Path      :   https://pigsty.cc/install
-# Usage     :   /bin/bash -c "$(curl -fsSL https://pigsty.cc/install)"
-# Copyright (C) 2018-2021 Ruohang Feng
+# Desc      :   get latest stable pigsty source code
+# Ctime     :   2022-10-30
+# Mtime     :   2023-08-19
+# Path      :   https://get.pigsty.cc/latest
+# Usage     :   bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"
+# Deps      :   curl
+# Author    :   Ruohang Feng (rh@vonng.com)
+# License   :   AGPLv3
 #==============================================================#
+VERSION=${VERSION-'v2.6.0'}
 
-PROG_NAME="$(basename $0))"
-PROG_DIR="$(cd $(dirname $0) && pwd)"
-DEFAULT_PIGSTY_HOME="${HOME}/pigsty"
 
-#==============================================================#
-# Arg1 : version (latest by default)
-# Arg2 : homedir (~/pigsty by default), must be a path end with 'pigsty'
-#==============================================================#
-PIGSTY_VERSION=${1-'latest'}
-PIGSTY_HOME=${2-${DEFAULT_PIGSTY_HOME}}
+#--------------------------------------------------------------#
+# Usage
+#--------------------------------------------------------------#
+# bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"               # get from CDN or Github
+# SOURCE=GITHUB bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"  # enforce download from github
+# SOURCE=CDN    bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"  # enforce download from CDN
 
-#========================================#
-# build source code tarball url
-#========================================#
-PIGSTY_TGZ_URL=https://pigsty.cc/pigsty.tgz
-if [[ ${PIGSTY_VERSION} =~ ^[0-9]+\.[0-9]+ ]]; then
-    PIGSTY_TGZ_URL=https://pigsty.cc/${PIGSTY_VERSION}/pigsty.tgz
+
+#--------------------------------------------------------------#
+# Param
+#--------------------------------------------------------------#
+SOURCE_FILENAME="pigsty-${VERSION}.tgz"
+SOURCE_URL_GITHUB="https://github.com/Vonng/pigsty/releases/download/${VERSION}/${SOURCE_FILENAME}"
+SOURCE_URL_CDN="https://get.pigsty.cc/${VERSION}/${SOURCE_FILENAME}"
+SOURCE_URL=${SOURCE_URL_GITHUB}
+DOWNLOAD_TO="/tmp/${SOURCE_FILENAME}"
+EXTRACT_TO="${HOME}/pigsty"
+
+
+#--------------------------------------------------------------#
+# Utils
+#--------------------------------------------------------------#
+__CN='\033[0m';__CB='\033[0;30m';__CR='\033[0;31m';__CG='\033[0;32m';
+__CY='\033[0;33m';__CB='\033[0;34m';__CM='\033[0;35m';__CC='\033[0;36m';__CW='\033[0;37m';
+function log_info() {  printf "[${__CG} OK ${__CN}] ${__CG}$*${__CN}\n";   }
+function log_warn() {  printf "[${__CY}WARN${__CN}] ${__CY}$*${__CN}\n";   }
+function log_error() { printf "[${__CR}FAIL${__CN}] ${__CR}$*${__CN}\n";   }
+function log_debug() { printf "[${__CB}HINT${__CN}] ${__CB}$*${__CN}\n"; }
+function log_hint()  { printf "${__CB}$*${__CN}\n"; }
+function log_line()  { printf "${__CM}[$*] ===========================================${__CN}\n"; }
+function behind_gfw() {
+    local return_code=$(curl -I -s --connect-timeout 1 www.google.com -w %{http_code} | tail -n1)
+    if [ "${return_code}" = "200" ]; then
+        return 1
+    fi
+    return 0
+}
+
+
+#--------------------------------------------------------------#
+# Check Environment (determine where to download pigsty source)
+#--------------------------------------------------------------#
+log_line "Checking"
+if [[ -n "${SOURCE}" ]]; then
+    if [[ "${SOURCE}" == "GITHUB" || "${SOURCE}" == "CDN" ]]; then
+       log_info "SOURCE=${SOURCE} from environment"
+       if [[ "${SOURCE}" == "CDN" ]]; then
+           SOURCE_URL=${SOURCE_URL_CDN}
+       fi
+    else
+       log_error "invalid environment SOURCE=${SOURCE}, use 'CDN' or 'GITHUB'"
+       log_hint '$ SOURCE=GITHUB bash -c "$(curl -fsSL https://get.pigsty.cc/latest);"'
+       log_hint '$ SOURCE=CDN    bash -c "$(curl -fsSL https://get.pigsty.cc/latest);"'
+       exit 1
+    fi
+else
+    if behind_gfw; then
+        log_info "SOURCE from CDN due to GFW"
+        SOURCE="CDN"
+        SOURCE_URL=${SOURCE_URL_CDN}
+    else
+        log_info "SOURCE from GITHUB Release"
+        SOURCE="GITHUB"
+    fi
+fi
+log_hint 'FROM CDN    : bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"'
+log_hint 'FROM GITHUB : bash -c "$(curl -fsSL https://raw.githubusercontent.com/Vonng/pigsty/master/bin/latest)"'
+
+
+#--------------------------------------------------------------#
+# Download
+#--------------------------------------------------------------#
+log_line "Downloading"
+log_info "download pigsty source code from ${SOURCE}"
+log_info "$ curl -SL ${SOURCE_URL}"
+curl -SL "${SOURCE_URL}" -o "${DOWNLOAD_TO}"
+if [[ $? -ne 0 ]]; then
+    log_error "fail to download pigsty source from ${SOURCE}"
+    log_info "check https://pigsty.io/en/docs/install , or try with CDN/GITHUB"
+    log_hint '$ SOURCE=CDN    bash -c "$(curl -fsSL https://get.pigsty.cc/latest);"'
+    log_hint '$ SOURCE=GITHUB bash -c "$(curl -fsSL https://get.pigsty.cc/latest);"'
+    exit 2
+fi
+# get md5 checksum of ${DOWNLOAD_TO}
+log_hint "MD5: $(md5sum ${DOWNLOAD_TO})"
+
+
+#--------------------------------------------------------------#
+# Extract
+#--------------------------------------------------------------#
+log_line "Extracting"
+# extract to home dir if ~/pigsty not exists
+if [[ ! -d ${EXTRACT_TO} ]]; then
+    log_info "extract '${DOWNLOAD_TO}' to '${EXTRACT_TO}'"
+    log_info "$ tar -xf ${DOWNLOAD_TO} -C ~;"
+    tar -xf ${DOWNLOAD_TO} -C ~;
+else
+    log_warn "${EXTRACT_TO} already exists, you can backup old pigsty dir and overwrite it with:"
+    log_hint "rm -rf /tmp/pigsty_backup; mv -f ${EXTRACT_TO} /tmp/pigsty_backup;"
+    log_hint "cd ~; rm -rf ~/pigsty; tar -xf ${DOWNLOAD_TO} -C ."
+    log_hint "cat /tmp/pigsty_backup/pigsty.yml > ~/pigsty/pigsty.yml;"
+    log_hint "rm -rf files/pki; cp -r /tmp/pigsty_backup/files/pki ~/pigsty/files/pki"
 fi
 
-#========================================#
-# download to /tmp first
-#========================================#
-printf "\033[0;32m[INFO] get pigsty ${PIGSTY_VERSION} from ${PIGSTY_TGZ_URL} to ${PIGSTY_HOME} \033[0m\n" >&2
-curl -fsSL ${PIGSTY_TGZ_URL} -o /tmp/pigsty.tgz
 
+#--------------------------------------------------------------#
+# Hint
+#--------------------------------------------------------------#
+log_line "Reference"
+log_hint "Website:      https://pigsty.io"
+log_hint "Public Demo:  https://demo.pigsty.cc"
+log_hint "Github Repo:  https://github.com/Vonng/pigsty"
 
-#========================================#
-# backup existing pigsty to /tmp first
-#========================================#
-if [[ -d ${PIGSTY_HOME} ]]; then
-    tmpPath="/tmp/pigsty-backup-$(   date +%s)"
-    printf "\033[0;33m[WARN] mv existing ${HOME}/pigsty to ${tmpPath} \033[0m\n" >&2
-    mv -f ${PIGSTY_HOME} ${tmpPath}
-fi
-
-#========================================#
-# extract pigsty source code
-#========================================#
-PIGSTY_ROOT=$(dirname ${PIGSTY_HOME})
-if [[ ${PIGSTY_ROOT} != "${HOME}" ]]; then
-    mkdir -p ${PIGSTY_ROOT}
-fi
-tar -xf /tmp/pigsty.tgz -C ${PIGSTY_ROOT}
-cd ${PIGSTY_HOME}
-
-
-#========================================#
-# print summary
-#========================================#
-printf "\033[0;32m[INFO] cd ${PIGSTY_HOME} \033[0m\n" >&2
-# next steps
-printf "\033[0;32m "
-cat <<-'EOF'
-
-    Make sure current user have right privileges:
-       * ssh to localhost without password
-       * root, or user with nopassword sudo privileges
-
-    To make it pigsty functional, cd ~/pigsty and run following commands:
-
-    1. `make pkg` : Optional, download offline installation packages
-       * Required if this node does NOT have Internet access. scp/ftp to `/tmp/pkg.tgz`
-       * Optional if this node has Internet access. Pigsty could download all packages from upstream repos.
-
-    2. `make meta` : bootstrap meta node
-       * this will install ansible and other utils on meta node, you can just install it by yourself and skip this
-       * if `/tmp/pkg.tgz` exists, extract and install ansible from it, otherwise, install via yum by default
-       * after ansible is installed, ansible playbook infra.yml will be called
-
-EOF
-printf "\033[0;0m"
-
-
-# short version
-# curl -fsSL https://pigsty.cc/pigsty.tgz | gzip -d | tar -xC ~
-# /bin/bash -c "$(curl -fsSL https://pigsty.cc/install)"
+log_line "Proceeding"
+log_hint 'cd ~/pigsty      # entering pigsty home directory before proceeding'
+log_hint './bootstrap      # install ansible & download the optional offline packages'
+log_hint './configure      # preflight-check and generate config according to your env'
+log_hint './install.yml    # install pigsty on this node and init it as the admin node'
+log_info "~/pigsty is ready to go now!"
