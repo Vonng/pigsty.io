@@ -47,7 +47,16 @@
   src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
   integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
   crossorigin="anonymous"></script>
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
   </head>
   <body class="td-section">
     <header>
@@ -86,7 +95,7 @@
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -253,7 +262,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>16: <a href="#pg-06a73ab7adbd73b0e635c3d9403cab4e">常见问题</a></li>
+<li>16: <a href="#pg-1f69b3f46163cb973f38581bf88a88a8">指标列表</a></li>
 
 
     
@@ -261,7 +270,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>17: <a href="#pg-1f69b3f46163cb973f38581bf88a88a8">指标列表</a></li>
+<li>17: <a href="#pg-06a73ab7adbd73b0e635c3d9403cab4e">常见问题</a></li>
 
 
     
@@ -5298,109 +5307,7 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-06a73ab7adbd73b0e635c3d9403cab4e">16 - 常见问题</h1>
-    <div class="lead">PostgreSQL 常见问题答疑</div>
-	<hr>
-<h2 id="pgsql初始化失败abort-due-to-postgres-exists">PGSQL初始化失败：ABORT due to postgres exists</h2>
-<p>这意味着正在初始化的 PostgreSQL 实例已经存在了， 将 <code>pg_clean</code> 设置为 <code>true</code>，并将 <code>pg_safeguard</code> 设置为 <code>false</code>，就可以在执行 <code>pgsql.yml</code> 期间强制清理现存实例。</p>
-<p>如果 <code>pg_clean</code> 为 <code>true</code> (并且 <code>pg_safeguard</code> 也为 <code>false</code>)，<code>pgsql.yml</code> 剧本将会移除现有的 pgsql 数据并重新初始化为新的，这使得这个剧本真正幂等。</p>
-<p>你可以通过使用一个特殊的任务标签 <code>pg_purge</code> 来强制清除现有的 PostgreSQL 数据，这个标签任务会忽略 <code>pg_clean</code> 和 <code>pg_safeguard</code> 的设置，所以非常危险。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_clean      <span style="color:#8f5902;font-style:italic"># 优先考虑 pg_clean 和 pg_safeguard</span>
-</span></span><span style="display:flex;"><span>./pgsql.yml -t pg_purge      <span style="color:#8f5902;font-style:italic"># 忽略 pg_clean 和 pg_safeguard</span>
-</span></span></code></pre></div><hr>
-<h2 id="pgsql初始化失败abort-due-to-pg_safeguard-enabled">PGSQL初始化失败：ABORT due to pg_safeguard enabled</h2>
-<p>这意味着正准备清理的 PostgreSQL 实例打开了防误删保险， 禁用 <code>pg_safeguard</code> 以移除 Postgres 实例。</p>
-<p>如果防误删保险 <a href="/zh/docs/reference/param#pg_safeguard"><code>pg_safeguard</code></a> 打开，那么你就不能使用 <code>bin/pgsql-rm</code> 和 <code>pgsql-rm.yml</code> 剧本移除正在运行的 PGSQL 实例了。</p>
-<p>要禁用 <code>pg_safeguard</code>，你可以在配置清单中将 <code>pg_safeguard</code> 设置为 <code>false</code>，或者在执行剧本时使用命令参数 <code>-e pg_safeguard=false</code>。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -e <span style="color:#000">pg_safeguard</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">false</span> -l &lt;cls_to_remove&gt;    <span style="color:#8f5902;font-style:italic"># 强制覆盖 pg_safeguard</span>
-</span></span></code></pre></div><hr>
-<h2 id="pgsql初始化失败fail-to-wait-for-postgrespatroni-primary">PGSQL初始化失败：Fail to wait for postgres/patroni primary</h2>
-<p>这通常是因为集群配置错误，或者之前的主节点被不正确地移除了，你必须检查 <code>/pg/log/*</code> 来找到具体原因。</p>
-<p>一种典型原因是，在DCS中有同名集群残留的垃圾元数据：没有正确完成下线，你可以使用 <code>etcdctl del --prefix /pg/&lt;cls&gt;</code> 来手工删除残留数据（请小心）</p>
-<hr>
-<h2 id="pgsql初始化失败fail-to-wait-for-postgrespatroni-replica">PGSQL初始化失败：Fail to wait for postgres/patroni replica</h2>
-<p>存在几种可能的原因：</p>
-<p><strong>立即失败</strong>：通常是由于配置错误、网络问题、损坏的DCS元数据等原因。你必须检查 <code>/pg/log</code> 找出实际原因。</p>
-<p><strong>过了一会儿失败</strong>：这可能是由于源实例数据损坏。查看 PGSQL FAQ：如何在数据损坏时创建副本？</p>
-<p><strong>过了很长时间再超时</strong>：如果 <code>wait for postgres replica</code> 任务耗时 30 分钟或更长时间并由于超时而失败，这对于大型集群（例如，1TB+，可能需要几小时创建一个副本）是很常见的。</p>
-<p>在这种情况下，底层创建副本的过程仍在进行。你可以使用 <code>pg list &lt;cls&gt;</code> 检查集群状态并等待副本赶上主节点。然后使用以下命令继续以下任务，完成完整的从库初始化：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
-</span></span></code></pre></div><hr>
-<h2 id="如何安装其他的postgresql大版本12---14以及-16beta">如何安装其他的PostgreSQL大版本：12 - 14，以及 16beta</h2>
-<p>要安装 PostgreSQL 12 - 15，你必须在配置清单中设置 <code>pg_version</code> 为 <code>12</code>、<code>13</code>、<code>14</code> 或 <code>15</code>，通常在集群级别配置这个参数。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic"># 在此模板中安装 pg 16</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_libs</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_stat_statements, auto_explain&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 从 pg 16 beta 中移除 timescaledb，因为它不可用</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_extensions</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># 目前缺少 pg16 扩展</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>在 <a href="https://github.com/Vonng/pigsty/blob/master/files/pigsty/prod.yml#L110">prod.yml</a> 42节点生产环境仿真模板中提供了安装 12 - 16 大版本集群的示例。</p>
-<p>详情请参考 <a href="/zh/docs/pgsql/config#%E5%A4%A7%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2">PGSQL配置：切换大版本</a></p>
-<hr>
-<h2 id="如何为-postgresql-启用大页hugepage">如何为 PostgreSQL 启用大页/HugePage？</h2>
-<blockquote>
-<p>使用 <code>node_hugepage_count</code> 和 <code>node_hugepage_ratio</code> 或 <code>/pg/bin/pg-tune-hugepage</code></p>
-</blockquote>
-<p>如果你计划启用大页（HugePage），请考虑使用 <a href="/zh/docs/reference/param#node_hugepage_count"><code>node_hugepage_count</code></a> 和 <a href="/zh/docs/reference/param#node_hugepage_ratio"><code>node_hugepage_ratio</code></a>，并配合 <code>./node.yml -t node_tune</code> 进行应用。</p>
-<p>大页对于数据库来说有利有弊，利是内存是专门管理的，不用担心被挪用，降低数据库 OOM 风险。缺点是某些场景下可能对性能由负面影响。</p>
-<p>在 PostgreSQL 启动前，您需要分配 <strong>足够多的</strong> 大页，浪费的部分可以使用 <code>pg-tune-hugepage</code> 脚本对其进行回收，不过此脚本仅 PostgreSQL 15+ 可用。</p>
-<p>如果你的 PostgreSQL 已经在运行，你可以使用下面的办法启动大页（仅 PG15+ 可用）：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sync<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">echo</span> <span style="color:#0000cf;font-weight:bold">3</span> &gt; /proc/sys/vm/drop_caches   <span style="color:#8f5902;font-style:italic"># 刷盘，释放系统缓存（请做好数据库性能受到冲击的准备）</span>
-</span></span><span style="display:flex;"><span>sudo /pg/bin/pg-tune-hugepage             <span style="color:#8f5902;font-style:italic"># 将 nr_hugepages 写入 /etc/sysctl.d/hugepage.conf</span>
-</span></span><span style="display:flex;"><span>pg restart &lt;cls&gt;                          <span style="color:#8f5902;font-style:italic"># 重启 postgres 以使用 hugepage</span>
-</span></span></code></pre></div><hr>
-<h2 id="如何确保故障转移中数据不丢失">如何确保故障转移中数据不丢失？</h2>
-<blockquote>
-<p>使用 <code>crit.yml</code> 参数模板，设置 <code>pg_rpo</code> 为 <code>0</code>，或<a href="/zh/docs/pgsql/admin#%E9%85%8D%E7%BD%AE%E9%9B%86%E7%BE%A4">配置集群</a>为同步提交模式。</p>
-</blockquote>
-<p>考虑使用 <a href="/zh/docs/pgsql/config#%E5%90%8C%E6%AD%A5%E5%A4%87%E5%BA%93">同步备库</a> 和 <a href="/zh/docs/pgsql/config#%E6%B3%95%E5%AE%9A%E4%BA%BA%E6%95%B0%E6%8F%90%E4%BA%A4">法定多数提交</a> 来确保故障转移过程中的零数据丢失。</p>
-<p>更多细节，可以参考 <a href="/zh/docs/setup/security#%E5%8F%AF%E7%94%A8%E6%80%A7">安全考量 - 可用性</a> 的相关介绍。</p>
-<hr>
-<h2 id="磁盘写满了如何抢救">磁盘写满了如何抢救？</h2>
-<p>如果磁盘写满了，连 Shell 命令都无法执行，<code>rm -rf /pg/dummy</code> 可以释放一些救命空间。</p>
-<p>默认情况下，<a href="/zh/docs/reference/param#pg_dummy_filesize"><code>pg_dummy_filesize</code></a> 设置为 <code>64MB</code>。在生产环境中，建议将其增加到 <code>8GB</code> 或更大。</p>
-<p>它将被放置在 PGSQL 主数据磁盘上的 <code>/pg/dummy</code> 路径下。你可以删除该文件以释放一些紧急空间：至少可以让你在该节点上运行一些 shell 脚本来进一步回收其他空间。</p>
-<hr>
-<h2 id="当集群数据已经损坏时如何创建副本">当集群数据已经损坏时如何创建副本？</h2>
-<p>Pigsty 在所有实例的 patroni 配置中设置了 <code>cloneform: true</code> 标签，标记该实例可用于创建副本。</p>
-<p>如果某个实例有损坏的数据文件，导致创建新副本的时候出错中断，那么你可以设置 <code>clonefrom: false</code> 来避免从损坏的实例中拉取数据。具体操作如下</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>tags:
-</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
-</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
-</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
-</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
-</span></span><span style="display:flex;"><span>  
-</span></span><span style="display:flex;"><span>$ systemctl reload patroni    <span style="color:#8f5902;font-style:italic"># 重新加载 Patroni 配置</span>
-</span></span></code></pre></div><hr>
-<h2 id="postgresql-监控的性能损耗如何">PostgreSQL 监控的性能损耗如何？</h2>
-<p>一个常规 PostgreSQL 实例抓取耗时大约 200ms。抓取间隔默认为 10 秒，对于一个生产多核数据库实例来说几乎微不足道。</p>
-<p>请注意，Pigsty 默认开启了库内对象监控，所以如果您的数据库内有数以十万计的表/索引对象，抓取可能耗时会增加到几秒。</p>
-<p>您可以修改 Prometheus 的抓取频率，请确保一点：抓取周期应当显著高于一次抓取的时长。</p>
-<hr>
-<h2 id="如何监控一个现存的-postgresql-实例">如何监控一个现存的 PostgreSQL 实例？</h2>
-<p>在 <a href="/zh/docs/pgsql/monitor">PGSQL Monitor</a> 中提供了详细的监控配置说明。</p>
-<hr>
-<h2 id="如何手工从-prometheus-中移除-postgresql-监控对象">如何手工从 Prometheus 中移除 PostgreSQL 监控对象？</h2>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -t prometheus -l &lt;cls&gt;     <span style="color:#8f5902;font-style:italic"># 将集群 &#39;cls&#39; 的所有实例从 prometheus 中移除</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgmon-rm &lt;ins&gt;     <span style="color:#8f5902;font-style:italic"># 用于从 Prometheus 中移除单个实例 &#39;ins&#39; 的监控对象，特别适合移除添加的外部实例</span>
-</span></span></code></pre></div>
-</div>
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-<div class="td-content" style="page-break-before: always">
-    
-	<h1 id="pg-1f69b3f46163cb973f38581bf88a88a8">17 - 指标列表</h1>
+	<h1 id="pg-1f69b3f46163cb973f38581bf88a88a8">16 - 指标列表</h1>
     <div class="lead">Pigsty PGSQL 模块提供的完整监控指标列表与释义</div>
 	<p><a href="/zh/docs/pgsql"><strong><code>PGSQL</code></strong></a> 模块包含有 638 类可用监控指标。</p>
 <table>
@@ -9244,6 +9151,108 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 </tbody>
 </table>
 
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-06a73ab7adbd73b0e635c3d9403cab4e">17 - 常见问题</h1>
+    <div class="lead">PostgreSQL 常见问题答疑</div>
+	<hr>
+<h2 id="pgsql初始化失败abort-due-to-postgres-exists">PGSQL初始化失败：ABORT due to postgres exists</h2>
+<p>这意味着正在初始化的 PostgreSQL 实例已经存在了， 将 <code>pg_clean</code> 设置为 <code>true</code>，并将 <code>pg_safeguard</code> 设置为 <code>false</code>，就可以在执行 <code>pgsql.yml</code> 期间强制清理现存实例。</p>
+<p>如果 <code>pg_clean</code> 为 <code>true</code> (并且 <code>pg_safeguard</code> 也为 <code>false</code>)，<code>pgsql.yml</code> 剧本将会移除现有的 pgsql 数据并重新初始化为新的，这使得这个剧本真正幂等。</p>
+<p>你可以通过使用一个特殊的任务标签 <code>pg_purge</code> 来强制清除现有的 PostgreSQL 数据，这个标签任务会忽略 <code>pg_clean</code> 和 <code>pg_safeguard</code> 的设置，所以非常危险。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_clean      <span style="color:#8f5902;font-style:italic"># 优先考虑 pg_clean 和 pg_safeguard</span>
+</span></span><span style="display:flex;"><span>./pgsql.yml -t pg_purge      <span style="color:#8f5902;font-style:italic"># 忽略 pg_clean 和 pg_safeguard</span>
+</span></span></code></pre></div><hr>
+<h2 id="pgsql初始化失败abort-due-to-pg_safeguard-enabled">PGSQL初始化失败：ABORT due to pg_safeguard enabled</h2>
+<p>这意味着正准备清理的 PostgreSQL 实例打开了防误删保险， 禁用 <code>pg_safeguard</code> 以移除 Postgres 实例。</p>
+<p>如果防误删保险 <a href="/zh/docs/reference/param#pg_safeguard"><code>pg_safeguard</code></a> 打开，那么你就不能使用 <code>bin/pgsql-rm</code> 和 <code>pgsql-rm.yml</code> 剧本移除正在运行的 PGSQL 实例了。</p>
+<p>要禁用 <code>pg_safeguard</code>，你可以在配置清单中将 <code>pg_safeguard</code> 设置为 <code>false</code>，或者在执行剧本时使用命令参数 <code>-e pg_safeguard=false</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -e <span style="color:#000">pg_safeguard</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">false</span> -l &lt;cls_to_remove&gt;    <span style="color:#8f5902;font-style:italic"># 强制覆盖 pg_safeguard</span>
+</span></span></code></pre></div><hr>
+<h2 id="pgsql初始化失败fail-to-wait-for-postgrespatroni-primary">PGSQL初始化失败：Fail to wait for postgres/patroni primary</h2>
+<p>这通常是因为集群配置错误，或者之前的主节点被不正确地移除了，你必须检查 <code>/pg/log/*</code> 来找到具体原因。</p>
+<p>一种典型原因是，在DCS中有同名集群残留的垃圾元数据：没有正确完成下线，你可以使用 <code>etcdctl del --prefix /pg/&lt;cls&gt;</code> 来手工删除残留数据（请小心）</p>
+<hr>
+<h2 id="pgsql初始化失败fail-to-wait-for-postgrespatroni-replica">PGSQL初始化失败：Fail to wait for postgres/patroni replica</h2>
+<p>存在几种可能的原因：</p>
+<p><strong>立即失败</strong>：通常是由于配置错误、网络问题、损坏的DCS元数据等原因。你必须检查 <code>/pg/log</code> 找出实际原因。</p>
+<p><strong>过了一会儿失败</strong>：这可能是由于源实例数据损坏。查看 PGSQL FAQ：如何在数据损坏时创建副本？</p>
+<p><strong>过了很长时间再超时</strong>：如果 <code>wait for postgres replica</code> 任务耗时 30 分钟或更长时间并由于超时而失败，这对于大型集群（例如，1TB+，可能需要几小时创建一个副本）是很常见的。</p>
+<p>在这种情况下，底层创建副本的过程仍在进行。你可以使用 <code>pg list &lt;cls&gt;</code> 检查集群状态并等待副本赶上主节点。然后使用以下命令继续以下任务，完成完整的从库初始化：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
+</span></span></code></pre></div><hr>
+<h2 id="如何安装其他的postgresql大版本12---14以及-16beta">如何安装其他的PostgreSQL大版本：12 - 14，以及 16beta</h2>
+<p>要安装 PostgreSQL 12 - 15，你必须在配置清单中设置 <code>pg_version</code> 为 <code>12</code>、<code>13</code>、<code>14</code> 或 <code>15</code>，通常在集群级别配置这个参数。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic"># 在此模板中安装 pg 16</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_libs</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_stat_statements, auto_explain&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># 从 pg 16 beta 中移除 timescaledb，因为它不可用</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_extensions</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># 目前缺少 pg16 扩展</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>在 <a href="https://github.com/Vonng/pigsty/blob/master/files/pigsty/prod.yml#L110">prod.yml</a> 42节点生产环境仿真模板中提供了安装 12 - 16 大版本集群的示例。</p>
+<p>详情请参考 <a href="/zh/docs/pgsql/config#%E5%A4%A7%E7%89%88%E6%9C%AC%E5%88%87%E6%8D%A2">PGSQL配置：切换大版本</a></p>
+<hr>
+<h2 id="如何为-postgresql-启用大页hugepage">如何为 PostgreSQL 启用大页/HugePage？</h2>
+<blockquote>
+<p>使用 <code>node_hugepage_count</code> 和 <code>node_hugepage_ratio</code> 或 <code>/pg/bin/pg-tune-hugepage</code></p>
+</blockquote>
+<p>如果你计划启用大页（HugePage），请考虑使用 <a href="/zh/docs/reference/param#node_hugepage_count"><code>node_hugepage_count</code></a> 和 <a href="/zh/docs/reference/param#node_hugepage_ratio"><code>node_hugepage_ratio</code></a>，并配合 <code>./node.yml -t node_tune</code> 进行应用。</p>
+<p>大页对于数据库来说有利有弊，利是内存是专门管理的，不用担心被挪用，降低数据库 OOM 风险。缺点是某些场景下可能对性能由负面影响。</p>
+<p>在 PostgreSQL 启动前，您需要分配 <strong>足够多的</strong> 大页，浪费的部分可以使用 <code>pg-tune-hugepage</code> 脚本对其进行回收，不过此脚本仅 PostgreSQL 15+ 可用。</p>
+<p>如果你的 PostgreSQL 已经在运行，你可以使用下面的办法启动大页（仅 PG15+ 可用）：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sync<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">echo</span> <span style="color:#0000cf;font-weight:bold">3</span> &gt; /proc/sys/vm/drop_caches   <span style="color:#8f5902;font-style:italic"># 刷盘，释放系统缓存（请做好数据库性能受到冲击的准备）</span>
+</span></span><span style="display:flex;"><span>sudo /pg/bin/pg-tune-hugepage             <span style="color:#8f5902;font-style:italic"># 将 nr_hugepages 写入 /etc/sysctl.d/hugepage.conf</span>
+</span></span><span style="display:flex;"><span>pg restart &lt;cls&gt;                          <span style="color:#8f5902;font-style:italic"># 重启 postgres 以使用 hugepage</span>
+</span></span></code></pre></div><hr>
+<h2 id="如何确保故障转移中数据不丢失">如何确保故障转移中数据不丢失？</h2>
+<blockquote>
+<p>使用 <code>crit.yml</code> 参数模板，设置 <code>pg_rpo</code> 为 <code>0</code>，或<a href="/zh/docs/pgsql/admin#%E9%85%8D%E7%BD%AE%E9%9B%86%E7%BE%A4">配置集群</a>为同步提交模式。</p>
+</blockquote>
+<p>考虑使用 <a href="/zh/docs/pgsql/config#%E5%90%8C%E6%AD%A5%E5%A4%87%E5%BA%93">同步备库</a> 和 <a href="/zh/docs/pgsql/config#%E6%B3%95%E5%AE%9A%E4%BA%BA%E6%95%B0%E6%8F%90%E4%BA%A4">法定多数提交</a> 来确保故障转移过程中的零数据丢失。</p>
+<p>更多细节，可以参考 <a href="/zh/docs/setup/security#%E5%8F%AF%E7%94%A8%E6%80%A7">安全考量 - 可用性</a> 的相关介绍。</p>
+<hr>
+<h2 id="磁盘写满了如何抢救">磁盘写满了如何抢救？</h2>
+<p>如果磁盘写满了，连 Shell 命令都无法执行，<code>rm -rf /pg/dummy</code> 可以释放一些救命空间。</p>
+<p>默认情况下，<a href="/zh/docs/reference/param#pg_dummy_filesize"><code>pg_dummy_filesize</code></a> 设置为 <code>64MB</code>。在生产环境中，建议将其增加到 <code>8GB</code> 或更大。</p>
+<p>它将被放置在 PGSQL 主数据磁盘上的 <code>/pg/dummy</code> 路径下。你可以删除该文件以释放一些紧急空间：至少可以让你在该节点上运行一些 shell 脚本来进一步回收其他空间。</p>
+<hr>
+<h2 id="当集群数据已经损坏时如何创建副本">当集群数据已经损坏时如何创建副本？</h2>
+<p>Pigsty 在所有实例的 patroni 配置中设置了 <code>cloneform: true</code> 标签，标记该实例可用于创建副本。</p>
+<p>如果某个实例有损坏的数据文件，导致创建新副本的时候出错中断，那么你可以设置 <code>clonefrom: false</code> 来避免从损坏的实例中拉取数据。具体操作如下</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tags:
+</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
+</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
+</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
+</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>$ systemctl reload patroni    <span style="color:#8f5902;font-style:italic"># 重新加载 Patroni 配置</span>
+</span></span></code></pre></div><hr>
+<h2 id="postgresql-监控的性能损耗如何">PostgreSQL 监控的性能损耗如何？</h2>
+<p>一个常规 PostgreSQL 实例抓取耗时大约 200ms。抓取间隔默认为 10 秒，对于一个生产多核数据库实例来说几乎微不足道。</p>
+<p>请注意，Pigsty 默认开启了库内对象监控，所以如果您的数据库内有数以十万计的表/索引对象，抓取可能耗时会增加到几秒。</p>
+<p>您可以修改 Prometheus 的抓取频率，请确保一点：抓取周期应当显著高于一次抓取的时长。</p>
+<hr>
+<h2 id="如何监控一个现存的-postgresql-实例">如何监控一个现存的 PostgreSQL 实例？</h2>
+<p>在 <a href="/zh/docs/pgsql/monitor">PGSQL Monitor</a> 中提供了详细的监控配置说明。</p>
+<hr>
+<h2 id="如何手工从-prometheus-中移除-postgresql-监控对象">如何手工从 Prometheus 中移除 PostgreSQL 监控对象？</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -t prometheus -l &lt;cls&gt;     <span style="color:#8f5902;font-style:italic"># 将集群 &#39;cls&#39; 的所有实例从 prometheus 中移除</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgmon-rm &lt;ins&gt;     <span style="color:#8f5902;font-style:italic"># 用于从 Prometheus 中移除单个实例 &#39;ins&#39; 的监控对象，特别适合移除添加的外部实例</span>
+</span></span></code></pre></div>
 </div>
 
 

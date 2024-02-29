@@ -43,7 +43,16 @@
   src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
   integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
   crossorigin="anonymous"></script>
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
   </head>
   <body class="td-section">
     <header>
@@ -82,7 +91,7 @@
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -129,7 +138,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>1: <a href="#pg-00fcc0891b8e51b39a5b93b6e89a421f">常见问题</a></li>
+<li>1: <a href="#pg-f8c94ca1b2e6cfdd961016e7d77247d8">指标列表</a></li>
 
 
     
@@ -137,7 +146,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>2: <a href="#pg-f8c94ca1b2e6cfdd961016e7d77247d8">指标列表</a></li>
+<li>2: <a href="#pg-00fcc0891b8e51b39a5b93b6e89a421f">常见问题</a></li>
 
 
     
@@ -907,101 +916,7 @@ Prometheus的告警事件会发送至AlertManager，但如果需要进一步处�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-00fcc0891b8e51b39a5b93b6e89a421f">1 - 常见问题</h1>
-    <div class="lead">Pigsty INFRA 基础设施模块常见问题答疑</div>
-	<hr>
-<h2 id="infra模块中包含了哪些组件">INFRA模块中包含了哪些组件？</h2>
-<ul>
-<li>Ansible 用于自动化、部署和管理；</li>
-<li>Nginx 用于公开对外暴露各种 WebUI 服务，并为提供一个本地软件源</li>
-<li>自签名 CA 用于 SSL/TLS 证书；</li>
-<li>Prometheus 用于收集存储监控指标；</li>
-<li>Grafana 用于监控/可视化；</li>
-<li>Loki 用于收集存储查询日志；</li>
-<li>AlertManager 用于告警聚合；</li>
-<li>Chronyd 用于 NTP 时间同步；</li>
-<li>DNSMasq 用于 DNS 注册和解析；</li>
-<li>ETCD 作为 PGSQL HA 的 DCS；（可以部署到别的专用节点集群上）</li>
-<li>在管理节点上的 PostgreSQL 作为 CMDB；（可选）</li>
-<li>Docker 用于无状态的应用程序和工具（可选）。</li>
-</ul>
-<hr>
-<h2 id="如何重新向-prometheus-注册监控目标">如何重新向 Prometheus 注册监控目标？</h2>
-<p>如果你不小心删除了基础设施节点上 Prometheus 的目标目录（<code>/etc/prometheus/target</code>），你可以使用以下命令再次向 Prometheus 注册监控目标：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 infra 目标</span>
-</span></span><span style="display:flex;"><span>./node.yml  -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 node  目标</span>
-</span></span><span style="display:flex;"><span>./etcd.yml  -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 etcd  目标</span>
-</span></span><span style="display:flex;"><span>./minio.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 minio 目标</span>
-</span></span><span style="display:flex;"><span>./pgsql.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 pgsql 目标</span>
-</span></span></code></pre></div><hr>
-<h2 id="如何重新向-grafana-注册-postgresql-数据源">如何重新向 Grafana 注册 PostgreSQL 数据源？</h2>
-<p>在 <a href="/zh/docs/reference/param#pg_databases"><code>pg_databases</code></a> 中定义的 PGSQL 数据库默认会被注册为 Grafana 数据源（以供 PGCAT 应用使用）。</p>
-<p>如果你不小心删除了在 Grafana 中注册的 postgres 数据源，你可以使用以下命令再次注册它们：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 将所有（在 pg_databases 中定义的） pgsql 数据库注册为 grafana 数据源</span>
-</span></span><span style="display:flex;"><span>./pgsql.yml -t register_grafana
-</span></span></code></pre></div><hr>
-<h2 id="如何重新向-nginx-注册节点的-haproxy-管控界面">如何重新向 Nginx 注册节点的 Haproxy 管控界面？</h2>
-<p>如果你不小心删除了 <code>/etc/nginx/conf.d/haproxy</code> 中的已注册 haproxy 代理设置，你可以使用以下命令再次恢复它们：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t register_nginx     <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 nginx 注册所有 haproxy 管理页面的代理设置</span>
-</span></span></code></pre></div><hr>
-<h2 id="如何恢复-dnsmasq-中的域名注册记录">如何恢复 DNSMASQ 中的域名注册记录？</h2>
-<p>PGSQL 集群/实例域名默认注册到 infra 节点的 <code>/etc/hosts.d/&lt;name&gt;</code>。你可以使用以下命令再次恢复它们：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_dns    <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 dnsmasq 注册 pg 的 DNS 名称</span>
-</span></span></code></pre></div><hr>
-<h2 id="如何使用nginx对外暴露新的上游服务">如何使用Nginx对外暴露新的上游服务？</h2>
-<p>尽管您可以直接通过 IP:Port 的方式访问服务，但我们依然建议收敛访问入口，使用域名并统一从 Nginx 代理访问各类带有 Web 界面的服务。
-这样有利于统一收口访问，减少暴露的端口，便于进行访问控制与审计。</p>
-<p>如果你希望通过 Nginx 门户公开新的 WebUI 服务，你可以将服务定义添加到 <a href="/zh/docs/reference/param#infra_portal"><code>infra_portal</code></a> 参数中。
-例如，下面是 Pigsty 官方 Demo 使用的 Infra 门户配置，对外暴露了几种额外的服务：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">infra_portal</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">home         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">home.pigsty.cc }</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">grafana      </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: demo.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3000&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">,websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">prometheus   </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: p.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9090&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">alertmanager </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: a.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9093&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">blackbox     </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9115&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">loki         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3100&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># 新增的 Web 门户</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">minio        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: sss.pigsty  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9001&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">,scheme: https ,websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">postgrest    </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: api.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8884&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">pgadmin      </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: adm.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8885&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">pgweb        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: cli.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8886&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">bytebase     </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: ddl.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8887&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">gitea        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: git.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8889&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">wiki         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: wiki.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:9002&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">noco         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: noco.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:9003&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">supa         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: supa.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8000&#34;</span><span style="color:#204a87;font-weight:bold">, websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>完成 Nginx 上游服务定义后，使用以下配置与命令，向 Nginx 注册新的服务。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -t nginx_config           <span style="color:#8f5902;font-style:italic"># 重新生成 Nginx 配置文件</span>
-</span></span><span style="display:flex;"><span>./infra.yml -t nginx_launch           <span style="color:#8f5902;font-style:italic"># 更新并应用 Nginx 配置。</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 您也可以使用 Ansible 手工重载 Nginx 配置</span>
-</span></span><span style="display:flex;"><span>ansible infra -b -a <span style="color:#4e9a06">&#39;nginx -s reload&#39;</span>  <span style="color:#8f5902;font-style:italic"># 重载Nginx配置</span>
-</span></span></code></pre></div><p>如果你希望通过 HTTPS 访问，你必须删除 <code>files/pki/csr/pigsty.csr</code> 和 <code>files/pki/nginx/pigsty.{key,crt}</code> 以强制重新生成 Nginx SSL/TLS 证书以包括新上游的域名。
-如果您希望使用权威机构签发的 SSL 证书，而不是 Pigsty 自签名 CA 颁发的证书，可以将其放置于 <code>/etc/nginx/conf.d/cert/</code> 目录中并修改相应配置：<code>/etc/nginx/conf.d/&lt;name&gt;.conf</code>。</p>
-<hr>
-<h2 id="如何手动向节点添加上游仓库的repo文件">如何手动向节点添加上游仓库的Repo文件？</h2>
-<p>Pigsty 有一个内置的包装脚本 <code>bin/repo-add</code>，它将调用 ansible 剧本 <code>node.yml</code> 来将 repo 文件添加到相应的节点。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/repo-add &lt;selector&gt; <span style="color:#ce5c00;font-weight:bold">[</span>modules<span style="color:#ce5c00;font-weight:bold">]</span>
-</span></span><span style="display:flex;"><span>bin/repo-add 10.10.10.10           <span style="color:#8f5902;font-style:italic"># 为节点 10.10.10.10 添加 node 源</span>
-</span></span><span style="display:flex;"><span>bin/repo-add infra   node,infra    <span style="color:#8f5902;font-style:italic"># 为 infra 分组添加 node 和 infra 源</span>
-</span></span><span style="display:flex;"><span>bin/repo-add infra   node,local    <span style="color:#8f5902;font-style:italic"># 为 infra 分组添加节点仓库和本地pigsty源</span>
-</span></span><span style="display:flex;"><span>bin/repo-add pg-test node,pgsql    <span style="color:#8f5902;font-style:italic"># 为 pg-test 分组添加 node 和 pgsql 源</span>
-</span></span></code></pre></div>
-</div>
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-<div class="td-content" style="page-break-before: always">
-    
-	<h1 id="pg-f8c94ca1b2e6cfdd961016e7d77247d8">2 - 指标列表</h1>
+	<h1 id="pg-f8c94ca1b2e6cfdd961016e7d77247d8">1 - 指标列表</h1>
     <div class="lead">Pigsty INFRA 模块提供的完整监控指标列表与释义</div>
 	<hr>
 <h2 id="infra-指标">INFRA 指标</h2>
@@ -7175,6 +7090,100 @@ Prometheus的告警事件会发送至AlertManager，但如果需要进一步处�
 </tbody>
 </table>
 
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-00fcc0891b8e51b39a5b93b6e89a421f">2 - 常见问题</h1>
+    <div class="lead">Pigsty INFRA 基础设施模块常见问题答疑</div>
+	<hr>
+<h2 id="infra模块中包含了哪些组件">INFRA模块中包含了哪些组件？</h2>
+<ul>
+<li>Ansible 用于自动化、部署和管理；</li>
+<li>Nginx 用于公开对外暴露各种 WebUI 服务，并为提供一个本地软件源</li>
+<li>自签名 CA 用于 SSL/TLS 证书；</li>
+<li>Prometheus 用于收集存储监控指标；</li>
+<li>Grafana 用于监控/可视化；</li>
+<li>Loki 用于收集存储查询日志；</li>
+<li>AlertManager 用于告警聚合；</li>
+<li>Chronyd 用于 NTP 时间同步；</li>
+<li>DNSMasq 用于 DNS 注册和解析；</li>
+<li>ETCD 作为 PGSQL HA 的 DCS；（可以部署到别的专用节点集群上）</li>
+<li>在管理节点上的 PostgreSQL 作为 CMDB；（可选）</li>
+<li>Docker 用于无状态的应用程序和工具（可选）。</li>
+</ul>
+<hr>
+<h2 id="如何重新向-prometheus-注册监控目标">如何重新向 Prometheus 注册监控目标？</h2>
+<p>如果你不小心删除了基础设施节点上 Prometheus 的目标目录（<code>/etc/prometheus/target</code>），你可以使用以下命令再次向 Prometheus 注册监控目标：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 infra 目标</span>
+</span></span><span style="display:flex;"><span>./node.yml  -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 node  目标</span>
+</span></span><span style="display:flex;"><span>./etcd.yml  -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 etcd  目标</span>
+</span></span><span style="display:flex;"><span>./minio.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 minio 目标</span>
+</span></span><span style="display:flex;"><span>./pgsql.yml -t register_prometheus  <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 prometheus 注册所有 pgsql 目标</span>
+</span></span></code></pre></div><hr>
+<h2 id="如何重新向-grafana-注册-postgresql-数据源">如何重新向 Grafana 注册 PostgreSQL 数据源？</h2>
+<p>在 <a href="/zh/docs/reference/param#pg_databases"><code>pg_databases</code></a> 中定义的 PGSQL 数据库默认会被注册为 Grafana 数据源（以供 PGCAT 应用使用）。</p>
+<p>如果你不小心删除了在 Grafana 中注册的 postgres 数据源，你可以使用以下命令再次注册它们：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 将所有（在 pg_databases 中定义的） pgsql 数据库注册为 grafana 数据源</span>
+</span></span><span style="display:flex;"><span>./pgsql.yml -t register_grafana
+</span></span></code></pre></div><hr>
+<h2 id="如何重新向-nginx-注册节点的-haproxy-管控界面">如何重新向 Nginx 注册节点的 Haproxy 管控界面？</h2>
+<p>如果你不小心删除了 <code>/etc/nginx/conf.d/haproxy</code> 中的已注册 haproxy 代理设置，你可以使用以下命令再次恢复它们：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t register_nginx     <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 nginx 注册所有 haproxy 管理页面的代理设置</span>
+</span></span></code></pre></div><hr>
+<h2 id="如何恢复-dnsmasq-中的域名注册记录">如何恢复 DNSMASQ 中的域名注册记录？</h2>
+<p>PGSQL 集群/实例域名默认注册到 infra 节点的 <code>/etc/hosts.d/&lt;name&gt;</code>。你可以使用以下命令再次恢复它们：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_dns    <span style="color:#8f5902;font-style:italic"># 在 infra 节点上向 dnsmasq 注册 pg 的 DNS 名称</span>
+</span></span></code></pre></div><hr>
+<h2 id="如何使用nginx对外暴露新的上游服务">如何使用Nginx对外暴露新的上游服务？</h2>
+<p>尽管您可以直接通过 IP:Port 的方式访问服务，但我们依然建议收敛访问入口，使用域名并统一从 Nginx 代理访问各类带有 Web 界面的服务。
+这样有利于统一收口访问，减少暴露的端口，便于进行访问控制与审计。</p>
+<p>如果你希望通过 Nginx 门户公开新的 WebUI 服务，你可以将服务定义添加到 <a href="/zh/docs/reference/param#infra_portal"><code>infra_portal</code></a> 参数中。
+例如，下面是 Pigsty 官方 Demo 使用的 Infra 门户配置，对外暴露了几种额外的服务：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">infra_portal</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">home         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">home.pigsty.cc }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">grafana      </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: demo.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3000&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">,websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">prometheus   </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: p.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9090&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">alertmanager </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: a.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9093&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">blackbox     </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9115&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">loki         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3100&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># 新增的 Web 门户</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">minio        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: sss.pigsty  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9001&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">,scheme: https ,websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">postgrest    </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: api.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8884&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">pgadmin      </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: adm.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8885&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">pgweb        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: cli.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8886&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">bytebase     </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: ddl.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8887&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">gitea        </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: git.pigsty.cc  ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8889&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">wiki         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: wiki.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:9002&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">noco         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: noco.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:9003&#34;</span><span style="color:#f8f8f8;text-decoration:underline">   </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">supa         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: supa.pigsty.cc ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;127.0.0.1:8000&#34;</span><span style="color:#204a87;font-weight:bold">, websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>完成 Nginx 上游服务定义后，使用以下配置与命令，向 Nginx 注册新的服务。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -t nginx_config           <span style="color:#8f5902;font-style:italic"># 重新生成 Nginx 配置文件</span>
+</span></span><span style="display:flex;"><span>./infra.yml -t nginx_launch           <span style="color:#8f5902;font-style:italic"># 更新并应用 Nginx 配置。</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 您也可以使用 Ansible 手工重载 Nginx 配置</span>
+</span></span><span style="display:flex;"><span>ansible infra -b -a <span style="color:#4e9a06">&#39;nginx -s reload&#39;</span>  <span style="color:#8f5902;font-style:italic"># 重载Nginx配置</span>
+</span></span></code></pre></div><p>如果你希望通过 HTTPS 访问，你必须删除 <code>files/pki/csr/pigsty.csr</code> 和 <code>files/pki/nginx/pigsty.{key,crt}</code> 以强制重新生成 Nginx SSL/TLS 证书以包括新上游的域名。
+如果您希望使用权威机构签发的 SSL 证书，而不是 Pigsty 自签名 CA 颁发的证书，可以将其放置于 <code>/etc/nginx/conf.d/cert/</code> 目录中并修改相应配置：<code>/etc/nginx/conf.d/&lt;name&gt;.conf</code>。</p>
+<hr>
+<h2 id="如何手动向节点添加上游仓库的repo文件">如何手动向节点添加上游仓库的Repo文件？</h2>
+<p>Pigsty 有一个内置的包装脚本 <code>bin/repo-add</code>，它将调用 ansible 剧本 <code>node.yml</code> 来将 repo 文件添加到相应的节点。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/repo-add &lt;selector&gt; <span style="color:#ce5c00;font-weight:bold">[</span>modules<span style="color:#ce5c00;font-weight:bold">]</span>
+</span></span><span style="display:flex;"><span>bin/repo-add 10.10.10.10           <span style="color:#8f5902;font-style:italic"># 为节点 10.10.10.10 添加 node 源</span>
+</span></span><span style="display:flex;"><span>bin/repo-add infra   node,infra    <span style="color:#8f5902;font-style:italic"># 为 infra 分组添加 node 和 infra 源</span>
+</span></span><span style="display:flex;"><span>bin/repo-add infra   node,local    <span style="color:#8f5902;font-style:italic"># 为 infra 分组添加节点仓库和本地pigsty源</span>
+</span></span><span style="display:flex;"><span>bin/repo-add pg-test node,pgsql    <span style="color:#8f5902;font-style:italic"># 为 pg-test 分组添加 node 和 pgsql 源</span>
+</span></span></code></pre></div>
 </div>
 
 

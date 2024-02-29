@@ -43,7 +43,16 @@
   src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
   integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
   crossorigin="anonymous"></script>
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
   </head>
   <body class="td-section">
     <header>
@@ -82,7 +91,7 @@
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -129,7 +138,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>1: <a href="#pg-bfaeae9f961d15c2f4a30d7af548af0c">FAQ</a></li>
+<li>1: <a href="#pg-b4db80f8234d7db0cbf16b40530478bd">Metrics</a></li>
 
 
     
@@ -137,7 +146,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>2: <a href="#pg-b4db80f8234d7db0cbf16b40530478bd">指标列表</a></li>
+<li>2: <a href="#pg-bfaeae9f961d15c2f4a30d7af548af0c">FAQ</a></li>
 
 
     
@@ -443,49 +452,9 @@ the playbook will abort if any running etcd instance exists to prevent purge etc
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-bfaeae9f961d15c2f4a30d7af548af0c">1 - FAQ</h1>
-    <div class="lead">Pigsty ETCD dcs module frequently asked questions</div>
-	<hr>
-<h2 id="what-is-the-impact-of-etcd-failure">What is the impact of ETCD failure?</h2>
-<p><a href="/docs/etcd/">ETCD</a> availability is critical for the PGSQL cluster&rsquo;s HA, which is guaranteed by using multiple nodes.
-With a 3-node ETCD cluster, if one node is down, the other two nodes can still function normally; and with a 5-node ETCD cluster, two-node failure can still be tolerated.
-If more than half of the ETCD nodes are down, the ETCD cluster and its service will be unavailable.
-Before Patroni 3.0, this could lead to a global <a href="/docs/pgsql/">PGSQL</a> outage; all primary will be demoted and reject write requests.</p>
-<p>Since pigsty 2.0, the patroni 3.0 <a href="https://patroni.readthedocs.io/en/master/dcs_failsafe_mode.html">DCS failsafe mode</a> is enabled by default, which will <strong>LOCK</strong> the PGSQL cluster status if the ETCD cluster is unavailable and all PGSQL members are still known to the primary.</p>
-<p>The PGSQL cluster can still function normally, but you must recover the ETCD cluster ASAP. (you can&rsquo;t configure the PGSQL cluster through patroni if etcd is down)</p>
-<hr>
-<h2 id="how-to-use-existing-external-etcd-cluster">How to use existing external etcd cluster?</h2>
-<p>The hard-coded group, <code>etcd</code>, will be used as DCS servers for PGSQL. You can initialize them with <code>etcd.yml</code> or assume it is an existing external etcd cluster.</p>
-<p>To use an existing external etcd cluster, define them as usual and make sure your current etcd cluster certificate is signed by the same CA as your self-signed CA for PGSQL.</p>
-<hr>
-<h2 id="how-to-add-a-new-member-to-the-existing-etcd-cluster">How to add a new member to the existing etcd cluster?</h2>
-<p>Check <a href="/docs/etcd/#add-member">Add a member to etcd cluster</a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>etcdctl member add &lt;etcd-?&gt; --learner<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> --peer-urls<span style="color:#ce5c00;font-weight:bold">=</span>https://&lt;new_ins_ip&gt;:2380 <span style="color:#8f5902;font-style:italic"># on admin node</span>
-</span></span><span style="display:flex;"><span>./etcd.yml -l &lt;new_ins_ip&gt; -e <span style="color:#000">etcd_init</span><span style="color:#ce5c00;font-weight:bold">=</span>existing                                 <span style="color:#8f5902;font-style:italic"># init new etcd member</span>
-</span></span><span style="display:flex;"><span>etcdctl member promote &lt;new_ins_server_id&gt;                                       <span style="color:#8f5902;font-style:italic"># on admin node</span>
-</span></span></code></pre></div><hr>
-<h2 id="how-to-remove-a-member-from-an-existing-etcd-cluster">How to remove a member from an existing etcd cluster?</h2>
-<p>Check <a href="/docs/etcd/#remove-member">Remove member from etcd cluster</a></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>etcdctl member remove &lt;etcd_server_id&gt;   <span style="color:#8f5902;font-style:italic"># kick member out of the cluster (on admin node)</span>
-</span></span><span style="display:flex;"><span>./etcd.yml -l &lt;ins_ip&gt; -t etcd_purge     <span style="color:#8f5902;font-style:italic"># purge etcd instance</span>
-</span></span></code></pre></div>
-</div>
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-<div class="td-content" style="page-break-before: always">
-    
-	<h1 id="pg-b4db80f8234d7db0cbf16b40530478bd">2 - 指标列表</h1>
-    <div class="lead">Pigsty ETCD 模块提供的完整监控指标列表与释义</div>
-	<p><a href="/zh/docs/etcd"><strong><code>ETCD</code></strong></a> 模块包含有 177 类可用监控指标。</p>
+	<h1 id="pg-b4db80f8234d7db0cbf16b40530478bd">1 - Metrics</h1>
+    <div class="lead">Pigsty ETCD module metric list</div>
+	<p><a href="/zh/docs/etcd"><strong><code>ETCD</code></strong></a> module has 177 available metrics</p>
 <table>
 <thead>
 <tr>
@@ -1561,6 +1530,46 @@ Before Patroni 3.0, this could lead to a global <a href="/docs/pgsql/">PGSQL</a>
 </tbody>
 </table>
 
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-bfaeae9f961d15c2f4a30d7af548af0c">2 - FAQ</h1>
+    <div class="lead">Pigsty ETCD dcs module frequently asked questions</div>
+	<hr>
+<h2 id="what-is-the-impact-of-etcd-failure">What is the impact of ETCD failure?</h2>
+<p><a href="/docs/etcd/">ETCD</a> availability is critical for the PGSQL cluster&rsquo;s HA, which is guaranteed by using multiple nodes.
+With a 3-node ETCD cluster, if one node is down, the other two nodes can still function normally; and with a 5-node ETCD cluster, two-node failure can still be tolerated.
+If more than half of the ETCD nodes are down, the ETCD cluster and its service will be unavailable.
+Before Patroni 3.0, this could lead to a global <a href="/docs/pgsql/">PGSQL</a> outage; all primary will be demoted and reject write requests.</p>
+<p>Since pigsty 2.0, the patroni 3.0 <a href="https://patroni.readthedocs.io/en/master/dcs_failsafe_mode.html">DCS failsafe mode</a> is enabled by default, which will <strong>LOCK</strong> the PGSQL cluster status if the ETCD cluster is unavailable and all PGSQL members are still known to the primary.</p>
+<p>The PGSQL cluster can still function normally, but you must recover the ETCD cluster ASAP. (you can&rsquo;t configure the PGSQL cluster through patroni if etcd is down)</p>
+<hr>
+<h2 id="how-to-use-existing-external-etcd-cluster">How to use existing external etcd cluster?</h2>
+<p>The hard-coded group, <code>etcd</code>, will be used as DCS servers for PGSQL. You can initialize them with <code>etcd.yml</code> or assume it is an existing external etcd cluster.</p>
+<p>To use an existing external etcd cluster, define them as usual and make sure your current etcd cluster certificate is signed by the same CA as your self-signed CA for PGSQL.</p>
+<hr>
+<h2 id="how-to-add-a-new-member-to-the-existing-etcd-cluster">How to add a new member to the existing etcd cluster?</h2>
+<p>Check <a href="/docs/etcd/#add-member">Add a member to etcd cluster</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>etcdctl member add &lt;etcd-?&gt; --learner<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> --peer-urls<span style="color:#ce5c00;font-weight:bold">=</span>https://&lt;new_ins_ip&gt;:2380 <span style="color:#8f5902;font-style:italic"># on admin node</span>
+</span></span><span style="display:flex;"><span>./etcd.yml -l &lt;new_ins_ip&gt; -e <span style="color:#000">etcd_init</span><span style="color:#ce5c00;font-weight:bold">=</span>existing                                 <span style="color:#8f5902;font-style:italic"># init new etcd member</span>
+</span></span><span style="display:flex;"><span>etcdctl member promote &lt;new_ins_server_id&gt;                                       <span style="color:#8f5902;font-style:italic"># on admin node</span>
+</span></span></code></pre></div><hr>
+<h2 id="how-to-remove-a-member-from-an-existing-etcd-cluster">How to remove a member from an existing etcd cluster?</h2>
+<p>Check <a href="/docs/etcd/#remove-member">Remove member from etcd cluster</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>etcdctl member remove &lt;etcd_server_id&gt;   <span style="color:#8f5902;font-style:italic"># kick member out of the cluster (on admin node)</span>
+</span></span><span style="display:flex;"><span>./etcd.yml -l &lt;ins_ip&gt; -t etcd_purge     <span style="color:#8f5902;font-style:italic"># purge etcd instance</span>
+</span></span></code></pre></div>
 </div>
 
 

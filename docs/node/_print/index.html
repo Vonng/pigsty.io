@@ -43,7 +43,16 @@
   src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
   integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
   crossorigin="anonymous"></script>
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
   </head>
   <body class="td-section">
     <header>
@@ -82,7 +91,7 @@
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -129,7 +138,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>1: <a href="#pg-239230a82e0955081c7a4e1b76e4c445">FAQ</a></li>
+<li>1: <a href="#pg-21159d62f30ba4efa931b151d5790100">Metrics</a></li>
 
 
     
@@ -137,7 +146,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>2: <a href="#pg-21159d62f30ba4efa931b151d5790100">Metrics</a></li>
+<li>2: <a href="#pg-239230a82e0955081c7a4e1b76e4c445">FAQ</a></li>
 
 
     
@@ -1050,74 +1059,7 @@ the first one is often used as the default admin node, and the rest of the infra
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-239230a82e0955081c7a4e1b76e4c445">1 - FAQ</h1>
-    <div class="lead">Pigsty NODE module frequently asked questions</div>
-	<hr>
-<h2 id="how-to-configure-ntp-service">How to configure NTP service?</h2>
-<blockquote>
-<p>If NTP is not configured, use a public NTP service or sync time with the admin node.</p>
-</blockquote>
-<p>If your nodes already have NTP configured, you can leave it there by setting <code>node_ntp_enabled</code> to <code>false</code>.</p>
-<p>Otherwise, if you have Internet access, you can use public NTP services such as <code>pool.ntp.org</code>.</p>
-<p>If you don&rsquo;t have Internet access, at least you can sync time with the admin node with the following:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>node_ntp_servers:                 <span style="color:#8f5902;font-style:italic"># NTP servers in /etc/chrony.conf</span>
-</span></span><span style="display:flex;"><span>  - pool cn.pool.ntp.org iburst
-</span></span><span style="display:flex;"><span>  - pool <span style="color:#4e9a06">${</span><span style="color:#000">admin_ip</span><span style="color:#4e9a06">}</span> iburst       <span style="color:#8f5902;font-style:italic"># assume non-admin nodes do not have internet access</span>
-</span></span></code></pre></div><hr>
-<h2 id="how-to-force-sync-time-on-nodes">How to force sync time on nodes?</h2>
-<p>Use <code>chronyc</code> to sync time. You have to configure the NTP service first.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ansible all -b -a <span style="color:#4e9a06">&#39;chronyc -a makestep&#39;</span>     <span style="color:#8f5902;font-style:italic"># sync time</span>
-</span></span></code></pre></div><p>You can replace <code>all</code> with any group or host IP address to limit execution scope.</p>
-<hr>
-<h2 id="remote-nodes-are-not-accessible-via-ssh-commands">Remote nodes are not accessible via SSH commands.</h2>
-<p>Consider using <a href="https://docs.ansible.com/ansible/latest/inventory_guide/connection_details.html"><strong>Ansible connection parameters</strong></a> if the target machine is hidden behind an SSH springboard machine,
-or if some customizations have been made that cannot be accessed directly using <code>ssh ip</code>.
-Additional SSH ports can be specified with <code>ansible_port</code> or <code>ansible_host</code> for SSH Alias.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg-test:
-</span></span><span style="display:flex;"><span>  vars: <span style="color:#ce5c00;font-weight:bold">{</span> pg_cluster: pg-test <span style="color:#ce5c00;font-weight:bold">}</span>
-</span></span><span style="display:flex;"><span>  hosts:
-</span></span><span style="display:flex;"><span>    10.10.10.11: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 1, pg_role: primary, ansible_host: node-1 <span style="color:#ce5c00;font-weight:bold">}</span>
-</span></span><span style="display:flex;"><span>    10.10.10.12: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 2, pg_role: replica, ansible_port: 22223, ansible_user: admin <span style="color:#ce5c00;font-weight:bold">}</span>
-</span></span><span style="display:flex;"><span>    10.10.10.13: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 3, pg_role: offline, ansible_port: <span style="color:#0000cf;font-weight:bold">22224</span> <span style="color:#ce5c00;font-weight:bold">}</span>
-</span></span></code></pre></div><hr>
-<h2 id="password-required-for-remote-node-ssh-and-sudo">Password required for remote node SSH and SUDO</h2>
-<p><strong>When performing deployments and changes</strong>, the admin user used <strong>must</strong> have <code>ssh</code> and <code>sudo</code> privileges for all nodes. Password-free is not required.</p>
-<p>You can pass in ssh and sudo passwords via the <code>-k|-K</code> parameter when executing the playbook or even use another user to run the playbook via <code>-e</code><a href="/docs/reference/param/#connect"><code>ansible_host</code></a><code>=&lt;another_user&gt;</code>.
-However, Pigsty strongly recommends configuring SSH <strong>passwordless login</strong> with passwordless <code>sudo</code> for the admin user.</p>
-<hr>
-<h2 id="create-an-admin-user-with-the-existing-admin-user">Create an admin user with the existing admin user.</h2>
-<p>This will create an admin user specified by <a href="/docs/reference/param/#node_admin_username"><code>node_admin_username</code></a> with the existing one on that node.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>./node.yml -k -K -e ansible_user=&lt;another_admin&gt; -t node_admin`
-</span></span></code></pre></div><hr>
-<h2 id="exposing-node-services-with-haproxy">Exposing node services with HAProxy</h2>
-<p>You can expose service with <a href="/docs/reference/param/#haproxy_services"><code>haproxy_services</code></a> in <code>node.yml</code>.</p>
-<p>And here&rsquo;s an example of exposing MinIO service with it: <a href="/docs/minio/#expose-service">Expose MinIO Service</a></p>
-<hr>
-<h2 id="why-my-nodes-etcyumreposd-are-nuked">Why my nodes /etc/yum.repos.d/* are nuked?</h2>
-<p>Pigsty will try to include all dependencies in the local yum repo on infra nodes. This repo file will be added according to <a href="/docs/reference/param/#node_repo_modules"><code>node_repo_modules</code></a>.
-And existing repo files will be removed by default according to the default value of <a href="/docs/reference/param/#node_repo_remove"><code>node_repo_remove</code></a>. This will prevent the node from using the Internet repo or some stupid issues.</p>
-<p>If you want to keep existing repo files during node init, just set <a href="/docs/reference/param/#node_repo_remove"><code>node_repo_remove</code></a> to <code>false</code>.</p>
-<p>If you want to keep existing repo files during infra node local repo bootstrap, just set <a href="/docs/reference/param/#repo_remove"><code>repo_remove</code></a> to <code>false</code>.</p>
-<hr>
-<h2 id="why-my-shell-prompt-change-and-how-to-restore-it">Why my shell prompt change and how to restore it?</h2>
-<p>The pigsty prompt is defined with the environment variable <code>PS1</code> in <code>/etc/profile.d/node.sh</code>.</p>
-<p>To restore your existing prompt, just remove that file and login again.</p>
-
-</div>
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-<div class="td-content" style="page-break-before: always">
-    
-	<h1 id="pg-21159d62f30ba4efa931b151d5790100">2 - Metrics</h1>
+	<h1 id="pg-21159d62f30ba4efa931b151d5790100">1 - Metrics</h1>
     <div class="lead">Pigsty NODE module metric list</div>
 	<p><a href="/zh/docs/node"><strong><code>NODE</code></strong></a> module has 747 available metrics.</p>
 <table>
@@ -5614,6 +5556,73 @@ And existing repo files will be removed by default according to the default valu
 </tr>
 </tbody>
 </table>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-239230a82e0955081c7a4e1b76e4c445">2 - FAQ</h1>
+    <div class="lead">Pigsty NODE module frequently asked questions</div>
+	<hr>
+<h2 id="how-to-configure-ntp-service">How to configure NTP service?</h2>
+<blockquote>
+<p>If NTP is not configured, use a public NTP service or sync time with the admin node.</p>
+</blockquote>
+<p>If your nodes already have NTP configured, you can leave it there by setting <code>node_ntp_enabled</code> to <code>false</code>.</p>
+<p>Otherwise, if you have Internet access, you can use public NTP services such as <code>pool.ntp.org</code>.</p>
+<p>If you don&rsquo;t have Internet access, at least you can sync time with the admin node with the following:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>node_ntp_servers:                 <span style="color:#8f5902;font-style:italic"># NTP servers in /etc/chrony.conf</span>
+</span></span><span style="display:flex;"><span>  - pool cn.pool.ntp.org iburst
+</span></span><span style="display:flex;"><span>  - pool <span style="color:#4e9a06">${</span><span style="color:#000">admin_ip</span><span style="color:#4e9a06">}</span> iburst       <span style="color:#8f5902;font-style:italic"># assume non-admin nodes do not have internet access</span>
+</span></span></code></pre></div><hr>
+<h2 id="how-to-force-sync-time-on-nodes">How to force sync time on nodes?</h2>
+<p>Use <code>chronyc</code> to sync time. You have to configure the NTP service first.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ansible all -b -a <span style="color:#4e9a06">&#39;chronyc -a makestep&#39;</span>     <span style="color:#8f5902;font-style:italic"># sync time</span>
+</span></span></code></pre></div><p>You can replace <code>all</code> with any group or host IP address to limit execution scope.</p>
+<hr>
+<h2 id="remote-nodes-are-not-accessible-via-ssh-commands">Remote nodes are not accessible via SSH commands.</h2>
+<p>Consider using <a href="https://docs.ansible.com/ansible/latest/inventory_guide/connection_details.html"><strong>Ansible connection parameters</strong></a> if the target machine is hidden behind an SSH springboard machine,
+or if some customizations have been made that cannot be accessed directly using <code>ssh ip</code>.
+Additional SSH ports can be specified with <code>ansible_port</code> or <code>ansible_host</code> for SSH Alias.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg-test:
+</span></span><span style="display:flex;"><span>  vars: <span style="color:#ce5c00;font-weight:bold">{</span> pg_cluster: pg-test <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>  hosts:
+</span></span><span style="display:flex;"><span>    10.10.10.11: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 1, pg_role: primary, ansible_host: node-1 <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    10.10.10.12: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 2, pg_role: replica, ansible_port: 22223, ansible_user: admin <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    10.10.10.13: <span style="color:#ce5c00;font-weight:bold">{</span>pg_seq: 3, pg_role: offline, ansible_port: <span style="color:#0000cf;font-weight:bold">22224</span> <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span></code></pre></div><hr>
+<h2 id="password-required-for-remote-node-ssh-and-sudo">Password required for remote node SSH and SUDO</h2>
+<p><strong>When performing deployments and changes</strong>, the admin user used <strong>must</strong> have <code>ssh</code> and <code>sudo</code> privileges for all nodes. Password-free is not required.</p>
+<p>You can pass in ssh and sudo passwords via the <code>-k|-K</code> parameter when executing the playbook or even use another user to run the playbook via <code>-e</code><a href="/docs/reference/param/#connect"><code>ansible_host</code></a><code>=&lt;another_user&gt;</code>.
+However, Pigsty strongly recommends configuring SSH <strong>passwordless login</strong> with passwordless <code>sudo</code> for the admin user.</p>
+<hr>
+<h2 id="create-an-admin-user-with-the-existing-admin-user">Create an admin user with the existing admin user.</h2>
+<p>This will create an admin user specified by <a href="/docs/reference/param/#node_admin_username"><code>node_admin_username</code></a> with the existing one on that node.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>./node.yml -k -K -e ansible_user=&lt;another_admin&gt; -t node_admin`
+</span></span></code></pre></div><hr>
+<h2 id="exposing-node-services-with-haproxy">Exposing node services with HAProxy</h2>
+<p>You can expose service with <a href="/docs/reference/param/#haproxy_services"><code>haproxy_services</code></a> in <code>node.yml</code>.</p>
+<p>And here&rsquo;s an example of exposing MinIO service with it: <a href="/docs/minio/#expose-service">Expose MinIO Service</a></p>
+<hr>
+<h2 id="why-my-nodes-etcyumreposd-are-nuked">Why my nodes /etc/yum.repos.d/* are nuked?</h2>
+<p>Pigsty will try to include all dependencies in the local yum repo on infra nodes. This repo file will be added according to <a href="/docs/reference/param/#node_repo_modules"><code>node_repo_modules</code></a>.
+And existing repo files will be removed by default according to the default value of <a href="/docs/reference/param/#node_repo_remove"><code>node_repo_remove</code></a>. This will prevent the node from using the Internet repo or some stupid issues.</p>
+<p>If you want to keep existing repo files during node init, just set <a href="/docs/reference/param/#node_repo_remove"><code>node_repo_remove</code></a> to <code>false</code>.</p>
+<p>If you want to keep existing repo files during infra node local repo bootstrap, just set <a href="/docs/reference/param/#repo_remove"><code>repo_remove</code></a> to <code>false</code>.</p>
+<hr>
+<h2 id="why-my-shell-prompt-change-and-how-to-restore-it">Why my shell prompt change and how to restore it?</h2>
+<p>The pigsty prompt is defined with the environment variable <code>PS1</code> in <code>/etc/profile.d/node.sh</code>.</p>
+<p>To restore your existing prompt, just remove that file and login again.</p>
 
 </div>
 

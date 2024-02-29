@@ -43,7 +43,16 @@
   src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
   integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
   crossorigin="anonymous"></script>
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
   </head>
   <body class="td-section">
     <header>
@@ -82,7 +91,7 @@
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.42616cf8d96488eb32394e94c79ebbd2.json"
+    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -233,7 +242,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>14: <a href="#pg-06a73ab7adbd73b0e635c3d9403cab4e">FAQ</a></li>
+<li>14: <a href="#pg-1f69b3f46163cb973f38581bf88a88a8">Metrics</a></li>
 
 
     
@@ -241,7 +250,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>15: <a href="#pg-1f69b3f46163cb973f38581bf88a88a8">Metrics</a></li>
+<li>15: <a href="#pg-06a73ab7adbd73b0e635c3d9403cab4e">FAQ</a></li>
 
 
     
@@ -4228,134 +4237,7 @@ You can do that by changing HBA rules &amp; reload (recommended), or just shutti
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-06a73ab7adbd73b0e635c3d9403cab4e">14 - FAQ</h1>
-    <div class="lead">Pigsty PGSQL module frequently asked questions</div>
-	<hr>
-<h2 id="abort-due-to-postgres-exists">ABORT due to postgres exists</h2>
-<blockquote>
-<p>Set <code>pg_clean</code> = <code>true</code> and <code>pg_safeguard</code> = <code>false</code> to force clean postgres data during <code>pgsql.yml</code></p>
-</blockquote>
-<p>This happens when you run <code>pgsql.yml</code> on a node with postgres running, and <a href="/docs/reference/param/#pg_clean"><code>pg_clean</code></a> is set to <code>false</code>.</p>
-<p>If <code>pg_clean</code> is true (and the <code>pg_safeguard</code> is <code>false</code>, too), the <code>pgsql.yml</code> playbook will remove the existing pgsql data and re-init it as a new one, which makes this playbook fully idempotent.</p>
-<p>You can still purge the existing PostgreSQL data by using a special task tag <code>pg_purge</code></p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_clean      <span style="color:#8f5902;font-style:italic"># honor pg_clean and pg_safeguard</span>
-</span></span><span style="display:flex;"><span>./pgsql.yml -t pg_purge      <span style="color:#8f5902;font-style:italic"># ignore pg_clean and pg_safeguard</span>
-</span></span></code></pre></div><hr>
-<h2 id="abort-due-to-pg_safeguard-enabled">ABORT due to pg_safeguard enabled</h2>
-<blockquote>
-<p>Disable <code>pg_safeguard</code> to remove the Postgres instance.</p>
-</blockquote>
-<p>If <a href="/docs/reference/param/#pg_safeguard"><code>pg_safeguard</code></a> is enabled, you can not remove the running pgsql instance with <code>bin/pgsql-rm</code> and <code>pgsql-rm.yml</code> playbook.</p>
-<p>To disable <code>pg_safeguard</code>, you can set <code>pg_safeguard</code> to <code>false</code> in the inventory or pass <code>-e pg_safeguard=false</code> as cli arg to the playbook:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -e <span style="color:#000">pg_safeguard</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">false</span> -l &lt;cls_to_remove&gt;    <span style="color:#8f5902;font-style:italic"># force override pg_safeguard</span>
-</span></span></code></pre></div><hr>
-<h2 id="fail-to-wait-for-postgrespatroni-primary">Fail to wait for postgres/patroni primary</h2>
-<p>This usually happens when the cluster is misconfigured, or the previous primary is improperly removed. (e.g., trash metadata in DCS with the same cluster name).</p>
-<p>You must check <code>/pg/log/*</code> to find the reason.</p>
-<p>To delete trash meta from etcd, you can use <code>etcdctl del --prefix /pg/&lt;cls&gt;</code>, do with caution!</p>
-<hr>
-<h2 id="fail-to-wait-for-postgrespatroni-replica">Fail to wait for postgres/patroni replica</h2>
-<p>There are several possible reasons:</p>
-<p><strong>Failed Immediately</strong>: Usually, this happens because of misconfiguration, network issues, broken DCS metadata, etc&hellip;, you have to inspect <code>/pg/log</code> to find out the actual reason.</p>
-<p><strong>Failed After a While</strong>: This may be due to source instance data corruption. Check PGSQL FAQ: How to create replicas when data is corrupted?</p>
-<p><strong>Timeout</strong>: If the <code>wait for postgres replica</code> task takes 30min or more and fails due to timeout, This is common for a huge cluster (e.g., 1TB+, which may take hours to create a replica). In this case, the underlying creating replica procedure is still proceeding. You can check cluster status with <code>pg list &lt;cls&gt;</code> and wait until the replica catches up with the primary. Then continue the following tasks:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
-</span></span></code></pre></div><hr>
-<h2 id="install-postgresql-12---15">Install PostgreSQL 12 - 15</h2>
-<p>To install PostgreSQL 12 - 15, you have to set <code>pg_version</code> to <code>12</code>, <code>13</code>, <code>14</code>, or <code>15</code> in the inventory. (usually at cluster level)</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic"># install pg 16 in this template</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_libs</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_stat_statements, auto_explain&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># remove timescaledb from pg 16 beta</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_extensions</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># missing pg16 extensions for now</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><hr>
-<h2 id="how-enable-hugepage-for-postgresql">How enable hugepage for PostgreSQL?</h2>
-<blockquote>
-<p>use <code>node_hugepage_count</code> and <code>node_hugepage_ratio</code> or <code>/pg/bin/pg-tune-hugepage</code></p>
-</blockquote>
-<p>If you plan to enable hugepage, consider using <code>node_hugepage_count</code> and <code>node_hugepage_ratio</code> and apply with <code>./node.yml -t node_tune</code> .</p>
-<p>It&rsquo;s good to allocate <strong>enough</strong> hugepage before postgres start, and use <code>pg_tune_hugepage</code> to shrink them later.</p>
-<p>If your postgres is already running, you can use <code>/pg/bin/pg-tune-hugepage</code> to enable hugepage on the fly. Note that this only works on PostgreSQL 15+</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sync<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">echo</span> <span style="color:#0000cf;font-weight:bold">3</span> &gt; /proc/sys/vm/drop_caches   <span style="color:#8f5902;font-style:italic"># drop system cache (ready for performance impact)</span>
-</span></span><span style="display:flex;"><span>sudo /pg/bin/pg-tune-hugepage             <span style="color:#8f5902;font-style:italic"># write nr_hugepages to /etc/sysctl.d/hugepage.conf</span>
-</span></span><span style="display:flex;"><span>pg restart &lt;cls&gt;                          <span style="color:#8f5902;font-style:italic"># restart postgres to use hugepage</span>
-</span></span></code></pre></div><hr>
-<h2 id="how-to-guarantee-zero-data-loss-during-failover">How to guarantee zero data loss during failover?</h2>
-<blockquote>
-<p>Use <code>crit.yml</code> template, or setting <code>pg_rpo</code> to <code>0</code>, or <a href="/docs/pgsql/admin/#config-cluster">config cluster</a> with synchronous mode.</p>
-</blockquote>
-<p>Consider using <a href="/docs/pgsql/conf#sync-standby">Sync Standby</a> and <a href="/docs/pgsql/conf#quorum-commit">Quorum Comit</a> to guarantee 0 data loss during failover.</p>
-<hr>
-<h2 id="how-to-survive-from-disk-full">How to survive from disk full?</h2>
-<blockquote>
-<p><code>rm -rf /pg/dummy</code> will free some emergency space.</p>
-</blockquote>
-<p>The <a href="/docs/reference/param/#pg_dummy_filesize"><code>pg_dummy_filesize</code></a> is set to <code>64MB</code> by default. Consider increasing it to <code>8GB</code> or larger in the production environment.</p>
-<p>It will be placed on <code>/pg/dummy</code> same disk as the PGSQL main data disk. You can remove that file to free some emergency space. At least you can run some shell scripts on that node.</p>
-<hr>
-<h2 id="how-to-create-replicas-when-data-is-corrupted">How to create replicas when data is corrupted?</h2>
-<blockquote>
-<p>Disable <code>clonefrom</code> on bad instances and reload patroni config.</p>
-</blockquote>
-<p>Pigsty sets the <code>cloneform: true</code> tag on all instances&rsquo; patroni config, which marks the instance available for cloning replica.</p>
-<p>If this instance has corrupt data files, you can set <code>clonefrom: false</code> to avoid pulling data from the evil instance. To do so:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>tags:
-</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
-</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
-</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
-</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
-</span></span><span style="display:flex;"><span>  
-</span></span><span style="display:flex;"><span>$ systemctl reload patroni
-</span></span></code></pre></div><hr>
-<h2 id="how-to-create-replicas-when-data-is-corrupted-1">How to create replicas when data is corrupted?</h2>
-<blockquote>
-<p>Disable <code>clonefrom</code> on bad instances and reload patroni config.</p>
-</blockquote>
-<p>Pigsty sets the <code>cloneform: true</code> tag on all instances&rsquo; patroni config, which marks the instance available for cloning replica.</p>
-<p>If this instance has corrupt data files, you can set <code>clonefrom: false</code> to avoid pulling data from the evil instance. To do so:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>tags:
-</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
-</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
-</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
-</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
-</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
-</span></span><span style="display:flex;"><span>  
-</span></span><span style="display:flex;"><span>$ systemctl reload patroni
-</span></span></code></pre></div><hr>
-<h2 id="performance-impact-of-monitoring-exporter">Performance impact of monitoring exporter</h2>
-<p>Not very much, 200ms per 10 ~ 15 seconds, won&rsquo;t affect the database performance.</p>
-<p>The default scrape interval for prometheus is 10s in pigsty, make sure the exporter can finish the scrape within that period.</p>
-<hr>
-<h2 id="how-to-monitor-an-existing-postgresql-instance">How to monitor an existing PostgreSQL instance?</h2>
-<p>Check <a href="/docs/pgsql/monitor/">PGSQL Monitor</a> for details.</p>
-<hr>
-<h2 id="how-to-remove-monitor-targets-from-prometheus">How to remove monitor targets from prometheus?</h2>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -t prometheus -l &lt;cls&gt;     <span style="color:#8f5902;font-style:italic"># remove prometheus targets of cluster &#39;cls&#39;</span>
-</span></span></code></pre></div><p>Or</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgmon-rm &lt;ins&gt;     <span style="color:#8f5902;font-style:italic"># shortcut for removing prometheus targets of pgsql instance &#39;ins&#39;</span>
-</span></span></code></pre></div>
-</div>
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-<div class="td-content" style="page-break-before: always">
-    
-	<h1 id="pg-1f69b3f46163cb973f38581bf88a88a8">15 - Metrics</h1>
+	<h1 id="pg-1f69b3f46163cb973f38581bf88a88a8">14 - Metrics</h1>
     <div class="lead">Pigsty PGSQL module metric list</div>
 	<p><a href="/zh/docs/pgsql"><strong><code>PGSQL</code></strong></a> module has 638 available metrics</p>
 <table>
@@ -8199,6 +8081,133 @@ You can do that by changing HBA rules &amp; reload (recommended), or just shutti
 </tbody>
 </table>
 
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-06a73ab7adbd73b0e635c3d9403cab4e">15 - FAQ</h1>
+    <div class="lead">Pigsty PGSQL module frequently asked questions</div>
+	<hr>
+<h2 id="abort-due-to-postgres-exists">ABORT due to postgres exists</h2>
+<blockquote>
+<p>Set <code>pg_clean</code> = <code>true</code> and <code>pg_safeguard</code> = <code>false</code> to force clean postgres data during <code>pgsql.yml</code></p>
+</blockquote>
+<p>This happens when you run <code>pgsql.yml</code> on a node with postgres running, and <a href="/docs/reference/param/#pg_clean"><code>pg_clean</code></a> is set to <code>false</code>.</p>
+<p>If <code>pg_clean</code> is true (and the <code>pg_safeguard</code> is <code>false</code>, too), the <code>pgsql.yml</code> playbook will remove the existing pgsql data and re-init it as a new one, which makes this playbook fully idempotent.</p>
+<p>You can still purge the existing PostgreSQL data by using a special task tag <code>pg_purge</code></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_clean      <span style="color:#8f5902;font-style:italic"># honor pg_clean and pg_safeguard</span>
+</span></span><span style="display:flex;"><span>./pgsql.yml -t pg_purge      <span style="color:#8f5902;font-style:italic"># ignore pg_clean and pg_safeguard</span>
+</span></span></code></pre></div><hr>
+<h2 id="abort-due-to-pg_safeguard-enabled">ABORT due to pg_safeguard enabled</h2>
+<blockquote>
+<p>Disable <code>pg_safeguard</code> to remove the Postgres instance.</p>
+</blockquote>
+<p>If <a href="/docs/reference/param/#pg_safeguard"><code>pg_safeguard</code></a> is enabled, you can not remove the running pgsql instance with <code>bin/pgsql-rm</code> and <code>pgsql-rm.yml</code> playbook.</p>
+<p>To disable <code>pg_safeguard</code>, you can set <code>pg_safeguard</code> to <code>false</code> in the inventory or pass <code>-e pg_safeguard=false</code> as cli arg to the playbook:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -e <span style="color:#000">pg_safeguard</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">false</span> -l &lt;cls_to_remove&gt;    <span style="color:#8f5902;font-style:italic"># force override pg_safeguard</span>
+</span></span></code></pre></div><hr>
+<h2 id="fail-to-wait-for-postgrespatroni-primary">Fail to wait for postgres/patroni primary</h2>
+<p>This usually happens when the cluster is misconfigured, or the previous primary is improperly removed. (e.g., trash metadata in DCS with the same cluster name).</p>
+<p>You must check <code>/pg/log/*</code> to find the reason.</p>
+<p>To delete trash meta from etcd, you can use <code>etcdctl del --prefix /pg/&lt;cls&gt;</code>, do with caution!</p>
+<hr>
+<h2 id="fail-to-wait-for-postgrespatroni-replica">Fail to wait for postgres/patroni replica</h2>
+<p>There are several possible reasons:</p>
+<p><strong>Failed Immediately</strong>: Usually, this happens because of misconfiguration, network issues, broken DCS metadata, etc&hellip;, you have to inspect <code>/pg/log</code> to find out the actual reason.</p>
+<p><strong>Failed After a While</strong>: This may be due to source instance data corruption. Check PGSQL FAQ: How to create replicas when data is corrupted?</p>
+<p><strong>Timeout</strong>: If the <code>wait for postgres replica</code> task takes 30min or more and fails due to timeout, This is common for a huge cluster (e.g., 1TB+, which may take hours to create a replica). In this case, the underlying creating replica procedure is still proceeding. You can check cluster status with <code>pg list &lt;cls&gt;</code> and wait until the replica catches up with the primary. Then continue the following tasks:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
+</span></span></code></pre></div><hr>
+<h2 id="install-postgresql-12---15">Install PostgreSQL 12 - 15</h2>
+<p>To install PostgreSQL 12 - 15, you have to set <code>pg_version</code> to <code>12</code>, <code>13</code>, <code>14</code>, or <code>15</code> in the inventory. (usually at cluster level)</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">16</span><span style="color:#f8f8f8;text-decoration:underline">                    </span><span style="color:#8f5902;font-style:italic"># install pg 16 in this template</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_libs</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_stat_statements, auto_explain&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># remove timescaledb from pg 16 beta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">pg_extensions</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># missing pg16 extensions for now</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="how-enable-hugepage-for-postgresql">How enable hugepage for PostgreSQL?</h2>
+<blockquote>
+<p>use <code>node_hugepage_count</code> and <code>node_hugepage_ratio</code> or <code>/pg/bin/pg-tune-hugepage</code></p>
+</blockquote>
+<p>If you plan to enable hugepage, consider using <code>node_hugepage_count</code> and <code>node_hugepage_ratio</code> and apply with <code>./node.yml -t node_tune</code> .</p>
+<p>It&rsquo;s good to allocate <strong>enough</strong> hugepage before postgres start, and use <code>pg_tune_hugepage</code> to shrink them later.</p>
+<p>If your postgres is already running, you can use <code>/pg/bin/pg-tune-hugepage</code> to enable hugepage on the fly. Note that this only works on PostgreSQL 15+</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sync<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">echo</span> <span style="color:#0000cf;font-weight:bold">3</span> &gt; /proc/sys/vm/drop_caches   <span style="color:#8f5902;font-style:italic"># drop system cache (ready for performance impact)</span>
+</span></span><span style="display:flex;"><span>sudo /pg/bin/pg-tune-hugepage             <span style="color:#8f5902;font-style:italic"># write nr_hugepages to /etc/sysctl.d/hugepage.conf</span>
+</span></span><span style="display:flex;"><span>pg restart &lt;cls&gt;                          <span style="color:#8f5902;font-style:italic"># restart postgres to use hugepage</span>
+</span></span></code></pre></div><hr>
+<h2 id="how-to-guarantee-zero-data-loss-during-failover">How to guarantee zero data loss during failover?</h2>
+<blockquote>
+<p>Use <code>crit.yml</code> template, or setting <code>pg_rpo</code> to <code>0</code>, or <a href="/docs/pgsql/admin/#config-cluster">config cluster</a> with synchronous mode.</p>
+</blockquote>
+<p>Consider using <a href="/docs/pgsql/conf#sync-standby">Sync Standby</a> and <a href="/docs/pgsql/conf#quorum-commit">Quorum Comit</a> to guarantee 0 data loss during failover.</p>
+<hr>
+<h2 id="how-to-survive-from-disk-full">How to survive from disk full?</h2>
+<blockquote>
+<p><code>rm -rf /pg/dummy</code> will free some emergency space.</p>
+</blockquote>
+<p>The <a href="/docs/reference/param/#pg_dummy_filesize"><code>pg_dummy_filesize</code></a> is set to <code>64MB</code> by default. Consider increasing it to <code>8GB</code> or larger in the production environment.</p>
+<p>It will be placed on <code>/pg/dummy</code> same disk as the PGSQL main data disk. You can remove that file to free some emergency space. At least you can run some shell scripts on that node.</p>
+<hr>
+<h2 id="how-to-create-replicas-when-data-is-corrupted">How to create replicas when data is corrupted?</h2>
+<blockquote>
+<p>Disable <code>clonefrom</code> on bad instances and reload patroni config.</p>
+</blockquote>
+<p>Pigsty sets the <code>cloneform: true</code> tag on all instances&rsquo; patroni config, which marks the instance available for cloning replica.</p>
+<p>If this instance has corrupt data files, you can set <code>clonefrom: false</code> to avoid pulling data from the evil instance. To do so:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tags:
+</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
+</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
+</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
+</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>$ systemctl reload patroni
+</span></span></code></pre></div><hr>
+<h2 id="how-to-create-replicas-when-data-is-corrupted-1">How to create replicas when data is corrupted?</h2>
+<blockquote>
+<p>Disable <code>clonefrom</code> on bad instances and reload patroni config.</p>
+</blockquote>
+<p>Pigsty sets the <code>cloneform: true</code> tag on all instances&rsquo; patroni config, which marks the instance available for cloning replica.</p>
+<p>If this instance has corrupt data files, you can set <code>clonefrom: false</code> to avoid pulling data from the evil instance. To do so:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ vi /pg/bin/patroni.yml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tags:
+</span></span><span style="display:flex;"><span>  nofailover: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  clonefrom: <span style="color:#204a87">true</span>      <span style="color:#8f5902;font-style:italic"># ----------&gt; change to false</span>
+</span></span><span style="display:flex;"><span>  noloadbalance: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  nosync: <span style="color:#204a87">false</span>
+</span></span><span style="display:flex;"><span>  version:  <span style="color:#4e9a06">&#39;15&#39;</span>
+</span></span><span style="display:flex;"><span>  spec: <span style="color:#4e9a06">&#39;4C.8G.50G&#39;</span>
+</span></span><span style="display:flex;"><span>  conf: <span style="color:#4e9a06">&#39;oltp.yml&#39;</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>$ systemctl reload patroni
+</span></span></code></pre></div><hr>
+<h2 id="performance-impact-of-monitoring-exporter">Performance impact of monitoring exporter</h2>
+<p>Not very much, 200ms per 10 ~ 15 seconds, won&rsquo;t affect the database performance.</p>
+<p>The default scrape interval for prometheus is 10s in pigsty, make sure the exporter can finish the scrape within that period.</p>
+<hr>
+<h2 id="how-to-monitor-an-existing-postgresql-instance">How to monitor an existing PostgreSQL instance?</h2>
+<p>Check <a href="/docs/pgsql/monitor/">PGSQL Monitor</a> for details.</p>
+<hr>
+<h2 id="how-to-remove-monitor-targets-from-prometheus">How to remove monitor targets from prometheus?</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -t prometheus -l &lt;cls&gt;     <span style="color:#8f5902;font-style:italic"># remove prometheus targets of cluster &#39;cls&#39;</span>
+</span></span></code></pre></div><p>Or</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgmon-rm &lt;ins&gt;     <span style="color:#8f5902;font-style:italic"># shortcut for removing prometheus targets of pgsql instance &#39;ins&#39;</span>
+</span></span></code></pre></div>
 </div>
 
 
