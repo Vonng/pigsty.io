@@ -48,7 +48,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/kernel/ch8/" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2018-01-04T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-03-01T21:27:45+08:00" />
 
 <meta itemprop="name" content="第八章 缓冲区管理器">
 <meta itemprop="description" content="缓冲区管理器（Buffer Manager）管理着共享内存和持久存储之间的数据传输，对于DBMS的性能有着重要的影响。PostgreSQL的缓冲区管理器十分高效。
@@ -64,7 +64,7 @@
 8.1.2 缓冲区标签（buffer_tag） PostgreSQL中的每个数据文件页面都可以分配到唯一的标签，即缓冲区标签（buffer tag）。 当缓冲区管理器收到请求时，PostgreSQL会用到目标页面的缓冲区标签。
 缓冲区标签（buffer_tag） 由三个值组成：关系文件节点（relfilenode），关系分支编号（fork number），页面块号（block number）。例如，缓冲区标签{(16821, 16384, 37721), 0, 7}表示，在oid=16821的表空间中的oid=16384的数据库中的oid=37721的表的0号分支（关系本体）的第七号页面。再比如缓冲区标签{(16821, 16384, 37721), 1, 3}表示该表空闲空间映射文件的三号页面。（关系本体main分支编号为0，空闲空间映射fsm分支编号为1）
 /* * Buffer tag 标识了缓冲区中包含着哪一个磁盘块。 * 注意：BufferTag中的数据必需足以在不参考pg_class或pg_tablespace中的数据项 * 的前提下，能够直接确定该块需要写入的位置。不过有可能出现这种情况：刷写缓冲区的 * 后端进程甚至都不认为自己能在那个时刻看见相应的关系（譬如，后段进程对应的的事务 * 开始时间早于创建该关系的事务）。无论如何，存储管理器都必须能应对这种情况。 * * 注意：如果结构中存在任何填充字节，INIT_BUFFERTAG需要将所有字段抹为零，因为整个 * 结构体被当成一个散列键来用。 */ typedef struct buftag { RelFileNode rnode;	/* 关系的物理标识符 */ ForkNumber	forkNum; /* 关系的分支编号 */ BlockNumber blockNum;	/* 相对于关系开始位置的块号 */ } BufferTag; typedef struct RelFileNode { Oid spcNode; /* 表空间 */ Oid dbNode; /* 数据库 */ Oid relNode; /* 关系 */ } RelFileNode; 8."><meta itemprop="datePublished" content="2018-01-04T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
+<meta itemprop="dateModified" content="2024-03-01T21:27:45+08:00" />
 <meta itemprop="wordCount" content="902">
 <meta itemprop="keywords" content="Internal," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="第八章 缓冲区管理器"/>
 <meta name="twitter:description" content="缓冲区管理器（Buffer Manager）管理着共享内存和持久存储之间的数据传输，对于DBMS的性能有着重要的影响。PostgreSQL的缓冲区管理器十分高效。
@@ -143,7 +143,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -167,7 +167,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -190,66 +190,7 @@ if (!doNotTrack) {
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
   <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
   <ul class="ul-1">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
-  <input type="checkbox" id="m-zhblogpg-check"/>
-  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">Postgres</span></a></label>
-  
-  <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
-  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
-  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
-  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
-  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
-  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
-  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
-  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
-  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
-  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
-  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
-  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
-  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
-  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
-  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
-  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
-  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
-  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
-  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
-  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
-  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
-  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
-  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
-  
-</li>
-  </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
   <input type="checkbox" id="m-zhblogdb-check"/>
   <label for="m-zhblogdb-check"><a href="/zh/blog/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><span class="">数据库</span></a></label>
   
@@ -411,6 +352,65 @@ if (!doNotTrack) {
   
 </li>
   </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
+  <input type="checkbox" id="m-zhblogpg-check"/>
+  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
+  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
+  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
+  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
+  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
+  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
+  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
+  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
+  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
+  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
+  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
+  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
+  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
+  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
+  
+</li>
+  </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
   <input type="checkbox" id="m-zhblogdev-check"/>
   <label for="m-zhblogdev-check"><a href="/zh/blog/dev/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a></label>
@@ -479,10 +479,6 @@ if (!doNotTrack) {
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
   <input type="checkbox" id="m-zhblogdevsql-exclude-check"/>
   <label for="m-zhblogdevsql-exclude-check"><a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevmaturity-model-li">
-  <input type="checkbox" id="m-zhblogdevmaturity-model-check"/>
-  <label for="m-zhblogdevmaturity-model-check"><a href="/zh/blog/dev/maturity-model/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevmaturity-model"><span class="">架构成熟度模型</span></a></label>
   
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfile_fdw-li">
   <input type="checkbox" id="m-zhblogdevfile_fdw-check"/>
@@ -1030,7 +1026,7 @@ if (!doNotTrack) {
 </li>
 </ul>
 <p><strong>图8.1 缓冲区管理器，存储和后端进程之间的关系</strong></p>
-<p><img alt="C76949F9-6362-4AA8-A5FB-9537C9A9B970" src="/img/kernel/fig-8-01.png"></p>
+<p><img alt="C76949F9-6362-4AA8-A5FB-9537C9A9B970" src="/img/blog/kernel/fig-8-01.png"></p>
 <h2 id="81-概览">8.1 概览</h2>
 <p>本节介绍了一些关键概念，有助于理解后续章节。</p>
 <h3 id="811-缓冲区管理器的结构">8.1.1 缓冲区管理器的结构</h3>
@@ -1064,7 +1060,7 @@ if (!doNotTrack) {
 </span></span></code></pre></div><h3 id="813-后端进程如何读取数据页">8.1.3 后端进程如何读取数据页</h3>
 <p>本小节描述了后端进程如何从缓冲区管理器中读取页面，如图8.2所示。</p>
 <p><strong>图8.2 后端进程如何读取数据页</strong></p>
-<p><img src="/img/kernel/fig-8-02.png"></p>
+<p><img src="/img/blog/kernel/fig-8-02.png"></p>
 <ol>
 <li>当读取表或索引页时，后端进程向缓冲区管理器发送请求，请求中带有目标页面的<code>buffer_tag</code>。</li>
 <li>缓冲区管理器会根据<code>buffer_tag</code>返回一个<code>buffer_id</code>，即目标页面存储在数组中的槽位的序号。如果请求的页面没有存储在缓冲池中，那么缓冲区管理器会将页面从持久存储中加载到其中一个缓冲池槽位中，然后再返回该槽位的<code>buffer_id</code>。</li>
@@ -1086,7 +1082,7 @@ if (!doNotTrack) {
 <h2 id="82-缓冲区管理器的结构">8.2 缓冲区管理器的结构</h2>
 <p>PostgreSQL缓冲区管理器由三层组成，即<strong>缓冲表层</strong>，<strong>缓冲区描述符层</strong>和<strong>缓冲池层</strong>（图8.3）：</p>
 <p><strong>图8.3 缓冲区管理器的三层结构</strong></p>
-<p><img src="/img/kernel/fig-8-03.png"></p>
+<p><img src="/img/blog/kernel/fig-8-03.png"></p>
 <ul>
 <li>
 <p>**缓冲池（buffer pool）**层是一个数组。 每个槽都存储一个数据文件页，数组槽的索引称为<code>buffer_id</code>。</p>
@@ -1103,7 +1099,7 @@ if (!doNotTrack) {
 <p>缓冲表可以在逻辑上分为三个部分：散列函数，散列桶槽，以及数据项（图8.4）。</p>
 <p>内置散列函数将<code>buffer_tag</code>映射到哈希桶槽。 即使散列桶槽的数量比缓冲池槽的数量要多，冲突仍然可能会发生。因此缓冲表采用了**使用链表的分离链接方法（separate chaining with linked lists）**来解决冲突。 当数据项被映射到至同一个桶槽时，该方法会将这些数据项保存在一个链表中，如图8.4所示。</p>
 <p><strong>图8.4 缓冲表</strong></p>
-<p><img src="/img/kernel/fig-8-04.png"></p>
+<p><img src="/img/blog/kernel/fig-8-04.png"></p>
 <p>数据项包括两个值：页面的<code>buffer_tag</code>，以及包含页面元数据的描述符的<code>buffer_id</code>。例如数据项<code>Tag_A,id=1</code> 表示，<code>buffer_id=1</code>对应的缓冲区描述符中，存储着页面<code>Tag_A</code>的元数据。</p>
 <blockquote>
 <h4 id="散列函数">散列函数</h4>
@@ -1212,7 +1208,7 @@ if (!doNotTrack) {
 <p>缓冲区描述符的集合构成了一个数组。本书称该数组为<strong>缓冲区描述符层（buffer descriptors layer）</strong>。</p>
 <p>当PostgreSQL服务器启动时，所有缓冲区描述符的状态都为<strong>空</strong>。在PostgreSQL中，这些描述符构成了一个名为**<code>freelist</code>**的链表，如图8.5所示。</p>
 <p><strong>图8.5 缓冲区管理器初始状态</strong></p>
-<p><img src="/img/kernel/fig-8-05.png"></p>
+<p><img src="/img/blog/kernel/fig-8-05.png"></p>
 <blockquote>
 <p>请注意PostgreSQL中的**<code>freelist</code>**完全不同于Oracle中<code>freelists</code>的概念。PostgreSQL的<code>freelist</code>只是空缓冲区描述符的链表。PostgreSQL中与Oracle中的<code>freelist</code>相对应的对象是空闲空间映射（FSM）（第5.3.4节）。</p>
 </blockquote>
@@ -1225,7 +1221,7 @@ if (!doNotTrack) {
 </ol>
 <p>第二页，以及后续页面都以类似方式加载，其他细节将在第8.4.2节中介绍。</p>
 <p><strong>图8.6 加载第一页</strong></p>
-<p><img src="/img/kernel/fig-8-06.png"></p>
+<p><img src="/img/blog/kernel/fig-8-06.png"></p>
 <p>从<code>freelist</code>中摘出的描述符始终保存着页面的元数据。换而言之，仍然在使用的非空描述符不会返还到<code>freelist</code>中。但当下列任一情况出现时，描述符状态将变为“空”，并被重新插入至<code>freelist</code>中：</p>
 <ol>
 <li>相关表或索引已被删除。</li>
@@ -1250,7 +1246,7 @@ if (!doNotTrack) {
 <p><code>BufMappingLock</code>会被分为多个分区，以减少缓冲表中的争用（默认为128个分区）。每个<code>BufMappingLock</code>分区都保护着一部分相应的散列桶槽。</p>
 <p>图8.7给出了一个<code>BufMappingLock</code>分区的典型示例。两个后端进程可以同时持有各自分区的<code>BufMappingLock</code>独占锁以插入新的数据项。如果<code>BufMappingLock</code>是系统级的锁，那么其中一个进程就需要等待另一个进程完成处理。</p>
 <p><strong>图8.7 两个进程同时获取相应分区的<code>BufMappingLock</code>独占锁，以插入新数据项</strong></p>
-<p><img src="/img/kernel/fig-8-07.png"></p>
+<p><img src="/img/blog/kernel/fig-8-07.png"></p>
 <p>缓冲表也需要许多其他锁。例如，在缓冲表内部会使用**自旋锁（spin lock）**来删除数据项。不过本章不需要其他这些锁的相关知识，因此这里省略了对其他锁的介绍。</p>
 <blockquote>
 <p>在9.4版本之前，<code>BufMappingLock</code>在默认情况下被分为16个独立的锁。</p>
@@ -1390,7 +1386,7 @@ if (!doNotTrack) {
 <li>访问<code>buffer_id=2</code>的缓冲池槽。</li>
 </ol>
 <p><strong>图8.8 访问存储在缓冲池中的页面。</strong></p>
-<p><img src="/img/kernel/fig-8-08.png"></p>
+<p><img src="/img/blog/kernel/fig-8-08.png"></p>
 <p>然后，当从缓冲池槽中的页面里读取行时，PostgreSQL进程获取相应缓冲区描述符的共享<code>content_lock</code>。因而缓冲池槽可以同时被多个进程读取。</p>
 <p>当向页面插入（及更新、删除）行时，该postgres后端进程获取相应缓冲区描述符的独占<code>content_lock</code>（注意这里必须将相应页面的脏位置位为<code>&quot;1&quot;</code>）。</p>
 <p>访问完页面后，相应缓冲区描述符的引用计数值减1。</p>
@@ -1451,7 +1447,7 @@ if (!doNotTrack) {
 </li>
 </ol>
 <p><strong>图8.9 将页面从存储装载到空插槽</strong></p>
-<p><img src="/img/kernel/fig-8-09.png"></p>
+<p><img src="/img/blog/kernel/fig-8-09.png"></p>
 <h3 id="843-将页面从存储加载至受害者缓冲池槽中">8.4.3 将页面从存储加载至受害者缓冲池槽中</h3>
 <p>在这种情况下，假设所有缓冲池槽位都被页面占用，且未存储所需的页面。缓冲区管理器将执行以下步骤：</p>
 <ol>
@@ -1498,7 +1494,7 @@ if (!doNotTrack) {
 </li>
 </ol>
 <p><strong>图8.10 将页面从存储加载至受害者缓冲池槽</strong></p>
-<p><img src="/img/kernel/fig-8-10.png"></p>
+<p><img src="/img/blog/kernel/fig-8-10.png"></p>
 <ol start="6">
 <li>
 <p>从缓冲表中删除旧表项，并释放旧表项所在分区的<code>BufMappingLock</code>。</p>
@@ -1514,7 +1510,7 @@ if (!doNotTrack) {
 </li>
 </ol>
 <p><strong>图8.11 将页面从存储加载至受害者缓冲池槽（接图8.10）</strong></p>
-<p><img src="/img/kernel/fig-8-11.png"></p>
+<p><img src="/img/blog/kernel/fig-8-11.png"></p>
 <h3 id="844-页面替换算法时钟扫描">8.4.4 页面替换算法：时钟扫描</h3>
 <p>本节的其余部分介绍了**时钟扫描（clock-sweep）<strong>算法。该算法是</strong>NFU（Not Frequently Used）**算法的变体，开销较小，能高效地选出较少使用的页面。</p>
 <p>我们将缓冲区描述符想象为一个循环列表（如图8.12所示）。而<code>nextVictimBuffer</code>是一个32位的无符号整型变量，它总是指向某个缓冲区描述符并按顺时针顺序旋转。该算法的伪代码与算法描述如下：</p>
@@ -1542,7 +1538,7 @@ if (!doNotTrack) {
 </blockquote>
 <p>具体的例子如图8.12所示。缓冲区描述符为蓝色或青色的方框，框中的数字显示每个描述符的<code>usage_count</code>。</p>
 <p><strong>图8.12 时钟扫描</strong></p>
-<p><img src="/img/kernel/fig-8-12.png"></p>
+<p><img src="/img/blog/kernel/fig-8-12.png"></p>
 <ol>
 <li><code>nextVictimBuffer</code>指向第一个描述符（<code>buffer_id = 1</code>）；但因为该描述符被钉住了，所以跳过。</li>
 <li><code>extVictimBuffer</code>指向第二个描述符（<code>buffer_id = 2</code>）。该描述符未被钉住，但其<code>usage_count</code>为2；因此该描述符的<code>usage_count</code>将减1，而<code>nextVictimBuffer</code>迭代至第三个候选描述符。</li>
@@ -1605,7 +1601,7 @@ if (!doNotTrack) {
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-03-01: <a href="https://github.com/Vonng/pigsty.cc/commit/ba0fa2bf42872bf8e12429efa3667298ed08766e">update blog images (ba0fa2b)</a>
 </div>
 </div>
 

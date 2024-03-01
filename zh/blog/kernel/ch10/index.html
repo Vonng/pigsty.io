@@ -60,7 +60,7 @@ postgres&gt; cat /usr/local/pgsql/data/backup_label START WAL LOCATION: 0/900002
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/kernel/ch10/" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2018-01-02T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-03-01T21:27:45+08:00" />
 
 <meta itemprop="name" content="第十章 基础备份与时间点恢复">
 <meta itemprop="description" content="在线数据库备份大致可分为两类：逻辑备份和物理备份。它们有着各自的优点和缺点。尽管各有优劣，但逻辑备份有一个缺点：执行需要花费太多时间。特别是对于大型数据库而言，需要花费很长时间进行备份，而从备份数据中恢复数据库可能需要更长的时间。相反的是，物理备份可以在相对较短的时间内备份和恢复大型数据库，因此在实际系统中，它是一个非常重要而实用的功能。
@@ -82,7 +82,7 @@ pg_start_backup和pg_stop_backup命令定义在：src/backend/access/transam/xlo
 备份标签backup_label文件包含以下六个项目（11或更新版本为七个项目）：
 检查点位置（CHECKPOINT LOCATION） —— 该命令所创建检查点的LSN位置。 WAL开始位置（START WAL LOCATION） —— 这不是给PITR用的，而是为第11章描述的流复制准备的。它被命名为START WAL LOCATION，因为复制模式下的备用服务器在初始启动时只读取一次该值。 备份方法（BACKUP METHOD） —— 这是用于进行此基本备份的方法。 （pg_start_backup或pg_basebackup） 备份来源（BACKUP FROM） —— 说明此备份是从主库还是备库拉取。 开始时间（START TIME）—— 这是执行pg_start_backup时的时间戳。 备份标签（LABEL） —— 这是pg_start_backup中指定的标签。 开始时间线（START TIMELINE） —— 这是备份开始的时间线。这是为了进行正常性检查，在版本11中被引入。 备份标签 一个9.6版本中备份标签的实际例子如下所示：
 postgres&gt; cat /usr/local/pgsql/data/backup_label START WAL LOCATION: 0/9000028 (file 000000010000000000000009) CHECKPOINT LOCATION: 0/9000060 BACKUP METHOD: pg_start_backup BACKUP FROM: master START TIME: 2018-7-9 11:45:19 GMT LABEL: Weekly Backup 可以想象，当使用此基础备份恢复数据库时，PostgreSQL从backup_label文件中取出检查点位置CHECKPOINT LOCATION，然后从归档日志中的合适位置读取检查点记录，然后从检查点记录中获取重做点的位置，最后从重做点开始进行恢复过程（下一节将介绍细节）。"><meta itemprop="datePublished" content="2018-01-02T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
+<meta itemprop="dateModified" content="2024-03-01T21:27:45+08:00" />
 <meta itemprop="wordCount" content="361">
 <meta itemprop="keywords" content="Internal," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="第十章 基础备份与时间点恢复"/>
 <meta name="twitter:description" content="在线数据库备份大致可分为两类：逻辑备份和物理备份。它们有着各自的优点和缺点。尽管各有优劣，但逻辑备份有一个缺点：执行需要花费太多时间。特别是对于大型数据库而言，需要花费很长时间进行备份，而从备份数据中恢复数据库可能需要更长的时间。相反的是，物理备份可以在相对较短的时间内备份和恢复大型数据库，因此在实际系统中，它是一个非常重要而实用的功能。
@@ -167,7 +167,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -191,7 +191,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -214,66 +214,7 @@ if (!doNotTrack) {
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
   <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
   <ul class="ul-1">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
-  <input type="checkbox" id="m-zhblogpg-check"/>
-  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">Postgres</span></a></label>
-  
-  <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
-  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
-  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
-  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
-  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
-  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
-  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
-  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
-  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
-  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
-  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
-  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
-  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
-  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
-  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
-  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
-  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
-  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
-  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
-  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
-  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
-  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
-  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
-  
-</li>
-  </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
   <input type="checkbox" id="m-zhblogdb-check"/>
   <label for="m-zhblogdb-check"><a href="/zh/blog/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><span class="">数据库</span></a></label>
   
@@ -435,6 +376,65 @@ if (!doNotTrack) {
   
 </li>
   </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
+  <input type="checkbox" id="m-zhblogpg-check"/>
+  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
+  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
+  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
+  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
+  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
+  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
+  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
+  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
+  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
+  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
+  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
+  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
+  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
+  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
+  
+</li>
+  </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
   <input type="checkbox" id="m-zhblogdev-check"/>
   <label for="m-zhblogdev-check"><a href="/zh/blog/dev/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a></label>
@@ -503,10 +503,6 @@ if (!doNotTrack) {
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
   <input type="checkbox" id="m-zhblogdevsql-exclude-check"/>
   <label for="m-zhblogdevsql-exclude-check"><a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevmaturity-model-li">
-  <input type="checkbox" id="m-zhblogdevmaturity-model-check"/>
-  <label for="m-zhblogdevmaturity-model-check"><a href="/zh/blog/dev/maturity-model/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevmaturity-model"><span class="">架构成熟度模型</span></a></label>
   
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfile_fdw-li">
   <input type="checkbox" id="m-zhblogdevfile_fdw-check"/>
@@ -1040,7 +1036,7 @@ if (!doNotTrack) {
 <p>这个简单的过程对于DBA来说很容易操作，因为它不需要特殊工具，只需要常用工具（如复制命令或类似的归档工具）来创建基本备份。此外，在此过程中，不需要获取表上的锁，所有用户都可以在不受备份操作影响的情况下发起查询。相对于其他开源关系型数据库，这是一个巨大的优势。</p>
 <p>更简单的方式是使用<a href="https://www.postgresql.org/docs/current/static/app-pgbasebackup.html"><code>pg_basebackup</code></a>命令来做基础备份，不过在它内部也是使用这些底层命令来工作的。</p>
 <p><strong>图10.1 制作基础备份</strong></p>
-<p><img src="/img/kernel/fig-10-01.png"></p>
+<p><img src="/img/blog/kernel/fig-10-01.png"></p>
 <p>由于这些命令对显然是理解PITR的关键点之一，我们将在以下小节中探讨它们。</p>
 <blockquote>
 <p><code>pg_start_backup</code>和<code>pg_stop_backup</code>命令定义在：<a href="https://github.com/postgres/postgres/blob/master/src/backend/access/transam/xlogfuncs.c"><code>src/backend/access/transam/xlogfuncs.c</code></a>。</p>
@@ -1092,7 +1088,7 @@ if (!doNotTrack) {
 <h2 id="102-时间点恢复pitr的工作原理">10.2 时间点恢复（PITR）的工作原理</h2>
 <p>图10.2展示了PITR的基本概念。 PITR模式下的PostgreSQL会在基础备份上重放归档日志中的WAL数据，从<code>pg_start_backup</code>创建的重做点开始，恢复至你想要的位置为止。在PostgreSQL中，要恢复到的位置，被称为<strong>恢复目标（recovery target）</strong>。</p>
 <p><strong>图10.2 PITR的基本概念</strong></p>
-<p><img src="/img/kernel/fig-10-02.png"></p>
+<p><img src="/img/blog/kernel/fig-10-02.png"></p>
 <p>PITR是这样工作的。假设你在GMT时间<code>2018-07-16 12:05:00</code>搞出了错误。那你应该删掉当前的数据库集簇，并使用之前制作的基础备份恢复一个新的出来。然后，创建一个<code>recovery.conf</code>文件，并在其中将参数<code>recovery_target_time</code>参数配置为你犯错误的时间点（在本例中，也就是12:05 GMT） 。<code>recovery.conf</code>文件如下所示：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-ini" data-lang="ini"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># Place archive logs under /mnt/server/archivedir directory.</span>
 </span></span><span style="display:flex;"><span><span style="color:#c4a000">restore_command</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">&#39;cp /mnt/server/archivedir/%f %p&#39;</span>
@@ -1168,12 +1164,12 @@ if (!doNotTrack) {
 <p>每个数据库集簇都会被指定一个时间线标识。由<code>initdb</code>命令创建的原始数据库集簇，其时间线标识为1。每当数据库集簇恢复时，时间线标识都会增加1。例如在前一节的例子中，从原始集簇中恢复得到的集簇，其时间线标识为2。</p>
 <p>图10.3从时间线标识的角度展示了PITR过程。首先，我们删除当前的数据库集簇，并替换为过去的基础备份，以便返回到恢复的起始点，这一步在图中用红色曲线箭头标识。接下来，我们启动PostgreSQL服务器，它通过跟踪初始时间线（时间线标识<code>1</code>），从<code>pg_start_backup</code>创建的重做点开始，重放归档日志中的WAL数据，直到恢复目标达成，这一步在图中用蓝色直线箭头标识。接下来，恢复得到的数据库集簇将被分配一个新的时间线标识<code>2</code>，而PostgreSQL将运行在新的时间线上。</p>
 <p><strong>图10.3 原始数据库集簇和恢复数据库集簇之间时间线标识的关系</strong></p>
-<p><img src="/img/kernel/fig-10-03.png"></p>
+<p><img src="/img/blog/kernel/fig-10-03.png"></p>
 <p>正如<a href="/zh/blog/kernel/ch9/">第九章</a>中简要提到的，WAL段文件名的前8位数字等于创建这些段文件的数据库集簇的时间线标识。当时间线标识发生变化时，WAL段文件名也会相应改变。</p>
 <p>让我们从WAL段文件的角度重新审视恢复过程。假设我们使用两个归档日志文件来恢复数据库：</p>
 <p>$\color{blue}{00000001}0000000000000009$，以及 $\color{blue}{00000001}000000000000000A$。新恢复得到的数据库集簇被分配了时间线标识<code>2</code>，而PostgreSQL就会从 $\color{blue}{00000002}000000000000000A$ 开始创建WAL段。如图10.4所示。</p>
 <p><strong>图10.4 原始数据库集簇和恢复数据库集簇之间WAL段文件的关系</strong></p>
-<p><img src="/img/kernel/fig-10-04.png"></p>
+<p><img src="/img/blog/kernel/fig-10-04.png"></p>
 <h3 id="1032-时间线历史文件">10.3.2 时间线历史文件</h3>
 <p>当PITR过程完成时，会在归档目录和<code>pg_xlog</code>子目录（10或更高版本为<code>pg_wal</code>子目录）下创建名称为<code>00000002.history</code>的时间线历史文件。该文件记录了当前时间线是从哪条时间线分叉出来的，以及分叉的时间。</p>
 <p>该文件的命名规则如下所示：</p>
@@ -1208,7 +1204,7 @@ if (!doNotTrack) {
 </span></span></code></pre></div><p>参数<code>recovery_target_time</code>被设置为您犯下新错误的时间，而<code>recovery_target_timeline</code>被设置为<code>2</code>，以便沿着这条时间线恢复。</p>
 <p>重启PostgreSQL服务器并进入PITR模式，数据库会沿着时间线标识2进行恢复。如图10.5所示。</p>
 <p><strong>图10.5 沿着时间线2将数据库恢复至12:15的状态</strong></p>
-<p><img src="/img/kernel/fig-10-05.png"></p>
+<p><img src="/img/blog/kernel/fig-10-05.png"></p>
 <ol>
 <li>
 <p>PostgreSQL从<code>backup_label</code>文件中读取<code>CHECKPOINT LOCATION</code>的值。</p>
@@ -1247,7 +1243,7 @@ if (!doNotTrack) {
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-03-01: <a href="https://github.com/Vonng/pigsty.cc/commit/ba0fa2bf42872bf8e12429efa3667298ed08766e">update blog images (ba0fa2b)</a>
 </div>
 </div>
 

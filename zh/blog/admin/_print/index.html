@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1224,7 +1224,7 @@ stateDiagram-v2
 	<blockquote>
 <p><a href="https://mp.weixin.qq.com/s/jmlzhktasg06MiA7b4huew">WeChat Column</a></p>
 </blockquote>
-<p><img src="/hero/pg-filedump.jpg"></p>
+<p><img src="/img/blog/hero/pg-filedump.jpg"></p>
 <blockquote>
 <p>备份是DBA的生命线 —— 但如果你的 PostgreSQL 数据库已经爆炸了又没有备份，那么该怎么办呢？也许 pg_filedump 可以帮到你！</p>
 </blockquote>
@@ -1245,7 +1245,7 @@ stateDiagram-v2
 </span></span><span style="display:flex;"><span>------
 </span></span><span style="display:flex;"><span> <span style="color:#0000cf;font-weight:bold">1262</span>
 </span></span></code></pre></div><p>这张系统视图里有不少字段，但我们主要关心的是前两个： <code>oid</code> 和 <code>datname</code> ，<code>datname</code> 是数据库的名称，<code>oid</code> 则可以用于定位数据库目录位置。以用 <code>pg_filedump</code> 把这张表解出来看一看， <code>-D</code> 参数可以告诉 <code>pg_filedump</code> 如何解释这张表里每一行的二进制数据。你可以指定每个字段的类型，用逗号分隔，<code>~</code> 表示后面的部分都忽略不要。</p>
-<p><img alt="pg-filedump-1.png" src="/img/db/pg-filedump-1.png"></p>
+<p><img alt="pg-filedump-1.png" src="/img/blog/pg/pg-filedump-1.png"></p>
 <p>可以看到，每一行数据都以 <code>COPY</code> 开始，这里我们发现了目标数据库 <code>gitlabhq_production</code>，其 OID 为 <strong>16386</strong> 。所以这个数据库内的所有文件都应当位于 <code>base/16386</code> 子目录中。</p>
 <hr>
 <h2 id="恢复数据字典">恢复数据字典</h2>
@@ -1253,16 +1253,16 @@ stateDiagram-v2
 <p>•<strong><code>pg_class</code></strong>：包含了所有表的重要元数据•<code>pg_namespace</code>：包含了模式的元数据•<code>pg_attribute</code>：包含了所有的列定义•<code>pg_type</code>：包含了类型的名称</p>
 <p>其中 <strong><code>pg_class</code></strong> 是最为重要，不可或缺的一张表。其他几张系统视图属于 Nice to have：能让我们的工作更加简单一些。所以，我们首先尝试恢复这张表。</p>
 <p><code>pg_class</code> 是数据库级别的系统视图，默认有着 OID = <code>1259</code> ，所以 <code>pg_class</code> 对应的文件应当是： <code>base/16386/1259</code>，在 <code>gitlabhq_production</code> 对应数据库目录下。</p>
-<p><img alt="pg-filedump-2.png" src="/img/db/pg-filedump-2.png"></p>
+<p><img alt="pg-filedump-2.png" src="/img/blog/pg/pg-filedump-2.png"></p>
 <p>这里说句题外话：熟悉 PostgreSQL 原理的朋友知道：实际底层存储数据的文件名（RelFileNode）虽然默认与表的 OID 保持一致，但是一些操作可能会改变这一点，在这种情况下，你可以用 <code>pg_filedump -m pg_filenode.map</code> 解析数据库目录下的映射文件，找到 OID 1259 对应的 Filenode。当然这里两者是一致的，就表过不提了。</p>
 <p>我们根据 <code>pg_class</code> 的表结构定义（注意要使用对应PG大版本的表结构），解析其二进制文件： pg_filedump -D &lsquo;oid,name,oid,oid,oid,oid,oid,oid,oid,int,real,int,oid,bool,bool,char,char,smallint,smallint,bool,bool,bool,bool,bool,bool,char,bool,oid,xid,xid,text,text,text&rsquo; -i base/16386/1259</p>
 <p>然后就可以看到解析出来的数据了。这里的数据是 <code>\t</code> 分隔的单行记录，与 PostgreSQL COPY 命令默认使用的格式相同。所以你可以用脚本 <code>grep</code> 收集过滤，掐掉每行开头的 <code>COPY</code> ，并重新灌入一张真正的数据库表来细看。</p>
-<p><img alt="pg-filedump-3.png" src="/img/db/pg-filedump-3.png"></p>
+<p><img alt="pg-filedump-3.png" src="/img/blog/pg/pg-filedump-3.png"></p>
 <p>在数据恢复时需要注意许多细节，其中第一条就是：你需要处理<strong>被删除</strong>的行。怎么识别呢？使用 <code>-i</code> 参数打印每一行的元数据，元数据里有一个 <code>XMAX</code> 字段。如果某一行元组被某个事务删除了，那么这条记录的 <code>XMAX</code> 就会被设置为该事务的 XID 事务号。所以如果某一行的 <code>XMAX</code> 不是零，就意味着这是一条被删除的记录，不应当输出到最终的结果中。</p>
-<p><img alt="pg-filedump-4.png" src="/img/db/pg-filedump-4.png"></p>
+<p><img alt="pg-filedump-4.png" src="/img/blog/pg/pg-filedump-4.png"></p>
 <p><strong>这里的 XMAX 代表这是条被删除的记录</strong></p>
 <p>有了 <code>pg_class</code> 数据字典之后，你就可以清楚地找到其他表，包括系统视图的 OID 对应关系了。用同样的办法可以恢复 <code>pg_namespace</code> ，<code>pg_attribute</code> ，<code>pg_type</code> 这三张表。有了这四张表就可以干什么呢？</p>
-<p><img alt="pg-filedump-5.png" src="/img/db/pg-filedump-5.png"></p>
+<p><img alt="pg-filedump-5.png" src="/img/blog/pg/pg-filedump-5.png"></p>
 <p>你可以用 SQL 生成每张表的输入路径，自动拼出每一列的类型作为 <code>-D</code> 参数，生成临时结果表的 Schema。总而言之，可以用编程自动化的方式，自动生成所有需要完成的任务。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">id</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">nspname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relname</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">nspid</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">attrs</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">fields</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">has_tough_type</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">CASE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">toast_page</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">THEN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">toast_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ELSE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NULL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">END</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">toast_name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relpages</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">reltuples</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">path</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1313,7 +1313,7 @@ stateDiagram-v2
 <p>当然这里有第一个知识点就是 PostgreSQL 的元组列布局是有顺序的，这个顺序保存在系统视图 <code>pg_attribute</code> 里面的 <code>attrnum</code> 中，而表中每一列的类型ID则保存在 <code>atttypid</code> 字段中，而为了获取类型的<strong>英文名称</strong>，你又需要通过类型ID引用 <code>pg_type</code> 系统视图（当然系统默认类型都有固定ID，也可以直接用ID映射）。综上，为了获取表中物理记录的解释方法，你至少需要用到上面提到的那四张系统字典表。</p>
 <p>有了这张表上列的顺序与类型之后，并且知道这张表的二进制文件位置之后，你就可以利用这个信息翻译二进制数据了。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_filedump -i -f -D <span style="color:#4e9a06">&#39;bigint,...,bigint&#39;</span> <span style="color:#0000cf;font-weight:bold">38304</span>
-</span></span></code></pre></div><p><img alt="pg-filedump-6.png" src="/img/db/pg-filedump-6.png"></p>
+</span></span></code></pre></div><p><img alt="pg-filedump-6.png" src="/img/blog/pg/pg-filedump-6.png"></p>
 <p>输出时结果建议添加 <code>-i</code> 与 <code>-f</code> 选项，前者会打印每一行的<strong>元数据</strong>（需要根据 XMAX 判断这一行有没有被删除）；后者会打印原始二进制数据上下文（这一点对于处理 pg_filedump 解决不了的复杂数据是必要的）。</p>
 <p>正常情况下，每一条记录都会以 <code>COPY:</code> 或 <code>Error:</code> 开头，前者代表提取成功，后者代表部分成功，或者失败。如果是失败，会有各种各样的原因，需要分别处理。对于成功的数据，你可以直接把它拿出来，每一行就是一条数据，用 <code>\t</code> 分隔，把 <code>\N</code> 替换为 NULL，处理好写入到临时表中保存待用即可。</p>
 <p>当然魔鬼其实都在细节里，要是数据恢复真这么容易就好了。</p>
@@ -1322,23 +1322,23 @@ stateDiagram-v2
 <p>在处理数据数据恢复时，有许多小细节需要关注，这里我提几个重要的点。</p>
 <p>首先是 <strong>TOAST</strong> 字段的处理。TOAST 是“ The Oversized-Attribute Storage Technique ”的缩写，即<strong>超标属性存储技术</strong>。如果你发现解析出来的字段内容是 <code>(TOASTED)</code>，那就说明这个字段因为太长，被切片转移到另外一张专用的表 —— TOAST 表中了。</p>
 <p>如果某张表里有可能 TOAST 的字段，它就会有一张对应的 TOAST 表，在 <code>pg_class</code> 中用 <code>reltoastrelid</code> 标识其 OID。TOAST 其实也可以看做一张普通的表来处理，所以你可以用一样的方法把 TOAST 数据解析出来，拼接回去，再填入到原表中，这里就不展开了。</p>
-<p><img alt="pg-filedump-7.png" src="/img/db/pg-filedump-7.png"></p>
+<p><img alt="pg-filedump-7.png" src="/img/blog/pg/pg-filedump-7.png"></p>
 <p>第二个问题<strong>是复杂类型</strong>，正如上一节所说， <code>pg_filedump</code> README里列出了支持的类型，但类似数组这样的类型就需要进行额外的二进制解析处理了。</p>
 <p>举个例子，当你转储数组二进制时，看到的结果可能是一串儿 <code>\0\0</code> 。这是因为 <code>pg_filedump</code> 直接把处理不了的复杂类型给吐出来了。当然这里就会带来一些额外的问题 —— 字符串里的零值会让你的插入报错，所以你的解析脚本需要处理好这种问题，当遇到一个解析错误的复杂列时，应该先做个标记占个坑，把二进制值现场给保留下来，留给后面的步骤去具体处理。</p>
 <p>这里我们来看个具体的例子：还是以上面 <code>public.approval_merge_request_rules</code> 表为例。我们可以从吐出来的数据，二进制视图，以及 ASCII 视图里面看到一些零星的字符串：<code>critical</code>，<code>unknown</code> 之类的东西，掺杂在一串 <code>\0</code> 与二进制控制字符中。没错，这就是一个字符串数组的二进制表示。PostgreSQL 中的数组允许任意类型任意深度的嵌套，所以这里的数据结构会有一点点复杂。</p>
-<p><img alt="pg-filedump-8.png" src="/img/db/pg-filedump-8.png"></p>
+<p><img alt="pg-filedump-8.png" src="/img/blog/pg/pg-filedump-8.png"></p>
 <p>例如，图片中标色的地方对应的数据是一个包含三个字符串的数组：<code>{unknown,high,critical}::TEXT[]</code> 。01 代表这是一个一位数组，紧跟着空值位图，以及代表数组元素的类型OID 的 0x00000019 ，<code>0x19</code> 十进制值为 25 对应 <code>pg_type</code> 中的 <code>text</code>类型，说明这里是一个字符串数组（如果是 <code>0x17</code> 则说明是整型数组）。紧接着是这个数组第一维的维度 0x03，因为这个数组只有一维，三个元素；接下来的 1 告诉我们数组第一维度的起始偏移量在哪儿。再后面才是挨着的三个字符串结构了：由4字节的长度打头（要右移两位处理标记未），接着才是字符串内容，还要考虑布局对齐与填充的问题。</p>
 <p>总的来说，你需要对照着源代码实现去挖掘，而这里有无穷无尽的细节：可变长度，空值位图，字段压缩，线外存储，以及大小端序，稍有不慎，你解出来的东西就是一团没用的浆糊。</p>
 <p>你可以选择直接用 Python 脚本去记录的上下文中解析原始二进制回补数据，或者在 pg_filedump 源代码中注册新的类型与回调处理函数，复用 PG 提供的 C 解析函数，无论哪一种都称不上是轻松。</p>
 <p>好在 PostgreSQL 本身已经提供了一些C语言的辅助函数 &amp; 宏可以帮助你完成大部分工作，而且幸运的是 Gitlab 中的数组都是一维数组，类型也仅限于整型数组与字符串数组，其他带复杂类型的数据页也可以从其他表中重建，所以总体工作量还是可以接受的 。</p>
-<p><img alt="pg-filedump-9.png" src="/img/db/pg-filedump-9.png"></p>
+<p><img alt="pg-filedump-9.png" src="/img/blog/pg/pg-filedump-9.png"></p>
 <hr>
 <h2 id="后记">后记</h2>
 <p>这个活儿折腾了我两天，掏粪细节就不展开了，我估计读者也不会感兴趣。总之经过了一系列处理，校正，补对之后，数据恢复的工作终于完成了！除了有几张表里有几条损坏的数据之外，其他的数据都成功解出来了。好家伙，整整一千张表啊！</p>
 <p>我以前也弄过一些数据恢复的活儿，大多数情况都还比较简单，数据坏块儿，控制文件/CLOG损坏，或者是被挖矿病毒种了勒索木马（往Tablespace里写了几个垃圾文件），但炸的这么彻底的Case我还是第一次弄。之所以敢接这个活，也是因为我对PG内核还是有些了解的，知道这些繁琐的实现细节。只要你知道这是一个工程上可解的问题，那么即使过程再脏再累也不会担心完不成。</p>
 <p>尽管有些缺陷，但 <code>pg_filedump</code> 还是一个不错的工具，后面我可能会考虑完善一下它，让它对各种数据类型都有完整的支持，这样就不用再自己写一堆 Python 小脚本来处理各种繁琐的细节了。在弄完这个案例后，我已经把  <code>pg_filedump</code> 打好了 PG 12 - 16 x EL 7 - 9 上的 RPM 包放在 Pigsty 的 Yum源中，默认收录在 Pigsty 离线软件包里，目前已经在 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486215&idx=1&sn=52ce37a537336a6d07448f35c7bc4cfd&chksm=fe4b3edcc93cb7ca2dc87602430c2beb09ae5e7dcb568158541a1bd026e305d69d94cea81da4&scene=21#wechat_redirect">Pigsty v2.4.1 中实装交付</a>了。我衷心希望您永远也用不上这个扩展，但如果你真的碰上需要它的场景时，我也希望它就在你的手边可以开箱即用。</p>
 <p>最后我还是想说一句，许多软件都需要数据库，但数据库的安装部署维护是一件很有门槛的活儿。Gitlab 拉起的 PostgreSQL 质量已经算是相当不错的了，但面对这种情况依然束手无策，更不用提那些土法手造 docker 镜像的简陋单机实例了。一场大故障，就能让一个企业积累的代码数据、CI/CD流程、Issue/PR/MR 记录灰飞烟灭。我真的建议您好好检视一下自己的数据库系统，至少请定期做个备份吧！</p>
-<p><img alt="pg-filedump-10.png" src="/img/db/pg-filedump-10.png"></p>
+<p><img alt="pg-filedump-10.png" src="/img/blog/pg/pg-filedump-10.png"></p>
 <p>Gitlab 的企业版和社区版的核心区别就在于它底下的 PG 有没有高可用和监控。而<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486135&idx=1&sn=7d9c4920e94efba5d0e0b6af467f596c&chksm=fe4b3f6cc93cb67ac570d5280b37328aed392598b13df88545ff0a06f99630801fc999db8de5&scene=21#wechat_redirect"><strong>开箱即用的 PostgreSQL 发行版 —— Pigsty</strong></a> 也可以为您更好地解决这些问题，却完全开源免费，分文不取：无论是高可用，PITR，还是监控系统一应俱全：下次再遇到这种问题时，就可以自动切换/一键回滚，游刃有余得多。之前我们自己的 Gitlab, Jira, Confluence 等软件都跑在上面，如果您有类似需求，倒是不妨试一下哦。</p>
 
 </div>
@@ -1594,7 +1594,7 @@ stateDiagram-v2
 </tbody>
 </table>
 <p>下面是实验5对应的详细执行计划，即使配置了足够大的内存，依然会溢出到磁盘执行外部排序。尽管如此，显式指定<code>LOCALE</code>的实验都出现了此情况，因此可以横向对比出C与<code>zh_CN</code>的性能差距来。</p>
-<p><img src="/img/blog/collation-plan.jpg"></p>
+<p><img src="/img/blog/pg/collation-plan.jpg"></p>
 <p>另一个更有对比性的例子是<strong>比大小</strong>。</p>
 <p>这里，表中的所有的字符串都会和<code>World</code>比一下大小，相当于在表上进行150万次特定规则比大小，而且也不涉及到磁盘IO。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">count</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">app</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;World&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -2041,7 +2041,7 @@ stateDiagram-v2
 <li>慢查询浪费系统资源，拉高系统水位。</li>
 </ul>
 <p>因此，一个合格的DBA必须知道如何及时定位并处理慢查询。</p>
-<p><img src="/img/db/slow-query-8.png"></p>
+<p><img src="/img/blog/pg/slow-query-8.png"></p>
 <blockquote>
 <p>图：一个慢查询优化前后，系统的整体饱和度从40%降到了4%</p>
 </blockquote>
@@ -2050,7 +2050,6 @@ stateDiagram-v2
 <p>传统上来说，在PostgreSQL有两种方式可以获得慢查询的相关信息，一个是通过官方的扩展插件<code>pg_stat_statements</code>，另一种是慢查询日志。</p>
 <p>慢查询日志顾名思义，所有执行时间长于<code>log_min_duration_statement</code>参数的查询都会被记录到PG的日志中，对于定位慢查询，特别是<strong>对于分析特例、单次慢查询不可或缺</strong>。不过慢查询日志也有自己的局限性。在生产环境中出于性能考虑，通常只会记录时长超出某一阈值的查询，那么许多信息就无法从慢查询日志中获取了。当然值得一提的是，尽管开销很大，但<strong>全量查询日志仍然是慢查询分析的终极杀手锏</strong>。</p>
 <p>更常用的慢查询诊断工具可能还是<code>pg_stat_statements</code>。这事是一个非常实用的扩展，它会收集数据库内运行查询的统计信息，<strong>在任何场景下都强烈建议启用该扩展</strong>。</p>
-<p><img src="/img/concept/pg-stat-statements.png"></p>
 <p><code>pg_stat_statements</code> 提供的原始指标数据以系统视图表的形式呈现。系统中的<strong>每一类</strong>查询（即抽取变量后执行计划相同的查询）都分配有一个查询ID，紧接着是调用次数，总耗时，最大、最小、平均单次耗时，响应时间都标准差，每次调用平均返回的行数，用于块IO的时间这些指标类数据。</p>
 <p>一种简单的方式当然是观察 <code>mean_time/max_time</code>这类指标，从系统的Catalog中，您的确可以知道某类查询有<strong>史以来平均的响应时间</strong>。对于定位慢查询来说，也许这样也算得上基本够用了。但是像这样的指标，只是系统在当前时刻的一个<strong>静态快照</strong>，所以能够回答的问题是有限的。譬如说，您想看一看某个查询在加上新索引之后的性能表现是不是有所改善，用这种方式可能就会非常繁琐。</p>
 <p><code>pg_stat_statements</code>需要在<code>shared_preload_library</code>中指定，并在数据库中通过<code>CREATE EXTENSION pg_stat_statements</code>显式创建。创建扩展后即可通过视图<code>pg_stat_statements</code>访问查询统计信息</p>
@@ -2086,12 +2085,12 @@ stateDiagram-v2
 </span></span></code></pre></div><p>现在我们已经有了一个模拟运行中的业务系统，让我们通过简单粗暴的方式来模拟一个慢查询场景。在<code>pg-test</code>集群的主库上执行以下命令，删除表<code>pgbench_accounts</code>的主键：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts_pkey</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>该命令会移除 <code>pgbench_accounts</code> 表上的主键，导致<strong>相关查询</strong>从索引扫描变为顺序全表扫描，全部变为慢查询，访问<a href="/zh/docs/monitoring/instance/pg-instance/">PG Instance</a> ➡️ Query ➡️ QPS，结果如下图所示：</p>
-<p><img src="/img/db/slow-query-1.jpg"></p>
+<p><img src="/img/blog/pg/slow-query-1.jpg"></p>
 <blockquote>
 <p>图1：平均查询响应时间从1ms飙升为300ms，单个从库实例的QPS从500下降至7。</p>
 </blockquote>
 <p>与此同时，实例因为慢查询堆积，系统会在瞬间<strong>雪崩过载</strong>，访问<a href="/zh/docs/monitoring/cluster/pg-cluster/">PG Cluster</a>首页，可以看到集群负载出现飙升。</p>
-<p><img src="/img/db/slow-query-2.png"></p>
+<p><img src="/img/blog/pg/slow-query-2.png"></p>
 <blockquote>
 <p>图2：系统负载达到200%，触发机器负载过大，与查询响应时间过长的报警规则。</p>
 </blockquote>
@@ -2099,7 +2098,7 @@ stateDiagram-v2
 <h3 id="慢查询定位">慢查询：定位</h3>
 <p>首先，使用<a href="/zh/docs/monitoring/cluster/pg-cluster/">PG Cluster</a>面板定位慢查询所在的具体实例，这里以 <code>pg-test-2</code> 为例。</p>
 <p>然后，使用<a href="/zh/docs/monitoring/database/pg-query/">PG Query</a>面板定位具体的慢查询：编号为 <strong>-6041100154778468427</strong></p>
-<p><img src="/img/db/slow-query-3.jpg"></p>
+<p><img src="/img/blog/pg/slow-query-3.jpg"></p>
 <blockquote>
 <p>图3：从查询总览中发现异常慢查询</p>
 </blockquote>
@@ -2111,7 +2110,7 @@ stateDiagram-v2
 </ul>
 <p>可以确定，就是这个查询变慢了！</p>
 <p>接下来，利用<a href="/zh/docs/monitoring/instance/pg-stat-statements/">PG Stat Statements</a>面板或<a href="/zh/docs/monitoring/database/pg-query-detail/">PG Query Detail</a>，根据查询ID定位慢查询的<strong>具体语句</strong>。</p>
-<p><img src="/img/db/slow-query-4.png"></p>
+<p><img src="/img/blog/pg/slow-query-4.png"></p>
 <blockquote>
 <p>图4：定位查询语句为<code>SELECT abalance FROM pgbench_accounts WHERE aid = $1</code></p>
 </blockquote>
@@ -2124,7 +2123,7 @@ stateDiagram-v2
 <p>下一步，我们就要<strong>验证猜想</strong>。</p>
 <p>第一步，使用<a href="/zh/docs/monitoring/database/pg-table-catalog/">PG Table Catalog</a>，我们可以检视表的详情，例如表上建立的索引。</p>
 <p>第二步，查阅 <a href="/zh/docs/monitoring/database/pg-table-detail/">PG Table Detail</a> 面板，检查 <code>pgbench_accounts</code> 表上的访问，来验证我们的猜想</p>
-<p><img src="/img/db/slow-query-5.png"></p>
+<p><img src="/img/blog/pg/slow-query-5.png"></p>
 <blockquote>
 <p>图5： <code>pgbench_accounts</code> 表上的访问情况</p>
 </blockquote>
@@ -2137,11 +2136,11 @@ stateDiagram-v2
 <p>这里的问题可以通过添加索引解决，<code>pgbench_accounts</code> 表上 <code>aid</code> 列缺少索引，那么我们尝试在 <code>pgbench_accounts</code> 表上为 <code>aid</code> 列添加索引，看看能否解决这个问题。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">aid</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>加上索引后，神奇的事情发生了。</p>
-<p><img src="/img/db/slow-query-6.png"></p>
+<p><img src="/img/blog/pg/slow-query-6.png"></p>
 <blockquote>
 <p>图6：可以看到，查询的响应时间与QPS已经恢复正常。</p>
 </blockquote>
-<p><img src="/img/db/slow-query-7.png"></p>
+<p><img src="/img/blog/pg/slow-query-7.png"></p>
 <blockquote>
 <p>图7：系统的负载也恢复正常</p>
 </blockquote>
@@ -2150,7 +2149,7 @@ stateDiagram-v2
 <p>作为慢查询处理的最后一步，我们通常需要对操作的过程进行记录，对效果进行评估。</p>
 <p>有时候一个简单的优化可以产生戏剧性的效果。也许本来需要砸几十万加机器的问题，创建一个索引就解决了。</p>
 <p>这种故事，就可以通过监控系统，用很生动直观的形式表达出来，赚取KPI与Credit。</p>
-<p><img src="/img/db/slow-query-8.png"></p>
+<p><img src="/img/blog/pg/slow-query-8.png"></p>
 <blockquote>
 <p>图：一个慢查询优化前后，系统的整体饱和度从40%降到了4%</p>
 <p>（相当于节省了X台机器，XX万元，老板看了心花怒放，下一任CTO就是你了！）</p>
@@ -2651,7 +2650,7 @@ stateDiagram-v2
 </blockquote>
 <p>概念及其命名是非常重要的东西，命名风格体现了工程师对系统架构的认知。定义不清的概念将导致沟通困惑，随意设定的名称将产生意想不到的额外负担。因此需要审慎地设计。</p>
 <h2 id="tldr">TL;DR</h2>
-<p><img alt="entity-naming.png" src="/img/blog/entity-naming.png"></p>
+<p><img alt="entity-naming.png" src="/img/blog/pg/entity-naming.png"></p>
 <ul>
 <li>**集群（Cluster）**是基本自治单元，由用户指定唯一标识，表达业务含义，作为顶层命名空间。</li>
 <li>集群在硬件层面上包含一系列的<strong>节点（Node）</strong>，即物理机，虚机（或Pod），可以通过IP唯一标识。</li>
@@ -2711,7 +2710,7 @@ stateDiagram-v2
 <p>实例隶属于集群，每个实例在集群范围内都有着自己的唯一标识用于区分。</p>
 <p>实例由服务负责解析，实例提供被寻址的能力，而Service将请求流量解析到具体的实例组上。</p>
 <h2 id="命名规则">命名规则</h2>
-<p><img alt="entity-naming.png" src="/img/blog/entity-naming.png"></p>
+<p><img alt="entity-naming.png" src="/img/blog/pg/entity-naming.png"></p>
 <p>一个对象可以有很多组 <strong>标签（Tag）</strong> 与 <strong>元数据（Metadata/Annotation）</strong> ，但通常只能有一个名字。</p>
 <p>管理数据库和软件，其实与管理子女或者宠物类似，都是需要花心思去照顾的。而起名字就是其中非常重要的一项工作。肆意的名字（例如 XÆA-12，NULL，史珍香）很可能会引入不必要的麻烦（额外复杂度），而设计得当的名字则可能会有意想不到的效果。</p>
 <p>总的来说，对象起名应当遵循一些原则：</p>
@@ -2908,13 +2907,13 @@ stateDiagram-v2
 <p>下图是一次生产事故的现场，由于某业务上线了一个慢查询，瞬间导致连接池被慢查询占据，发生堆积。可以看出PG Load和RT都很及时地反映出了故障的情况，而TPS看上去则是掉了一个坑，并不是特别显眼。</p>
 <p>从效果上看，PG Load1与PG Load0（实时负载）是一个相当灵敏的指标，对于大多数与压力负载有关的故障都能及时准确作出反应。所以被我们采纳为核心报警指标。</p>
 <p>PG Load的利用率目标有一些经验值：黄线通常为50%，即需要引起关注的阈值；红线通常为70%，即报警线，需要立刻采取行动的阈值；500%或更高通常意味着这个实例已经被打崩了。</p>
-<p><img src="/img/blog/pg-load-compare.png"></p>
+<p><img src="/img/blog/pg/pg-load-compare.png"></p>
 <h3 id="case-2用于水位评估与容量规划">Case 2：用于水位评估与容量规划</h3>
 <p>比起报警，水位评估与容量规划更像是PG Load的核心用途。毕竟报警之类的的需求还是可以通过延迟，排队连接等指标来满足的。</p>
 <p>这里，PG集群的15分钟负载是一个很好的参考值。通过这个指标的历史均值，峰值，以及其他一些统计量，我们可以很轻松地看出哪些集群处于高负载状态需要扩容，哪些集群处于低资源利用率状态需要缩容。</p>
 <p>CPU利用率是另一个很重要的容量评估指标。我们可以看出，PG Load与CPU Usage有着很密切的关系。不过相比CPU使用率，PG Load更为纯粹地反映了数据库本身的负载水平，滤除了机器上的无关负载，也可以滤除掉数据库维护工作（备份，清理，垃圾回收）产生的杂音，更为丝滑平顺。因此非常适合用于容量评估。</p>
 <p>当系统负载长期位于30%~50%时，就应该考虑进行扩容了。</p>
-<p><img src="/img/blog/pg-load-cluster.png"></p>
+<p><img src="/img/blog/pg/pg-load-cluster.png"></p>
 <h2 id="0x06-结论">0x06 结论</h2>
 <p>本文介绍了一种定量衡量PG负载的方式，即PG Load指标</p>
 <p>该指标可以简单直观地反映数据库实例的负载水平</p>
@@ -3119,7 +3118,7 @@ stateDiagram-v2
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># vim打开后使用 :%!xxd 编辑二进制</span>
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 编辑完成后使用 :%!xxd -r转换回二进制，再用:wq保存</span>
 </span></span><span style="display:flex;"><span>vi <span style="color:#4e9a06">${</span><span style="color:#000">PGDATA</span><span style="color:#4e9a06">}</span>/global/2964
-</span></span></code></pre></div><p><img src="/img/blog/pit-extension.png"></p>
+</span></span></code></pre></div><p><img src="/img/blog/pg/pit-extension.png"></p>
 <p>这里，将所有的<code>pg_hint_plan</code>字符串都替换成等长的<code>^@</code>二进制零字符即可。当然如果不在乎原来的配置，更省事的做法是直接把这个文件截断成零长文件。</p>
 <p>重启数据库，终于又能连接上了。</p>
 <h2 id="复现">复现</h2>
@@ -3169,12 +3168,12 @@ stateDiagram-v2
 <li><strong>O</strong>: <strong>O</strong>ffline，离线延迟备库，可以挂载到主库，同步从库，或者远程备库上。</li>
 </ul>
 <p>依照R和O的挂载目标不同，复制拓扑关系有以下几种选择：</p>
-<p><img src="/img/blog/replication-topo.png"></p>
+<p><img src="/img/blog/pg/replication-topo.png"></p>
 <p>其中，拓扑2具有显著的优越性：</p>
 <p>假设采用同步提交，那么为了安全起见，必须有超过一个的同步从库，这样当采用<code>ANY 1</code>或<code>FIRST 1</code>同步提交时，主库不至于因为从库故障而挂掉。因此，离线库O应当直接挂载到主库上：在具体实现细节上：延迟备库可以采用日志传输的方式实现，这样能够将线上库与延迟库解耦。日志归档使用自带的<code>pg_receivewal</code>采用同步的方式（即<code>pg_receivewal</code>作为一个“备库”，而不是离线数据库实例本身）。</p>
 <p>另一方面，当使用同步提交时，假设M出现故障，Failover至S，那么S也需要一个同步从库，以免在切换后立刻因为同步提交而Hang住，因此远程备库适合挂载到S上。</p>
-<p><img src="/img/blog/replication-topo-good.png"></p>
-<p><img src="/img/blog/backup-types.png"></p>
+<p><img src="/img/blog/pg/replication-topo-good.png"></p>
+<p><img src="/img/blog/pg/backup-types.png"></p>
 <h2 id="故障恢复">故障恢复</h2>
 <p>当故障发生时，我们需要<strong>尽可能快</strong>地将生产系统救回来，例如通过Failover，并在事后<strong>有时间时</strong>恢复原有的拓扑结构。</p>
 <ul>
@@ -3223,7 +3222,7 @@ stateDiagram-v2
 <li>冷备（Code Backup）：冷备数据库以数据目录静态文件的形式存在，是数据库目录的二进制备份。便于制作，管理简单，便于放到其他AZ实现容灾。是数据库的最终保险。</li>
 <li>异地副本（Remote Standby）：所谓X地X中心，通常指的就是放在其他AZ的热备实例。</li>
 </ul>
-<p><img src="/img/blog/backup-types.png"></p>
+<p><img src="/img/blog/pg/backup-types.png"></p>
 <p>通常我们所说的备份，指的是冷备和温备。它们与热备的重要区别是：它们通常不是最新的。当服务线上查询时，这种滞后是一个缺陷，但对于故障恢复而言，这是一个非常重要的特性。同步的备库是不足以应对所有的问题。设想这样一种情况：一些人为故障或者软件错误把整个数据表甚至整个数据库删除了，这样的变更会立刻应用到同步从库上。这种情况只能通过从延迟温备中查询，或者从冷备重放日志来恢复。因此无论有没有从库，冷/温备都是必须的。</p>
 <p>参考：<a href="/zh/blog/2019/03/29/postgresql%E6%A0%87%E5%87%86%E5%A4%8D%E5%88%B6%E6%96%B9%E6%A1%88/">PostgreSQL复制方案</a></p>
 <h2 id="温备方案">温备方案</h2>
@@ -3235,7 +3234,7 @@ stateDiagram-v2
 <li><strong>响应快速</strong>：在延迟备库的延时窗口内发生的故障（删库），都可以快速地恢复：从延迟备库中查出来灌回主库，或者直接将延迟备库步进至特定时间点并提升为新主库。同时，采用温备的方式，就不用每天或每周从主库上拉去全量备份了，更省带宽，执行也更快。</li>
 </ul>
 <h3 id="步骤概览">步骤概览</h3>
-<p><img src="/img/blog/backu-setup.png"></p>
+<p><img src="/img/blog/pg/backu-setup.png"></p>
 <h3 id="日志归档">日志归档</h3>
 <p>如何归档主库生成的WAL日志，传统上通常是通过配置主库上的<code>archive_command</code>实现的。不过最近版本的PostgreSQL提供了一个相当实用的工具：<code>pg_receivewal</code>（10以前的版本称为<code>pg_receivexlog</code>）。对于主库而言，这个客户端应用看上去就像一个从库一样，主库会不断发送最新的WAL日志，而<code>pg_receivewal</code>会将其写入本地目录中。这种方式相比<code>archive_command</code>的一个显著优势就是，<code>pg_receivewal</code>不会等到PostgreSQL写满一个WAL段文件之后再进行归档，因此可以在同步提交的情况下做到故障不丢数据。</p>
 <p><code>pg_receivewal</code>使用起来也非常简单：</p>
@@ -3309,7 +3308,7 @@ stateDiagram-v2
 </ul>
 <p>Web应用会频繁建立大量的数据库连接，故在实际应用中通常都会使用连接池，复用连接，以减小连接创建与销毁的开销。除了使用各种语言/驱动内置的连接池外，Pgbouncer是最常用的第三方中间件连接池。Pgbouncer提供了一种Transaction Pooling的模式，即：每当客户端事务开始时，连接池会为客户端连接分配一个服务端连接，当事务结束时，服务端连接会被放回到池中。</p>
 <p>事务池化模式也存在一些问题，例如<strong>连接污染</strong>。当某个客户端修改了连接的状态，并将该连接放回池中，其他的应用遍可能受到非预期的影响。如下图所示：</p>
-<p><img src="/img/blog/pg-dump-failure.png"></p>
+<p><img src="/img/blog/pg/pg-dump-failure.png"></p>
 <p>假设有四条客户端连接（前端连接）C1、C2、C3、C4，和两条服务器连接（后端连接）S1，S2。数据库默认搜索路径被配置为：<code>app,$user,public</code>，应用知道该假设，并使用<code>SELECT * FROM tbl;</code>的方式，来默认访问模式<code>app</code>下的表<code>app.tbl</code>。现在假设客户端C2在使用了服务器连接S2的过程中，执行了<code>set search_path = ''</code>清空了连接S2上的搜索路径。当S2被另一个客户端C3复用时，C3执行<code>SELECT * FROM tbl</code>时就会因为<code>search_path</code>中找不到对应的表而报错。</p>
 <p>当客户端对于连接的假设被打破时，很容易出现各种错误。</p>
 <hr>
@@ -3563,7 +3562,7 @@ stateDiagram-v2
 </span></span><span style="display:flex;"><span>0000050 20 9e 36 00 00 9e 36 00 e0 9d 36 00 c0 9d 36 00
 </span></span><span style="display:flex;"><span>0000060 a0 9d 36 00 80 9d 36 00 60 9d 36 00 40 9d 36 00
 </span></span><span style="display:flex;"><span>0000070 20 9d 36 00 00 9d 36 00 e0 9c 36 00 c0 9c 36 00
-</span></span></code></pre></div><p><img src="/img/blog/page-corruption-tuple.png"></p>
+</span></span></code></pre></div><p><img src="/img/blog/pg/page-corruption-tuple.png"></p>
 <p>上面已经给出了PostgreSQL判断页面是否“正常”的逻辑，这里我们就修改一下数据页面，让页面变得“不正常”。页面的第12~16字节，也就是这里第一行的最后四个字节<code>a0 03 c0 03</code>，是页面内空闲空间上下界的指针。这里按小端序解释的意思就是本页面内，空闲空间从<code>0x03A0</code>开始，到<code>0x03C0</code>结束。符合逻辑的空闲空间范围当然需要满足上界小于等于下界。这里我们将上界<code>0x03A0</code>修改为<code>0x03D0</code>，超出下界<code>0x03C0</code>，也就是将第一行的倒数第四个字节由<code>A0</code>修改为<code>D0</code>。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># vim打开后使用 :%!xxd 编辑二进制</span>
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 编辑完成后使用 :%!xxd -r转换回二进制，再用:wq保存</span>
@@ -3810,7 +3809,7 @@ stateDiagram-v2
 <h3 id="计算元组的平均长度">计算元组的平均长度</h3>
 <p>为了理解估算的过程，首先需要理解PostgreSQL中数据页面与元组的的内部布局。</p>
 <p>首先来看元组的<strong>平均长度</strong>，PG中元组的布局如下图所示。</p>
-<p><img src="/img/blog/page-tuple.png"></p>
+<p><img src="/img/blog/pg/page-tuple.png"></p>
 <p>一条元组占用的空间可以分为三个部分：</p>
 <ul>
 <li>定长的行指针（4字节，严格来说这不算元组的一部分，但它与元组一一对应）</li>
@@ -4776,15 +4775,11 @@ stateDiagram-v2
 <li>提升从库后，需要紧急VACUUM FREEZE才能继续服务，进一步延长了故障时间。</li>
 <li>主库进入保护状态后提交日志（clog）没有及时复制到从库，从库产生存疑事务拒绝服务。</li>
 </ul>
+<hr>
 <h2 id="摘要">摘要</h2>
-<ul>
-<li>
-<p>这是一个即将下线老旧库，疏于管理。坏块征兆在一周前就已经出现，没有及时跟进年龄。</p>
-</li>
-<li>
-<p>通常AutoVacuum会保证很难出现这种故障，但一旦出现往往意味着祸不单行…让救火更加困难了……</p>
-</li>
-</ul>
+<p>这是一个即将下线老旧库，疏于管理。坏块征兆在一周前就已经出现，没有及时跟进年龄。
+通常AutoVacuum会保证很难出现这种故障，但一旦出现往往意味着祸不单行…让救火更加困难了……</p>
+<hr>
 <h2 id="背景">背景</h2>
 <p>PostgreSQL实现了<strong>快照隔离（Snapshot Isolation）</strong>，每个事务开始时都能获取数据库在该时刻的快照（也就是只能看到<strong>过去</strong>事务提交的结果，看不见<strong>后续</strong>事务提交的结果）。这一强大的功能是通过MVCC实现的，但也引入了额外复杂度，例如<strong>事务ID回卷</strong>问题。</p>
 <p>事务ID（<code>xid</code>）是用于标识事务的<strong>32位无符号整型数值</strong>，递增分配，其中值0,1,2为保留值，溢出后回卷为3重新开始。<strong>事务ID之间的大小关系决定了事务的先后顺序</strong>。</p>
@@ -4806,14 +4801,14 @@ stateDiagram-v2
 </span></span><span style="display:flex;"><span>	<span style="color:#000">diff</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">int32</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">id1</span> <span style="color:#ce5c00;font-weight:bold">-</span> <span style="color:#000">id2</span><span style="color:#000;font-weight:bold">);</span>
 </span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">return</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">diff</span> <span style="color:#ce5c00;font-weight:bold">&lt;</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">);</span>
 </span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
-</span></span></code></pre></div><p><img alt="xid-wrap-around" src="/img/blog/xid-wrap-around.png"></p>
-<p>​	可以将<code>xid</code>的取值域视为一个整数环，但刨除<code>0,1,2</code>三个特殊值。0代表无效事务ID，1代表系统事务ID，2代表冻结事务ID。特殊的事务ID比任何普通事务ID小。而普通事务ID之间的比较可参见上图：它取决于两个事务ID的差值是否超出<code>INT32_MAX</code>。对任意一个事务ID，都有约21亿个位于过去的事务和21亿个位于未来的事务。</p>
-<p>​	xid不仅仅存在于活跃的事务上，xid会影响所有的元组：事务会给自己影响的元组打上自己的xid作为记号。每个元组都会用<code>(xmin, xmax)</code>来标识自己的可见性，<code>xmin</code> 记录了最后写入（<code>INSERT</code>, <code>UPDATE</code>）该元组的事务ID，而<code>xmax</code>记录了删除或锁定该元组的事务ID。每个事务只能看见由先前事务提交（<code>xmin &lt; xid</code>）且未被删除的元组（从而实现快照隔离）。</p>
-<p>​	如果一个元组是由很久很久以前的事务产生的，那么在数据库的例行VACUUM FREEZE时，会找出当前活跃事务中最老的xid，将所有<code>xmin &lt; xid</code>的元组的<code>xmin</code>标记为<code>2</code>，也就是冻结事务ID。这意味着这条元组跳出了这个比较环，比所有普通事务ID都要小，所以能被所有的事务看到。通过清理，数据库中最老的xid会不断追赶当前的xid，从而避免事务回卷。</p>
-<p>​	数据库或表的<strong>年龄（age）</strong>，定义为当前事务ID与数据库/表中存在最老的<code>xid</code>之差。最老的<code>xid</code>可能来自一个持续了几天的超长事务。也可能来自几天前老事务写入，但尚未被冻结的元组中。如果数据库的年龄超过了<code>INT32_MAX</code>，灾难性情况就发生了。过去的事务变成了未来的事务，过去事务写入的元组将变得不可见。</p>
-<p>​	为了避免这种情况，需要避免<strong>超长事务</strong>与定期VACUUM FREEZE冻结老元组。如果单库在平均3万TPS的超高负载下，20亿个事务号一整天内就会用完。在这样的库上就无法执行一个超过一天的超长事务。而如果由于某种原因，自动清理工作无法继续进行，一天之内就可能遇到事务回卷。</p>
-<p>​	9.4之后对FREEZE的机制进行了修改，FREEZE使用元组中单独的标记位来表示。</p>
-<p>​	PostgreSQL应对事务回卷有自我保护机制。当临界事务号还剩<strong>一千万</strong>时，会进入紧急状态。</p>
+</span></span></code></pre></div><p><img alt="xid-wrap-around" src="/img/blog/pg/xid-wrap-around.png"></p>
+<p>可以将<code>xid</code>的取值域视为一个整数环，但刨除<code>0,1,2</code>三个特殊值。0代表无效事务ID，1代表系统事务ID，2代表冻结事务ID。特殊的事务ID比任何普通事务ID小。而普通事务ID之间的比较可参见上图：它取决于两个事务ID的差值是否超出<code>INT32_MAX</code>。对任意一个事务ID，都有约21亿个位于过去的事务和21亿个位于未来的事务。</p>
+<p>xid不仅仅存在于活跃的事务上，xid会影响所有的元组：事务会给自己影响的元组打上自己的xid作为记号。每个元组都会用<code>(xmin, xmax)</code>来标识自己的可见性，<code>xmin</code> 记录了最后写入（<code>INSERT</code>, <code>UPDATE</code>）该元组的事务ID，而<code>xmax</code>记录了删除或锁定该元组的事务ID。每个事务只能看见由先前事务提交（<code>xmin &lt; xid</code>）且未被删除的元组（从而实现快照隔离）。</p>
+<p>如果一个元组是由很久很久以前的事务产生的，那么在数据库的例行VACUUM FREEZE时，会找出当前活跃事务中最老的xid，将所有<code>xmin &lt; xid</code>的元组的<code>xmin</code>标记为<code>2</code>，也就是冻结事务ID。这意味着这条元组跳出了这个比较环，比所有普通事务ID都要小，所以能被所有的事务看到。通过清理，数据库中最老的xid会不断追赶当前的xid，从而避免事务回卷。</p>
+<p>数据库或表的<strong>年龄（age）</strong>，定义为当前事务ID与数据库/表中存在最老的<code>xid</code>之差。最老的<code>xid</code>可能来自一个持续了几天的超长事务。也可能来自几天前老事务写入，但尚未被冻结的元组中。如果数据库的年龄超过了<code>INT32_MAX</code>，灾难性情况就发生了。过去的事务变成了未来的事务，过去事务写入的元组将变得不可见。</p>
+<p>为了避免这种情况，需要避免<strong>超长事务</strong>与定期VACUUM FREEZE冻结老元组。如果单库在平均3万TPS的超高负载下，20亿个事务号一整天内就会用完。在这样的库上就无法执行一个超过一天的超长事务。而如果由于某种原因，自动清理工作无法继续进行，一天之内就可能遇到事务回卷。</p>
+<p>9.4之后对FREEZE的机制进行了修改，FREEZE使用元组中单独的标记位来表示。</p>
+<p>PostgreSQL应对事务回卷有自我保护机制。当临界事务号还剩<strong>一千万</strong>时，会进入紧急状态。</p>
 <h2 id="查询">查询</h2>
 <p>查询当前所有表的年龄，SQL 语句如下：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">c</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">oid</span><span style="color:#000;font-weight:bold">::</span><span style="color:#000">regclass</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">as</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">table_name</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -5298,15 +5293,15 @@ stateDiagram-v2
 <p>匪夷所思的是，移走了表（数据量减半），移走了负载（TPS减半），其他什么都没变竟然会导致压力上升？</p>
 <h2 id="二现象">二、现象</h2>
 <p>CPU使用率的正常水位在25%，警戒水位在45%，极限水位在80%。故障期间所有从库飙升至极限水位。</p>
-<p><img src="../img/download-failure-cpu.png"></p>
+<p><img src="/img/blog/pg/download-failure-cpu.jpg"></p>
 <p>PostgreSQL连接数发生暴涨，通常5~10个左右的数据库连接就足够撑起所有流量，连接池的最大连接数为100。</p>
-<p><img alt="pg-conn" src="../img/download-failure-pg-conn.png"></p>
+<p><img alt="pg-conn" src="/img/blog/pg/download-failure-pg-conn.png"></p>
 <p>pgbouncer连接池平均响应时间平时在500μs左右，故障期间飙升至百毫秒级别。</p>
-<p><img alt="pgb-time" src="../img/download-failure-pgb-time.png"></p>
+<p><img alt="pgb-time" src="/img/blog/pg/download-failure-pgb-time.png"></p>
 <p>故障期间，数据库TPS发生显著下滑。进行杀查询抢救后恢复，但处于剧烈抖动状态。</p>
-<p><img src="../img/download-failure-tps.png"></p>
+<p><img src="/img/blog/pg/download-failure-tps.png"></p>
 <p>故障期间，两个函数的执行时间发生显著恶化，从几百微秒劣化至几十毫秒。</p>
-<p><img src="../img/download-failure-functime.png"></p>
+<p><img src="/img/blog/pg/download-failure-functime.png"></p>
 <p>故障期间，复制延迟显著上升，开始出现GB级别的复制延迟，业务指标出现显著下滑。</p>
 <p>开始杀查询后，大部分指标恢复，但一旦停止马上重新开始出现（22:48尝试性停止故障恢复）。</p>
 <h2 id="三原因分析">三、原因分析</h2>
@@ -5321,11 +5316,11 @@ stateDiagram-v2
 <p>在生产环境中使用了连接池，正常情况下5~10个实际数据库连接就可以支撑起所有快查询。然而一旦有大量慢查询持续进入，长期占用了活跃连接，那么快查询就会排队等待发生堆积，连接池进而启动更多实际数据库的连接，而这些连接上的快查询很快就会执行完毕，最终仍然会被不断进入的慢查询占据。最终导致约100个实际数据库连接都在执行CPU/IO密集的慢查询（<code>max_pool_size=100</code>），CPU暴涨，进一步恶化情况。</p>
 <h4 id="证据">证据</h4>
 <h5 id="连接池活跃连接数">连接池活跃连接数</h5>
-<p><img alt="pgb-active-conn-5888653" src="../img/download-failure-pgb-active-conn.png"></p>
+<p><img alt="pgb-active-conn-5888653" src="/img/blog/pg/download-failure-pgb-active-conn.png"></p>
 <h5 id="连接池排队连接数"><strong>连接池排队连接数</strong></h5>
-<p><img alt="pgb-wait-conn" src="../img/download-failure-pgb-wait-conn.png"></p>
+<p><img alt="pgb-wait-conn" src="/img/blog/pg/download-failure-pgb-wait-conn.png"></p>
 <p><strong>数据库后端连接数</strong></p>
-<p><img alt="pg-conn" src="../img/download-failure-pg-conn.png"></p>
+<p><img alt="pg-conn" src="/img/blog/pg/download-failure-pg-conn.png"></p>
 <h4 id="修复">修复</h4>
 <p>持续地无差别杀掉所有数据库活跃连接，能起到很好的治标效果，且对业务指标影响很小。</p>
 <p>但杀掉连接（<code>pg_terminate_backend</code>）会导致连接池重连，更好的做法是取消查询（<code>pg_cancel_backend</code>）</p>
@@ -5339,9 +5334,9 @@ stateDiagram-v2
 <p>故障的直接导火索是这两个函数劣化为慢查询。经过单独的压力测试，这两个函数随着并行执行数增高，发生急剧的性能劣化，阈值点为约30个并发进程。（因为所有进程只执行同一个查询，所以可认为并行数等于并发数）</p>
 <h4 id="证据-1">证据</h4>
 <p><strong>图：故障期间函数平均执行时间出现明显飙升</strong></p>
-<p><img src="../img/download-failure-functime.png"></p>
+<p><img src="/img/blog/pg/download-failure-functime.png"></p>
 <p><strong>图：在不同并行数下压测该函数能达到的最大QPS</strong></p>
-<p><img alt="degenerate-5889931" src="../img/download-failure-degenerate.png"></p>
+<p><img alt="degenerate-5889931" src="/img/blog/pg/download-failure-degenerate.png"></p>
 <h4 id="修复-1">修复</h4>
 <ul>
 <li>优化函数执行逻辑，将该函数的执行时间优化至原来的一半（最大QPS翻倍）。</li>
@@ -8687,7 +8682,7 @@ stateDiagram-v2
 <li>添加显示过滤器<code>pgsql</code>，这样就可以滤除无关的TCP协议报文。</li>
 <li>然后就可以执行一些操作，观察并分析协议了</li>
 </ol>
-<p><img src="/img/admin/wireshark-capture.png"></p>
+<p><img src="/img/blog/pg/wireshark-capture.png"></p>
 <hr>
 <h2 id="抓包样例">抓包样例</h2>
 <p>我们先从最简单的case开始，不使用认证，也不使用SSL，执行以下命令建立一条到PostgreSQL的连接。</p>
@@ -8699,7 +8694,7 @@ stateDiagram-v2
 <li>简单查询协议：客户端发送查询命令，服务器回送查询结果。</li>
 <li>终止：客户端中断连接。</li>
 </ul>
-<p><img src="/img/admin/wireshark-capture-sample.png"></p>
+<p><img src="/img/blog/pg/wireshark-capture-sample.png"></p>
 <p>Wireshark内建了对PGSQL的解码，允许我们方便地查看PostgreSQL协议报文的内容。</p>
 <p>启动阶段，客户端向服务端发送了一条<code>StartupMessage (F)</code>，而服务端回送了一系列消息，包括<code>AuthenticationOK(R)</code>， <code>ParameterStatus(S)</code>, <code>BackendKeyData(K)</code> , <code>ReadyForQuery(Z)</code>。这里这几条消息都打包在同一个TCP报文中发送给客户端。</p>
 <p>简单查询阶段，客户端发送了一条<code>Query (F)</code>消息，将SQL语句<code>SELECT 1 AS a, 2 AS b;</code>直接作为内容发送给服务器。服务器依次返回了<code>RowDescription(T)</code>,<code>DataRow(D)</code>,<code>CommandComplete(C)</code>,<code>ReadyForQuery(Z)</code>.</p>

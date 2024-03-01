@@ -27,7 +27,7 @@
         &lt;blockquote&gt;
 &lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g&#34;&gt;微信公众号原文&lt;/a&gt;&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g&#34;&gt;&lt;img src=&#34;/hero/pg-wal-page-seq.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g&#34;&gt;&lt;img src=&#34;/img/blog/hero/pg-wal-page-seq.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;昨天在群里遇到一个有趣的关于 PostgreSQL 的问题：&lt;/p&gt;
 &lt;p&gt;&lt;em&gt;”写脏数据页和写入WAL缓冲区的先后顺序是什么？“&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;我们都知道， WAL 就是 &lt;strong&gt;Write Ahead Log&lt;/strong&gt; / &lt;strong&gt;预写式日志&lt;/strong&gt; 的缩写，那从逻辑上说，好像是先写 WAL 再写数据页才对。&lt;/p&gt;
@@ -60,7 +60,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;TransactionIdCommitTree&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color:#a40000&#34;&gt;@&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;transam&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;c&lt;/span&gt;    
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;                            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;/* 在CLOG中将当前事务的状态由&amp;#34;IN_PROGRESS&amp;#34;修改为&amp;#34;COMMITTED&amp;#34; /*
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/img/kernel/fig-9-11.png&#34;&gt;&lt;/p&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/img/blog/kernel/fig-9-11.png&#34;&gt;&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;函数&lt;code&gt;ExtendCLOG()&lt;/code&gt;将当前事务的状态&lt;code&gt;IN_PROGRESS&lt;/code&gt;写入内存中的CLOG。&lt;/li&gt;
 &lt;li&gt;函数&lt;code&gt;heap_insert()&lt;/code&gt;向共享缓冲池的目标页面中插入堆元组，创建当前页面的XLOG记录，并执行函数&lt;code&gt;XLogInsert()&lt;/code&gt;。&lt;/li&gt;
@@ -139,7 +139,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;wal是如何刷盘的&#34;&gt;WAL是如何刷盘的？&lt;/h2&gt;
 &lt;p&gt;我们已经知道了，刷脏数据页这件事通常是异步进行的，且肯定晚于对应的 WAL 记录刷盘。那么新的问题就是，WAL 是由谁在什么时间点来刷盘的呢：从内存中的 WAL 缓冲区刷入磁盘中？&lt;/p&gt;
 &lt;p&gt;要回答这个问题，首先要理解 WAL 的模型。WAL 在逻辑上是一个长度无限的文件，任何一个&lt;strong&gt;改变数据库系统状态的操作&lt;/strong&gt;，都会生成相应的 XLogRecord，即 WAL记录。每一条 WAL 记录都会使用其起始位置的文件偏移量作为自己的唯一标识符，即 LSN（逻辑日志位点）。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/img/kernel/fig-9-09.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/kernel/fig-9-09.png&#34;&gt;&lt;/p&gt;
 &lt;p&gt;各种各样修改系统状态的行为都会产生 WAL记录：例如 BEGIN 有一条 WAL记录，INSERT 有一条 WAL记录，COMMIT 也有一条WAL记录，而WAL记录会首先被写入内存中的 WAL缓冲区（最大16MB）。&lt;/p&gt;
 &lt;p&gt;PostgreSQL 支持多个客户端并发修改，所以同一时刻会有各种进程往内存中的 WAL缓冲区（最大16MB）写东西。所以不同进程、不同事务产生的 XLogRecord 会在同一个逻辑文件中相互交织。每次写入都是原子性的，一条记录一条记录的写。&lt;/p&gt;
 &lt;p&gt;内存里的WAL缓冲区中的内容，会被各种进程写入/刷入持久化磁盘上的WAL文件里。当前写入内存WAL缓冲区的逻辑日志位置点称作 INSERT LSN。写入操作系统缓冲区的日志位点叫 WRITE LSN，已经使用 FSYNC 之类的 API 确保已经成功持久化的日志位点叫 FLUSH LSN。这里面的关系是 INSERT_LSN &amp;gt;= WRITE_LSN &amp;gt;= FLUSH_LSN。原理很简单：内存中的东西最新，写入可能稍微滞后些，刷盘则可能比写入更滞后一些。&lt;/p&gt;

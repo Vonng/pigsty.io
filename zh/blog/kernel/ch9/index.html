@@ -62,7 +62,7 @@ PostgreSQL从相关的WAL段文件中读取第一条INSERT语句的XLOG记录，
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/kernel/ch9/" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2018-01-03T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-03-01T21:27:45+08:00" />
 
 <meta itemprop="name" content="第九章 预写式日志">
 <meta itemprop="description" content="事务日志（transaction log）是数据库的关键组件，因为当出现系统故障时，任何数据库管理系统都不允许丢失数据。事务日志是数据库系统中所有**变更（change）与行为（action）**的历史记录，当诸如电源故障，或其他服务器错误导致服务器崩溃时，它被用于确保数据不会丢失。由于日志包含每个已执行事务的相关充分信息，因此当服务器崩溃时，数据库服务器应能通过重放事务日志中的变更与行为来恢复数据库集群。
@@ -85,7 +85,7 @@ WAL与检查点过程在7.1版本中同时实现
 检查点进程是一个后台进程，周期性地执行过程。当检查点进程开始执行检查点时，它会向当前WAL段文件写入一条XLOG记录，称为检查点（Checkpoint Record）。这条记录包含了最新的重做点位置。 发起第一条INSERT语句时，PostgreSQL从数据库集簇文件中加载表A的页面至内存中的共享缓冲池，向页面中插入一条元组，然后在LSN_1位置创建并写入一条相应的XLOG记录，然后将表A的LSN从LSN_0更新为LSN_1。在本例中，XLOG记录是由首部数据与完整元组组成的一对值。 当该事务提交时，PostgreSQL向WAL缓冲区创建并写入一条关于该提交行为的XLOG记录，然后将WAL缓冲区中的所有XLOG记录刷写入WAL段文件中。 发起第二条INSERT语句时，PostgreSQL向页面中插入一条新元组，然后在LSN_2位置创建并写入一条相应的XLOG记录，然后将表A的LSN从LSN_1更新为LSN_2。 当这条语句的事务提交时，PostgreSQL执行同步骤3类似的操作。 设想当操作系统失效发生时，尽管共享缓冲区中的所有数据都丢失了，但所有页面修改已经作为历史记录被写入WAL段文件中。 接下来的步骤展示了如何将数据库集簇恢复到崩溃时刻前的状态。不需要任何特殊的操作，重启PostgreSQL时会自动进入恢复模式，如图9.3所示。PostgreSQL会从重做点开始，依序读取正确的WAL段文件并重放XLOG记录。
 图9.3 使用WAL进行数据库恢复
 PostgreSQL从相关的WAL段文件中读取第一条INSERT语句的XLOG记录，并从硬盘上的数据库集簇目录加载表A的页面到内存中的共享缓冲区中。 在重放XLOG记录前，PostgreSQL会比较XLOG记录的LSN与相应页面的LSN。这么做的原因在第9.8节中描述。重放XLOG记录的规则如下所示： 如果XLOG记录的LSN要比页面LSN大，XLOG记录中的数据部分就会被插入到页面中，并将页面的LSN更新为XLOG记录的LSN。 如果XLOG记录的LSN要比页面的LSN小，那么不用做任何事情，直接读取后续的WAL数据即可。 PostgreSQL按照同样的方式重放其余的XLOG记录。 PostgreSQL可以通过按时间顺序重放写在WAL段文件中的XLOG记录来自我恢复，因此，PostgreSQL的XLOG记录显然是一种重做日志（REDO log）。"><meta itemprop="datePublished" content="2018-01-03T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
+<meta itemprop="dateModified" content="2024-03-01T21:27:45+08:00" />
 <meta itemprop="wordCount" content="1100">
 <meta itemprop="keywords" content="Internal," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="第九章 预写式日志"/>
 <meta name="twitter:description" content="事务日志（transaction log）是数据库的关键组件，因为当出现系统故障时，任何数据库管理系统都不允许丢失数据。事务日志是数据库系统中所有**变更（change）与行为（action）**的历史记录，当诸如电源故障，或其他服务器错误导致服务器崩溃时，它被用于确保数据不会丢失。由于日志包含每个已执行事务的相关充分信息，因此当服务器崩溃时，数据库服务器应能通过重放事务日志中的变更与行为来恢复数据库集群。
@@ -171,7 +171,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -195,7 +195,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -218,66 +218,7 @@ if (!doNotTrack) {
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
   <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
   <ul class="ul-1">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
-  <input type="checkbox" id="m-zhblogpg-check"/>
-  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">Postgres</span></a></label>
-  
-  <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
-  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
-  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
-  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
-  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
-  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
-  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
-  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
-  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
-  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
-  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
-  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
-  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
-  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
-  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
-  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
-  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
-  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
-  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
-  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
-  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
-  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
-  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
-  
-</li>
-  </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
   <input type="checkbox" id="m-zhblogdb-check"/>
   <label for="m-zhblogdb-check"><a href="/zh/blog/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><span class="">数据库</span></a></label>
   
@@ -439,6 +380,65 @@ if (!doNotTrack) {
   
 </li>
   </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
+  <input type="checkbox" id="m-zhblogpg-check"/>
+  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
+  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
+  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
+  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
+  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
+  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
+  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
+  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
+  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
+  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
+  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
+  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
+  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
+  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
+  
+</li>
+  </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
   <input type="checkbox" id="m-zhblogdev-check"/>
   <label for="m-zhblogdev-check"><a href="/zh/blog/dev/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a></label>
@@ -507,10 +507,6 @@ if (!doNotTrack) {
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
   <input type="checkbox" id="m-zhblogdevsql-exclude-check"/>
   <label for="m-zhblogdevsql-exclude-check"><a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevmaturity-model-li">
-  <input type="checkbox" id="m-zhblogdevmaturity-model-check"/>
-  <label for="m-zhblogdevmaturity-model-check"><a href="/zh/blog/dev/maturity-model/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevmaturity-model"><span class="">架构成熟度模型</span></a></label>
   
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfile_fdw-li">
   <input type="checkbox" id="m-zhblogdevfile_fdw-check"/>
@@ -1057,7 +1053,7 @@ if (!doNotTrack) {
 <p>正如在<a href="/zh/blog/kernel/ch8/">第八章</a>中讨论的那样，为了能高效访问关系表的页面，几乎所有的DBMS都实现了共享缓冲池。</p>
 <p>假设有这样一个没有实现WAL机制的PostgreSQL，现在向表A中插入一些数据元组，如图9.1所示。</p>
 <p><strong>图9.1 没有WAL的插入操作</strong></p>
-<p><img alt="图9.1 没有WAL的插入操作" src="/img/kernel/fig-9-01.png"></p>
+<p><img alt="图9.1 没有WAL的插入操作" src="/img/blog/kernel/fig-9-01.png"></p>
 <ol>
 <li>发起第一条<code>INSERT</code>语句时，PostgreSQL从数据库集簇文件中加载表A的页面到内存中的共享缓冲池。然后向页面中插入一条元组。页面并没有立刻写回到数据库集簇文件中。正如<a href="/zh/blog/kernel/ch8/">第8章</a>中提到的，被修改过的页面通常称为<strong>脏页（dirty page）</strong></li>
 <li>发起第二条<code>INSERT</code>语句时，PostgreSQL直接向缓冲池里的页面内添加了一条新元组。这一页仍然没有被写回到持久存储中。</li>
@@ -1074,7 +1070,7 @@ if (!doNotTrack) {
 </blockquote>
 <p>介绍完了主要的关键词与概念，现在来说一下带有WAL时的元组插入操作。如图9.2所示：</p>
 <p><strong>图9.2 带有WAL的插入操作</strong></p>
-<p><img alt="图9.2 带有WAL的插入操作" src="/img/kernel/fig-9-02.png"></p>
+<p><img alt="图9.2 带有WAL的插入操作" src="/img/blog/kernel/fig-9-02.png"></p>
 <blockquote>
 <p>表A的LSN展示的是表A页面中页首部里<code>pd_lsn</code>类型的<code>PageXLogRecPtr</code>字段，与页面的LSN是一回事。</p>
 </blockquote>
@@ -1088,7 +1084,7 @@ if (!doNotTrack) {
 </ol>
 <p>接下来的步骤展示了如何将数据库集簇恢复到崩溃时刻前的状态。不需要任何特殊的操作，重启PostgreSQL时会自动进入恢复模式，如图9.3所示。PostgreSQL会从<strong>重做点</strong>开始，依序读取正确的WAL段文件并重放XLOG记录。</p>
 <p><strong>图9.3 使用WAL进行数据库恢复</strong></p>
-<p><img alt="图9.3 使用WAL进行数据库恢复" src="/img/kernel/fig-9-03.png"></p>
+<p><img alt="图9.3 使用WAL进行数据库恢复" src="/img/blog/kernel/fig-9-03.png"></p>
 <ol>
 <li>PostgreSQL从相关的WAL段文件中读取第一条<code>INSERT</code>语句的XLOG记录，并从硬盘上的数据库集簇目录加载表A的页面到内存中的共享缓冲区中。</li>
 <li>在重放XLOG记录前，PostgreSQL会比较XLOG记录的LSN与相应页面的LSN。这么做的原因在第9.8节中描述。重放XLOG记录的规则如下所示：
@@ -1111,7 +1107,7 @@ if (!doNotTrack) {
 </blockquote>
 <p>PostgreSQL支持诸如<strong>整页写入（full-page write）<strong>的功能来处理这种失效。如果启用，PostgreSQL会在每次检查点之后，在每个页面第一次发生变更时，会将</strong>整个页面</strong>及相应首部作为一条XLOG记录写入。这个功能默认是开启的。在PostgreSQL中，这种包含完整页面的XLOG记录称为<strong>备份区块（backup block）</strong>，或者<strong>整页镜像（full-page image）</strong>。</p>
 <p><strong>图9.4 整页写入</strong></p>
-<p><img alt="图9.4 整页写入" src="/img/kernel/fig-9-04.png"></p>
+<p><img alt="图9.4 整页写入" src="/img/blog/kernel/fig-9-04.png"></p>
 <ol>
 <li>检查点进程开始进行检查点过程。</li>
 <li>在第一条<code>INSERT</code>语句进行插入操作时，PostgreSQL执行的操作几乎同上所述。区别在于这里的XLOG记录是当前页的<strong>备份区块</strong>（即，包含了完整的页面），因为这是自最近一次检查点以来，该页面的第一次写入。</li>
@@ -1122,7 +1118,7 @@ if (!doNotTrack) {
 </ol>
 <p>重启PostgreSQL即可修复损坏的集簇，如图9.5所示</p>
 <p><strong>图9.5 使用备份区块进行数据库恢复</strong></p>
-<p><img alt="图9.5 使用备份区块进行数据库恢复" src="/img/kernel/fig-9-05.png"></p>
+<p><img alt="图9.5 使用备份区块进行数据库恢复" src="/img/blog/kernel/fig-9-05.png"></p>
 <ol>
 <li>
 <p>PostgreSQL读取第一条<code>INSERT</code>语句的XLOG记录，并从数据库集簇目录加载表A的页面至共享缓冲池中。在本例中，按照整页写入的规则，这条XLOG记录是一个备份区块。</p>
@@ -1144,7 +1140,7 @@ if (!doNotTrack) {
 <p>从版本11开始，在使用<code>initdb</code>创建数据库时，可以通过<a href="https://www.postgresql.org/docs/11/static/app-initdb.html"><code>--wal-segsize</code></a>选项来配置WAL段文件的大小。</p>
 </blockquote>
 <p><strong>图9.6 事务日志与WAL段文件</strong></p>
-<p><img alt="图9.6 事务日志与WAL段文件" src="/img/kernel/fig-9-06.png"></p>
+<p><img alt="图9.6 事务日志与WAL段文件" src="/img/blog/kernel/fig-9-06.png"></p>
 <p>WAL段文件的文件名是由24个十六进制数字组成的，其命名规则如下：
 $$
 \begin{align}
@@ -1171,7 +1167,7 @@ $$</p>
 <h2 id="93-wal段文件的内部布局">9.3 WAL段文件的内部布局</h2>
 <p>一个WAL段文件大小默认为16MB，并在内部划分为大小为8192字节（8KB）的页面。第一个页包含了由<code>XLogLongPageHeaderData</code>定义的首部数据，其他的页包含了由<code>XLogPageHeaderData</code>定义的首部数据。每页在首部数据之后，紧接着就是以<strong>降序</strong>写入的XLOG记录，如图9.7所示。</p>
 <p><strong>图9.7 WAL段文件内部布局</strong></p>
-<p><img alt="图9.7 WAL段文件内部布局" src="/img/kernel/fig-9-07.png"></p>
+<p><img alt="图9.7 WAL段文件内部布局" src="/img/blog/kernel/fig-9-07.png"></p>
 <p><code>XLogLongPageHeaderData</code>与<code>XLogPageHeaderData</code>结构定义在 <a href="https://github.com/postgres/postgres/blob/master/src/include/access/xlog_internal.h"><code>src/include/access/xlog_internal.h</code></a>中。这两个结构的具体说明就不在此展开了，因为对于后续小节并非必需。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">typedef</span> <span style="color:#204a87;font-weight:bold">struct</span> <span style="color:#000">XLogPageHeaderData</span>
 </span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
@@ -1273,7 +1269,7 @@ $$</p>
 <h3 id="942-xlog记录数据部分94及以前">9.4.2 XLOG记录数据部分（9.4及以前）</h3>
 <p>XLOG记录的数据部分可以分为两类：备份区块（完整的页面），或非备份区块（不同的操作相应的数据不同）。</p>
 <p><strong>图9.8 XLOG记录的样例（9.4版本或更早）</strong></p>
-<p><img src="/img/kernel/fig-9-08.png"></p>
+<p><img src="/img/blog/kernel/fig-9-08.png"></p>
 <p>让我们通过几个具体示例来了解XLOG记录的内部布局。</p>
 <h4 id="9421-备份区块">9.4.2.1 备份区块</h4>
 <p>备份区块如图9.8(a)所示，它由两个数据结构和一个数据对象组成，如下所述：</p>
@@ -1350,7 +1346,7 @@ $$</p>
 <p>在9.4及之前的版本，XLOG记录并没有通用的格式，因此每一种资源管理器都需要定义各自的格式。在这种情况下，维护源代码，以及实现与WAL相关的新功能变得越来越困难。为了解决这个问题，9.5版引入了一种通用的结构化格式，不依赖于特定的资源管理器。</p>
 <p>XLOG记录的数据部分可以被划分为两个部分：首部与数据，如图9.9所示：</p>
 <p><strong>图9.9 通用XLOG记录格式</strong></p>
-<p><img src="/img/kernel/fig-9-09.png"></p>
+<p><img src="/img/blog/kernel/fig-9-09.png"></p>
 <p>首部部分包含零个或多个<code>XLogRecordBlockHeaders</code>，以及零个或一个<code>XLogRecordDataHeaderShort</code>（或<code>XLogRecordDataHeaderLong</code>）；它必须至少包含其中一个。当记录存储着整页镜像时（即备份区块），<code>XLogRecordBlockHeader</code>会包含<code>XLogRecordBlockImageHeader</code>，如果启用压缩还会包含<code>XLogRecordBlockCompressHeader</code>。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">/* 追加写入XLOG记录的区块数据首部。
 </span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"> * &#39;data_length&#39;是与本区块关联的，特定于资源管理器的数据荷载长度。它不包括可能会出现
@@ -1426,7 +1422,7 @@ $$</p>
 <p>该功能有两个优点与一个缺点，优点是降低写入记录的I/O开销，并减小WAL段文件的消耗量；缺点是会消耗更多的CPU资源来执行压缩。</p>
 </blockquote>
 <p><strong>图9.10 XLOG记录样例（9.5及其后的版本）</strong></p>
-<p><img src="/img/kernel/fig-9-10.png"></p>
+<p><img src="/img/blog/kernel/fig-9-10.png"></p>
 <p>和前一小节一样，这里通过一些特例来描述。</p>
 <h4 id="9431-备份区块">9.4.3.1 备份区块</h4>
 <p>由<code>INSERT</code>语句创建的备份区块如图9.10(a)所示，它由如下所示的四个数据结构与一个数据对象组成：</p>
@@ -1498,7 +1494,7 @@ $$</p>
 <li>函数<code>finish_xact_command()</code>会在该事务被提交时被调用，用于创建该提交动作的XLOG记录，而这里的<code>XLogInsert()</code>函数会将该记录写入WAL缓冲区<code>LSN_2</code>处。</li>
 </ol>
 <p><strong>图9.11 XLOG记录的写入顺序</strong></p>
-<p><img src="/img/kernel/fig-9-11.png"></p>
+<p><img src="/img/blog/kernel/fig-9-11.png"></p>
 <blockquote>
 <p>上图的XLOG格式是9.4版本的</p>
 </blockquote>
@@ -1507,7 +1503,7 @@ $$</p>
 <li>函数<code>TransactionIdCommitTree()</code>将提交日志clog中当前事务的状态从<code>IN_PROGRESS</code>更改为<code>COMMITTED</code>。</li>
 </ol>
 <p><strong>图9.12 XLOG记录的写入顺序（续图9.11）</strong></p>
-<p><img src="/img/kernel/fig-9-12.png"></p>
+<p><img src="/img/blog/kernel/fig-9-12.png"></p>
 <p>在上面这个例子中，<code>COMMIT</code>操作致使XLOG记录写入WAL段文件。但发生在下列任一情况时，都会执行这种写入操作：</p>
 <ol>
 <li>一个运行中的事务提交或中止。</li>
@@ -1535,7 +1531,7 @@ $$</p>
 <h3 id="971-检查点过程概述">9.7.1 检查点过程概述</h3>
 <p>检查点进程负责两个方面：为数据库恢复做准备工作，以及共享缓冲池上脏页的刷盘工作。在本小节介绍其内部过程时，将重点关注前一个方面。参见图9.13和以下描述。</p>
 <p><strong>图9.13 PostgreSQL检查点的内部流程</strong></p>
-<p><img src="/img/kernel/fig-9-13.png"></p>
+<p><img src="/img/blog/kernel/fig-9-13.png"></p>
 <ol>
 <li>当检查点进程启动时，会将**重做点（REDO Point）**存储在内存中；<strong>重做点</strong>是上次检查点开始时刻时XLOG记录的写入位置，也是数据库恢复的开始位置。</li>
 <li>该检查点相应的XLOG记录（即检查点）会被写入WAL缓冲区，该记录的数据部分是由<code>CheckPoint</code>结构体定义的，包含了一些变量，比如第一步中重做点的位置。另外，写入检查点记录的位置，也按照字面意义叫做<strong>检查点（checkpoint</strong>）。</li>
@@ -1585,7 +1581,7 @@ $$</p>
 <p>在本节之前，我们已经多次讨论过数据库恢复，所以这里将会介绍两个与恢复有关，但尚未解释过的事情。</p>
 <p>第一件事是PostgreSQL如何启动恢复过程。当PostgreSQL启动时，它首先读取<code>pg_control</code>文件。以下是从那时起恢复处理的细节。参见图9.14和以下描述。</p>
 <p><strong>图9.14 恢复过程的细节</strong></p>
-<p><img src="/img/kernel/fig-9-14.png"></p>
+<p><img src="/img/blog/kernel/fig-9-14.png"></p>
 <ol>
 <li>PostgreSQL在启动时读取<code>pg_control</code>文件的所有项。如果<code>state</code>项是<code>in production</code>，PostgreSQL将进入恢复模式，因为这意味着数据库没有正常停止；如果是<code>shut down</code>，它就会进入正常的启动模式。</li>
 <li>PostgreSQL从合适的WAL段文件中读取最近的检查点，该记录的位置写在<code>pg_control</code>文件中，并从该检查点中获得重做点。如果最新的检查点是无效的，PostgreSQL会读取前一个检查点。如果两个记录都不可读，它就会放弃自我恢复（注意在PostgreSQL11中不会存储前一个检查点）。</li>
@@ -1593,7 +1589,7 @@ $$</p>
 </ol>
 <p>第二件事是关于LSN的比较：为什么应该比较非备份区块的LSN和相应页面的<code>pd_lsn</code>。与前面的示例不同，这里使用需要在两个LSN之间进行比较的具体例子来解释，如图9.15和图9.16。 （注意这里省略了WAL缓冲区，以简化描述）。</p>
 <p><strong>图9.15 当后台写入者工作时的插入操作</strong></p>
-<p><img src="/img/kernel/fig-9-15.png"></p>
+<p><img src="/img/blog/kernel/fig-9-15.png"></p>
 <ol>
 <li>
 <p>PostgreSQL将一条元组插入表A，并将一条XLOG记录写入<code>LSN_1</code>。</p>
@@ -1608,7 +1604,7 @@ $$</p>
 <p>与本章概述中的例子不同，在本场景中，表A的页面已经被一次性写入存储中。</p>
 <p>使用<code>immediate</code>模式关闭数据库，然后启动数据库。</p>
 <p><strong>图9.16 数据库恢复</strong></p>
-<p><img src="/img/kernel/fig-9-15.png"></p>
+<p><img src="/img/blog/kernel/fig-9-15.png"></p>
 <ol>
 <li>PostgreSQL加载第一条XLOG记录和表A的页面，但不重放它，因为该记录的LSN不大于表A的LSN（两个值都是<code>LSN_1</code>）。实际上一目了然，没有重放该记录的必要性。</li>
 <li>接下来，PostgreSQL会重放第二条XLOG记录，因为该记录的LSN（<code>LSN_2</code>）大于当前表A的LSN（<code>LSN_1</code>）。</li>
@@ -1632,14 +1628,14 @@ $$</p>
 <p>任何比包含上一个重做点的段文件更老的段文件都可以被移除，因为按照9.8节中描述的恢复机制，这些文件永远不会被用到了。</p>
 </blockquote>
 <p><strong>图9.17 在检查点时发生的WAL段文件循环与回收</strong></p>
-<p><img src="/img/kernel/fig-9-17.png"></p>
+<p><img src="/img/blog/kernel/fig-9-17.png"></p>
 <p>如果出现了WAL活动尖峰，导致需要更多的文件，新的文件会被创建，而WAL文件的总大小是小于<code>max_wal_size</code>的。例如在图9.18中，如果<code>WAL_7</code>被填满，<code>WAL_8</code>就会被新创建出来。</p>
 <p><strong>9.18 创建WAL段文件</strong></p>
-<p><img src="/img/kernel/fig-9-18.png"></p>
+<p><img src="/img/blog/kernel/fig-9-18.png"></p>
 <p>WAL文件的数量会根据服务器活动而自动适配。 如果WAL数据写入量持续增加，则WAL段文件的估计数量以及WAL文件的总大小也会逐渐增加。 在相反的情况下（即WAL数据写入量减少），这些值也会减少。</p>
 <p>如果WAL文件的总大小超过<code>max_wal_size</code>，则将启动检查点。 图9.19说明了这种情况。 检查点将会创建一个新的重做点，最近的重做点将会变为上一个重做点，不是必需的文件将被回收。通过这种方式，PostgreSQL将始终只保留数据库恢复所必需的WAL段文件。</p>
 <p><strong>图9.19 检查点与回收WAL段文件</strong></p>
-<p><img src="/img/kernel/fig-9-19.png"></p>
+<p><img src="/img/blog/kernel/fig-9-19.png"></p>
 <p>配置参数<code>wal_keep_segments</code>以及**复制槽（Replication Slot）**功能都会影响WAL段文件的数量。</p>
 <h3 id="993-wal段管理94版及以前">9.9.3 WAL段管理（9.4版及以前）</h3>
 <p>WAL段文件的数量主要由下列三个参数控制：</p>
@@ -1664,7 +1660,7 @@ $$</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">archive_command</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">&#39;cp %p /home/postgres/archives/%f&#39;</span>
 </span></span></code></pre></div><p>这里<code>%p</code>是被拷贝WAL段文件的路径占位符，而<code>%f</code>是归档日志文件名的占位符。</p>
 <p><strong>图9.20 持续归档</strong></p>
-<p><img src="/img/kernel/fig-9-20.png"></p>
+<p><img src="/img/blog/kernel/fig-9-20.png"></p>
 <p>当WAL段文件<code>WAL_7</code>发生切换时，该文件被拷贝至归档区域，作为归档日志7。</p>
 <p><code>archive_command</code>参数可以配置为任意的Unix命令或程序，因此你也能用<code>scp</code>将归档日志发送到其他主机上，或使用任意的文件备份工具来替代普通的拷贝命令。</p>
 <blockquote>
@@ -1682,7 +1678,7 @@ $$</p>
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-03-01: <a href="https://github.com/Vonng/pigsty.cc/commit/ba0fa2bf42872bf8e12429efa3667298ed08766e">update blog images (ba0fa2b)</a>
 </div>
 </div>
 

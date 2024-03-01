@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -307,16 +307,6 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-4edce86d9d2c59f9e48389a326037d68">架构成熟度模型</a></li>
-
-
-
-    
-  
-    
-    
-	
-
     <li><a href="#pg-d56766a08ea9cfa2db09a9b26cb09ded">file_fdw妙用无穷——从数据库读取系统信息</a></li>
 
 
@@ -408,25 +398,25 @@ This is the multi-page printable view of this section.
 <p>GPT 展现出来了强大的智能水平，它的成功有很多因素，但在工程上关键的一步是：<strong>神经网络与大语言模型将一个语言问题转化为数学问题，并使用工程手段高效解决了这个数学问题</strong>。</p>
 <p>对于AI来说，各种各样的知识与概念在内部都使用数学向量来存储表示输入输出。将词汇/文本/语句/段落/图片/音频各种对象转换为数学向量的这个过程被叫做<strong>嵌入</strong>（<strong>Embedding</strong>）。</p>
 <p>例如 OpenAI 就使用 <strong>1536</strong> 维的浮点数向量空间。当你问 ChatGPT 一个问题时，输入的文本首先被编码转换成为一个<strong>数学向量</strong>，才能作为神经网络的输入。而神经网络的直接输出结果，也是一个向量，向量被重新解码为人类的自然语言或其他形式，再呈现到人类眼前。</p>
-<p><img alt="llm-pgvector-1.jpeg" src="/img/db/llm-pgvector-1.jpeg"></p>
+<p><img alt="llm-pgvector-1.jpeg" src="/img/blog/pg/llm-pgvector-1.jpeg"></p>
 <p>人工智能大模型的“思考过程”，在数学上就是一系列向量与矩阵之间的加乘正逆运算。这种向量对于人类来说过于抽象，无法理解。但这种形式很适合使用 GPU/FPGA/ASIC 这样的专用硬件来高效实现 —— AI 有了一个硅基的仿生大脑，带有更多的神经元，更快的处理速度，以及更强大的学习算法，惊人的智能水平，高速自我复制与永生的能力。</p>
 <p>语言大模型解决的是 <strong>编码</strong> - <strong>运算</strong> - <strong>输出</strong> 的问题，但是只有计算是不够的，还有一个重要的部分是<strong>记忆</strong>。大模型本身可以视作人类公开数据集的一个压缩存储，这些知识通过训练被编码到了模型中，内化到了模型的权重参数里。<strong>而精确性的，长期性的，过程性的，大容量的外部记忆存储，就需要用到向量数据库了。</strong></p>
-<p><img alt="llm-pgvector-2.png" src="/img/db/llm-pgvector-2.png"></p>
+<p><img alt="llm-pgvector-2.png" src="/img/blog/pg/llm-pgvector-2.png"></p>
 <p>所有的概念都可以用向量来表示，而向量空间有一些很好的数学性质，比如可以计算两个向量的“<strong>距离</strong>”。<strong>这意味着任意两个抽象概念之间的“相关性”，都可以用对应编码向量的距离来衡量</strong>。</p>
 <p>这个看上去简单的功能却有着非常强大的效果，例如最经典的应用场景就是搜索。比如，您可以预处理你的知识库，将每个文档都是用模型转换成抽象向量存储在向量数据库中，当你想要检索时，只需要将您的问题也用模型编码成为一个一次性的查询向量，并在数据库中找到与此查询向量“**距离最近“**的文档作为回答返回给用户即可。</p>
-<p><img alt="llm-pgvector-3.jpeg" src="/img/db/llm-pgvector-3.jpeg"></p>
+<p><img alt="llm-pgvector-3.jpeg" src="/img/blog/pg/llm-pgvector-3.jpeg"></p>
 <p>通过这种方式，一个模糊而困难的自然语言处理问题，转换成为了一个简单清晰的数学问题。而向量数据库，就可以用来高效地解决这个数学问题。</p>
 <hr>
 <h2 id="向量数据库能干什么">向量数据库能干什么？</h2>
 <p>数据库有事务处理（OLTP）与数据分析（OLAP）两大核心场景，向量数据库自然也不例外。典型的事务处理场景包括：知识库，问答，推荐系统，人脸识别，图片搜索，等等等等。知识问答：给出一个自然语言描述的问题，返回与这些输入最为接近的结果；以图搜图：给定一张图片，找出与这张图片在逻辑上最接近的其他相关图片。</p>
 <p>这些功能说到底都是一个共同的数学问题：**向量最近邻检索（KNN）：**给定一个向量，找到距离此向量最近的其他向量。</p>
 <p>典型的分析场景是<strong>聚类</strong>：将一系列向量按照距离亲疏远近分门别类，找出内在的关联结构，并对比急簇之间的差异。</p>
-<p><img alt="llm-pgvector-4.jpeg" src="/img/db/llm-pgvector-4.jpeg"></p>
+<p><img alt="llm-pgvector-4.jpeg" src="/img/blog/pg/llm-pgvector-4.jpeg"></p>
 <hr>
 <h2 id="pg向量插件-pgvector">PG向量插件 PGVECTOR</h2>
 <p>市面上有许多向量数据库产品，商业的有 Pinecone，Zilliz，开源的有 Milvus，Qdrant 等，基于已有流行数据库以插件形式提供的则有 <code>pgvector</code> 与 Redis Stack。</p>
 <p>在所有现有向量数据库中，<strong>pgvector</strong> 是一个独特的存在 —— 它选择了在现有的世界上最强大的开源关系型数据库 PostgreSQL 上以插件的形式添砖加瓦，而不是另起炉灶做成另一个专用的“数据库” [1]。<strong>pgvector</strong> 有着优雅简单易用的接口，不俗的性能表现，更是继承了PG生态的超能力集合。</p>
-<p><img alt="llm-pgvector-5.png" src="/img/db/llm-pgvector-5.png"></p>
+<p><img alt="llm-pgvector-5.png" src="/img/blog/pg/llm-pgvector-5.png"></p>
 <p><strong>一个合格的向量数据库，首先得是一个合格的数据库，而从零开始做到这一点并不容易</strong>。<strong>比起使用一种全新的独立数据库品类，为现有数据库加装向量搜索的能力显然是一个更为务实，简单，经济的选择</strong>。</p>
 <hr>
 <h2 id="pgvector-知识检索案例">PGVECTOR 知识检索案例</h2>
@@ -460,12 +450,12 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>    <span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">execute</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;&#34;&#34;SELECT id, txt, vec &lt;-&gt; </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> AS d FROM sentences ORDER BY 3 LIMIT </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">;&#34;&#34;&#34;</span> <span style="color:#ce5c00;font-weight:bold">%</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">item</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">limit</span><span style="color:#000;font-weight:bold">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#204a87">id</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">txt</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">distance</span> <span style="color:#204a87;font-weight:bold">in</span> <span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">fetchall</span><span style="color:#000;font-weight:bold">():</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#204a87">print</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;</span><span style="color:#4e9a06">%-6d</span><span style="color:#4e9a06"> [</span><span style="color:#4e9a06">%.3f</span><span style="color:#4e9a06">]</span><span style="color:#4e9a06">\t</span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">&#34;</span> <span style="color:#ce5c00;font-weight:bold">%</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#204a87">id</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">distance</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">txt</span><span style="color:#000;font-weight:bold">))</span>
-</span></span></code></pre></div><p><img alt="llm-pgvector-6.png" src="/img/db/llm-pgvector-6.png"></p>
+</span></span></code></pre></div><p><img alt="llm-pgvector-6.png" src="/img/blog/pg/llm-pgvector-6.png"></p>
 <hr>
 <h2 id="pgvector-的性能">PGVECTOR 的性能</h2>
 <p>当功能、正确性、安全性满足需求后，用户的目光就会转向<strong>性能</strong>。PGVECTOR 有着不错的性能表现，尽管比起专用的高性能向量计算Library来说有些差距，但性能对于生产环境中使用已经是绰绰有余了。</p>
 <p>对于向量数据库来说，最近邻查询的延迟是一个重要的性能指标，<strong>ANN-Benchmark</strong> 则是一个相对权威的最近邻性能评测基准[2]。pgvector 的索引算法是 ivfflat ，在几个常见的基准测试中表现如下图所示：</p>
-<p><img alt="llm-pgvector-7.png" src="/img/db/llm-pgvector-7.png"></p>
+<p><img alt="llm-pgvector-7.png" src="/img/blog/pg/llm-pgvector-7.png"></p>
 <p>为了对 <code>pgvector</code> 的性能表现在直觉上有一个把握，在 M1 Max 芯片 Macbook 下单核运行一些简单的测试：从1百万条随机 1536 维向量（正好是 OpenAI 的输出向量维度）中找出余弦距离最近的TOP 1 ～ 50 条向量，每次耗时大约 8ms 。从 1 亿条随机 128 维向量 （SIFT图像数据集的维度）中找出 L2 欧几里得距离 TOP 1 向量耗时 5ms，TOP 100 耗时也只要 21ms 。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- 1M 个 1536 维向量，随机取 TOP1～50，余弦距离， 单核：插入与索引耗时均为5～6分钟，大小8GB左右。随机向量最近邻 Top1 召回：8ms
 </span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXISTS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">vtest</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> 
@@ -510,7 +500,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>INSERT INTO items (vec) VALUES (&#39;[1,1]&#39;), (&#39;[-2,-2]&#39;), (&#39;[-3,4]&#39;);
 </span></span><span style="display:flex;"><span>SELECT *, vec &lt;=&gt; &#39;[0,1]&#39; AS d FROM items ORDER BY 2 LIMIT 3;
 </span></span></code></pre></div><p>更简单的选择是本地优先的开源 RDS PostgreSQL 替代 —— Pigsty ，在三月底发布的v2.0.2 中， <code>pgvector</code> 已经默认启用，开箱即用。您可以在一台全新虚拟机上一键完成安装，自带时序地理空间向量插件，监控备份高可用齐全。分文不收，立等可取。</p>
-<p><img alt="llm-pgvector-8.png" src="/img/db/llm-pgvector-8.png"></p>
+<p><img alt="llm-pgvector-8.png" src="/img/blog/pg/llm-pgvector-8.png"></p>
 <p>Supabase，Neon 也提供了带有 <code>pgvector</code> 插件的付费托管 PostgreSQL 服务，AWS RDS for PostgreSQL 也已经在五月初刚刚支持了此扩展 。提供托管服务的完整供应商列表可以参考 <code>pgvector</code> 的 Github Issue [6]。</p>
 <hr>
 <h2 id="参考">参考</h2>
@@ -1521,7 +1511,7 @@ This is the multi-page printable view of this section.
 <p>ETL大家都耳熟能详，每天批量跑ETL任务，从生产OLTP数据库 <strong>拉取（E）</strong> ， <strong>转换（T）</strong> 格式， <strong>导入（L）</strong> 数仓，在此不赘述。相比ETL而言，CDC算是个新鲜玩意，随着流计算的崛起也越来越多地进入人们的视线。</p>
 <p><strong>变更数据捕获（change data capture, CDC）<strong>是一种观察写入数据库的所有数据变更，并将其提取并转换为可以复制到其他系统中的形式的过程。 CDC很有意思，特别是当</strong>变更</strong>能在被写入数据库后立刻用于后续的<strong>流处理</strong>时。</p>
 <p>例如用户可以捕获数据库中的变更，并不断将相同的变更应用至<strong>搜索索引</strong>（e.g elasticsearch）。如果变更日志以相同的顺序应用，则可以预期的是，搜索索引中的数据与数据库中的数据是匹配的。同理，这些变更也可以应用于后台刷新<strong>缓存</strong>（redis），送往<strong>消息队列（Kafka）</strong>，导入<strong>数据仓库</strong>（EventSourcing，存储不可变的事实事件记录而不是每天取快照），<strong>收集统计数据与监控（Prometheus）</strong>，等等等等。在这种意义下，外部索引，缓存，数仓都成为了<strong>PostgreSQL在逻辑上的从库</strong>，这些衍生数据系统都成为了变更流的消费者，而PostgreSQL成为了整个<strong>数据系统</strong>的主库。在这种架构下，应用只需要操心怎样把数据写入数据库，剩下的事情交给CDC即可。系统设计可以得到极大地简化：所有的数据组件都能够自动与主库在逻辑上保证（最终）一致。用户不用再为如何保证多个异构数据系统之间数据同步而焦头烂额了。</p>
-<p><img src="/img/blog/cdc-system.png"></p>
+<p><img src="/img/blog/pg/cdc-system.png"></p>
 <p>实际上PostgreSQL自10.0版本以来提供的<strong>逻辑复制（logical replication）<strong>功能，实质上就是一个</strong>CDC应用</strong>：从主库上提取变更事件流：<code>INSERT, UPDATE, DELETE, TRUNCATE</code>，并在另一个PostgreSQL<strong>主库</strong>实例上重放。如果这些增删改事件能够被解析出来，它们就可以用于任何感兴趣的消费者，而不仅仅局限于另一个PostgreSQL实例。</p>
 <h3 id="逻辑复制">逻辑复制</h3>
 <p>想在传统关系型数据库上实施CDC并不容易，关系型数据库本身的<strong>预写式日志WAL</strong> 实际上就是数据库中变更事件的记录。因此从数据库中捕获变更，基本上可以认为等价于消费数据库产生的WAL日志/复制日志。（当然也有其他的变更捕获方式，例如在表上建立触发器，当变更发生时将变更记录写入另一张变更日志表，客户端不断tail这张日志表，当然也有一定的局限性）。</p>
@@ -1985,10 +1975,10 @@ This is the multi-page printable view of this section.
 <li>表级锁存在于PG的共享内存中，可以通过<code>pg_locks</code>系统视图查阅。</li>
 </ul>
 <h3 id="表级锁的模式">表级锁的模式</h3>
-<p><img src="/img/blog/pg-lock-table-lock"></p>
+<p><img src="/img/blog/pg/pg-lock-table-lock"></p>
 <p>如何记忆这么多类型的锁呢？让我们从演化的视角来看这些锁。</p>
 <h3 id="表级锁的演化">表级锁的演化</h3>
-<p><img src="/img/blog/pg-lock-envolve.png"></p>
+<p><img src="/img/blog/pg/pg-lock-envolve.png"></p>
 <p>最开始只有两种锁：<code>Share</code>与<code>Exclusive</code>，共享锁与排它锁，即所谓<strong>读锁</strong>与<strong>写锁</strong>。读锁的目的是阻止表数据的变更，而写锁的目的是阻止一切并发访问。这很好理解。</p>
 <h4 id="多版本并发控制">多版本并发控制</h4>
 <p>后来随着多版本并发控制技术的出现（PostgreSQL使用快照隔离实现MVCC），读不阻塞写，写不阻塞读（针对表的增删改查而言）。因而原有的锁模型就需要升级了：这里的共享锁与排他锁都有了一个升级版本，即前面多加一个<code>ACCESS</code>。<code>ACCESS SHARE</code>是改良版共享锁，即允许<code>ACCESS</code>（多版本并发访问）的<code>SHARE</code>锁，这种锁意味着即使其他进程正在并发修改数据也不会阻塞本进程读取数据。当然有了多版本读锁也就会有对应的多版本写锁来阻止一切访问，即连<code>ACCESS</code>（多版本并发访问）都要<code>EXCLUSIVE</code>的锁，这种锁会阻止一切访问，是最强的写锁。</p>
@@ -2168,7 +2158,7 @@ This is the multi-page printable view of this section.
 </tbody>
 </table>
 <h4 id="样例数据">样例数据</h4>
-<p><img src="/img/blog/pg-lock-sample.png"></p>
+<p><img src="/img/blog/pg/pg-lock-sample.png"></p>
 <p>这个视图需要一些额外的知识才能解读。</p>
 <ul>
 <li>该视图是<strong>数据库集簇</strong>范围的视图，而非仅限于单个数据库，即可以看见其他数据库中的锁。</li>
@@ -2948,7 +2938,7 @@ This is the multi-page printable view of this section.
 <h3 id="字符">字符</h3>
 <p>字符是指字母、数字、标点、表意文字（如汉字）、符号、或者其他文本形式的书写“<strong>原子</strong>”。它是书面语中最小语义单元的抽象实体。这里说的字符都是<strong>抽象字符（abstract character）</strong>，其确切定义是：用于组织、控制、显示文本数据的信息单元。</p>
 <p>抽象字符是一种抽象的符号，与具体的形式无关：区分<strong>字符（character）<strong>与</strong>字形（Glyph）<strong>是非常重要的，我们在屏幕上看到的有形的东西是</strong>字形（Glyph）</strong>，它是抽象字符的视觉表示形式。抽象<strong>字符</strong>通过<strong>渲染（Render）<strong>呈现为</strong>字形</strong>，用户界面呈现的<strong>字形</strong>通过人眼被感知，通过人脑被认知，最终又在人的大脑中还原为抽象的实体概念。字形在这个过程中起到了媒介的作用，但决不能将其等价为抽象字符本身。</p>
-<p><img src="/img/blog/char-glyph.png"></p>
+<p><img src="/img/blog/pg/char-glyph.png"></p>
 <p>要注意的是，虽然<strong>多数</strong>时候字形与字符是一一对应的，但仍然存在一些多对多的情况：一个字形可能由多个字符组合而成，例如抽象字符<code>à</code>（拼音中的第四声a），我们将其视作单个‘字符’，但它既可以真的是一个单独的字符，也可以由字符<code>a</code>与去声撇号字符<code>	̀</code>组合而成。另一方面，一个字符也可能由多个字形组成，例如很多阿拉伯语印地语中的文字，由很多图元（字形）组成的符号，复杂地像一幅画，实际上却是单个字符。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;&gt;</span> <span style="color:#204a87">print</span> <span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;</span><span style="color:#4e9a06">\u00e9</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;e</span><span style="color:#4e9a06">\u0301</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;e</span><span style="color:#4e9a06">\u0301\u0301\u0301</span><span style="color:#4e9a06">&#39;</span>
 </span></span><span style="display:flex;"><span><span style="color:#000">é</span> <span style="color:#000">é</span> <span style="color:#000">é</span><span style="color:#a40000">́́</span>
@@ -2969,7 +2959,7 @@ This is the multi-page printable view of this section.
 </ul>
 <p>我们所熟悉的诸多名词，都可以归类到这个模型的相应层次之中。例如，<strong>Unicode字符集（UCS）</strong>，ASCII字符集，GBK字符集，这些都属于编码字符集CCS；而常见的UTF8，UTF16，UTF32这些概念，都属于<strong>字符编码表CEF</strong>，不过也有同名的字符编码方案CES。而我们熟悉的<code>base64</code>，<code>URLEncode</code>这些就属于<strong>传输编码语法TES</strong>。</p>
 <p>这些概念之间的关系可以用下图表示：</p>
-<p><img src="/img/blog/char-encoding.png"></p>
+<p><img src="/img/blog/pg/char-encoding.png"></p>
 <p>可以看到，为了将一个抽象字符转换为二进制，中间其实经过了几次概念的转换。在抽象字符序列与字节序列间还有两种中间形态：码位序列与码元序列。简单来说：</p>
 <ul>
 <li>
@@ -3088,7 +3078,7 @@ This is the multi-page printable view of this section.
 <p>这些特性这使得UTF-8非常适合用于信息的传输与交换。互联网上大多数文本文件的编码都是UTF-8。而Go、Python3也采用了UTF-8作为其默认编码。</p>
 <p>当然，UTF-8也是有代价的。对于中文而言，UTF-8通常使用三个字节进行编码。比起双字节编码而言带来了50%的额外存储开销。与此同时，变长编码无法进行随机访问字符，也使得处理相比“定长编码”更为复杂，也会有更高的计算开销。对于正确性不甚在乎，但对性能有严苛要求的中文文字处理应用可能不会喜欢UTF-8。</p>
 <p>UTF-8的一个巨大优势就在于，它没有字节序的问题。而UTF-16与UTF-32就不得不操心大端字节在前还是小端字节在前的问题了。这个问题通常在**字符编码方案（Character Encoding Schema）**中通过BOM来解决。</p>
-<p><img src="/img/blog/char-utf.png"></p>
+<p><img src="/img/blog/pg/char-utf.png"></p>
 <h3 id="字符编码方案">字符编码方案</h3>
 <p>字符编码表 CEF解决了如何将<strong>自然数码位</strong>编码为<strong>码元序列</strong>的问题，无论使用哪种码元，计算机中都有相应的整型。但我们可以说编码问题就解决了吗？还不行，假设一个字符按照UTF16拆成了若干个码元组成的码元序列，因为每个码元都是一个<code>uint16</code>，实际上各由两个字节组成。因此将码元序列化为字节序列的时候，就会遇到一些问题：每个码元究竟是高位字节在前还是低位字节在前呢？这就是大小端字节序问题。</p>
 <p>对于网络交换和本地处理，大小端序各有优劣，因此不同的系统往往也会采用不同的大小端序。为了标明二进制文件的大小端序，人们引入了**字节序标记（Byte Order Mark, BOM）**的概念。BOM是放置于编码字节序列开始处的一段特殊字节序列，用于表示文本序列的大小端序。</p>
@@ -3905,7 +3895,7 @@ This is the multi-page printable view of this section.
 </span></span></span></code></pre></div><p>为了简化问题，让我们暂时忽略经纬度其实是球面坐标，地球又是个椭球体的事实。</p>
 <p><strong>在这一前提下，这个SQL确实能正确完成工作</strong>。不过，谁要敢在生产环境这么用，DBA肯定得打死他。</p>
 <p>让我们先考察其执行计划：</p>
-<p><img src="/img/blog/knn-explain-l1.png"></p>
+<p><img src="/img/blog/pg/knn-explain-l1.png"></p>
 <blockquote>
 <h3 id="题外话sql内联">题外话：SQL内联</h3>
 <p>SQL内联有助于正确使用索引。</p>
@@ -3967,7 +3957,7 @@ $$</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">category</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">60000</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LIMIT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>预热后，实际执行平均耗时35毫秒，相比暴力扫表有了近千倍的性能提高，一个巨大的进步。</p>
-<p><img src="/img/blog/knn-explain-l2.png"></p>
+<p><img src="/img/blog/pg/knn-explain-l2.png"></p>
 <p>对于比较简单粗糙的产品，这种方法已经达到了‘可用’的级别。但这一方法仍然存在许多问题。</p>
 <h3 id="存在的问题-1">存在的问题</h3>
 <p>这种方法最大的问题在于额外复杂度。它使用了一个（多个）魔数，来确定候选点的大致范围。</p>
@@ -4004,8 +3994,8 @@ $$</p>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><img src="/img/blog/knn-badcase-1.png"></td>
-<td style="text-align:center"><img alt="mage-20180321221805" src="/img/blog/knn-badcase-2.png"></td>
+<td style="text-align:center"><img src="/img/blog/pg/knn-badcase-1.png"></td>
+<td style="text-align:center"><img alt="mage-20180321221805" src="/img/blog/pg/knn-badcase-2.png"></td>
 </tr>
 <tr>
 <td style="text-align:center">繁荣的五道口，一公里圈10家小意思。</td>
@@ -4021,7 +4011,7 @@ $$</p>
 <p>从30毫秒提升到10毫秒，三倍的性能提升</p>
 <p>对于传统关系型数据库，这差不多就是极限了</p>
 <p>有没有优雅、正确、快速的解决方案呢？</p>
-<p><img alt="mage-20180321221928" src="/img/blog/knn-cluster.png"></p>
+<p><img alt="mage-20180321221928" src="/img/blog/pg/knn-cluster.png"></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pois4</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">btree</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">longitude</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">latitude</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">category</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">CLUSTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pois4</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pois4_longitude_latitude_category_idx</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>相应的查询保持不变</p>
@@ -4034,7 +4024,7 @@ $$</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sphere_distance</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">longitude</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">latitude</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">116</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">365798</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">39</span><span style="color:#000;font-weight:bold">.</span><span style="color:#0000cf;font-weight:bold">966956</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">LIMIT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>联合索引查询的执行计划，实际执行时间可以压缩至7毫秒。</p>
-<p><img alt="mage-20180321221945" src="/img/blog/knn-l3.png"></p>
+<p><img alt="mage-20180321221945" src="/img/blog/pg/knn-l3.png"></p>
 <p>这差不多就是传统关系数据模型的极限了，对于大部分业务，这都是一个可以接受水平了。</p>
 <p>因为这个边界魔数凑的很好，所以性能比较理想。</p>
 <blockquote>
@@ -4061,7 +4051,7 @@ $$</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">position</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&lt;-&gt;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ST_GeogFromText</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;SRID=4326;POINT(116.365798 39.961576)&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LIMIT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><h3 id="r树">R树</h3>
 <p>R树的核心思想是，聚合<strong>距离相近</strong>的节点，并在树结构的上一层，将其表示为这些节点的<strong>最小外接矩形</strong>，这个最小外接矩形就成为上一层的一个节点。因为所有节点都在它们的最小外接矩形中，所以跟某个矩形不相交的查询就一定跟这个矩形中的所有节点都不相交。</p>
-<p><img alt="mage-20180321220143" src="/img/blog/knn-r-tree.png"></p>
+<p><img alt="mage-20180321220143" src="/img/blog/pg/knn-r-tree.png"></p>
 <p>实际查询中，该查询能在1.6毫秒完成，这是相当惊人的一个结果了。但要注意，这里<code>position</code>的类型是<code>GEOMETRY</code>，意味着它使用的是二维平面坐标，正确的计算距离需要使用Geography类型。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">id</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -4084,8 +4074,8 @@ $$</p>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><img src="/img/blog/knn-explain-l4-geom.png"></td>
-<td style="text-align:center"><img alt="mage-20180321222024" src="/img/blog/knn-l4-geog.png"></td>
+<td style="text-align:center"><img src="/img/blog/pg/knn-explain-l4-geom.png"></td>
+<td style="text-align:center"><img alt="mage-20180321222024" src="/img/blog/pg/knn-l4-geog.png"></td>
 </tr>
 </tbody>
 </table>
@@ -4135,7 +4125,7 @@ $$</p>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><img src="/img/blog/knn-explain-l5.png"></td>
+<td style="text-align:center"><img src="/img/blog/pg/knn-explain-l5.png"></td>
 </tr>
 </tbody>
 </table>
@@ -4270,12 +4260,12 @@ $$</p>
 <p>当我们没有行政区划的边界数据，但有行政区划中心点的数据时，这也是一种能凑合管用办法。找到距离用户最近的某级行政区域中心，然后认为用户就位于该行政区域中心。这个功能实现起来非常简单。</p>
 <p>不过，这种方法对于边界情况的处理很差：</p>
 <p><strong>最近邻搜索—Vornoi方法</strong></p>
-<p><img alt="vornoi" src="/img/blog/adcode-vornoi.png"></p>
+<p><img alt="vornoi" src="/img/blog/pg/adcode-vornoi.png"></p>
 <p>现实总是与理想情况相距甚远。也许对于国内而言，这种错误影响也许并不大。但涉及到国际主权边界时，这种粗糙的实现很可能会给自己带来不必要的麻烦：</p>
-<p><img src="/img/blog/adcode-south-china-seas.png"></p>
+<p><img src="/img/blog/pg/adcode-south-china-seas.png"></p>
 <p>还有一种思路，和编程中的“查表法”类似，预先计算好所有经纬度到行政区划的映射，使用时只要用经纬度坐标查表就好了。当然无论经度还是维度，都是一个连续的标量，理论上精度必然是有限的。</p>
 <p>GeoHash就是这样一种方案：它将经度与维度交叉编码为单一字符串，字符串越长精度越高，每一个字符串都对应一个经纬度围成的“矩形”，只要精度足够，理论上是可以这么做的。当然，这种方案难以做到真正意义上的正确，存储开销也极为浪费。好处是实现很简单。只要有数据，一个KV服务就可以轻松搞定。</p>
-<p><img alt="geohash" src="/img/blog/adcode-geohash.png"></p>
+<p><img alt="geohash" src="/img/blog/pg/adcode-geohash.png"></p>
 <p>相比之下，基于地理边界多边形的解决方案在保证绝对正确的前提下，能在一毫秒内完成这种地理编码功能，而且可能只需要几兆的空间。唯一的难点可能在于如何获取数据上。</p>
 <hr>
 <h2 id="0x02-数据为王">0x02 数据为王</h2>
@@ -4285,14 +4275,14 @@ $$</p>
 <li>
 <p><a href="http://lbs.amap.com/api/webservice/guide/api/district">高德地图行政区域查询API</a></p>
 <p>高德的数据更新更及时，形式简单，边界精度较高（点数多），但不够权威，有不少<strong>错漏之处</strong>。</p>
-<p><img alt="geohash" src="/img/blog/adcode-gaode-q.png"></p>
+<p><img alt="geohash" src="/img/blog/pg/adcode-gaode-q.png"></p>
 </li>
 <li>
 <p><a href="http://xzqh.mca.gov.cn/map">民政部全国行政区划信息查询平台</a></p>
 <p>民政部平台数据相对更加权威，而且采用的是拓扑编码，严格避免了边界重叠的问题，使用无偏的WGS84坐标，但边界精度较低（点数目较少）。</p>
 </li>
 </ul>
-<p><img alt="geohash" src="/img/blog/adcode-mca-q.png"></p>
+<p><img alt="geohash" src="/img/blog/pg/adcode-mca-q.png"></p>
 <p>除了地理围栏数据之外，另一份重要的数据是行政区划代码数据。国家统计局使用的12位城乡统计用行政区划代码编制还是很科学的，具有层次包含关系，尤其适合作为行政区划的唯一标示。但问题是稍显过时，最新的版本是2016年8月发布的，2018年7月后可能会发布一份更新的数据。</p>
 <blockquote>
 <p>笔者整理了一份连接国际统计局行政区划与高德区划边界的数据：https://github.com/Vonng/adcode</p>
@@ -4375,8 +4365,8 @@ $$</p>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center"><img alt="geohash" src="/img/blog//adcode-gaode-hk.png"></td>
-<td style="text-align:center"><img alt="geohash" src="/img/blog//adcode-mca-hk.png"></td>
+<td style="text-align:center"><img alt="geohash" src="/img/blog/pg//adcode-gaode-hk.png"></td>
+<td style="text-align:center"><img alt="geohash" src="/img/blog/pg//adcode-mca-hk.png"></td>
 </tr>
 </tbody>
 </table>
@@ -4785,37 +4775,6 @@ $$</p>
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-4edce86d9d2c59f9e48389a326037d68">架构成熟度模型</h1>
-	<div class="lead">架构，特别是互联网服务的架构，<strong>按照组织的典型特征与负载数量级</strong>，可以简单地分为以下九个阶段。</div>
-	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
-        
-		<time datetime="2018-03-12" class="text-muted">2018年03月12日</time>
-        
-	</div>
-	<p>架构，特别是互联网服务的架构，<strong>按照组织的典型特征与负载数量级</strong>，可以分为以下九个阶段。</p>
-<p>这种划分方式虽然简单粗暴，但是很有效果。</p>
-<p>1~3为简单系统，4-6为中等系统，7-9为复杂系统。</p>
-<p><img src="/img/blog/maturity-model.png"></p>
-
-</div>
-
-
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-
-  
-
-<div class="td-content" style="page-break-before: always">
     <h1 id="pg-d56766a08ea9cfa2db09a9b26cb09ded">file_fdw妙用无穷——从数据库读取系统信息</h1>
 	<div class="lead">通过<code>file_fdw</code>，轻松查看操作系统信息，拉取网络数据，把各种各样的数据源轻松喂进数据库里统一查看管理。</div>
 	<div class="td-byline mb-4">
@@ -4869,7 +4828,7 @@ $$</p>
 </span></span><span style="display:flex;"><span>FORMAT &#39;csv&#39;, DELIMITER E&#39;\037&#39;, HEADER &#39;TRUE&#39;);
 </span></span></code></pre></div><p>这里，关键是通过<code>CREATE FOREIGN TABLE OPTIONS (xxxx)</code>中的<code>OPTIONS</code>提供相应的参数，在<code>PROGRAM</code>参数中填入上面的命令，pg就会在查询这张表的时候自动执行此命令，并读取其输出。<code>FORMAT</code>参数可以指定为<code>CSV</code>，<code>DELIMITER</code>参数指定为之前使用的<code>\x1F</code>，并通过<code>HEADER 'TRUE'</code>忽略CSV的第一行</p>
 <p>那么结果如何呢？</p>
-<p><img src="/img/blog/file_fdw.png"></p>
+<p><img src="/img/blog/pg/file_fdw.png"></p>
 <hr>
 <h2 id="有什么用">有什么用</h2>
 <p>最简单的场景，原本系统指标监控需要编写各种监测脚本，部署在奇奇怪怪的地方。然后定期执行拉取metric，再存进数据库。现在通过file_fdw的方式，可以将感兴趣的指标直接录入数据库表，一步到位，而且维护方便，部署简单，更加可靠。在外表上加上视图，定期拉取聚合，将原本一个监控系统完成的事情，在数据库中一条龙解决了。</p>

@@ -40,7 +40,7 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/kernel/ch6/" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2018-01-06T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-03-01T21:27:45+08:00" />
 
 <meta itemprop="name" content="第六章 垃圾清理过程">
 <meta itemprop="description" content="**清理（VACUUM）**是一种维护过程，有助于PostgreSQL的持久运行。它的两个主要任务是删除死元组，以及冻结事务标识，两者都在第5.10节中简要提到过。
@@ -52,7 +52,7 @@
 移除死元组 移除每一页中的死元组，并对每一页内的活元组进行碎片整理。 移除指向死元组的索引元组。 冻结旧的事务标识（txid） 如有必要，冻结旧元组的事务标识（txid）。 更新与冻结事务标识相关的系统视图（pg_database与pg_class）。 如果可能，移除非必需的提交日志（clog）。 其他 更新已处理表的空闲空间映射（FSM）和可见性映射（VM）。 更新一些统计信息（pg_stat_all_tables等）。 这里假设读者已经熟悉以下术语：死元组，冻结事务标识，FSM，clog；如果读者不熟悉这些术语的含义，请参阅第5章。VM将在第6.2节中介绍。
 以下伪代码描述了清理的过程。
 伪码：并发清理 (1) FOR each table (2) 在目标表上获取 ShareUpdateExclusiveLock 锁 /* 第一部分 */ (3) 扫描所有页面，定位死元组；如有必要，冻结过老的元组。 (4) 如果存在，移除指向死元组的索引元组。 /* 第二部分 */ (5) FOR each page of the table (6) 移除死元组，重排本页内的活元组。 (7) 更新 FSM 与 VM END FOR /* 第三部分 */ (8) 如果可能，截断最后的页面。 (9) 更新系统数据字典与统计信息 释放ShareUpdateExclusiveLock锁 END FOR /* 后续处理 */ (10) 更新统计信息与系统数据字典 (11) 如果可能，移除没有必要的文件，以及clog中的文件。 从指定的表集中依次处理每一张表。 获取表上的ShareUpdateExclusiveLock锁， 此锁允许其他事务对该表进行读取。 扫描表中所有的页面，以获取所有的死元组，并在必要时冻结旧元组。 删除指向相应死元组的索引元组（如果存在）。 对表的每个页面执行步骤(6)和(7)中的操作 移除死元组，并重新分配页面中的活元组。 更新目标表对应的FSM与VM。 如果最后一个页面没有任何元组，则截断最后一页。 更新与目标表清理过程相关的统计数据和系统视图。 更新与清理过程相关的统计数据和系统视图。 如果可能，移除clog中非必需的文件与页面。 该伪码分为两大块：一块是依次处理表的循环，一块是后处理逻辑。而循环块又能分为三个部分，每一个部分都有各自的任务。接下来会描述这三个部分，以及后处理的逻辑。"><meta itemprop="datePublished" content="2018-01-06T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
+<meta itemprop="dateModified" content="2024-03-01T21:27:45+08:00" />
 <meta itemprop="wordCount" content="756">
 <meta itemprop="keywords" content="Internal," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="第六章 垃圾清理过程"/>
 <meta name="twitter:description" content="**清理（VACUUM）**是一种维护过程，有助于PostgreSQL的持久运行。它的两个主要任务是删除死元组，以及冻结事务标识，两者都在第5.10节中简要提到过。
@@ -127,7 +127,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -151,7 +151,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b598d8060662aa27ffddde91becf83b9.json"
+    data-offline-search-index-json-src="/offline-search-index.42e32438a3542a6cb50f075160f3734f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -174,66 +174,7 @@ if (!doNotTrack) {
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
   <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
   <ul class="ul-1">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
-  <input type="checkbox" id="m-zhblogpg-check"/>
-  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">Postgres</span></a></label>
-  
-  <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
-  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
-  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
-  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
-  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
-  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
-  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
-  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
-  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
-  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
-  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
-  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
-  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
-  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
-  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
-  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
-  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
-  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
-  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
-  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
-  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
-  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
-  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
-  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
-  
-</li>
-  </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
   <input type="checkbox" id="m-zhblogdb-check"/>
   <label for="m-zhblogdb-check"><a href="/zh/blog/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><span class="">数据库</span></a></label>
   
@@ -395,6 +336,65 @@ if (!doNotTrack) {
   
 </li>
   </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
+  <input type="checkbox" id="m-zhblogpg-check"/>
+  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
+  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
+  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
+  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
+  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
+  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
+  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
+  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
+  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
+  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
+  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
+  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
+  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
+  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
+  
+</li>
+  </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
   <input type="checkbox" id="m-zhblogdev-check"/>
   <label for="m-zhblogdev-check"><a href="/zh/blog/dev/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a></label>
@@ -463,10 +463,6 @@ if (!doNotTrack) {
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
   <input type="checkbox" id="m-zhblogdevsql-exclude-check"/>
   <label for="m-zhblogdevsql-exclude-check"><a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a></label>
-  
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevmaturity-model-li">
-  <input type="checkbox" id="m-zhblogdevmaturity-model-check"/>
-  <label for="m-zhblogdevmaturity-model-check"><a href="/zh/blog/dev/maturity-model/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevmaturity-model"><span class="">架构成熟度模型</span></a></label>
   
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfile_fdw-li">
   <input type="checkbox" id="m-zhblogdevfile_fdw-check"/>
@@ -1074,7 +1070,7 @@ if (!doNotTrack) {
 <h3 id="612-第二部分">6.1.2 第二部分</h3>
 <p>这一部分会移除死元组，并逐页更新FSM和VM。图6.1展示了一个例子：</p>
 <p><strong>图6.1 删除死元组</strong></p>
-<p><img src="/img/kernel/fig-6-01.png">
+<p><img src="/img/blog/kernel/fig-6-01.png">
 假设该表包含三个页面，这里先关注0号页面（即第一个页面）。该页面包含三条元组， 其中<code>Tuple_2</code>是一条死元组，如图6.1(1)所示。在这里PostgreSQL移除了<code>Tuple_2</code>，并重排剩余元组来整理碎片空间，然后更新该页面的FSM和VM，如图6.1(2)所示。 PostgreSQL不断重复该过程直至最后一页。</p>
 <p>请注意，非必需的行指针是不会被移除的，它们会在将来被重用。因为如果移除了行指针，就必须同时更新所有相关索引中的索引元组。</p>
 <h3 id="613-第三部分">6.1.3 第三部分</h3>
@@ -1090,7 +1086,7 @@ if (!doNotTrack) {
 <p>VM的基本概念很简单。 每个表都拥有各自的可见性映射，用于保存表文件中每个页面的可见性。 页面的可见性确定了每个页面是否包含死元组。清理过程可以跳过没有死元组的页面。</p>
 <p>图6.2展示了VM的使用方式。 假设该表包含三个页面，第0页和第2页包含死元组，而第1页不包含死元组。 表的可见性映射中保存着哪些页面包含死元组的信息。 在这种情况下，清理过程可以参考VM中的信息，跳过第一个页面。</p>
 <p><strong>图6.2 VM的使用方式</strong></p>
-<p><img src="/img/kernel/fig-6-02.png"></p>
+<p><img src="/img/blog/kernel/fig-6-02.png"></p>
 <p>每个VM由一个或多个8 KB页面组成，文件以后缀<code>_vm</code>存储。 例如，一个表文件的<code>relfilenode</code>是18751，其FSM（<code>18751_fsm</code>）和VM（<code>18751_vm</code>）文件如下所示。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ <span style="color:#204a87">cd</span> <span style="color:#000">$PGDATA</span>
 </span></span><span style="display:flex;"><span>$ ls -la base/16384/18751*
@@ -1117,7 +1113,7 @@ $$</p>
 <p>而<code>OldestXmin</code>是当前正在运行的事务中最早的<strong>事务标识（txid）</strong>。 举个例子，如果在执行<code>VACUUM</code>命令时，还有其他三个事务正在运行，且其<code>txid</code>分别为<code>100,101,102</code>，那么这里<code>OldestXmin</code>就是100。如果不存在其他事务，<code>OldestXmin</code> 就是执行此<code>VACUUM</code>命令的事务标识。 这里<code>vacuum_freeze_min_age</code>是一个配置参数（默认值为<code>50,000,000</code>）。</p>
 <p>图6.3给出了一个具体的例子。这里<code>Table_1</code>由三个页面组成，每个页面包含三条元组。 执行<code>VACUUM</code>命令时，当前<code>txid</code>为<code>50,002,500</code>且没有其他事务。在这种情况下，<code>OldestXmin</code>就是<code>50,002,500</code>；因此<code>freezeLimit_txid</code>为<code>2500</code>。冻结过程按照如下步骤执行。</p>
 <p><strong>图6.3 冻结元组——惰性模式</strong></p>
-<p><img src="/img/kernel/fig-6-03.png"></p>
+<p><img src="/img/blog/kernel/fig-6-03.png"></p>
 <ul>
 <li>
 <p>第0页：</p>
@@ -1146,7 +1142,7 @@ $$
 <p>图6.4给出了一个具体的例子。在表1中，<code>Tuple_1</code>和<code>Tuple_7</code>都已经被删除。<code>Tuple_10</code>和<code>Tuple_11</code>则已经插入第2页中。执行<code>VACUUM</code>命令时的事务标识为<code>150,002,000</code>，且没有其他事务。因此，<code>OldestXmin=150,002,000</code>，<code>freezeLimit_txid=100,002,000</code>。在这种情况下满足了上述条件：因为<code>1821 &lt; (150002000 - 150000000)</code>	，因而冻结过程会以迫切模式执行，如下所示。</p>
 <p>（注意，这里是版本9.5或更早版本的行为；最新版本的行为将在第6.3.3节中描述。）</p>
 <p><strong>图6.4 冻结旧元组——迫切模式（9.5或更早版本）</strong></p>
-<p><img src="/img/kernel/fig-6-04.png"></p>
+<p><img src="/img/blog/kernel/fig-6-04.png"></p>
 <ul>
 <li>
 <p>第0页：</p>
@@ -1164,7 +1160,7 @@ $$
 <p>冻结一张表后，目标表的<code>pg_class.relfrozenxid</code>将被更新。 <a href="https://www.postgresql.org/docs/current/catalog-pg-class.html"><code>pg_class</code></a>是一个系统视图，每个<code>pg_class.relfrozenxid</code>列都保存着相应表的最近冻结的事务标识。本例中表1的<code>pg_class.relfrozenxid</code>会被更新为当前的<code>freezeLimit_txid</code>（即<code>100,002,000</code>），这意味着表1中<code>t_xmin</code>小于<code>100,002,000</code>的所有元组都已被冻结。</p>
 <p>在完成清理过程之前，必要时会更新<code>pg_database.datfrozenxid</code>。每个<code>pg_database.datfrozenxid</code>列都包含相应数据库中的最小<code>pg_class.relfrozenxid</code>。例如，如果在迫切模式下仅仅对表1做冻结处理，则不会更新该数据库的<code>pg_database.datfrozenxid</code>，因为其他关系的<code>pg_class.relfrozenxid</code>（当前数据库可见的其他表和系统视图）还没有发生变化，如图6.5(1)所示。如果当前数据库中的所有关系都以迫切模式冻结，则数据库的<code>pg_database.datfrozenxid</code>就会被更新，因为此数据库的所有关系的<code>pg_class.relfrozenxid</code>都被更新为当前的<code>freezeLimit txid</code>，如图6.5(2)所示。</p>
 <p><strong>图6.5  <code>pg_database.datfrozenxid</code>与<code>pg_class.relfrozenxid</code>之间的关系</strong></p>
-<p><img src="/img/kernel/fig-6-05.png"></p>
+<p><img src="/img/blog/kernel/fig-6-05.png"></p>
 <blockquote>
 <h4 id="如何显示pg_classrelfrozenxid与pg_databasedatfrozenxid"> 如何显示<code>pg_class.relfrozenxid</code>与<code>pg_database.datfrozenxid</code></h4>
 <p>如下所示，第一个查询显示<code>testdb</code>数据库中所有可见关系的<code>relfrozenxid</code>，第二个查询显示<code>testdb</code>数据库的<code>pg_database.datfrozenxld</code>。</p>
@@ -1209,12 +1205,12 @@ $$
 <p>为了解决这一问题，9.6版本改进了可见性映射VM与冻结过程。如第6.2.1节所述，新VM包含着每个页面中所有元组是否都已被冻结的信息。在迫切模式下进行冻结处理时，可以跳过仅包含冻结元组的页面。</p>
 <p>图6.6给出了一个例子。 根据VM中的信息，冻结此表时会跳过第0页。在更新完1号页面后，相关的VM信息会被更新，因为该页中所有的元组都已经被冻结了。</p>
 <p><strong>图6.6  冻结旧元组——迫切模式（9.6或更高版本）</strong></p>
-<p><img src="/img/kernel/fig-6-06.png"></p>
+<p><img src="/img/blog/kernel/fig-6-06.png"></p>
 <h2 id="64-移除不必要的提交日志文件">6.4 移除不必要的提交日志文件</h2>
 <p>如5.4节中所述，**提交日志（clog）**存储着事务的状态。 当更新<code>pg_database.datfrozenxid</code>时，PostgreSQL会尝试删除不必要的clog文件。 注意相应的clog页面也会被删除。</p>
 <p>图6.7给出了一个例子。 如果clog文件<code>0002</code>中包含最小的<code>pg_database.datfrozenxid</code>，则可以删除旧文件（<code>0000</code>和<code>0001</code>），因为存储在这些文件中的所有事务在整个数据库集簇中已经被视为冻结了。</p>
 <p><strong>图6.7  删除不必要的clog文件和页面</strong></p>
-<p><img src="/img/kernel/fig-6-07.png"></p>
+<p><img src="/img/blog/kernel/fig-6-07.png"></p>
 <blockquote>
 <h3 id="pg_databasedatfrozenxid与clog文件"> <code>pg_database.datfrozenxid</code>与clog文件</h3>
 <p>下面展示了<code>pg_database.datfrozenxid</code>与clog文件的实际输出</p>
@@ -1246,13 +1242,13 @@ $$
 <p>虽然并发清理对于运维至关重要，但光有它还不够。比如，即使删除了许多死元组，也无法压缩表大小的情况。</p>
 <p>图6.8给出了一个极端的例子。假设一个表由三个页面组成，每个页面包含六条元组。执行以下<code>DELETE</code>命令以删除元组，并执行<code>VACUUM</code>命令以移除死元组：</p>
 <p><strong>图6.8 并发清理的缺陷示例</strong></p>
-<p><img src="/img/kernel/fig-6-08.png"></p>
+<p><img src="/img/blog/kernel/fig-6-08.png"></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#000">testdb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DELETE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tbl</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">%</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">!=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">testdb</span><span style="color:#ce5c00;font-weight:bold">=#</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VACUUM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tbl</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>死元组虽然都被移除了，但表的尺寸没有减小。 这种情况既浪费了磁盘空间，又会对数据库性能产生负面影响。 例如在上面的例子中，当读取表中的三条元组时，必须从磁盘加载三个页面。</p>
 <p>为了解决这种情况，PostgreSQL提供了<strong>完整清理</strong>模式。 图6.9概述了该模式。</p>
 <p><strong>图6.9 完整清理模式概述</strong></p>
-<p><img src="/img/kernel/fig-6-09.png"></p>
+<p><img src="/img/blog/kernel/fig-6-09.png"></p>
 <ol>
 <li>
 <p>创建新的表文件：见图6.9(1)</p>
@@ -1356,7 +1352,7 @@ $$
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-03-01: <a href="https://github.com/Vonng/pigsty.cc/commit/ba0fa2bf42872bf8e12429efa3667298ed08766e">update blog images (ba0fa2b)</a>
 </div>
 </div>
 
