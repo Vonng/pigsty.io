@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.ac5726654687336b24d43fe68360f7b1.json"
+    data-offline-search-index-json-src="/offline-search-index.8af538314d1eb96f60e9aa1cd758b1f5.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1789,8 +1789,22 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 将新用户/角色定义添加到 <code>all.children.&lt;cls&gt;.pg_users</code>，并使用以下方法创建该数据库：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-user &lt;cls&gt; &lt;username&gt;    <span style="color:#8f5902;font-style:italic"># pgsql-user.yml -l &lt;cls&gt; -e username=&lt;username&gt;</span>
 </span></span></code></pre></div><p>不同于数据库，创建用户的剧本总是幂等的。当目标用户已经存在时，Pigsty会修改目标用户的属性使其符合配置。所以在现有集群上重复运行它通常不会有问题。</p>
-<p>我们不建议您手工创建新的业务用户，特别当您想要创建的用户使用默认的 pgbouncer 连接池时：除非您愿意手工负责维护 Pgbouncer 中的用户列表并与 PostgreSQL 保持一致。
-使用 <code>pgsql-db</code> 工具或 <code>pgsql-db.yml</code> 剧本创建新数据库时，会将此数据库一并添加到  <a href="/zh/docs/pgsql/user/#pgbouncer用户">Pgbouncer用户</a> 列表中。</p>
+
+
+<div class="alert alert-secondary" role="alert">
+<h4 class="alert-heading">请使用剧本创建用户</h4>
+
+    我们不建议您手工创建新的业务用户，特别当您想要创建的用户使用默认的 pgbouncer 连接池时：除非您愿意手工负责维护 Pgbouncer 中的用户列表并与 PostgreSQL 保持一致。
+使用 <strong><code>bin/pgsql-user</code></strong> 工具或 <a href="/zh/docs/pgsql/playbook#pgsql-useryml"><strong><code>pgsql-user.yml</code></strong></a> 剧本创建新数据库时，会将此数据库一并添加到  <a href="/zh/docs/pgsql/user/#pgbouncer用户">Pgbouncer用户</a> 列表中。
+
+</div>
+
+<hr>
+<h2 id="修改用户">修改用户</h2>
+<p>修改 PostgreSQL 用户的属性的方式与 <a href="/zh/docs/pgsql/user/#创建用户"><strong>创建用户</strong></a> 相同。</p>
+<p>首先，调整您的用户定义，修改需要调整的属性，然后执行以下命令应用：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-user &lt;cls&gt; &lt;username&gt;    <span style="color:#8f5902;font-style:italic"># pgsql-user.yml -l &lt;cls&gt; -e username=&lt;username&gt;</span>
+</span></span></code></pre></div><p>请注意，修改用户不会删除用户，而是通过 <code>ALTER USER</code> 命令修改用户属性；也不会回收用户的权限与分组，并使用 <code>GRANT</code> 命令授予新的角色。</p>
 <hr>
 <h2 id="pgbouncer用户">Pgbouncer用户</h2>
 <p>默认情况下启用 Pgbouncer，并作为连接池中间件，其用户默认被管理。</p>
@@ -4263,7 +4277,7 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#8f5902;font-style:italic"># 使用本地文件系统仓库时，最多保留2个完整备份，备份时临时允许3个</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>您的备份磁盘存储空间至少应该能放下最近三个数据库全量备份文件，以及这段期间（3天）内的WAL归档文件。</p>
 <p><strong>MinIO备份仓库</strong></p>
-<p>使用MinIO时，存储容量通常不是问题。您可以按需保留备份。例如，默认的<code>pg-test</code>将在星期一进行全量备份，其他工作日进行增量备份。</p>
+<p>使用MinIO时，存储容量通常不是问题。您可以按需保留备份。例如，默认的 <code>pg-test</code> 样例集群将在星期一进行全量备份，其他工作日进行增量备份。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_crontab</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># 周一凌晨1点进全量备份，其他工作日进行增量备份</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#4e9a06">&#39;00 01 * * 1 postgres /pg/bin/pg-backup full&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#4e9a06">&#39;00 01 * * 2,3,4,5,6,7 postgres /pg/bin/pg-backup&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
