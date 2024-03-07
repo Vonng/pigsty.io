@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.d193f2d3f97b54ade42568d60fc8ba7f.json"
+    data-offline-search-index-json-src="/offline-search-index.81f07673841f21ae4cba52289d79f7bc.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1081,14 +1081,80 @@ the default value is 30s, and it will be populated to the following patroni para
 	<h1 id="pg-397dc822a55434d21cd8ee3a6f846291">7 - Point-in-Time Recovery</h1>
     <div class="lead">Pigsty utilizes pgBackRest for PostgreSQL point-in-time recovery, allowing users to roll back to any point within the backup policy limits.</div>
 	<hr>
-<h2 id="point-in-time-recovery">Point-In-Time Recovery</h2>
+<h2 id="overview">Overview</h2>
 <blockquote>
-<p>Rollback clusters to a past state to mitigate data loss from software bugs or human errors.</p>
+<p>You can roll back your cluster to any point in time, avoiding data loss caused by software defects and human errors.</p>
 </blockquote>
-<p>Pigsty&rsquo;s PostgreSQL cluster features pre-configured PITR, leveraging <a href="https://pgbackrest.org/">pgBackRest</a> and, optionally, <a href="/docs/minio/">MinIO</a>.</p>
-<p>While high availability counters hardware failures, it&rsquo;s not effective against unintentional data deletions or overwrites: changes sync and apply to replicas instantly. PITR fill this gap. If operating a single instance, PITR can serve as a high availability substitute, providing a safety net.</p>
-<p>For cluster rollback to a specific backup, users should maintain regular base backups. For rollbacks to arbitrary points, WAL archives since the last backup are required. Pigsty automates these with pgBackRest for backup management, WAL archiving, and PITR execution.
-Backup repositories are configurable (<a href="/docs/reference/param/#pgbackrest_repo"><code>pgbackrest_repo</code></a>): defaulting to the primary&rsquo;s local file system (<code>local</code>), but alternatives include other disk paths, bundled <a href="/docs/minio/">MinIO</a> (<code>minio</code>), or cloud S3 services.</p>
+<p>Pigsty&rsquo;s PostgreSQL clusters come with an automatically configured Point in Time Recovery (PITR) solution, based on the backup component <a href="https://pgbackrest.org/"><strong>pgBackRest</strong></a> and the optional object storage repository <a href="https://min.io/"><strong>MinIO</strong></a>.</p>
+<p><a href="/docs/concept/ha/"><strong>High Availability solutions</strong></a> can address hardware failures, but they are powerless against data deletions/overwrites/deletions caused by software defects and human errors. For such scenarios, Pigsty offers an out-of-the-box <strong>Point in Time Recovery</strong> (PITR) capability, enabled by default without any additional configuration.</p>
+<p>Pigsty provides you with the default configuration for base backups and WAL archiving, allowing you to use local directories and disks, or dedicated MinIO clusters or S3 object storage services to store backups and achieve off-site disaster recovery. When using local disks, by default, you retain the ability to recover to any point in time within the past day. When using MinIO or S3, by default, you retain the ability to recover to any point in time within the past week. As long as storage space permits, you can keep a recoverable time span as long as desired, based on your budget.</p>
+<hr>
+<p><strong>What problems does Point in Time Recovery (PITR) solve?</strong></p>
+<ul>
+<li>Enhanced disaster recovery capability: <strong>RPO</strong> reduces from ∞ to a few MBs, <strong>RTO</strong> from ∞ to a few hours/minutes.</li>
+<li>Ensures data security: <strong>Data Integrity</strong> among C/I/A: avoids data consistency issues caused by accidental deletions.</li>
+<li>Ensures data security: <strong>Data Availability</strong> among C/I/A: provides a safety net for &ldquo;permanently unavailable&rdquo; disasters.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Singleton Strategy</th>
+<th style="text-align:center">Event</th>
+<th>RTO</th>
+<th style="text-align:left">RPO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><i class="fa-solid fa-music text-danger"></i> Do nothing</td>
+<td style="text-align:center">Crash</td>
+<td><i class="fas fa-circle-xmark text-danger"></i> <strong>Permanently lost</strong></td>
+<td style="text-align:left"><i class="fas fa-circle-xmark text-danger"></i> <strong>All lost</strong></td>
+</tr>
+<tr>
+<td><i class="fa-solid fa-copy text-secondary"></i> Basic backup</td>
+<td style="text-align:center">Crash</td>
+<td><i class="fa-solid fa-triangle-exclamation text-secondary"></i> Depends on backup size and bandwidth (a few hours)</td>
+<td style="text-align:left"><i class="fa-solid fa-triangle-exclamation text-secondary"></i> Loss of data after the last backup (a few hours to days)</td>
+</tr>
+<tr>
+<td><i class="fa-solid fa-copy text-primary"></i> Basic backup + <i class="fa-solid fa-clock-rotate-left text-primary"></i> WAL Archiving</td>
+<td style="text-align:center">Crash</td>
+<td><i class="fa-solid fa-triangle-exclamation text-primary"></i> Depends on backup size and bandwidth (a few hours)</td>
+<td style="text-align:left"><i class="fa-solid fa-triangle-exclamation text-primary"></i> Loss of data not yet archived (a few dozen MBs)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What are the costs of Point in Time Recovery?</strong></p>
+<ul>
+<li>Reduced C in data security: <strong>Confidentiality</strong>, creating additional leakage points, requiring extra protection for backups.</li>
+<li>Additional resource consumption: local storage or network traffic/bandwidth costs, usually not a problem.</li>
+<li>Increased complexity cost: users need to invest in backup management.</li>
+</ul>
+<p><strong>Limitations of Point in Time Recovery</strong></p>
+<p>If PITR is the only method for fault recovery, the RTO and RPO metrics are inferior compared to <a href="/docs/concept/ha/"><strong>High Availability solutions</strong></a>, and it&rsquo;s usually best to use both in combination.</p>
+<ul>
+<li><strong>RTO</strong>: With only a single machine + PITR, recovery time depends on backup size and network/disk bandwidth, ranging from tens of minutes to several hours or days.</li>
+<li><strong>RPO</strong>: With only a single machine + PITR, a crash might result in the loss of a small amount of data, as one or several WAL log segments might not yet be archived, losing between 16 MB to several dozen MBs of data.</li>
+</ul>
+<p>Apart from <a href="/docs/pgsql/pitr/"><strong>PITR</strong></a>, you can also use <a href="/docs/pgsql/config/#delayed-cluster"><strong>Delayed Clusters</strong></a> in Pigsty to address data deletion or alteration issues caused by human errors or software defects.</p>
+<hr>
+<h2 id="how-does-pitr-works">How does PITR works?</h2>
+<p>Point in Time Recovery allows you to roll back your cluster to any &ldquo;specific moment&rdquo; in the past, avoiding data loss caused by software defects and human errors. To achieve this, two key preparations are necessary: <a href="/docs/concept/pitr/#base-backups"><strong>Base Backups</strong></a> and <a href="/docs/concept/pitr/#wal-archiving"><strong>WAL Archiving</strong></a>. Having a <strong>Base Backup</strong> allows users to restore the database to the state at the time of the backup, while having <strong>WAL Archiving</strong> from a certain base backup enables users to restore the database to any point in time after the base backup.</p>
+<p><img alt="fig-10-02.png" src="/img/blog/kernel/fig-10-02.png"></p>
+<p>For a detailed principle, refer to: <a href="/zh/blog/kernel/ch10/"><strong>Base Backups and Point in Time Recovery</strong></a>; for specific operations, refer to <a href="/zh/docs/pgsql/pitr"><strong>PGSQL Management: Backup and Restore</strong></a>.</p>
+<h3 id="base-backups">Base Backups</h3>
+<p>Pigsty uses pgBackRest to manage PostgreSQL backups. pgBackRest will initialize an empty repository on all cluster instances, but it will only use the repository on the primary instance.</p>
+<p>pgBackRest supports three backup modes: <strong>Full Backup</strong>, <strong>Incremental Backup</strong>, and Differential Backup, with the first two being the most commonly used. A Full Backup takes a complete physical snapshot of the database cluster at a current moment, while an Incremental Backup records the differences between the current database cluster and the last full backup.</p>
+<p>Pigsty provides a wrapper command for backups: <code>/pg/bin/pg-backup [full|incr]</code>. You can make base backups periodically as needed through Crontab or any other task scheduling system.</p>
+<h3 id="wal-archiving">WAL Archiving</h3>
+<p>By default, Pigsty enables WAL archiving on the primary instance of the cluster and continuously pushes WAL segment files to the backup repository using the <code>pgbackrest</code> command-line tool.</p>
+<p>pgBackRest automatically manages the required WAL files and promptly cleans up expired backups and their corresponding WAL archive files according to the backup retention policy.</p>
+<p>If you do not need PITR functionality, you can disable WAL archiving by <a href="/docs/pgsql/admin/#configuring-the-cluster"><strong>configuring the cluster</strong></a>: <code>archive_mode: off</code>, and remove <a href="/docs/reference/param/#node_crontab"><code>node_crontab</code></a> to stop periodic backup tasks.</p>
+<hr>
+<h2 id="implementation">Implementation</h2>
+<p>By default, Pigsty provides two preset <a href="/docs/pgsql/pitr/#backup-strategies">backup strategies</a>: using the local filesystem backup repository by default, where a full backup is taken daily to ensure users can roll back to any point within a day at any time. The alternative strategy uses a dedicated MinIO cluster or S3 storage for backups, with a full backup on Monday and incremental backups daily, keeping two weeks of backups and WAL archives by default.</p>
+<p>Pigsty uses pgBackRest to manage backups, receive WAL archives, and perform PITR. The backup repository can be flexibly configured (<a href="/docs/reference/param/#pgbackrest_repo"><code>pgbackrest_repo</code></a>): by default, it uses the local filesystem (<code>local</code>) of the primary instance, but it can also use other disk paths, or the optional <a href="/docs/minio/">MinIO</a> service (<code>minio</code>) and cloud-based S3 services.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pgbackrest_repo:                  # pgbackrest repo</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">https://pgbackrest.org/configuration.html#section-repository</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">local</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                          </span><span style="color:#8f5902;font-style:italic"># default pgbackrest repo with local posix fs</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">path</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/pg/backup             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># local backup directory, `/pg/backup` by default</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1111,6 +1177,44 @@ Backup repositories are configurable (<a href="/docs/reference/param/#pgbackrest
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full_type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">time    </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># retention full backup by time on minio repo</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">retention_full</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">14</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># keep full backup for last 14 days</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>Pigsty has two built-in <a href="/docs/concept/pitr/#policy">backup options</a>: local file system repository with daily full backups or dedicated MinIO/S3 storage with weekly full and daily incremental backups, retaining two weeks&rsquo; worth by default.</p>
+<p>The target repositories in Pigsty parameter <a href="/docs/reference/param/#pgbackrest_repo"><code>pgbackrest_repo</code></a> are translated into repository definitions in the <code>/etc/pgbackrest/pgbackrest.conf</code> configuration file.
+For example, if you define a West US region S3 repository for cold backups, you could use the following reference configuration.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">s3</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic"># ------&gt; /etc/pgbackrest/pgbackrest.conf</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s3                                  </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-type=s3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-region</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">us-west-1                      </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-region=us-west-1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">s3-us-west-1.amazonaws.com   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-endpoint=s3-us-west-1.amazonaws.com</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-key</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&lt;your_access_key&gt;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-key=&lt;your_access_key&gt;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-key-secret</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&lt;your_secret_key&gt;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-key-secret=&lt;your_secret_key&gt;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-bucket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql                          </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-bucket=pgsql</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-s3-uri-style</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">host                        </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-s3-uri-style=host</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-path</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/pgbackrest                         </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-path=/pgbackrest</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-bundle</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">y</span><span style="color:#f8f8f8;text-decoration:underline">                                  </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-bundle=y</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-cipher-type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">aes-256-cbc                  </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-cipher-type=aes-256-cbc</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-cipher-pass</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgBackRest                   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-cipher-pass=pgBackRest</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-retention-full-type</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">time                 </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-retention-full-type=time</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">repo1-retention-full</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">90</span><span style="color:#f8f8f8;text-decoration:underline">                         </span><span style="color:#8f5902;font-style:italic"># ----&gt; repo1-retention-full=90</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="recovery">Recovery</h2>
+<p>You can use the following encapsulated commands for <a href="https://pgbackrest.org/command.html#command-restore">Point in Time Recovery</a> of the PostgreSQL database cluster.</p>
+<p>By default, Pigsty uses incremental, differential, parallel recovery, allowing you to restore to a specified point in time as quickly as possible.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>pg-pitr                                 # restore to wal archive stream end (e.g. used in case of entire DC failure)
+</span></span><span style="display:flex;"><span>pg-pitr -i                              # restore to the time of latest backup complete (not often used)
+</span></span><span style="display:flex;"><span>pg-pitr --time=&#34;2022-12-30 14:44:44+08&#34; # restore to specific time point (in case of drop db, drop table)
+</span></span><span style="display:flex;"><span>pg-pitr --name=&#34;my-restore-point&#34;       # restore TO a named restore point create by pg_create_restore_point
+</span></span><span style="display:flex;"><span>pg-pitr --lsn=&#34;0/7C82CB8&#34; -X            # restore right BEFORE a LSN
+</span></span><span style="display:flex;"><span>pg-pitr --xid=&#34;1234567&#34; -X -P           # restore right BEFORE a specific transaction id, then promote
+</span></span><span style="display:flex;"><span>pg-pitr --backup=latest                 # restore to latest backup set
+</span></span><span style="display:flex;"><span>pg-pitr --backup=20221108-105325        # restore to a specific backup set, which can be checked with pgbackrest info
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pg-pitr                                 # pgbackrest --stanza=pg-meta restore
+</span></span><span style="display:flex;"><span>pg-pitr -i                              # pgbackrest --stanza=pg-meta --type=immediate restore
+</span></span><span style="display:flex;"><span>pg-pitr -t &#34;2022-12-30 14:44:44+08&#34;     # pgbackrest --stanza=pg-meta --type=time --target=&#34;2022-12-30 14:44:44+08&#34; restore
+</span></span><span style="display:flex;"><span>pg-pitr -n &#34;my-restore-point&#34;           # pgbackrest --stanza=pg-meta --type=name --target=my-restore-point restore
+</span></span><span style="display:flex;"><span>pg-pitr -b 20221108-105325F             # pgbackrest --stanza=pg-meta --type=name --set=20221230-120101F restore
+</span></span><span style="display:flex;"><span>pg-pitr -l &#34;0/7C82CB8&#34; -X               # pgbackrest --stanza=pg-meta --type=lsn --target=&#34;0/7C82CB8&#34; --target-exclusive restore
+</span></span><span style="display:flex;"><span>pg-pitr -x 1234567 -X -P                # pgbackrest --stanza=pg-meta --type=xid --target=&#34;0/7C82CB8&#34; --target-exclusive --target-action=promote restore
+</span></span></code></pre></div><p>During PITR, you can observe the LSN point status of the cluster using the Pigsty monitoring system to determine if it has successfully restored to the specified time point, transaction point, LSN point, or other points.</p>
+<p><img alt="pitr" src="/img/docs/concept/pitr.png"></p>
 
 </div>
 
