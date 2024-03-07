@@ -24,12 +24,12 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/docs/concept/ca/" /><meta property="article:section" content="docs" />
 
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-03-07T10:24:39+08:00" />
 
 <meta itemprop="name" content="Self-Signed CA">
 <meta itemprop="description" content="Pigsty comes with a set of self-signed CA PKI for issuing SSL certs to encrypt network traffic.">
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
-<meta itemprop="wordCount" content="278">
+<meta itemprop="dateModified" content="2024-03-07T10:24:39+08:00" />
+<meta itemprop="wordCount" content="724">
 <meta itemprop="keywords" content="Security," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="Self-Signed CA"/>
 <meta name="twitter:description" content="Pigsty comes with a set of self-signed CA PKI for issuing SSL certs to encrypt network traffic."/>
 
@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.8af538314d1eb96f60e9aa1cd758b1f5.json"
+    data-offline-search-index-json-src="/offline-search-index.d193f2d3f97b54ade42568d60fc8ba7f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -119,7 +119,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.8af538314d1eb96f60e9aa1cd758b1f5.json"
+    data-offline-search-index-json-src="/offline-search-index.d193f2d3f97b54ade42568d60fc8ba7f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -562,7 +562,9 @@ if (!doNotTrack) {
         <nav id="TableOfContents">
   <ul>
     <li><a href="#local-ca">Local CA</a></li>
-    <li><a href="#check-cert-content">Check Cert Content</a></li>
+    <li><a href="#using-an-existing-ca">Using an Existing CA</a></li>
+    <li><a href="#trust-ca">Trust CA</a></li>
+    <li><a href="#check-cert">Check Cert</a></li>
     <li><a href="#issue-database-client-certs">Issue Database Client Certs</a></li>
   </ul>
 </nav>
@@ -683,56 +685,144 @@ if (!doNotTrack) {
 </div>
 
   </header>
-	<hr>
+	<p>Pigsty has some security best practices: encrypting network traffic with SSL and encrypting the Web interface with HTTPS.</p>
+<p>To achieve this, Pigsty comes with a built-in local self-signed Certificate Authority (CA) for issuing SSL certificates to encrypt network communication.</p>
+<p>By default, SSL and HTTPS are enabled but not enforced. For environments with higher security requirements, you can enforce the use of SSL and HTTPS.</p>
+<hr>
 <h2 id="local-ca">Local CA</h2>
-<p>By default, Pigsty initializes by generating a self-signed CA within the local Pigsty source directory on the management node. This CA can be used when SSL, digital signatures, and advanced security features are needed.</p>
-<p>The CA keys are located in the <code>/etc/pigsty/pki/ca</code> directory on the meta node.</p>
-<p>If you already have your own CA public and private keys, place them in the <code>files/ca/pki</code> directory and change the <a href="/docs/pgsql/config/#ca_method"><code>ca_method</code></a> to <code>copy</code>. Pigsty will then use the provided CA certificate and private key instead of generating a new one.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/etc/pki              <span style="color:#8f5902;font-style:italic"># Certificate directory</span>
-</span></span><span style="display:flex;"><span>/etc/pki/ca           <span style="color:#8f5902;font-style:italic"># CA directory</span>
-</span></span><span style="display:flex;"><span>/etc/pki/ca/ca.crt    <span style="color:#8f5902;font-style:italic"># CA certificate</span>
-</span></span><span style="display:flex;"><span>/etc/pki/ca/ca.key    <span style="color:#8f5902;font-style:italic"># CA private key</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/etc/pki              <span style="color:#8f5902;font-style:italic"># CA与证书目录</span>
-</span></span><span style="display:flex;"><span>/etc/pki/ca           <span style="color:#8f5902;font-style:italic"># CA证书目录</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>/etc/pki/ca/cert           <span style="color:#8f5902;font-style:italic"># CA证书目录</span>
-</span></span></code></pre></div><hr>
-<h2 id="check-cert-content">Check Cert Content</h2>
-<p>Use the following command to view the content of the Pigsty CA certificate.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openssl x509 -text -in /etc/pigsty/ca/ca.crt
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate:
+<p>Pigsty, by default, generates a self-signed CA in the Pigsty source code directory (<code>~/pigsty</code>) on the <a href="/docs/node/#admin节点">ADMIN node</a> during initialization. This CA is used when SSL, HTTPS, digital signatures, issuing database client certificates, and advanced security features are needed.</p>
+<p>Hence, each Pigsty deployment uses a unique CA, and CAs from different Pigsty deployments do not trust each other.</p>
+<p>The local CA consists of two files, typically located in the <code>files/pki/ca</code> directory:</p>
+<ul>
+<li><code>ca.crt</code>: The self-signed root CA certificate, which should be distributed and installed on all managed nodes for certificate verification.</li>
+<li><code>ca.key</code>: The CA private key, used to issue certificates and verify CA identity. It should be securely stored to prevent leaks!</li>
+</ul>
+
+
+<div class="alert alert-danger" role="alert">
+<h4 class="alert-heading">Protect Your CA Private Key File</h4>
+
+    Please securely store the CA private key file, do not lose it or let it leak. We recommend encrypting and backing up this file after completing the Pigsty installation.
+
+</div>
+
+<hr>
+<h2 id="using-an-existing-ca">Using an Existing CA</h2>
+<p>If you already have a CA public and private key infrastructure, Pigsty can also be configured to use an existing CA.</p>
+<p>Simply place your CA public and private key files in the <code>files/pki/ca</code> directory.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>files/pki/ca/ca.key     <span style="color:#8f5902;font-style:italic"># The essential CA private key file, must exist; if not, a new one will be randomly generated by default</span>
+</span></span><span style="display:flex;"><span>files/pki/ca/ca.crt     <span style="color:#8f5902;font-style:italic"># If a certificate file is absent, Pigsty will automatically generate a new root certificate file from the CA private key</span>
+</span></span></code></pre></div><p>When Pigsty executes the <a href="/docs/infra/#installyml"><strong><code>install.yml</code></strong></a> and <a href="/docs/infra/#infrayml"><strong><code>infra.yml</code></strong></a> playbooks for installation, if the <code>ca.key</code> private key file is found in the <code>files/pki/ca</code> directory, the existing CA will be used. The <code>ca.crt</code> file can be generated from the <code>ca.key</code> private key, so if there is no certificate file, Pigsty will automatically generate a new root certificate file from the CA private key.</p>
+
+
+<div class="alert alert-secondary" role="alert">
+<h4 class="alert-heading">Note When Using an Existing CA</h4>
+
+    You can configure the <a href="/docs/reference/param/#ca_method"><strong><code>ca_method</code></strong></a> parameter as <code>copy</code> to ensure that Pigsty reports an error and halts if it cannot find the local CA, rather than automatically regenerating a new self-signed CA.
+
+</div>
+
+<hr>
+<h2 id="trust-ca">Trust CA</h2>
+<p>During the Pigsty installation, <code>ca.crt</code> is distributed to all nodes under the <code>/etc/pki/ca.crt</code> path during the <code>node_ca</code> task in the <a href="/docs/node/#nodeyml"><strong><code>node.yml</code></strong></a> playbook.</p>
+<p>The default paths for trusted CA root certificates differ between EL family and Debian family operating systems, hence the distribution path and update methods also vary.</p>
+
+
+
+
+
+
+
+<ul class="nav nav-tabs" id="tabs-2" role="tablist">
+  <li class="nav-item">
+      <button class="nav-link disabled"
+          id="tabs-02-00-tab" data-bs-toggle="tab" data-bs-target="#tabs-02-00" role="tab"
+          aria-controls="tabs-02-00" aria-selected="false">
+        Trust CA
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link active"
+          id="tabs-02-01-tab" data-bs-toggle="tab" data-bs-target="#tabs-02-01" role="tab"
+          aria-controls="tabs-02-01" aria-selected="true">
+        EL
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link"
+          id="tabs-02-02-tab" data-bs-toggle="tab" data-bs-target="#tabs-02-02" role="tab"
+          aria-controls="tabs-02-02" aria-selected="false">
+        Debian/Ubuntu
+      </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="tabs-2-content">
+    <div class="tab-pane fade"
+        id="tabs-02-00" role="tabpanel" aria-labelled-by="tabs-02-00-tab" tabindex="2">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"></code></pre></div>
+    </div>
+    <div class="tab-pane fade show active"
+        id="tabs-02-01" role="tabpanel" aria-labelled-by="tabs-02-01-tab" tabindex="2">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>rm -rf /etc/pki/ca-trust/source/anchors/ca.crt
+</span></span><span style="display:flex;"><span>ln -s /etc/pki/ca.crt /etc/pki/ca-trust/source/anchors/ca.crt
+</span></span><span style="display:flex;"><span>/bin/update-ca-trust</span></span></code></pre></div>
+    </div>
+    <div class="tab-pane fade"
+        id="tabs-02-02" role="tabpanel" aria-labelled-by="tabs-02-02-tab" tabindex="2">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>rm -rf /usr/local/share/ca-certificates/ca.crt
+</span></span><span style="display:flex;"><span>ln -s /etc/pki/ca.crt /usr/local/share/ca-certificates/ca.crt
+</span></span><span style="display:flex;"><span>/usr/sbin/update-ca-certificates</span></span></code></pre></div>
+    </div>
+</div>
+
+<p>By default, Pigsty will issue HTTPS certificates for domain names used by web systems on infrastructure nodes, allowing you to access Pigsty&rsquo;s web systems via HTTPS.
+If you do not want your browser on the client computer to display &ldquo;untrusted CA certificate&rdquo; messages, you can distribute <code>ca.crt</code> to the trusted certificate directory on the client computer.</p>
+<p>You can double-click the <code>ca.crt</code> file to add it to the system keychain, for example, on macOS systems, you need to open &ldquo;Keychain Access,&rdquo; search for <code>pigsty-ca</code>, and then &ldquo;trust&rdquo; this root certificate.</p>
+<hr>
+<hr>
+<h2 id="check-cert">Check Cert</h2>
+<p>Use the following command to view the contents of the Pigsty CA certificate</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>openssl x509 -text -in /etc/pki/ca.crt
+</span></span></code></pre></div><details><summary>Local CA Root Cert Content</summary>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate:
 </span></span><span style="display:flex;"><span>    Data:
 </span></span><span style="display:flex;"><span>        Version: 3 (0x2)
 </span></span><span style="display:flex;"><span>        Serial Number:
-</span></span><span style="display:flex;"><span>            0b:e1:0b:39:c9:67:56:e5:b2:3d:6d:db:6a:b4:74:c5:50:0e:00:4e
-</span></span><span style="display:flex;"><span>    Signature Algorithm: sha256WithRSAEncryption
-</span></span><span style="display:flex;"><span>        Issuer: O=Pigsty CA, CN=pigsty-ca
+</span></span><span style="display:flex;"><span>            50:29:e3:60:96:93:f4:85:14:fe:44:81:73:b5:e1:09:2a:a8:5c:0a
+</span></span><span style="display:flex;"><span>        Signature Algorithm: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>        Issuer: O=pigsty, OU=ca, CN=pigsty-ca
 </span></span><span style="display:flex;"><span>        Validity
-</span></span><span style="display:flex;"><span>            Not Before: Jul 13 07:52:21 2022 GMT
-</span></span><span style="display:flex;"><span>            Not After : Jun 19 07:52:21 2122 GMT
-</span></span><span style="display:flex;"><span>        Subject: O=Pigsty CA, CN=pigsty-ca
+</span></span><span style="display:flex;"><span>            Not Before: Feb  7 00:56:27 2023 GMT
+</span></span><span style="display:flex;"><span>            Not After : Jan 14 00:56:27 2123 GMT
+</span></span><span style="display:flex;"><span>        Subject: O=pigsty, OU=ca, CN=pigsty-ca
 </span></span><span style="display:flex;"><span>        Subject Public Key Info:
 </span></span><span style="display:flex;"><span>            Public Key Algorithm: rsaEncryption
 </span></span><span style="display:flex;"><span>                Public-Key: (4096 bit)
 </span></span><span style="display:flex;"><span>                Modulus:
-</span></span><span style="display:flex;"><span>                    ........................................
-</span></span><span style="display:flex;"><span>                    73:09:b5
+</span></span><span style="display:flex;"><span>                    00:c1:41:74:4f:28:c3:3c:2b:13:a2:37:05:87:31:
+</span></span><span style="display:flex;"><span>                    ....
+</span></span><span style="display:flex;"><span>                    e6:bd:69:a5:5b:e3:b4:c0:65:09:6e:84:14:e9:eb:
+</span></span><span style="display:flex;"><span>                    90:f7:61
 </span></span><span style="display:flex;"><span>                Exponent: 65537 (0x10001)
 </span></span><span style="display:flex;"><span>        X509v3 extensions:
-</span></span><span style="display:flex;"><span>            X509v3 Subject Alternative Name:
+</span></span><span style="display:flex;"><span>            X509v3 Subject Alternative Name: 
 </span></span><span style="display:flex;"><span>                DNS:pigsty-ca
-</span></span><span style="display:flex;"><span>            X509v3 Key Usage:
+</span></span><span style="display:flex;"><span>            X509v3 Key Usage: 
 </span></span><span style="display:flex;"><span>                Digital Signature, Certificate Sign, CRL Sign
 </span></span><span style="display:flex;"><span>            X509v3 Basic Constraints: critical
 </span></span><span style="display:flex;"><span>                CA:TRUE, pathlen:1
-</span></span><span style="display:flex;"><span>            X509v3 Subject Key Identifier:
-</span></span><span style="display:flex;"><span>                ........................................
+</span></span><span style="display:flex;"><span>            X509v3 Subject Key Identifier: 
+</span></span><span style="display:flex;"><span>                C5:F6:23:CE:BA:F3:96:F6:4B:48:A5:B1:CD:D4:FA:2B:BD:6F:A6:9C
 </span></span><span style="display:flex;"><span>    Signature Algorithm: sha256WithRSAEncryption
-</span></span><span style="display:flex;"><span>         ........................................
+</span></span><span style="display:flex;"><span>    Signature Value:
+</span></span><span style="display:flex;"><span>        89:9d:21:35:59:6b:2c:9b:c7:6d:26:5b:a9:49:80:93:81:18:
+</span></span><span style="display:flex;"><span>        ....
+</span></span><span style="display:flex;"><span>        9e:dd:87:88:0d:c4:29:9e
 </span></span><span style="display:flex;"><span>-----BEGIN CERTIFICATE-----
-</span></span><span style="display:flex;"><span>........................................
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>cXyWAYcvfPae3YeIDcQpng==
 </span></span><span style="display:flex;"><span>-----END CERTIFICATE-----
-</span></span></code></pre></div><hr>
+</span></span></code></pre></div></details>
+<hr>
 <h2 id="issue-database-client-certs">Issue Database Client Certs</h2>
 <p>If you wish to authenticate via client certificates, you can manually issue PostgreSQL client certificates using the local CA and the <a href="https://github.com/Vonng/pigsty/blob/master/cert.yml">cert.yml</a> playbook.</p>
 <p>Set the certificate&rsquo;s <code>CN</code> field to the database username:</p>
@@ -797,7 +887,7 @@ if (!doNotTrack) {
 </script>
 <br />
 <div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-03-07: <a href="https://github.com/Vonng/pigsty.cc/commit/47209677a9a44556df623ffe4583706b283154be">add ca / iac in en/docs (4720967)</a>
 </div>
 
 </div>

@@ -26,12 +26,12 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/admin/slow-query/" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2021-02-01T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-03-01T21:27:45+08:00" />
+<meta property="article:modified_time" content="2024-03-07T10:24:39+08:00" />
 
 <meta itemprop="name" content="PG慢查询诊断方法论">
 <meta itemprop="description" content="慢查询是在线业务数据库的大敌，本文介绍了使用监控系统定位诊断慢查询的一般方法论。
 "><meta itemprop="datePublished" content="2021-02-01T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-03-01T21:27:45+08:00" />
+<meta itemprop="dateModified" content="2024-03-07T10:24:39+08:00" />
 <meta itemprop="wordCount" content="222">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="PG慢查询诊断方法论"/>
 <meta name="twitter:description" content="慢查询是在线业务数据库的大敌，本文介绍了使用监控系统定位诊断慢查询的一般方法论。
@@ -99,7 +99,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.8af538314d1eb96f60e9aa1cd758b1f5.json"
+    data-offline-search-index-json-src="/offline-search-index.d193f2d3f97b54ade42568d60fc8ba7f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -123,7 +123,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.8af538314d1eb96f60e9aa1cd758b1f5.json"
+    data-offline-search-index-json-src="/offline-search-index.d193f2d3f97b54ade42568d60fc8ba7f.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -305,6 +305,10 @@ if (!doNotTrack) {
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddba-vs-rds-li">
   <input type="checkbox" id="m-zhblogclouddba-vs-rds-check"/>
   <label for="m-zhblogclouddba-vs-rds-check"><a href="/zh/blog/cloud/dba-vs-rds/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddba-vs-rds"><span class="">DBA会被云淘汰吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudaliyun-depreciate-li">
+  <input type="checkbox" id="m-zhblogcloudaliyun-depreciate-check"/>
+  <label for="m-zhblogcloudaliyun-depreciate-check"><a href="/zh/blog/cloud/aliyun-depreciate/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudaliyun-depreciate"><span class=""></span></a></label>
   
 </li>
   </ul>
@@ -953,7 +957,7 @@ if (!doNotTrack) {
 <p>监控系统就可以更全面地回答关于慢查询的问题。监控系统中的数据是由无数<strong>历史快照</strong>组成的（如5秒一次快照采样）。因此用户可以回溯至任意时间点，考察不同时间段内查询平均响应时间的变化。</p>
 <p><img src="/img/concept/slow-query.jpg"></p>
 <blockquote>
-<p>上图是Pigsty中 <a href="/zh/docs/monitoring/database/pg-query-detail/">PG Query Detail</a>提供的界面，这里展现出了单个查询的详细信息。</p>
+<p>上图是Pigsty中 <a href="/zh/docs/pgsql/dasdhboard/">PG Query Detail</a>提供的界面，这里展现出了单个查询的详细信息。</p>
 <p>这是一个典型的慢查询，平均响应时间几秒钟。为它添加了一个索引后。从右中Query RT仪表盘的上可以看到，查询的平均响应世界从几秒降到了几毫秒。</p>
 </blockquote>
 <p>用户可以利用监控系统提供的<strong>洞察</strong>迅速定位数据库中的慢查询，定位问题，提出猜想。更重要的是，用户可以<strong>即时地</strong>在不同层次审视表与查询的详细指标，应用解决方案并获取<strong>实时反馈</strong>，这对于紧急故障处理是非常有帮助的。</p>
@@ -963,7 +967,7 @@ if (!doNotTrack) {
 <blockquote>
 <p>Talk is cheap, show me the code</p>
 </blockquote>
-<p>假设用户已经拥有一个 <a href="/zh/docs/sandbox/">Pigsty沙箱演示环境</a>，下面将使用Pigsty沙箱，演示模拟的慢查询定位与处理流程。</p>
+<p>假设用户已经拥有一个 <a href="/zh/docs/setup/provision/">Pigsty沙箱演示环境</a>，下面将使用Pigsty沙箱，演示模拟的慢查询定位与处理流程。</p>
 <hr>
 <h3 id="慢查询模拟">慢查询：模拟</h3>
 <p>因为没有实际的业务系统，这里我们以一种简单快捷的方式模拟系统中的慢查询。即<code>pgbench</code>自带的类<code>tpc-b</code>场景。</p>
@@ -975,20 +979,20 @@ if (!doNotTrack) {
 </span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">while</span> true<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87;font-weight:bold">do</span> pgbench -nv -P1 -c40 --select-only --rate<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">1000</span> -T10 postgres://test:test@pg-test:5434/test<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87;font-weight:bold">done</span>
 </span></span></code></pre></div><p>现在我们已经有了一个模拟运行中的业务系统，让我们通过简单粗暴的方式来模拟一个慢查询场景。在<code>pg-test</code>集群的主库上执行以下命令，删除表<code>pgbench_accounts</code>的主键：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts_pkey</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>该命令会移除 <code>pgbench_accounts</code> 表上的主键，导致<strong>相关查询</strong>从索引扫描变为顺序全表扫描，全部变为慢查询，访问<a href="/zh/docs/monitoring/instance/pg-instance/">PG Instance</a> ➡️ Query ➡️ QPS，结果如下图所示：</p>
+</span></span></span></code></pre></div><p>该命令会移除 <code>pgbench_accounts</code> 表上的主键，导致<strong>相关查询</strong>从索引扫描变为顺序全表扫描，全部变为慢查询，访问<a href="/zh/zh/docs/pgsql/dasdhboard">PG Instance</a> ➡️ Query ➡️ QPS，结果如下图所示：</p>
 <p><img src="/img/blog/pg/slow-query-1.jpg"></p>
 <blockquote>
 <p>图1：平均查询响应时间从1ms飙升为300ms，单个从库实例的QPS从500下降至7。</p>
 </blockquote>
-<p>与此同时，实例因为慢查询堆积，系统会在瞬间<strong>雪崩过载</strong>，访问<a href="/zh/docs/monitoring/cluster/pg-cluster/">PG Cluster</a>首页，可以看到集群负载出现飙升。</p>
+<p>与此同时，实例因为慢查询堆积，系统会在瞬间<strong>雪崩过载</strong>，访问<a href="/zh/zh/docs/pgsql/dasdhboard">PG Cluster</a>首页，可以看到集群负载出现飙升。</p>
 <p><img src="/img/blog/pg/slow-query-2.png"></p>
 <blockquote>
 <p>图2：系统负载达到200%，触发机器负载过大，与查询响应时间过长的报警规则。</p>
 </blockquote>
 <hr>
 <h3 id="慢查询定位">慢查询：定位</h3>
-<p>首先，使用<a href="/zh/docs/monitoring/cluster/pg-cluster/">PG Cluster</a>面板定位慢查询所在的具体实例，这里以 <code>pg-test-2</code> 为例。</p>
-<p>然后，使用<a href="/zh/docs/monitoring/database/pg-query/">PG Query</a>面板定位具体的慢查询：编号为 <strong>-6041100154778468427</strong></p>
+<p>首先，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Cluster</a>面板定位慢查询所在的具体实例，这里以 <code>pg-test-2</code> 为例。</p>
+<p>然后，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Query</a>面板定位具体的慢查询：编号为 <strong>-6041100154778468427</strong></p>
 <p><img src="/img/blog/pg/slow-query-3.jpg"></p>
 <blockquote>
 <p>图3：从查询总览中发现异常慢查询</p>
@@ -1000,7 +1004,7 @@ if (!doNotTrack) {
 <li>花费在该查询上的时间占比显著增加</li>
 </ul>
 <p>可以确定，就是这个查询变慢了！</p>
-<p>接下来，利用<a href="/zh/docs/monitoring/instance/pg-stat-statements/">PG Stat Statements</a>面板或<a href="/zh/docs/monitoring/database/pg-query-detail/">PG Query Detail</a>，根据查询ID定位慢查询的<strong>具体语句</strong>。</p>
+<p>接下来，利用<a href="/zh/zh/docs/pgsql/dasdhboard/">PG Stat Statements</a>面板或<a href="/zh/zh/docs/pgsql/dasdhboard">PG Query Detail</a>，根据查询ID定位慢查询的<strong>具体语句</strong>。</p>
 <p><img src="/img/blog/pg/slow-query-4.png"></p>
 <blockquote>
 <p>图4：定位查询语句为<code>SELECT abalance FROM pgbench_accounts WHERE aid = $1</code></p>
@@ -1012,8 +1016,8 @@ if (!doNotTrack) {
 </span></span></span></code></pre></div><p>该查询以 <code>aid</code> 作为过滤条件查询 <code>pgbench_accounts</code> 表，如此简单的查询变慢，大概率是这张表上的索引出了问题。 <em>用屁股想都知道是索引少了，因为就是我们自己删掉的嘛！</em></p>
 <p>分析查询后， 可以<strong>提出猜想</strong>： 该查询变慢是<code>pgbench_accounts</code>表上<code>aid</code>列缺少索引。</p>
 <p>下一步，我们就要<strong>验证猜想</strong>。</p>
-<p>第一步，使用<a href="/zh/docs/monitoring/database/pg-table-catalog/">PG Table Catalog</a>，我们可以检视表的详情，例如表上建立的索引。</p>
-<p>第二步，查阅 <a href="/zh/docs/monitoring/database/pg-table-detail/">PG Table Detail</a> 面板，检查 <code>pgbench_accounts</code> 表上的访问，来验证我们的猜想</p>
+<p>第一步，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Table Catalog</a>，我们可以检视表的详情，例如表上建立的索引。</p>
+<p>第二步，查阅 <a href="/zh/zh/docs/pgsql/dasdhboard">PG Table Detail</a> 面板，检查 <code>pgbench_accounts</code> 表上的访问，来验证我们的猜想</p>
 <p><img src="/img/blog/pg/slow-query-5.png"></p>
 <blockquote>
 <p>图5： <code>pgbench_accounts</code> 表上的访问情况</p>
@@ -1077,7 +1081,7 @@ if (!doNotTrack) {
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-03-01: <a href="https://github.com/Vonng/pigsty.cc/commit/ba0fa2bf42872bf8e12429efa3667298ed08766e">update blog images (ba0fa2b)</a>
+  Last modified 2024-03-07: <a href="https://github.com/Vonng/pigsty.cc/commit/47209677a9a44556df623ffe4583706b283154be">add ca / iac in en/docs (4720967)</a>
 </div>
 </div>
 

@@ -4361,19 +4361,141 @@ Cluster services will be &lt;a href=&#34;/docs/pgsql/admin/#reload-service&#34;&
         
         
         &lt;hr&gt;
-&lt;h2 id=&#34;high-availability&#34;&gt;High Availability&lt;/h2&gt;
+&lt;h2 id=&#34;overview&#34;&gt;Overview&lt;/h2&gt;
 &lt;blockquote&gt;
 &lt;p&gt;Primary Failure RTO ≈ 30s, RPO &amp;lt; 1MB, Replica Failure RTO≈0 (reset current conn)&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;Pigsty&amp;rsquo;s PostgreSQL cluster has battery-included high-availability powered by &lt;a href=&#34;https://patroni.readthedocs.io/en/latest/&#34;&gt;patroni&lt;/a&gt;, &lt;a href=&#34;https://etcd.io/&#34;&gt;etcd&lt;/a&gt;, and &lt;a href=&#34;http://www.haproxy.org/&#34;&gt;haproxy&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pigsty-ha.png&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;When the primary fails, one of the replicas will be promoted to primary automatically, and read-write traffic will be routed to the new primary immediately. The impact is: write queries will be blocked for 15 ~ 40s until the new leader is elected.&lt;/p&gt;
-&lt;p&gt;When a replica fails, read-only traffic will be routed to the other replicas, if all replicas fail, read-only traffic will fall back to the primary. The impact would be very small: a few running queries on that replica will abort due to a connection reset.&lt;/p&gt;
-&lt;p&gt;Failure detection is done by &lt;code&gt;patroni&lt;/code&gt; and &lt;code&gt;etcd&lt;/code&gt;, the leader will hold a lease, and if it fails, the lease will be released due to timeout, and the other instance will elect a new leader to take over.&lt;/p&gt;
+&lt;p&gt;Pigsty&amp;rsquo;s PostgreSQL cluster has battery-included high-availability powered by &lt;a href=&#34;https://patroni.readthedocs.io/en/latest/&#34;&gt;Patroni&lt;/a&gt;, &lt;a href=&#34;https://etcd.io/&#34;&gt;Etcd&lt;/a&gt;, and &lt;a href=&#34;http://www.haproxy.org/&#34;&gt;HAProxy&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;When your have two or more instances in the PostgreSQL cluster, you have the ability to self-healing from hardware failures without any further configuration — as long as any instance within the cluster survives, the cluster can serve its services. Clients simply need to connect to any node in the cluster to obtain full services without worrying about replication topology changes.&lt;/p&gt;
+&lt;p&gt;By default, the recovery time objective (RTO) for primary failure is approximately 30s ~ 60s, and the data recovery point objective (RPO) is &amp;lt; 1MB; for standby failure, RPO = 0, RTO ≈ 0 (instantaneous). In consistency-first mode, zero data loss during failover is guaranteed: RPO = 0. These metrics can be &lt;a href=&#34;/docs/concept/ha/#trade-offs&#34;&gt;&lt;strong&gt;configured as needed&lt;/strong&gt;&lt;/a&gt; based on your actual hardware conditions and reliability requirements.&lt;/p&gt;
+&lt;p&gt;Pigsty incorporates an HAProxy load balancer for automatic traffic switching, offering multiple access methods for clients such as DNS/VIP/LVS. Failovers and switchover are almost imperceptible to the business side except for sporadic interruptions, meaning applications do not need connection string modifications or restarts.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty-ha&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;What problems does High-Availability solve?&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Elevates the availability aspect of data safety C/IA to a new height: RPO ≈ 0, RTO &amp;lt; 30s.&lt;/li&gt;
+&lt;li&gt;Enables seamless rolling maintenance capabilities, minimizing maintenance window requirements for great convenience.&lt;/li&gt;
+&lt;li&gt;Hardware failures can self-heal immediately without human intervention, allowing operations DBAs to sleep soundly.&lt;/li&gt;
+&lt;li&gt;Standbys can carry read-only requests, sharing the load with the primary to make full use of resources.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;What are the costs of High Availability?&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Infrastructure dependency: High availability relies on DCS (etcd/zk/consul) for consensus.&lt;/li&gt;
+&lt;li&gt;Increased entry barrier: A meaningful high-availability deployment environment requires at least &lt;strong&gt;three nodes&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Additional resource consumption: Each new standby consumes additional resources, which isn&amp;rsquo;t a major issue.&lt;/li&gt;
+&lt;li&gt;Significantly higher complexity costs: Backup costs significantly increase, requiring tools to manage complexity.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Limitations of High Availability&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Since replication is real-time, all changes are immediately applied to the standby. Thus, high-availability solutions based on streaming replication cannot address human errors and software defects that cause data deletions or modifications. (e.g., &lt;code&gt;DROP TABLE&lt;/code&gt;, or &lt;code&gt;DELETE&lt;/code&gt; data)
+Such failures require the use of &lt;a href=&#34;/docs/pgsql/config/#延迟集群&#34;&gt;&lt;strong&gt;Delayed Clusters&lt;/strong&gt;&lt;/a&gt; or &lt;a href=&#34;/docs/concept/pitr/&#34;&gt;&lt;strong&gt;Point-In-Time Recovery&lt;/strong&gt;&lt;/a&gt; using previous base backups and WAL archives.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;Strategy&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;RTO (Time to Recover)&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;RPO (Max Data Loss)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Standalone + &lt;i class=&#34;fa-solid fa-music text-danger&#34;&gt;&lt;/i&gt; Do Nothing&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;Permanent data loss, irrecoverable&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;Total data loss&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Standalone + &lt;i class=&#34;fa-solid fa-copy text-secondary&#34;&gt;&lt;/i&gt; Basic Backup&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; Depends on backup size and bandwidth (hours)&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; Loss of data since last backup (hours to days)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Standalone + &lt;i class=&#34;fa-solid fa-copy text-primary&#34;&gt;&lt;/i&gt; Basic Backup + &lt;br&gt;&lt;i class=&#34;fa-solid fa-clock-rotate-left text-primary&#34;&gt;&lt;/i&gt; WAL Archiving&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; Depends on backup size and bandwidth (hours)&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; Loss of last unarchived data (tens of MB)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Primary-Replica + &lt;i class=&#34;fa-solid fa-wrench text-secondary&#34;&gt;&lt;/i&gt; Manual Failover&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; Dozens of minutes&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; Replication Lag (about 100KB)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Primary-Replica + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; Auto Failover&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; Within a minute&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; Replication Lag (about 100KB)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Primary-Replica + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; Auto Failover + &lt;br&gt;&lt;i class=&#34;fa-solid fa-rotate text-success&#34;&gt;&lt;/i&gt; Synchronous Commit&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; Within a minute&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; No data loss&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;implementation&#34;&gt;Implementation&lt;/h2&gt;
+&lt;p&gt;In Pigsty, the high-availability architecture works as follows:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;PostgreSQL uses standard streaming replication to set up physical standby databases. In case of a primary database failure, the standby takes over.&lt;/li&gt;
+&lt;li&gt;Patroni is responsible for managing PostgreSQL server processes and handles high-availability-related matters.&lt;/li&gt;
+&lt;li&gt;Etcd provides Distributed Configuration Store (DCS) capabilities and is used for leader election after a failure.&lt;/li&gt;
+&lt;li&gt;Patroni relies on Etcd to reach a consensus on cluster leadership and offers a health check interface to the outside.&lt;/li&gt;
+&lt;li&gt;HAProxy exposes cluster services externally and utilizes the Patroni health check interface to automatically route traffic to healthy nodes.&lt;/li&gt;
+&lt;li&gt;vip-manager offers an optional layer 2 VIP, retrieves leader information from Etcd, and binds the VIP to the node hosting the primary database.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Upon primary database failure, a new round of leader election is triggered. The healthiest standby in the cluster (with the highest LSN and least data loss) wins and is promoted to the new primary. After the promotion of the winning standby, read-write traffic is immediately routed to the new primary.
+The impact of a primary failure is &lt;strong&gt;temporary unavailability of write services&lt;/strong&gt;: from the primary&amp;rsquo;s failure to the promotion of a new primary, write requests will be blocked or directly fail, typically lasting 15 to 30 seconds, usually not exceeding 1 minute.&lt;/p&gt;
+&lt;p&gt;When a standby fails, read-only traffic is routed to other standbys. If all standbys fail, the primary will eventually carry the read-only traffic.
+The impact of a standby failure is &lt;strong&gt;partial read-only query interruption&lt;/strong&gt;: queries currently running on the failed standby will be aborted due to connection reset and immediately taken over by another available standby.&lt;/p&gt;
+&lt;p&gt;Failure detection is jointly completed by Patroni and Etcd. The cluster leader holds a lease,
+if the cluster leader fails to renew the lease in time (10s) due to a failure, the lease will be released, triggering a &lt;strong&gt;failover&lt;/strong&gt; and a new round of cluster elections.&lt;/p&gt;
+&lt;p&gt;Even without any failures, you can still proactively perform a &lt;a href=&#34;/docs/pgsql/admin/#主动切换&#34;&gt;&lt;strong&gt;Switchover&lt;/strong&gt;&lt;/a&gt; to change the primary of the cluster. In this case, write queries on the primary will be interrupted and immediately routed to the new primary for execution. This operation can typically be used for rolling maintenance/upgrades of the database server.&lt;/p&gt;
 &lt;hr&gt;
 &lt;h1 id=&#34;trade-offs&#34;&gt;Trade Offs&lt;/h1&gt;
 &lt;p&gt;The ttl can be tuned with &lt;a href=&#34;/docs/reference/param/#pg_rto&#34;&gt;&lt;code&gt;pg_rto&lt;/code&gt;&lt;/a&gt;, which is 30s by default, increasing it will cause longer failover wait time, while decreasing it will increase the false-positive failover rate (e.g. network jitter).&lt;/p&gt;
 &lt;p&gt;Pigsty will use &lt;strong&gt;availability first&lt;/strong&gt; mode by default, which means when primary fails, it will try to failover ASAP, data not replicated to the replica may be lost (usually 100KB), and the max potential data loss is controlled by &lt;a href=&#34;/docs/reference/param/#pg_rpo&#34;&gt;&lt;code&gt;pg_rpo&lt;/code&gt;&lt;/a&gt;, which is 1MB by default.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Recovery Time Objective (RTO)&lt;/strong&gt; and &lt;strong&gt;Recovery Point Objective (RPO)&lt;/strong&gt; are two parameters that need careful consideration when designing a high-availability cluster.&lt;/p&gt;
+&lt;p&gt;The default values of &lt;strong&gt;RTO&lt;/strong&gt; and &lt;strong&gt;RPO&lt;/strong&gt; used by Pigsty meet the reliability requirements for most scenarios. You can adjust them based on your hardware level, network quality, and business needs.&lt;/p&gt;
+
+
+&lt;div class=&#34;alert alert-danger&#34; role=&#34;alert&#34;&gt;
+&lt;h4 class=&#34;alert-heading&#34;&gt;Smaller RTO and RPO are not always better!&lt;/h4&gt;
+
+    A smaller RTO increases the likelihood of false positives, and a smaller RPO reduces the probability of successful automatic failovers.
+
+&lt;/div&gt;
+
+&lt;p&gt;The maximum duration of unavailability during a failover is controlled by the &lt;a href=&#34;/docs/reference/param/#pg_rto&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_rto&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; parameter, with a default value of &lt;code&gt;30s&lt;/code&gt;. Increasing it will lead to a longer duration of unavailability for write operations during primary failover, while decreasing it will increase the rate of false failovers (e.g., due to brief network jitters).&lt;/p&gt;
+&lt;p&gt;The upper limit of potential data loss is controlled by the &lt;a href=&#34;/docs/reference/param/#pg_rpo&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_rpo&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; parameter, defaulting to &lt;code&gt;1MB&lt;/code&gt;. Lowering this value can reduce the upper limit of data loss during failovers but also increases the likelihood of refusing automatic failovers due to insufficiently healthy standbys (too far behind).&lt;/p&gt;
+&lt;p&gt;Pigsty defaults to an &lt;strong&gt;availability-first&lt;/strong&gt; mode, meaning that it will proceed with a failover as quickly as possible when the primary fails, and data not yet replicated to the standby might be lost (under regular ten-gigabit networks, replication delay is usually between a few KB to 100KB).&lt;/p&gt;
+&lt;p&gt;If you need to ensure no data loss during failovers, you can use the &lt;a href=&#34;/docs/reference/param/#pg_conf&#34;&gt;&lt;strong&gt;&lt;code&gt;crit.yml&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; template to ensure no data loss during failovers, but this will come at the cost of some performance.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;parameters&#34;&gt;Parameters&lt;/h2&gt;
+&lt;h3 id=&#34;pg_rtodocsreferenceparampg_rto&#34;&gt;&lt;a href=&#34;/docs/reference/param/#pg_rto&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_rto&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;name: &lt;code&gt;pg_rto&lt;/code&gt;, type: &lt;code&gt;int&lt;/code&gt;, level: &lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;recovery time objective in seconds, This will be used as Patroni TTL value, &lt;code&gt;30&lt;/code&gt;s by default.&lt;/p&gt;
+&lt;p&gt;If a primary instance is missing for such a long time, a new leader election will be triggered.&lt;/p&gt;
+&lt;p&gt;Decrease the value can reduce the unavailable time (unable to write) of the cluster during failover,
+but it will make the cluster more sensitive to network jitter, thus increase the chance of false-positive failover.&lt;/p&gt;
+&lt;p&gt;Config this according to your network condition and expectation to &lt;strong&gt;trade-off between chance and impact&lt;/strong&gt;,
+the default value is 30s, and it will be populated to the following patroni parameters:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# the TTL to acquire the leader lock (in seconds). Think of it as the length of time before initiation of the automatic failover process. Default value: 30&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;ttl&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_rto }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# the number of seconds the loop will sleep. Default value: 10 , this is patroni check loop interval&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;loop_wait&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;(pg_rto / 3)|round(0, &amp;#39;ceil&amp;#39;)|int }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# timeout for DCS and PostgreSQL operation retries (in seconds). DCS or network issues shorter than this will not cause Patroni to demote the leader. Default value: 10&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retry_timeout&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;(pg_rto / 3)|round(0, &amp;#39;ceil&amp;#39;)|int }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# the amount of time a primary is allowed to recover from failures before failover is triggered (in seconds), Max RTO: 2 loop wait + primary_start_timeout&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;primary_start_timeout&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;(pg_rto / 3)|round(0, &amp;#39;ceil&amp;#39;)|int }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;pg_rpodocsreferenceparampg_rpo&#34;&gt;&lt;a href=&#34;/docs/reference/param/#pg_rpo&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_rpo&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;name: &lt;code&gt;pg_rpo&lt;/code&gt;, type: &lt;code&gt;int&lt;/code&gt;, level: &lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;recovery point objective in bytes, &lt;code&gt;1MiB&lt;/code&gt; at most by default&lt;/p&gt;
+&lt;p&gt;default values: &lt;code&gt;1048576&lt;/code&gt;, which will tolerate at most 1MiB data loss during failover.&lt;/p&gt;
+&lt;p&gt;when the primary is down and all replicas are lagged, you have to make a tough choice to &lt;strong&gt;trade off between Availability and Consistency&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Promote a replica to be the new primary and bring system back online ASAP, with the price of an acceptable data loss (e.g. less than 1MB).&lt;/li&gt;
+&lt;li&gt;Wait for the primary to come back (which may never be) or human intervention to avoid any data loss.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;You can use &lt;code&gt;crit.yml&lt;/code&gt;  &lt;a href=&#34;/docs/reference/param/#pg_conf&#34;&gt;&lt;strong&gt;&lt;code&gt;crit.yml&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; template to ensure no data loss during failover, but it will sacrifice some performance.&lt;/p&gt;
 
       </description>
     </item>
