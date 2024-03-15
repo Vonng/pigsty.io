@@ -5,7 +5,7 @@
     <description>Recent content in PostgreSQL on Pigsty</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 27 Nov 2023 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 04 Mar 2024 00:00:00 +0000</lastBuildDate>
     
 	  <atom:link href="/categories/postgresql/index.xml" rel="self" type="application/rss+xml" />
     
@@ -25,6 +25,251 @@
         
         
         
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: PostgreSQL is eating the database world</title>
+      <link>/blog/pg/pg-eat-db-world/</link>
+      <pubDate>Mon, 04 Mar 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/blog/pg/pg-eat-db-world/</guid>
+      <description>
+        
+        
+        &lt;p&gt;PostgreSQL isn&amp;rsquo;t just a simple relational database; it&amp;rsquo;s a data management framework with the potential to engulf the entire database realm. The trend of &amp;ldquo;Using Postgres for Everything&amp;rdquo; is no longer limited to a few elite teams but is becoming a mainstream best practice.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;olaps-new-challenger&#34;&gt;OLAP&amp;rsquo;s New Challenger&lt;/h2&gt;
+&lt;p&gt;In a 2016 database meetup, I argued that a significant gap in the PostgreSQL ecosystem was the lack of a &lt;strong&gt;sufficiently good&lt;/strong&gt; columnar storage analysis extension for OLAP. While PostgreSQL itself offers lots of analysis features for analytic tasks, its performance in full-scale analysis on larger datasets doesn&amp;rsquo;t quite measure up to dedicated real-time data warehouses.&lt;/p&gt;
+&lt;p&gt;Consider &lt;a href=&#34;https://benchmark.clickhouse.com/&#34;&gt;ClickBench&lt;/a&gt;, an analytics performance benchmark, where we&amp;rsquo;ve documented the performance of PostgreSQL, its ecosystem extensions, and compatible derivative databases. The untuned PostgreSQL performs poorly (&lt;strong&gt;x1050&lt;/strong&gt;), but with optimization, it can reach (&lt;strong&gt;x47&lt;/strong&gt;). Additionally, there are three analysis-related extensions: columnar store &lt;strong&gt;Hydra&lt;/strong&gt; (&lt;strong&gt;x42&lt;/strong&gt;), time-series &lt;strong&gt;TimescaleDB&lt;/strong&gt; (&lt;strong&gt;x103&lt;/strong&gt;), and distributed &lt;strong&gt;Citus&lt;/strong&gt; (&lt;strong&gt;x262&lt;/strong&gt;).&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pg-eat-clickbench.png&#34; src=&#34;/img/blog/pg/pg-eat-clickbench-en.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;This performance can&amp;rsquo;t be considered bad, especially compared to pure OLTP databases like MySQL and MariaDB (&lt;strong&gt;x3065, x19700&lt;/strong&gt;); however, its third-tier performance is not &amp;ldquo;good enough,&amp;rdquo; lagging behind the first-tier OLAP components like Umbra, ClickHouse, Databend, SelectDB (&lt;strong&gt;x3~x4&lt;/strong&gt;) by an order of magnitude. It&amp;rsquo;s a tough spot - not satisfying enough to use, but too good to discard.&lt;/p&gt;
+&lt;p&gt;However, the arrival of &lt;a href=&#34;https://www.paradedb.com/&#34;&gt;&lt;strong&gt;ParadeDB&lt;/strong&gt;&lt;/a&gt; and &lt;a href=&#34;https://duckdb.org/&#34;&gt;&lt;strong&gt;DuckDB&lt;/strong&gt;&lt;/a&gt; changed the game!&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;ParadeDB&lt;/strong&gt;&amp;rsquo;s native PG extension &lt;strong&gt;pg_analytics&lt;/strong&gt; achieves second-tier performance (&lt;strong&gt;x10&lt;/strong&gt;), narrowing the gap to the top tier to just 3–4x. Given the additional benefits, this level of performance discrepancy is often acceptable - ACID, freshness and real-time data without ETL, no additional learning curve, no maintenance of separate services, not to mention its ElasticSearch grade full-text search capabilities.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;DuckDB&lt;/strong&gt; focuses on pure OLAP, pushing analysis performance to the extreme (&lt;strong&gt;x3.2&lt;/strong&gt;) - excluding the academically focused, close-source database Umbra, DuckDB is arguably the fastest for practical OLAP performance. It&amp;rsquo;s not a PG extension, but as an embedded file database, PostgreSQL can fully leverage DuckDB&amp;rsquo;s analysis performance boost through projects like &lt;a href=&#34;https://github.com/alitrack/duckdb_fdw&#34;&gt;&lt;strong&gt;DuckDB FDW&lt;/strong&gt;&lt;/a&gt; and &lt;a href=&#34;https://github.com/hydradatabase/pg_quack&#34;&gt;&lt;strong&gt;pg_quack&lt;/strong&gt;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The emergence of ParadeDB and DuckDB propels PostgreSQL&amp;rsquo;s analysis capabilities to the top tier of OLAP, filling the last crucial gap in its OLAP performance.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;the-pendulum-of-database-realm&#34;&gt;The Pendulum of Database Realm&lt;/h2&gt;
+&lt;p&gt;The distinction between OLTP and OLAP didn&amp;rsquo;t exist at the inception of databases. The separation of OLAP data warehouses from databases emerged in the 1990s due to traditional OLTP databases struggling to support the query patterns and performance demands of analytics scenarios.&lt;/p&gt;
+&lt;p&gt;For a long time, best practice in data processing involved using MySQL/PostgreSQL for OLTP workloads and syncing data to specialized OLAP systems like Greenplum, ClickHouse, Doris, Snowflake, etc., through ETL processes.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/pg/pg-eat-ddia.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Like many &amp;ldquo;specialized databases,&amp;rdquo; the strength of dedicated OLAP systems often lies in &lt;strong&gt;performance&lt;/strong&gt; — achieving 1-3 orders of magnitude improvement over native PG or MySQL. The cost, however, is redundant data, excessive data movement, lack of agreement on data values among distributed components, extra labor expense for specialized skills, extra licensing costs, limited query language power, programmability and extensibility, limited tool integration, poor data integrity and availability compared with a complete DMBS.&lt;/p&gt;
+&lt;p&gt;However, as the saying goes, &amp;ldquo;What goes around comes around&amp;rdquo;. With &lt;a href=&#34;/blog/cloud/bonus/&#34;&gt;hardware improving over thirty years following Moore&amp;rsquo;s Law&lt;/a&gt;, performance has increased exponentially while costs have plummeted. In 2024, a single x86 machine can have 512 cores, several TBs of RAM, a single NVMe SSD can hold up to 64TB, and a single all-flash rack can reach 2PB; object storage like S3 offers virtually unlimited storage.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/blog/cloud/bonus/&#34;&gt;&lt;img alt=&#34;io-bandwidth.png&#34; src=&#34;/img/blog/cloud/bonus-io-bandwidth.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Hardware advancements have solved the data volume issue, while software developments in databases (PostgreSQL, ParadeDB, DuckDB) have addressed access method challenges. This puts the fundamental assumptions of the analytics sector — the so-called &amp;ldquo;big data&amp;rdquo; industry — under scrutiny.&lt;/p&gt;
+&lt;p&gt;As DuckDB&amp;rsquo;s manifesto &lt;a href=&#34;https://motherduck.com/blog/big-data-is-dead/&#34;&gt;&amp;quot;&lt;strong&gt;Big Data is Dead&lt;/strong&gt;&amp;quot;&lt;/a&gt; suggests, &lt;strong&gt;the era of big data is over&lt;/strong&gt;. Most people don&amp;rsquo;t have that much data, and most data is seldom queried. The frontier of big data recedes as hardware and software evolve, rendering &amp;ldquo;big data&amp;rdquo; unnecessary for 99% of scenarios.&lt;/p&gt;
+&lt;p&gt;If 99% of use cases can now be handled on a single machine with standalone DuckDB or PostgreSQL (and its replicas), what&amp;rsquo;s the point of using dedicated analytics components? If every smartphone can send and receive texts freely, what&amp;rsquo;s the point of pagers? (With the caveat that North American hospitals still use pagers, indicating that maybe less than 1% of scenarios might genuinely need &amp;ldquo;big data.&amp;rdquo;)&lt;/p&gt;
+&lt;p&gt;The shift in fundamental assumptions is steering the database world from a phase of diversification back to convergence, from a big bang to a mass extinction. In this process, a new era of unified, super-converged databases will emerge, reuniting OLTP and OLAP. But who will lead this monumental task of reconsolidating the database field?&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;postgresql-the-database-world-eater&#34;&gt;PostgreSQL: The Database World Eater&lt;/h2&gt;
+&lt;p&gt;In the database realm, there&amp;rsquo;s a plethora of niches: time-series, geospatial, document, search, graph, vector databases, message queues, and object databases. PostgreSQL makes its presence felt across all these domains.&lt;/p&gt;
+&lt;p&gt;A case in point is the PostGIS extension, setting the de facto standard in geospatial databases; the TimescaleDB extension puts &amp;ldquo;generic&amp;rdquo; time-series databases in an awkward spot; the vector extension, &lt;strong&gt;PGVector&lt;/strong&gt;, turns the dedicated vector database niche into a punchline.&lt;/p&gt;
+&lt;p&gt;This isn&amp;rsquo;t the first time, and now we&amp;rsquo;re witnessing it again in the oldest and largest subdomain: OLAP analytics. But PostgreSQL&amp;rsquo;s ambition doesn&amp;rsquo;t stop at OLAP; it&amp;rsquo;s eyeing the entire database world!&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/docs/reference/extension/&#34;&gt;&lt;img alt=&#34;pigsty-ecosystem.png&#34; src=&#34;/img/pigsty/ecosystem.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;What makes PostgreSQL so capable? Sure, it&amp;rsquo;s advanced, but so is Oracle; it&amp;rsquo;s open-source, as is MySQL. PostgreSQL&amp;rsquo;s edge comes from being &lt;strong&gt;both advanced and open-source&lt;/strong&gt;, allowing it to compete with Oracle/MySQL. But its true uniqueness lies in its &lt;strong&gt;extreme scalability and thriving extension ecosystem&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.timescale.com/state-of-postgres/2022&#34;&gt;&lt;img alt=&#34;pg-survey.png&#34; src=&#34;/img/blog/pg/pg-eat-survey.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Reasons users &lt;a href=&#34;https://www.timescale.com/state-of-postgres/2022&#34;&gt;choose PostgreSQL&lt;/a&gt;: Open-source, advanced, &lt;strong&gt;extensibility&lt;/strong&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;PostgreSQL isn&amp;rsquo;t just a relational database; it&amp;rsquo;s a data management framework capable of engulfing the entire database universe. Its core competitiveness, besides being open-source and advanced, stems from &lt;strong&gt;scalability&lt;/strong&gt;: the &lt;strong&gt;reusability&lt;/strong&gt; of its infrastructure and the &lt;strong&gt;composability&lt;/strong&gt; of its extension plugins.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;PostgreSQL allows users to develop extensions, leveraging the database&amp;rsquo;s common infra to deliver features at minimal cost. For instance, the vector database extension &lt;a href=&#34;https://github.com/pgvector/pgvector&#34;&gt;pgvector&lt;/a&gt;, with just several thousand lines of code, is negligible in complexity compared to PostgreSQL&amp;rsquo;s millions of lines. Yet, this &amp;ldquo;insignificant&amp;rdquo; extension achieves complete vector data types and indexing capabilities, &lt;a href=&#34;https://supabase.com/blog/pgvector-vs-pinecone&#34;&gt;outperforming&lt;/a&gt; nearly all specialized vector databases.&lt;/p&gt;
+&lt;p&gt;Why? Because pgvector&amp;rsquo;s creators didn&amp;rsquo;t need to worry about the database&amp;rsquo;s general additional complexities: ACID, recovery, backup &amp;amp; PITR, high availability, access control, monitoring, deployment, 3rd-party ecosystem tools, client drivers, etc., which require millions of lines of code to solve well. They only focused on the essential complexity of their problem.&lt;/p&gt;
+&lt;p&gt;For example, ElasticSearch was developed on the Lucene search library, while the Rust ecosystem has an improved next-gen full-text search library, &lt;a href=&#34;https://github.com/quickwit-oss/tantivy&#34;&gt;Tantivy&lt;/a&gt;, as a Lucene alternative. ParadeDB only needs to wrap and connect it to PostgreSQL&amp;rsquo;s interface to offer search services comparable to ElasticSearch. More importantly, it can stand on the shoulders of PostgreSQL, leveraging the entire PG ecosystem&amp;rsquo;s united strength (e.g., mixed searches with PG Vector) to &amp;ldquo;unfairly&amp;rdquo; compete with another dedicated database.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;The scalability brings another huge advantage: the &lt;strong&gt;composability&lt;/strong&gt; of extensions, allowing different extensions to work together, creating a synergistic effect where 1+1 &amp;raquo; 2. For instance, TimescaleDB can be combined with PostGIS for spatio-temporal data support; the BM25 extension for full-text search can be combined with the PGVector extension for semantic fuzzy search, providing mixed search capabilities.&lt;/p&gt;
+&lt;p&gt;Furthermore, the &lt;strong&gt;distributed&lt;/strong&gt; extension Citus can transparently transform a standalone primary-secondary database cluster into a horizontally partitioned distributed database cluster. This capability can be orthogonally combined with other features, making PostGIS a distributed geospatial database, PGVector a distributed vector database, ParadeDB a distributed full-text search database, and so on.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;What&amp;rsquo;s more powerful is that extensions &lt;strong&gt;evolve independently&lt;/strong&gt;, without the cumbersome need for main branch merges and coordinated testing. This allows for scaling — PG&amp;rsquo;s scalability lets numerous teams explore database possibilities in parallel, with all extensions being optional, not affecting the core functionality&amp;rsquo;s reliability. Those features that are mature and robust have the chance to be stably integrated into the main branch.&lt;/p&gt;
+&lt;p&gt;Through the magic of extreme extensibility, PostgreSQL achieves both foundational reliability and agile functionality, making it an outlier in the database world and changing the game rules of the database landscape.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;game-changer-in-the-db-arena&#34;&gt;Game Changer in the DB Arena&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;The emergence of PostgreSQL has shifted the paradigms in the database domain&lt;/strong&gt;: Teams endeavoring to craft a “new database kernel” now face a formidable trial - how to stand out against the open-source, feature-rich Postgres. What’s their unique value proposition?&lt;/p&gt;
+&lt;p&gt;Until a revolutionary hardware breakthrough occurs, the advent of practical, new, general-purpose database kernels seems unlikely. No singular database can match the overall prowess of PG, bolstered by all its extensions - not even Oracle, given PG&amp;rsquo;s ace of being open-source and free.&lt;/p&gt;
+&lt;p&gt;A niche database product might carve out a space for itself if it can outperform PostgreSQL by an order of magnitude in specific aspects (typically performance). However, it usually doesn&amp;rsquo;t take long before the PostgreSQL ecosystem spawns open-source extension alternatives. Opting to develop a PG extension rather than a whole new database gives teams a crushing speed advantage in playing catch-up!&lt;/p&gt;
+&lt;p&gt;Following this logic, the PostgreSQL ecosystem is poised to snowball, accruing advantages and inevitably moving towards a monopoly, mirroring the Linux kernel&amp;rsquo;s status in server OS within a few years. Developer surveys and database trend reports confirm this trajectory.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://survey.stackoverflow.co/2023/#section-most-popular-technologies-databases&#34;&gt;&lt;img alt=&#34;pg-is-no1-2.png&#34; src=&#34;/img/blog/db/pg-is-no1-2.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://survey.stackoverflow.co/2023/#section-most-popular-technologies-databases&#34;&gt;&lt;strong&gt;StackOverflow 2023 Survey: PostgreSQL, the Decathlete&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/sf-survey&#34;&gt;&lt;img alt=&#34;pg-is-no1-1.png&#34; src=&#34;/img/blog/db/pg-is-no1-1.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/sf-survey&#34;&gt;&lt;strong&gt;StackOverflow&amp;rsquo;s Database Trends Over the Past 7 Years&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;PostgreSQL has long been the favorite database in HackerNews &amp;amp; StackOverflow. Many new open-source projects default to PostgreSQL as their primary, if not only, database choice. And many new-gen companies are going All in PostgreSQL.&lt;/p&gt;
+&lt;p&gt;As “&lt;a href=&#34;https://www.amazingcto.com/postgres-for-everything/&#34;&gt;&lt;strong&gt;Radical Simplicity: Just Use Postgres&lt;/strong&gt;&lt;/a&gt;” say: Simplifying tech stacks, reducing components, accelerating development, lowering risks, and adding more features can be achieved by &lt;strong&gt;&amp;ldquo;Just Use Postgres&amp;rdquo;&lt;/strong&gt;. Postgres can replace many backend technologies, including MySQL, Kafka, RabbitMQ, ElasticSearch, Mongo, and Redis, effortlessly serving millions of users. &lt;strong&gt;Just Use Postgres&lt;/strong&gt; is no longer avant-garde for the elite few but becoming a mainstream best practice.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;what-else-can-be-done&#34;&gt;What Else Can Be Done?&lt;/h2&gt;
+&lt;p&gt;The endgame for the database domain seems predictable. But what can we do, and what should we do?&lt;/p&gt;
+&lt;p&gt;PostgreSQL is already a near-perfect database kernel for the vast majority of scenarios, making the idea of a kernel &amp;ldquo;bottleneck&amp;rdquo; absurd. Forks of PostgreSQL and MySQL that tout kernel modifications as selling points are essentially going nowhere.&lt;/p&gt;
+&lt;p&gt;This is akin to the situation with the Linux operating system kernel today; despite the plethora of Linux distros, everyone opts for the same Linux kernel. Modifying the kernel for the sake of it is seen as creating unnecessary difficulties, frowned upon by the industry.&lt;/p&gt;
+&lt;p&gt;Accordingly, the main conflict is no longer the database kernel itself but focuses on two directions - database &lt;strong&gt;extensions&lt;/strong&gt; and &lt;strong&gt;services&lt;/strong&gt;! The former pertains to internal extensibility, while the latter relates to external composability.
+The competitive landscape, much like the OS ecosystem, will concentrate on &lt;strong&gt;database distributions&lt;/strong&gt;. In the database domain, only those distributions centered around extensions and services stand a chance for ultimate success.&lt;/p&gt;
+&lt;p&gt;Kernel developers remain lukewarm, with MariaDB, the parent fork of MySQL, nearing delisting, while AWS, profiting from offering services and extensions on top of the free kernel, thrives.
+Investment has flowed into numerous PG ecosystem extensions and service distributions: Citus, TimescaleDB, Hydra, PostgresML, ParadeDB, FerretDB, StackGres, Aiven, Neon, Supabase, Tembo, PostgresAI, and our own PG distro —— &lt;a href=&#34;https://pigsty.io&#34;&gt;Pigsty&lt;/a&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;A dilemma within the PostgreSQL ecosystem is the independent evolution of many extensions and tools, lacking a unifier to synergize them.
+For instance, analytics provider Hydra releases its package and Docker image, as does PostgresML, each distributing PostgreSQL images with their extensions.
+These basic images and packages are far from comprehensive database services like AWS RDS.&lt;/p&gt;
+&lt;p&gt;Even service providers and ecosystem integrators like AWS fall short in front of numerous extensions, unable to include many due to various reasons (AGPLv3 license, security challenges with multi-tenancy),
+thus failing to leverage the synergistic amplification potential of PostgreSQL ecosystem extensions.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;strong&gt;Extesion Category&lt;/strong&gt;&lt;/th&gt;
+&lt;th&gt;&lt;a href=&#34;https://pigsty.io/docs/reference/extension/&#34;&gt;&lt;strong&gt;Pigsty RDS &amp;amp; PGDG&lt;/strong&gt;&lt;/a&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-extensions.html&#34;&gt;&lt;strong&gt;AWS RDS PG&lt;/strong&gt;&lt;/a&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://help.aliyun.com/zh/rds/apsaradb-rds-for-postgresql/extensions-supported-by-apsaradb-rds-for-postgresql&#34;&gt;&lt;strong&gt;Aliyun RDS PG&lt;/strong&gt;&lt;/a&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Add Extension&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; Free to Install&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; Not Allowed&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; Not Allowed&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Geo Spatial&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PostGIS 3.4.2&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PostGIS 3.4.1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PostGIS 3.3.4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Time Series&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; TimescaleDB 2.14.2&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Distributive&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; Citus 12.1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AI / ML&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PostgresML 2.8.1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Columnar&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; Hydra 1.1.1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Vector&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PGVector 0.6&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PGVector 0.6&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pase 0.0.1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Sparse Vector&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PG Sparse 0.5.6&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Full-Text Search&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pg_bm25 0.5.6&lt;br /&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Graph&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; Apache AGE 1.5.0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GraphQL&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PG GraphQL 1.5.0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Message Queue&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pgq 3.5.0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;OLAP&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pg_analytics 0.5.6&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;DuckDB&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; duckdb_fdw 1.1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;CDC&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; wal2json 2.5.3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; wal2json 2.5&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Bloat Control&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pg_repack 1.5.0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pg_repack 1.5.0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; pg_repack 1.4.8&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Point Cloud&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; PG PointCloud 1.2.5&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;i class=&#34;fas fa-circle-check text-success&#34;&gt;&lt;/i&gt; Ganos PointCloud 6.1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Many important extensions are not available on Cloud RDS (PG 16, 2024-02-29)&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Extensions are the soul of PostgreSQL. A Postgres without the freedom to use extensions is like cooking without salt, confined like MySQL within the same RDS box, And giant constrained.&lt;/p&gt;
+&lt;p&gt;Addressing this issue is one of our primary goals.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;our-resolution-pigsty&#34;&gt;Our Resolution: Pigsty&lt;/h2&gt;
+&lt;p&gt;Despite earlier exposure to MySQL and MSSQL, I was convinced of PostgreSQL&amp;rsquo;s future dominance in the database realm when I first used it in 2015. Nearly a decade later, I’ve transitioned from a user and administrator to a contributor and developer, witnessing PG&amp;rsquo;s march toward that goal.&lt;/p&gt;
+&lt;p&gt;Interactions with diverse users revealed that the shortcoming in the database field isn&amp;rsquo;t the kernel - PostgreSQL is already sufficient. The real issue is &lt;strong&gt;leveraging the kernel’s capabilities&lt;/strong&gt;, which is the reason behind RDS’s booming success.&lt;/p&gt;
+&lt;p&gt;However, I believe this capability should be as accessible as the free software movement advocates, like the PostgreSQL kernel itself - available to every user, not just renting from cyber feudal lords.&lt;/p&gt;
+&lt;p&gt;Thus, I created &lt;a href=&#34;https://pigsty.io&#34;&gt;&lt;strong&gt;Pigsty&lt;/strong&gt;&lt;/a&gt;, a battery-included, open-source PostgreSQL distribution that aims to harness the collective power of PostgreSQL ecosystem extensions and democratize access to high-quality database services.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://pigsty.io&#34;&gt;&lt;img alt=&#34;img&#34; src=&#34;/img/pigsty/homepage.en.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Pigsty stands for &lt;strong&gt;P&lt;/strong&gt;ostgreSQL &lt;strong&gt;i&lt;/strong&gt;n &lt;strong&gt;G&lt;/strong&gt;reat &lt;strong&gt;STY&lt;/strong&gt;le, representing the zenith of PostgreSQL.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;We’ve defined six core propositions addressing the central issues in PostgreSQL database services: &lt;strong&gt;Extensible Postgres&lt;/strong&gt;, &lt;strong&gt;Reliable Infras&lt;/strong&gt;, &lt;strong&gt;Observable Graphical&lt;/strong&gt;, &lt;strong&gt;Available Service&lt;/strong&gt;, &lt;strong&gt;Maintainable Toolbox&lt;/strong&gt;, and &lt;strong&gt;Composable Modules&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;The initials of these value propositions offer another acronym for Pigsty:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;P&lt;/strong&gt;ostgres, &lt;strong&gt;I&lt;/strong&gt;nfras, &lt;strong&gt;G&lt;/strong&gt;raphics, &lt;strong&gt;S&lt;/strong&gt;ervice, &lt;strong&gt;T&lt;/strong&gt;oolbox, &lt;strong&gt;Y&lt;/strong&gt;ours.&lt;/p&gt;
+&lt;p&gt;Your graphical Postgres infrastructure service toolbox.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Extensible PostgreSQL&lt;/strong&gt; is the linchpin of this distribution. In the recently launched &lt;a href=&#34;https://github.com/Vonng/pigsty/releases/tag/v2.6.0&#34;&gt;&lt;strong&gt;Pigsty v2.6&lt;/strong&gt;&lt;/a&gt;, we integrated DuckdbFDW and ParadeDB extensions, massively boosting PostgreSQL’s analytical capabilities, ensuring every user can easily harness this power.&lt;/p&gt;
+&lt;p&gt;Our aim is to integrate the strengths within the PostgreSQL ecosystem, creating a synergistic force akin to the &lt;strong&gt;Ubuntu&lt;/strong&gt; of the database world. I believe the kernel debate is settled, and the real competitive frontier lies here.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://postgis.net/&#34;&gt;&lt;strong&gt;PostGIS&lt;/strong&gt;&lt;/a&gt;: Provides geospatial data types and indexes, the de facto standard for GIS (&amp;amp; &lt;strong&gt;pgPointCloud&lt;/strong&gt;, &lt;strong&gt;pgRouting&lt;/strong&gt;).&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.timescale.com/&#34;&gt;&lt;strong&gt;TimescaleDB&lt;/strong&gt;&lt;/a&gt;: Adds time-series, continuous aggregates, distributed, columnar storage, and automatic compression capabilities.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/pgvector/pgvector&#34;&gt;&lt;strong&gt;PGVector&lt;/strong&gt;&lt;/a&gt;: Supports AI vectors/embeddings and ivfflat, hnsw vector indexes (&amp;amp; &lt;strong&gt;pg_sparse&lt;/strong&gt; for sparse vectors).&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.citusdata.com/&#34;&gt;&lt;strong&gt;Citus&lt;/strong&gt;&lt;/a&gt;: Transforms classic master-slave PG clusters into horizontally partitioned distributed database clusters.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.hydra.so/&#34;&gt;&lt;strong&gt;Hydra&lt;/strong&gt;&lt;/a&gt;: Adds columnar storage and analytics, rivaling ClickHouse’s analytic capabilities.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.paradedb.com/&#34;&gt;&lt;strong&gt;ParadeDB&lt;/strong&gt;&lt;/a&gt;: Elevates full-text search and mixed retrieval to ElasticSearch levels (&amp;amp; &lt;strong&gt;zhparser&lt;/strong&gt; for Chinese tokenization).&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://age.apache.org/&#34;&gt;&lt;strong&gt;Apache AGE&lt;/strong&gt;&lt;/a&gt;: Graph database extension, adding Neo4J-like OpenCypher query support to PostgreSQL.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/supabase/pg_graphql&#34;&gt;&lt;strong&gt;PG GraphQL&lt;/strong&gt;&lt;/a&gt;: Adds native built-in GraphQL query language support to PostgreSQL.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/alitrack/duckdb_fdw&#34;&gt;&lt;strong&gt;DuckDB FDW&lt;/strong&gt;&lt;/a&gt;: Enables direct access to DuckDB’s powerful embedded analytic database files through PostgreSQL (&amp;amp; DuckDB CLI).&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/app/supabase&#34;&gt;&lt;strong&gt;Supabase&lt;/strong&gt;&lt;/a&gt;: An open-source Firebase alternative based on PostgreSQL, providing a complete app development storage solution.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/app/ferretdb&#34;&gt;&lt;strong&gt;FerretDB&lt;/strong&gt;&lt;/a&gt;: An open-source MongoDB alternative based on PostgreSQL, compatible with MongoDB APIs/drivers.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/app/pgml&#34;&gt;&lt;strong&gt;PostgresML&lt;/strong&gt;&lt;/a&gt;: Facilitates classic machine learning algorithms, calling, deploying, and training AI models with SQL.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;/docs/reference/extension/&#34;&gt;&lt;img alt=&#34;img&#34; src=&#34;/img/pigsty/extension.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Pigsty has 234 &lt;a href=&#34;/docs/reference/extension/&#34;&gt;&lt;strong&gt;extensions&lt;/strong&gt;&lt;/a&gt; available.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Developers, your choices will shape the future of the database world. Hope my work could help you to utilize better the world’s most advanced open-source database kernel — &lt;strong&gt;PostgreSQL&lt;/strong&gt;.&lt;/p&gt;
+
       </description>
     </item>
     
