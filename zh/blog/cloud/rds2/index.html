@@ -1,0 +1,1902 @@
+<!doctype html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh" class="no-js">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>重新审视阿里云RDS定价策略 | Pigsty</title>
+<meta name="description" content="阿里云号称大降价，但如果实际剖析一下云服务器的成本，还是不难看出云上的算力与存储依然贵的离谱。">
+<meta property="og:title" content="重新审视阿里云RDS定价策略" />
+<meta property="og:description" content="阿里云号称大降价，但如果实际剖析一下云服务器的成本，还是不难看出云上的算力与存储依然贵的离谱。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="//localhost:1313/zh/blog/cloud/rds2/" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2024-03-29T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-03-29T00:00:00+00:00" />
+
+<meta itemprop="name" content="重新审视阿里云RDS定价策略">
+<meta itemprop="description" content="阿里云号称大降价，但如果实际剖析一下云服务器的成本，还是不难看出云上的算力与存储依然贵的离谱。"><meta itemprop="datePublished" content="2024-03-29T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-03-29T00:00:00+00:00" />
+<meta itemprop="wordCount" content="1261">
+<meta itemprop="keywords" content="CloudExit," /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="重新审视阿里云RDS定价策略"/>
+<meta name="twitter:description" content="阿里云号称大降价，但如果实际剖析一下云服务器的成本，还是不难看出云上的算力与存储依然贵的离谱。"/>
+
+
+
+
+
+<link href="/scss/main.css" rel="stylesheet">
+
+<script
+  src="https://code.jquery.com/jquery-3.6.3.min.js"
+  integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
+  crossorigin="anonymous"></script>
+<script defer
+  src="https://unpkg.com/lunr@2.3.9/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      <nav class="td-navbar navbar-dark js-navbar-scroll">
+<div class="container-fluid flex-column flex-md-row">
+  <a class="navbar-brand" href="/zh/"><span class="navbar-brand__logo navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="navbar-brand__name">Pigsty</span></a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="/zh/docs/"><i class='fa-solid fa-book'></i><span>文档</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" href="/zh/blog/"><i class="fas fa-blog"></i><span>博客</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" rel="noopener"><i class='fab fa-github'></i><span>GitHub</span></a>
+      </li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/">English</a></li>
+    </ul>
+</div>
+</li>
+      </ul>
+  </div>
+  <div class="d-none d-lg-block">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+  </div>
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <aside class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            <div id="td-sidebar-menu" class="td-sidebar__inner">
+  <form class="td-sidebar__search d-flex align-items-center">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  <nav class="td-sidebar-nav collapse" id="td-section-nav">
+    <div class="td-sidebar-nav__section nav-item dropdown d-block d-lg-none">
+      <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/">English</a></li>
+    </ul>
+</div>
+
+    </div>
+    <ul class="td-sidebar-nav__section pe-md-3 ul-0">
+      <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
+  <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
+  <ul class="ul-1">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+  <a href="/zh/blog/db/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><i class="fas fa-database"></i><span class="">数据库</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbrethink-li">
+  <a href="/zh/blog/db/rethink/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbrethink"><span class="">数据库老司机：合订本</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbredis-oss-li">
+  <a href="/zh/blog/db/redis-oss/" title="Redis不开源是“开源”之耻，更是公有云之耻" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbredis-oss"><span class="">Redis不开源是“开源”之耻</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbbad-mysql-li">
+  <a href="/zh/blog/db/bad-mysql/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbbad-mysql"><span class="">MySQL正确性竟如此垃圾？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdb-in-k8s-li">
+  <a href="/zh/blog/db/db-in-k8s/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdb-in-k8s"><span class="">数据库应该放入K8S里吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsvdb-is-dead-li">
+  <a href="/zh/blog/db/svdb-is-dead/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsvdb-is-dead"><span class="">专用向量数据库凉了吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdb-choke-li">
+  <a href="/zh/blog/db/db-choke/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdb-choke"><span class="">数据库真被卡脖子了吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbrhel-compatibility-li">
+  <a href="/zh/blog/db/rhel-compatibility/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbrhel-compatibility"><span class="">EL系操作系统发行版哪家强？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsovereign-dbos-li">
+  <a href="/zh/blog/db/sovereign-dbos/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsovereign-dbos"><span class="">基础软件需要什么样的自主可控？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdemand-pyramid-li">
+  <a href="/zh/blog/db/demand-pyramid/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdemand-pyramid"><span class="">数据库需求层次金字塔</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdistributive-bullshit-li">
+  <a href="/zh/blog/db/distributive-bullshit/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdistributive-bullshit"><span class="">分布式数据库是不是伪需求？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbmicroservice-bad-idea-li">
+  <a href="/zh/blog/db/microservice-bad-idea/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbmicroservice-bad-idea"><span class="">微服务是不是个蠢主意？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbgoodbye-gpl-li">
+  <a href="/zh/blog/db/goodbye-gpl/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbgoodbye-gpl"><span class="">是时候和GPL说再见了</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbpg-in-docker-li">
+  <a href="/zh/blog/db/pg-in-docker/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbpg-in-docker"><span class="">容器化数据库是个好主意吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbreason-about-time-li">
+  <a href="/zh/blog/db/reason-about-time/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbreason-about-time"><span class="">理解时间：闰年闰秒，时间与时区</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbconcurrent-control-li">
+  <a href="/zh/blog/db/concurrent-control/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbconcurrent-control"><span class="">并发异常那些事</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbblockchain-li">
+  <a href="/zh/blog/db/blockchain/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbblockchain"><span class="">区块链与分布式数据库</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbconsistency-li">
+  <a href="/zh/blog/db/consistency/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbconsistency"><span class="">一致性：过载的术语</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbwhy-learn-database-li">
+  <a href="/zh/blog/db/why-learn-database/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdbwhy-learn-database"><span class="">为什么要学习数据库原理</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblogcloud-li">
+  <a href="/zh/blog/cloud/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogcloud"><i class="fas fa-cloud"></i><span class="">云计算</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-zhblogcloudrds2-li">
+  <a href="/zh/blog/cloud/rds2/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudrds2"><span class="td-sidebar-nav-active-item">重新审视阿里云RDS定价策略</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloudflare-li">
+  <a href="/zh/blog/cloud/cloudflare/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloudflare"><span class="">吊打公有云的赛博佛祖Cloudflare</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloud-exit-li">
+  <a href="/zh/blog/cloud/cloud-exit/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloud-exit"><span class="">云计算泥石流：合订本</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudecs-li">
+  <a href="/zh/blog/cloud/ecs/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudecs"><span class="">剖析算力成本：阿里云真降价了吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouduptime-li">
+  <a href="/zh/blog/cloud/uptime/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogclouduptime"><span class="">云下高可用秘诀：拒绝复杂度自慰</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouds3-li">
+  <a href="/zh/blog/cloud/s3/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogclouds3"><span class="">扒皮云对象存储：从降本到杀猪</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloud-exit-faq-li">
+  <a href="/zh/blog/cloud/cloud-exit-faq/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloud-exit-faq"><span class="">半年下云省千万，DHH下云FAQ</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudsmile-li">
+  <a href="/zh/blog/cloud/smile/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudsmile"><span class="">从降本增笑到真的降本增效</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudbonus-li">
+  <a href="/zh/blog/cloud/bonus/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudbonus"><span class="">重新拿回计算机硬件的红利</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudaliyun-li">
+  <a href="/zh/blog/cloud/aliyun/" title="我们能从阿里云全球故障中学到什么?" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudaliyun"><span class="">阿里云史诗级故障非官方复盘</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcheap-ecs-li">
+  <a href="/zh/blog/cloud/cheap-ecs/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcheap-ecs"><span class="">薅阿里云羊毛，打造数字家园</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddebris-li">
+  <a href="/zh/blog/cloud/debris/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddebris"><span class="">云计算泥石流：用数据解构公有云</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudodyssey-li">
+  <a href="/zh/blog/cloud/odyssey/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudodyssey"><span class="">下云奥德赛：该放弃云计算了吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudfinops-li">
+  <a href="/zh/blog/cloud/finops/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudfinops"><span class="">FinOps终点是下云</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudprofit-li">
+  <a href="/zh/blog/cloud/profit/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudprofit"><span class="">云计算为啥还没挖沙子赚钱？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudsla-li">
+  <a href="/zh/blog/cloud/sla/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudsla"><span class="">云SLA是不是安慰剂？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudluo-li">
+  <a href="/zh/blog/cloud/luo/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudluo"><span class="">罗永浩救不了牙膏云？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudebs-li">
+  <a href="/zh/blog/cloud/ebs/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudebs"><span class="">云盘是不是杀猪盘？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcdn-li">
+  <a href="/zh/blog/cloud/cdn/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcdn"><span class="">垃圾腾讯云CDN：从入门到放弃？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudno-dba-bullshit-li">
+  <a href="/zh/blog/cloud/no-dba-bullshit/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudno-dba-bullshit"><span class="">驳《再论为什么你不应该招DBA》</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudparadigm-li">
+  <a href="/zh/blog/cloud/paradigm/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudparadigm"><span class="">范式转移：从云到本地优先</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudrds-li">
+  <a href="/zh/blog/cloud/rds/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudrds"><span class="">云数据库是不是智商税</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudis-dba-good-job-li">
+  <a href="/zh/blog/cloud/is-dba-good-job/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudis-dba-good-job"><span class="">DBA还是一份好工作吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddrop-rds-li">
+  <a href="/zh/blog/cloud/drop-rds/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddrop-rds"><span class="">云RDS：从删库到跑路</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddba-vs-rds-li">
+  <a href="/zh/blog/cloud/dba-vs-rds/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddba-vs-rds"><span class="">DBA会被云淘汰吗？</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogpg-li">
+  <a href="/zh/blog/pg/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-license-li">
+  <a href="/zh/blog/pg/pg-license/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-license"><span class="">PostgreSQL会修改开源许可证吗？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-eat-db-world-li">
+  <a href="/zh/blog/pg/pg-eat-db-world/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-eat-db-world"><span class="">PostgreSQL正在吞噬数据库世界</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <a href="/zh/blog/pg/paradedb/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <a href="/zh/blog/pg/pg-convention/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <a href="/zh/blog/pg/ferretdb/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <a href="/zh/blog/pg/pg-performence/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
+  <a href="/zh/blog/dev/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevllm-and-pgvector-li">
+  <a href="/zh/blog/dev/llm-and-pgvector/" title="AI大模型与向量库 PGVector" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevllm-and-pgvector"><span class="">AI大模型与PGVector</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfuzzymatch-li">
+  <a href="/zh/blog/dev/fuzzymatch/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevfuzzymatch"><span class="">高级模糊查询的实现</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevwire-protocol-li">
+  <a href="/zh/blog/dev/wire-protocol/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevwire-protocol"><span class="">前后端通信线缆协议</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevisolation-level-li">
+  <a href="/zh/blog/dev/isolation-level/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevisolation-level"><span class="">事务隔离等级注意事项</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevlogical-decoding-li">
+  <a href="/zh/blog/dev/logical-decoding/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevlogical-decoding"><span class="">CDC 变更数据捕获机理</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-lock-li">
+  <a href="/zh/blog/dev/pg-lock/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-lock"><span class="">PostgreSQL中的锁</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevgin-li">
+  <a href="/zh/blog/dev/gin/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevgin"><span class="">GIN搜索的O(n2)负载度</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevgeoip-li">
+  <a href="/zh/blog/dev/geoip/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevgeoip"><span class="">GeoIP 地理逆查询优化</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-trigger-li">
+  <a href="/zh/blog/dev/sql-trigger/" title="PostgreSQL的触发器使用注意事项" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-trigger"><span class="">触发器使用注意事项</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevcharacter-encoding-li">
+  <a href="/zh/blog/dev/character-encoding/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevcharacter-encoding"><span class="">理解字符编码原理</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-convention-li">
+  <a href="/zh/blog/dev/pg-convention/" title="PostgreSQL开发规约（2018版）" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-convention"><span class="">PostgreSQL开发规约2018版</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevknn-optimize-li">
+  <a href="/zh/blog/dev/knn-optimize/" title="KNN极致优化：从RDS到PostGIS" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevknn-optimize"><span class="">KNN极致优化：GIS圈选</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevadcode-geodecode-li">
+  <a href="/zh/blog/dev/adcode-geodecode/" title="PostGIS高效解决行政区划归属查询" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevadcode-geodecode"><span class="">行政区划查询：GIS点找面</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-distinct-on-li">
+  <a href="/zh/blog/dev/sql-distinct-on/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-distinct-on"><span class="">Distinct On 去除重复数据</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-func-volatility-li">
+  <a href="/zh/blog/dev/sql-func-volatility/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-func-volatility"><span class="">函数易变性等级分类</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
+  <a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfile_fdw-li">
+  <a href="/zh/blog/dev/file_fdw/" title="file_fdw妙用无穷——从数据库读取系统信息" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevfile_fdw"><span class="">FileFDW用例：读取OS信息</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevnotify-trigger-based-repl-li">
+  <a href="/zh/blog/dev/notify-trigger-based-repl/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevnotify-trigger-based-repl"><span class="">GO与PG实现缓存同步</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevaudit-change-li">
+  <a href="/zh/blog/dev/audit-change/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevaudit-change"><span class="">用触发器审计数据变化</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-recsys-li">
+  <a href="/zh/blog/dev/pg-recsys/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-recsys"><span class="">SQL实现ItemCF推荐系统</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevuuid-li">
+  <a href="/zh/blog/dev/uuid/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogdevuuid"><span class="">UUID性质原理与应用</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogadmin-li">
+  <a href="/zh/blog/admin/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogadmin"><i class="fas fa-balance-scale"></i><span class="">PG 管理</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminlogical-replication-li">
+  <a href="/zh/blog/admin/logical-replication/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminlogical-replication"><span class="">Postgres逻辑复制详解</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-filedump-li">
+  <a href="/zh/blog/admin/pg-filedump/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-filedump"><span class="">如何用 pg_filedump 抢救数据？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmincollate-li">
+  <a href="/zh/blog/admin/collate/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadmincollate"><span class="">PG中的本地化排序规则</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminreplica-identity-li">
+  <a href="/zh/blog/admin/replica-identity/" title="PG复制标识详解（Replica Identity）" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminreplica-identity"><span class="">PG复制标识详解</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmintime-travel-li">
+  <a href="/zh/blog/admin/time-travel/" title="故障档案:时间回溯导致的Patroni故障" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadmintime-travel"><span class="">故障档案：NTP/Patroni</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminslow-query-li">
+  <a href="/zh/blog/admin/slow-query/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminslow-query"><span class="">PG慢查询诊断方法论</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminalter-type-li">
+  <a href="/zh/blog/admin/alter-type/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminalter-type"><span class="">在线修改主键列类型</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmingolden-metrics-li">
+  <a href="/zh/blog/admin/golden-metrics/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadmingolden-metrics"><span class="">黄金监控指标：错误延迟吞吐饱和</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminentity-and-naming-li">
+  <a href="/zh/blog/admin/entity-and-naming/" title="数据库集群管理概念与实体命名规范" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminentity-and-naming"><span class="">数据库管理实体与命名规范</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-load-li">
+  <a href="/zh/blog/admin/pg-load/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-load"><span class="">PostgreSQL的KPI</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmigrate-column-type-li">
+  <a href="/zh/blog/admin/migrate-column-type/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmigrate-column-type"><span class="">在线修改PG字段类型</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminextension-li">
+  <a href="/zh/blog/admin/extension/" title="故障档案：PG安装Extension导致无法连接" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminextension"><span class="">故障:扩展导致拒绝连接</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminreplication-plan-li">
+  <a href="/zh/blog/admin/replication-plan/" title="PostgreSQL 常见复制拓扑方案" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminreplication-plan"><span class="">常见复制拓扑方案</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbackup-plan-li">
+  <a href="/zh/blog/admin/backup-plan/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbackup-plan"><span class="">温备：使用pg_receivewal</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-dump-failure-li">
+  <a href="/zh/blog/admin/pg-dump-failure/" title="故障档案：pg_dump导致的连接池污染" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-dump-failure"><span class="">故障档案：连接池污染</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpage-corruption-li">
+  <a href="/zh/blog/admin/page-corruption/" title="PostgreSQL数据页面损坏修复" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpage-corruption"><span class="">故障档案：数据页损坏</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbloat-li">
+  <a href="/zh/blog/admin/bloat/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbloat"><span class="">关系膨胀的监控与治理</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpipeline-intro-li">
+  <a href="/zh/blog/admin/pipeline-intro/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpipeline-intro"><span class="">PipelineDB快速上手</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmintimescale-install-li">
+  <a href="/zh/blog/admin/timescale-install/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadmintimescale-install"><span class="">TimescaleDB 快速上手</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminxid-wrap-around-li">
+  <a href="/zh/blog/admin/xid-wrap-around/" title="故障档案：PostgreSQL事务号回卷" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminxid-wrap-around"><span class="">故障档案：XID回卷</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminsequence-overflow-li">
+  <a href="/zh/blog/admin/sequence-overflow/" title="故障档案：序列号消耗过快导致整型溢出" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminsequence-overflow"><span class="">故障档案：序列号溢出</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmon-table-size-li">
+  <a href="/zh/blog/admin/mon-table-size/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmon-table-size"><span class="">监控PG中的表大小</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgadmin-install-li">
+  <a href="/zh/blog/admin/pgadmin-install/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgadmin-install"><span class="">PgAdmin安装配置</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmindownload-failure-li">
+  <a href="/zh/blog/admin/download-failure/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadmindownload-failure"><span class="">故障档案：快慢不匀雪崩</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpsql-and-bash-li">
+  <a href="/zh/blog/admin/psql-and-bash/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpsql-and-bash"><span class="">Bash与psql小技巧</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminroutine-maintain-li">
+  <a href="/zh/blog/admin/routine-maintain/" title="PostgreSQL例行维护" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminroutine-maintain"><span class="">PgSQL例行维护任务</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbackup-overview-li">
+  <a href="/zh/blog/admin/backup-overview/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbackup-overview"><span class="">备份恢复手段概览</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgbackrest-li">
+  <a href="/zh/blog/admin/pgbackrest/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgbackrest"><span class="">PgBackRest2中文文档</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgbouncer-usage-li">
+  <a href="/zh/blog/admin/pgbouncer-usage/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgbouncer-usage"><span class="">Pgbouncer快速上手</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminlogging-li">
+  <a href="/zh/blog/admin/logging/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminlogging"><span class="">PG服务器日志常规配置</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmigration-without-downtime-li">
+  <a href="/zh/blog/admin/migration-without-downtime/" title="空中换引擎 —— PostgreSQL不停机迁移数据" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmigration-without-downtime"><span class="">不停机迁移数据迁移基本原理</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminfio-li">
+  <a href="/zh/blog/admin/fio/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminfio"><span class="">使用FIO测试磁盘性能</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminsysbench-li">
+  <a href="/zh/blog/admin/sysbench/" title="使用sysbench测试PostgreSQL性能" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminsysbench"><span class="">使用sysbench测试性能</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminfind-dummy-index-li">
+  <a href="/zh/blog/admin/find-dummy-index/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminfind-dummy-index"><span class="">找出没用过的索引</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminssh-add-key-li">
+  <a href="/zh/blog/admin/ssh-add-key/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminssh-add-key"><span class="">批量配置SSH免密登录</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminwireshark-capture-li">
+  <a href="/zh/blog/admin/wireshark-capture/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminwireshark-capture"><span class="">Wireshark抓包分析协议</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminunix-tool-li">
+  <a href="/zh/blog/admin/unix-tool/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminunix-tool"><span class="">Linux 常用统计 CLI 工具</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpostgis-install-li">
+  <a href="/zh/blog/admin/postgis-install/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpostgis-install"><span class="">源码编译安装 PostGIS</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmongo_fdw-install-li">
+  <a href="/zh/blog/admin/mongo_fdw-install/" title="PostgreSQL MongoFDW安装部署" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmongo_fdw-install"><span class="">MongoFDW安装部署</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogkernel-li">
+  <a href="/zh/blog/kernel/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogkernel"><i class="fas fa-gears"></i><span class="">PG 内核</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelpg-wal-page-seq-li">
+  <a href="/zh/blog/kernel/pg-wal-page-seq/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelpg-wal-page-seq"><span class="">PG先写脏页还是先写WAL？</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch1-li">
+  <a href="/zh/blog/kernel/ch1/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch1"><span class="">第一章 数据库的物理/逻辑结构</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch2-li">
+  <a href="/zh/blog/kernel/ch2/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch2"><span class="">第二章 进程和内存架构</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch3-li">
+  <a href="/zh/blog/kernel/ch3/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch3"><span class="">第三章 查询处理</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch4-li">
+  <a href="/zh/blog/kernel/ch4/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch4"><span class="">第四章 外部数据包装器</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch5-li">
+  <a href="/zh/blog/kernel/ch5/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch5"><span class="">第五章 并发控制</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch6-li">
+  <a href="/zh/blog/kernel/ch6/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch6"><span class="">第六章 垃圾清理过程</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch7-li">
+  <a href="/zh/blog/kernel/ch7/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch7"><span class="">第七章 堆内元组与仅索引扫描</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch8-li">
+  <a href="/zh/blog/kernel/ch8/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch8"><span class="">第八章 缓冲区管理器</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch9-li">
+  <a href="/zh/blog/kernel/ch9/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch9"><span class="">第九章 预写式日志</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch10-li">
+  <a href="/zh/blog/kernel/ch10/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch10"><span class="">第十章 基础备份与时间点恢复</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch11-li">
+  <a href="/zh/blog/kernel/ch11/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch11"><span class="">第十一章 流复制</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelwal-and-checkpoint-li">
+  <a href="/zh/blog/kernel/wal-and-checkpoint/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelwal-and-checkpoint"><span class="">WAL与检查点概述</span></a>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogreleases-li">
+  <a href="/zh/blog/releases/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-zhblogreleases"><i class="fas fa-newspaper"></i><span class="">版本发布</span></a>
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv260-li">
+  <a href="/zh/blog/releases/v2.6.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv260"><span class="">v2.6.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv250-li">
+  <a href="/zh/blog/releases/v2.5.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv250"><span class="">v2.5.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv240-li">
+  <a href="/zh/blog/releases/v2.4.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv240"><span class="">v2.4.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv230-li">
+  <a href="/zh/blog/releases/v2.3.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv230"><span class="">v2.3.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv220-li">
+  <a href="/zh/blog/releases/v2.2.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv220"><span class="">v2.2.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv210-li">
+  <a href="/zh/blog/releases/v2.1.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv210"><span class="">v2.1.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv200-li">
+  <a href="/zh/blog/releases/v2.0.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv200"><span class="">v2.0.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv150-li">
+  <a href="/zh/blog/releases/v1.5.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv150"><span class="">v1.5.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv140-li">
+  <a href="/zh/blog/releases/v1.4.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv140"><span class="">v1.4.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv130-li">
+  <a href="/zh/blog/releases/v1.3.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv130"><span class="">v1.3.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv120-li">
+  <a href="/zh/blog/releases/v1.2.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv120"><span class="">v1.2.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv110-li">
+  <a href="/zh/blog/releases/v1.1.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv110"><span class="">v1.1.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv100-li">
+  <a href="/zh/blog/releases/v1.0.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv100"><span class="">v1.0.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv090-li">
+  <a href="/zh/blog/releases/v0.9.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv090"><span class="">v0.9.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv080-li">
+  <a href="/zh/blog/releases/v0.8.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv080"><span class="">v0.8.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv070-li">
+  <a href="/zh/blog/releases/v0.7.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv070"><span class="">v0.7.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv060-li">
+  <a href="/zh/blog/releases/v0.6.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv060"><span class="">v0.6.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv050-li">
+  <a href="/zh/blog/releases/v0.5.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv050"><span class="">v0.5.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv040-li">
+  <a href="/zh/blog/releases/v0.4.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv040"><span class="">v0.4.0 发布注记</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv030-li">
+  <a href="/zh/blog/releases/v0.3.0/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv030"><span class="">v0.3.0 发布注记</span></a>
+</li>
+  </ul>
+</li>
+  </ul>
+</li>
+    </ul>
+  </nav>
+</div>
+
+          </aside>
+          <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
+            <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
+<a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/cloud/rds2.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/cloud/rds2.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/cloud?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e9%87%8d%e6%96%b0%e5%ae%a1%e8%a7%86%e9%98%bf%e9%87%8c%e4%ba%91RDS%e5%ae%9a%e4%bb%b7%e7%ad%96%e7%95%a5" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project td-page-meta__project-issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create project issue</a>
+  <a id="print" href="/zh/blog/cloud/_print/"><i class="fa-solid fa-print fa-fw"></i> Print entire section</a>
+
+</div>
+
+            <div class="td-toc">
+        <nav id="TableOfContents">
+  <ul>
+    <li><a href="#太长不看">太长不看</a></li>
+    <li><a href="#纯算力的价格">纯算力的价格</a></li>
+    <li><a href="#杀猪盘的价格">杀猪盘的价格</a></li>
+    <li><a href="#云存储对单价的影响">云存储对单价的影响</a></li>
+    <li><a href="#预付费对单价的影响">预付费对单价的影响</a></li>
+    <li><a href="#实例族对价格的影响">实例族对价格的影响</a></li>
+    <li><a href="#可用区对价格的影响">可用区对价格的影响</a></li>
+  </ul>
+</nav>
+      </div>
+    
+            <div class="taxonomy taxonomy-terms-cloud taxo-module">
+      <h5 class="taxonomy-title">Modules</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/app/" data-taxonomy-term="app"><span class="taxonomy-label">APP</span><span class="taxonomy-count">19</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/blog/" data-taxonomy-term="blog"><span class="taxonomy-label">BLOG</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/docker/" data-taxonomy-term="docker"><span class="taxonomy-label">DOCKER</span><span class="taxonomy-count">11</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/etcd/" data-taxonomy-term="etcd"><span class="taxonomy-label">ETCD</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/infra/" data-taxonomy-term="infra"><span class="taxonomy-label">INFRA</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/minio/" data-taxonomy-term="minio"><span class="taxonomy-label">MINIO</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/mongo/" data-taxonomy-term="mongo"><span class="taxonomy-label">MONGO</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/mysql/" data-taxonomy-term="mysql"><span class="taxonomy-label">MYSQL</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/node/" data-taxonomy-term="node"><span class="taxonomy-label">NODE</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/pgsql/" data-taxonomy-term="pgsql"><span class="taxonomy-label">PGSQL</span><span class="taxonomy-count">67</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/pigsty/" data-taxonomy-term="pigsty"><span class="taxonomy-label">PIGSTY</span><span class="taxonomy-count">41</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/redis/" data-taxonomy-term="redis"><span class="taxonomy-label">REDIS</span><span class="taxonomy-count">2</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-categories">
+      <h5 class="taxonomy-title">Categories</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/about/" data-taxonomy-term="about"><span class="taxonomy-label">About</span><span class="taxonomy-count">10</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">22</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/arch/" data-taxonomy-term="arch"><span class="taxonomy-label">Arch</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/business/" data-taxonomy-term="business"><span class="taxonomy-label">Business</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/cloud/" data-taxonomy-term="cloud"><span class="taxonomy-label">Cloud</span><span class="taxonomy-count">26</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/concept/" data-taxonomy-term="concept"><span class="taxonomy-label">Concept</span><span class="taxonomy-count">12</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/config/" data-taxonomy-term="config"><span class="taxonomy-label">Config</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/dashboard/" data-taxonomy-term="dashboard"><span class="taxonomy-label">Dashboard</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">18</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/develop/" data-taxonomy-term="develop"><span class="taxonomy-label">Develop</span><span class="taxonomy-count">17</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/faq/" data-taxonomy-term="faq"><span class="taxonomy-label">FAQ</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/install/" data-taxonomy-term="install"><span class="taxonomy-label">Install</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span><span class="taxonomy-count">14</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/metrics/" data-taxonomy-term="metrics"><span class="taxonomy-label">Metrics</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/module/" data-taxonomy-term="module"><span class="taxonomy-label">Module</span><span class="taxonomy-count">10</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/monitor/" data-taxonomy-term="monitor"><span class="taxonomy-label">Monitor</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/overview/" data-taxonomy-term="overview"><span class="taxonomy-label">Overview</span><span class="taxonomy-count">12</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/param/" data-taxonomy-term="param"><span class="taxonomy-label">Param</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/playbook/" data-taxonomy-term="playbook"><span class="taxonomy-label">Playbook</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span><span class="taxonomy-count">16</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/reference/" data-taxonomy-term="reference"><span class="taxonomy-label">Reference</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/release/" data-taxonomy-term="release"><span class="taxonomy-label">Release</span><span class="taxonomy-count">22</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/section/" data-taxonomy-term="section"><span class="taxonomy-label">Section</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/setup/" data-taxonomy-term="setup"><span class="taxonomy-label">Setup</span><span class="taxonomy-count">15</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-tags">
+      <h5 class="taxonomy-title">Tags</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/access/" data-taxonomy-term="access"><span class="taxonomy-label">Access</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/aliyun/" data-taxonomy-term="aliyun"><span class="taxonomy-label">Aliyun</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/auth/" data-taxonomy-term="auth"><span class="taxonomy-label">Auth</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/bench/" data-taxonomy-term="bench"><span class="taxonomy-label">Bench</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cloudexit/" data-taxonomy-term="cloudexit"><span class="taxonomy-label">CloudExit</span><span class="taxonomy-count">26</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/convention/" data-taxonomy-term="convention"><span class="taxonomy-label">Convention</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cost/" data-taxonomy-term="cost"><span class="taxonomy-label">Cost</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/dba/" data-taxonomy-term="dba"><span class="taxonomy-label">DBA</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/dhh/" data-taxonomy-term="dhh"><span class="taxonomy-label">DHH</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/ebs/" data-taxonomy-term="ebs"><span class="taxonomy-label">EBS</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/ecosystem/" data-taxonomy-term="ecosystem"><span class="taxonomy-label">Ecosystem</span><span class="taxonomy-count">10</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/ferretdb/" data-taxonomy-term="ferretdb"><span class="taxonomy-label">FerretDB</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/gis/" data-taxonomy-term="gis"><span class="taxonomy-label">GIS</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/hba/" data-taxonomy-term="hba"><span class="taxonomy-label">HBA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/industry/" data-taxonomy-term="industry"><span class="taxonomy-label">Industry</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/internal/" data-taxonomy-term="internal"><span class="taxonomy-label">Internal</span><span class="taxonomy-count">11</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/kubernetes/" data-taxonomy-term="kubernetes"><span class="taxonomy-label">Kubernetes</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/migration/" data-taxonomy-term="migration"><span class="taxonomy-label">Migration</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/offline/" data-taxonomy-term="offline"><span class="taxonomy-label">Offline</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/os/" data-taxonomy-term="os"><span class="taxonomy-label">OS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pitr/" data-taxonomy-term="pitr"><span class="taxonomy-label">PITR</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/provision/" data-taxonomy-term="provision"><span class="taxonomy-label">Provision</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/rds/" data-taxonomy-term="rds"><span class="taxonomy-label">RDS</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/search/" data-taxonomy-term="search"><span class="taxonomy-label">Search</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/security/" data-taxonomy-term="security"><span class="taxonomy-label">Security</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/service/" data-taxonomy-term="service"><span class="taxonomy-label">Service</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sla/" data-taxonomy-term="sla"><span class="taxonomy-label">SLA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sop/" data-taxonomy-term="sop"><span class="taxonomy-label">SOP</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sponsor/" data-taxonomy-term="sponsor"><span class="taxonomy-label">Sponsor</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/user/" data-taxonomy-term="user"><span class="taxonomy-label">User</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/vector/" data-taxonomy-term="vector"><span class="taxonomy-label">Vector</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/visualization/" data-taxonomy-term="visualization"><span class="taxonomy-label">Visualization</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/wal/" data-taxonomy-term="wal"><span class="taxonomy-label">WAL</span><span class="taxonomy-count">2</span></a></li>
+        </ul>
+    </div>
+  
+	
+          </aside>
+          <main class="col-12 col-md-9 col-xl-8 ps-md-5 pe-md-4" role="main">
+            
+<div class="td-content">
+	<h1>重新审视阿里云RDS定价策略</h1>
+	
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		<time datetime="2024-03-29" class="text-muted">2024年03月29日</time>
+	</div>
+	<header class="article-meta">
+		<div class="taxonomy taxonomy-terms-article taxo-categories">
+  <h5 class="taxonomy-title">Categories:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/cloud/" data-taxonomy-term="cloud"><span class="taxonomy-label">Cloud</span></a></li>
+    </ul>
+</div>
+<div class="taxonomy taxonomy-terms-article taxo-tags">
+  <h5 class="taxonomy-title">Tags:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cloudexit/" data-taxonomy-term="cloudexit"><span class="taxonomy-label">CloudExit</span></a></li>
+    </ul>
+</div>
+
+  </header>
+	<hr>
+<h2 id="太长不看">太长不看</h2>
+<p>算力的价格使用 <strong>人民币/核·月</strong> 作为统一单位 ，云服务器的溢价为自建的 5 ～ 12 倍。</p>
+<p>作为自建的参照案例，DHH 与 探探自建大型计算/存储服务器的单价成本为 <strong>20 ¥</strong>/(核·月)，算上64x 配比的本地 NVMe 存储后为 <strong>22.4 ¥</strong>/(核·月)。我们考察阿里云国内一线可用区标准 c/g/r 实例族最近三代的算力均价，可以得出以下结论</p>
+<p>在不考虑存储的情况下，云上按量，包月，包年，预付五年的单价分别为 <strong>187¥，125¥，81¥，37¥</strong>，相比自建的 <strong>20¥</strong> 分别溢价了 <strong>8x, 5x, 3x, 1x</strong>。在配置常用比例的块存储后（1核:64GB, ESSD PL3），单价分别为：<strong>571¥，381¥，298¥，165¥</strong>，相比自建的 <strong>22.4¥</strong> 溢价了 <strong>24x, 16x, 12x, 6x</strong> 。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">关键数字</th>
+<th style="text-align:center">按需价格</th>
+<th style="text-align:center">包月价格</th>
+<th style="text-align:center">包年价格</th>
+<th style="text-align:center">预付三年</th>
+<th style="text-align:center">预付五年</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>配上64x存储价格</strong></td>
+<td style="text-align:center">571 ¥</td>
+<td style="text-align:center">381 ¥</td>
+<td style="text-align:center">298 ¥</td>
+<td style="text-align:center">181 ¥</td>
+<td style="text-align:center">165 ¥</td>
+</tr>
+<tr>
+<td style="text-align:center">是自建价格的几倍</td>
+<td style="text-align:center"><strong>25x</strong></td>
+<td style="text-align:center">17x</td>
+<td style="text-align:center">13x</td>
+<td style="text-align:center">8x</td>
+<td style="text-align:center">7x</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>算力单位价格</strong></td>
+<td style="text-align:center">187 ¥</td>
+<td style="text-align:center">125 ¥</td>
+<td style="text-align:center">81 ¥</td>
+<td style="text-align:center">53 ¥</td>
+<td style="text-align:center">37 ¥</td>
+</tr>
+<tr>
+<td style="text-align:center">是自建价格的几倍</td>
+<td style="text-align:center">9x</td>
+<td style="text-align:center">6x</td>
+<td style="text-align:center">4x</td>
+<td style="text-align:center">3x</td>
+<td style="text-align:center"><strong>2x</strong></td>
+</tr>
+</tbody>
+</table>
+<p>随后，我们进一步定量分析阿里云服务器定价数据，发现了对单价影响最大的几项要素：附加存储，付费方式，可用区，实例族（芯片架构，实例代际，内存配比），并解释了上面的数字是如何计算得到的。</p>
+<p>作为结论：即使是在所谓的“大降价”后，公有云提供的算力也远远称不上 “便宜” 。实际上云服务器的成本极其高昂，尤其是大型计算与大型 NVMe 存储。如果您的业务需要较大的块存储或一台物理服务器以上的算力，您确实应当仔细计算一下这里的成本，并考虑一下其他的备选项。</p>
+<p>1 月：标准家
+1 年： 75 折
+2 年： 65
+3 年： 45
+4 年： 37
+5 年： 3 折</p>
+<p>1 月：标准家
+1 年： 65 折
+2 年： 65
+3 年： 45
+4 年： 37
+5 年： 3 折</p>
+<p>¥ 96   |  ¥ 123   |  ¥ 164</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">代际</th>
+<th style="text-align:center">c 计算型 2x</th>
+<th style="text-align:center">g 通用型 4x</th>
+<th style="text-align:center">r 内存型 8x</th>
+<th style="text-align:center">c / g</th>
+<th style="text-align:center">r / g</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">6</td>
+<td style="text-align:center">¥ 88</td>
+<td style="text-align:center">¥ 114</td>
+<td style="text-align:center">¥ 150</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">132%</td>
+</tr>
+<tr>
+<td style="text-align:center">7</td>
+<td style="text-align:center">¥ 96</td>
+<td style="text-align:center">¥ 123</td>
+<td style="text-align:center">¥ 164</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">133%</td>
+</tr>
+<tr>
+<td style="text-align:center">8</td>
+<td style="text-align:center">¥ 101</td>
+<td style="text-align:center">¥ 130</td>
+<td style="text-align:center">¥ 173</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">133%</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>x</th>
+<th>规格代码</th>
+<th>CPU（核）</th>
+<th>内存</th>
+<th>最大连接数</th>
+<th>参考价格</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>pg.x2.medium.2c</td>
+<td>2</td>
+<td>4GB</td>
+<td>400</td>
+<td>550</td>
+<td>¥275.00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.large.2c</td>
+<td>4</td>
+<td>8GB</td>
+<td>800</td>
+<td>1099</td>
+<td>¥274.75</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.xlarge.2c</td>
+<td>8</td>
+<td>16GB</td>
+<td>1600</td>
+<td>2184</td>
+<td>¥273.00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.3large.2c</td>
+<td>12</td>
+<td>24GB</td>
+<td>2400</td>
+<td>3276</td>
+<td>¥273.00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.2xlarge.2c</td>
+<td>16</td>
+<td>32GB</td>
+<td>3200</td>
+<td>4338</td>
+<td>¥271.13</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.3xlarge2c</td>
+<td>24</td>
+<td>48GB</td>
+<td>4800</td>
+<td>6507</td>
+<td>¥271.13</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.4xlarge.2c</td>
+<td>32</td>
+<td>64GB</td>
+<td>6400</td>
+<td>8616</td>
+<td>¥269.25</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.13large.2c</td>
+<td>52</td>
+<td>96GB</td>
+<td>9600</td>
+<td>13905</td>
+<td>¥267.40</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.8xlarge.2c</td>
+<td>64</td>
+<td>128GB</td>
+<td>12800</td>
+<td>16994</td>
+<td>¥265.53</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pg.x2.13xlarge.2c</td>
+<td>104</td>
+<td>192GB</td>
+<td>19200</td>
+<td>27421</td>
+<td>¥263.66</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.medium.2c</td>
+<td>2</td>
+<td>8GB</td>
+<td>800</td>
+<td>700</td>
+<td>¥350.00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.large.2c</td>
+<td>4</td>
+<td>16GB</td>
+<td>1600</td>
+<td>1392</td>
+<td>¥348.00</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.xlarge.2c</td>
+<td>8</td>
+<td>32GB</td>
+<td>3200</td>
+<td>2764</td>
+<td>¥345.50</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.3large.2c</td>
+<td>12</td>
+<td>48GB</td>
+<td>4800</td>
+<td>4118</td>
+<td>¥343.17</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.2xlarge.2c</td>
+<td>16</td>
+<td>64GB</td>
+<td>6400</td>
+<td>5452</td>
+<td>¥340.75</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.3xlarge.2c</td>
+<td>24</td>
+<td>96GB</td>
+<td>9600</td>
+<td>8121</td>
+<td>¥338.38</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.4xlarge.2c</td>
+<td>32</td>
+<td>128GB</td>
+<td>12800</td>
+<td>10675</td>
+<td>¥333.59</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.13large.2c</td>
+<td>52</td>
+<td>192GB</td>
+<td>19200</td>
+<td>17222</td>
+<td>¥331.19</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.8xlarge.2c</td>
+<td>64</td>
+<td>256GB</td>
+<td>25600</td>
+<td>21196</td>
+<td>¥331.19</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pg.x4.13xlarge.2c</td>
+<td>104</td>
+<td>384GB</td>
+<td>38400</td>
+<td>33945</td>
+<td>¥326.39</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.medium.2c</td>
+<td>2</td>
+<td>16GB</td>
+<td>1600</td>
+<td>890</td>
+<td>¥445.00</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.large.2c</td>
+<td>4</td>
+<td>32GB</td>
+<td>3200</td>
+<td>1768</td>
+<td>¥442.00</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.xlarge.2c</td>
+<td>8</td>
+<td>64GB</td>
+<td>6400</td>
+<td>3510</td>
+<td>¥438.75</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.3large.2c</td>
+<td>12</td>
+<td>96GB</td>
+<td>9600</td>
+<td>5227</td>
+<td>¥435.58</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.2xlarge.2c</td>
+<td>16</td>
+<td>128GB</td>
+<td>12800</td>
+<td>6970</td>
+<td>¥435.63</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.3xlarge.2c</td>
+<td>24</td>
+<td>192GB</td>
+<td>19200</td>
+<td>10379</td>
+<td>¥432.46</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.4xlarge.2c</td>
+<td>32</td>
+<td>256GB</td>
+<td>25600</td>
+<td>13839</td>
+<td>¥432.47</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.13large.2c</td>
+<td>52</td>
+<td>384GB</td>
+<td>38400</td>
+<td>21992</td>
+<td>¥422.92</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.8xlarge.2c</td>
+<td>64</td>
+<td>512GB</td>
+<td>51200</td>
+<td>27068</td>
+<td>¥422.94</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pg.x8.13xlarge.2c</td>
+<td>104</td>
+<td>768GB</td>
+<td>76800</td>
+<td>43324</td>
+<td>¥416.58</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">付费模式</th>
+<th style="text-align:center">算力折扣</th>
+<th style="text-align:center">算力单价</th>
+<th style="text-align:center">ESSD折扣</th>
+<th style="text-align:center">PL3</th>
+<th style="text-align:center">PL2</th>
+<th style="text-align:center">PL1</th>
+<th style="text-align:center">PL0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">按量付费</td>
+<td style="text-align:center">150%</td>
+<td style="text-align:center">187</td>
+<td style="text-align:center">151.25%</td>
+<td style="text-align:center">6.05</td>
+<td style="text-align:center">3.02</td>
+<td style="text-align:center">1.51</td>
+<td style="text-align:center">0.76</td>
+</tr>
+<tr>
+<td style="text-align:center">包月付费</td>
+<td style="text-align:center">100%</td>
+<td style="text-align:center">125</td>
+<td style="text-align:center">100%</td>
+<td style="text-align:center">4.00</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+</tr>
+<tr>
+<td style="text-align:center">预付一年</td>
+<td style="text-align:center">65%</td>
+<td style="text-align:center">81</td>
+<td style="text-align:center">85%</td>
+<td style="text-align:center">3.40</td>
+<td style="text-align:center">1.70</td>
+<td style="text-align:center">0.85</td>
+<td style="text-align:center">0.43</td>
+</tr>
+<tr>
+<td style="text-align:center">预付二年</td>
+<td style="text-align:center">55%</td>
+<td style="text-align:center">68</td>
+<td style="text-align:center">70%</td>
+<td style="text-align:center">2.80</td>
+<td style="text-align:center">1.40</td>
+<td style="text-align:center">0.70</td>
+<td style="text-align:center">0.35</td>
+</tr>
+<tr>
+<td style="text-align:center">预付三年</td>
+<td style="text-align:center">44%</td>
+<td style="text-align:center">53</td>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+<tr>
+<td style="text-align:center">预付四年</td>
+<td style="text-align:center">35%</td>
+<td style="text-align:center">44</td>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+<tr>
+<td style="text-align:center">预付五年</td>
+<td style="text-align:center"><strong>30%</strong></td>
+<td style="text-align:center">37</td>
+<td style="text-align:center"><strong>50%</strong></td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="纯算力的价格">纯算力的价格</h2>
+<p>我们取样了最具有代表性的国内可用区，最近三代 c/g/r 实例族纯算力部分的的价格，绘制为图表。</p>
+<p>如表所示，单位算力（1C4G）的标准价格是包月的价格，为 <strong>125 ¥</strong>。在此基础上：按量付费需要额外支付 50% 溢价，为 <strong>187 ¥</strong>；包年预付可以打 65折为 <strong>81 ¥</strong>，包三年可以打 44 折为 <strong>53 ¥</strong>，预付五年可以打三折为 <strong>37 ¥</strong>。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">关键数字</th>
+<th style="text-align:center">按需价格</th>
+<th style="text-align:center">包月价格</th>
+<th style="text-align:center">包年价格</th>
+<th style="text-align:center">预付三年</th>
+<th style="text-align:center">预付五年</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>算力单位价格</strong></td>
+<td style="text-align:center">187 ¥</td>
+<td style="text-align:center">125 ¥</td>
+<td style="text-align:center">81 ¥</td>
+<td style="text-align:center">53 ¥</td>
+<td style="text-align:center">37 ¥</td>
+</tr>
+<tr>
+<td style="text-align:center">是自建价格的几倍</td>
+<td style="text-align:center">9x</td>
+<td style="text-align:center">6x</td>
+<td style="text-align:center">4x</td>
+<td style="text-align:center">3x</td>
+<td style="text-align:center">2x</td>
+</tr>
+<tr>
+<td style="text-align:center">自建成本可降低%</td>
+<td style="text-align:center">89%</td>
+<td style="text-align:center">84%</td>
+<td style="text-align:center">75%</td>
+<td style="text-align:center">62%</td>
+<td style="text-align:center">46%</td>
+</tr>
+<tr>
+<td style="text-align:center">自建成本可降至 %</td>
+<td style="text-align:center">11%</td>
+<td style="text-align:center">16%</td>
+<td style="text-align:center">25%</td>
+<td style="text-align:center">38%</td>
+<td style="text-align:center">54%</td>
+</tr>
+</tbody>
+</table>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=63"><img src="/img/blog/cloud/ecs-2.png"></a></p>
+<p>我们可以使用 DDH 2023 年下云自建的案例，以及我自己在探探亲身经历的云下 IDC 自建案例作为对比。
+刨除 NVMe 存储部分后，DHH 自建的纯算力单价为 <strong>22 ¥</strong>，探探自建的单价为 <strong>18 ¥</strong>。</p>
+
+
+<div class="alert alert-danger" role="alert">
+<h4 class="alert-heading">自建价格已经算上人力/运维费用了！</h4>
+
+    <strong>请注意，此成本数字中已经包含了服务器费用，以及交换机/机柜/网/电/代维/运维人员均摊后的费用。DHH 的单位价格中有 50% 是服务器之外的成本，探探中则为 20% 。如果只算服务器成本，自建单位价格可以降至 10 ¥。如果再以容器平台 500% 超卖比率计算…</strong>
+
+</div>
+
+<p>因此不难看出，云上的纯算力的价格是自建的 2 ～ 9 倍！为了实现云厂商所鼓吹的 “极致弹性”，“按量付费”，您需要额外付出 <strong>8倍</strong>的成本。假如您完全不在乎弹性，就跟正常采购服务器五年摊销一样使用，那么仍然需要额外付出<strong>1倍</strong>的成本。</p>
+<hr>
+<h2 id="杀猪盘的价格">杀猪盘的价格</h2>
+<p>如果云上的算力溢价在预付多年的 Saving Plan 中，价格还能勉强让人接受，那么云上存储的溢价就属于离谱的杀猪盘了。</p>
+<p>大型算力往往要搭配高性能的本地存储使用 —— 例如业内经常使用的一种配比规格为 <strong>1核:64GB</strong> NVMe 存储。探探和 DHH 的自建案例中都使用此配比。 探探的服务器案例中，64核配 3.2TB NVMe SSD，采购价 6000 元，当下市价 ¥2788。在 DHH的案例中，192 核配 12 TB NVMe SSD，采购价 $2390。以标准五年质保与财务摊销计算，单位价格 <strong>¥/(GB·月)</strong> 约为 <strong>0.02</strong>。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">单位价格：¥/GiB月</th>
+<th style="text-align:center">IOPS</th>
+<th>带宽</th>
+<th style="text-align:center">容量</th>
+<th style="text-align:center">按需价格</th>
+<th style="text-align:center">包月价格</th>
+<th style="text-align:center">包年价格</th>
+<th style="text-align:center">预付三年+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">ESSD 云盘 PL0</td>
+<td style="text-align:center">10K</td>
+<td>180 MB/s</td>
+<td style="text-align:center">40G-32T</td>
+<td style="text-align:center">0.76</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.43</td>
+<td style="text-align:center">0.25</td>
+</tr>
+<tr>
+<td style="text-align:center">ESSD 云盘 PL1</td>
+<td style="text-align:center">50K</td>
+<td>350 MB/s</td>
+<td style="text-align:center">20G-32T</td>
+<td style="text-align:center">1.51</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.85</td>
+<td style="text-align:center">0.50</td>
+</tr>
+<tr>
+<td style="text-align:center">ESSD 云盘 PL2</td>
+<td style="text-align:center">100K</td>
+<td>750 MB/s</td>
+<td style="text-align:center">461G-32T</td>
+<td style="text-align:center">3.02</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.70</td>
+<td style="text-align:center">1.00</td>
+</tr>
+<tr>
+<td style="text-align:center">ESSD 云盘 PL3</td>
+<td style="text-align:center">1M</td>
+<td>4 GB/s</td>
+<td style="text-align:center">1.2T-32T</td>
+<td style="text-align:center">6.05</td>
+<td style="text-align:center">4.00</td>
+<td style="text-align:center">3.40</td>
+<td style="text-align:center">2.00</td>
+</tr>
+<tr>
+<td style="text-align:center">本地 NVMe SSD</td>
+<td style="text-align:center">3M</td>
+<td>7 GB/s</td>
+<td style="text-align:center">最大单卡64T</td>
+<td style="text-align:center">0.02</td>
+<td style="text-align:center">0.02</td>
+<td style="text-align:center">0.02</td>
+<td style="text-align:center">0.02</td>
+</tr>
+</tbody>
+</table>
+<p>抛开系统盘/HDD这种乞丐盘，在阿里云上提供了四种不同规格等级的块存储：ESSD PL0 ~ PL3。其单位价格分别为：<strong>0.5, 1, 2, 4</strong>。ESSD PL3 的性能勉强接近本地 Gen3 NVMe SSD，但它 4 块钱的单价是本地自建的 200 倍！当然 ESSD 也有自己独立的折扣策略 —— 预付费三年以上，ESSD 可以打满顶折 5 折，但那也是 100 倍溢价了！</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">关键数字</th>
+<th style="text-align:center">按需价格</th>
+<th style="text-align:center">包月价格</th>
+<th style="text-align:center">包年价格</th>
+<th style="text-align:center">预付三年</th>
+<th style="text-align:center">预付五年</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><strong>配上64x存储价格</strong></td>
+<td style="text-align:center">571 ¥</td>
+<td style="text-align:center">381 ¥</td>
+<td style="text-align:center">298 ¥</td>
+<td style="text-align:center">181 ¥</td>
+<td style="text-align:center">165 ¥</td>
+</tr>
+<tr>
+<td style="text-align:center">是自建价格的几倍</td>
+<td style="text-align:center"><strong>25x</strong></td>
+<td style="text-align:center">17x</td>
+<td style="text-align:center">13x</td>
+<td style="text-align:center">8x</td>
+<td style="text-align:center">7x</td>
+</tr>
+<tr>
+<td style="text-align:center">自建成本可降低%</td>
+<td style="text-align:center">96%</td>
+<td style="text-align:center">94%</td>
+<td style="text-align:center">92%</td>
+<td style="text-align:center">88%</td>
+<td style="text-align:center">86%</td>
+</tr>
+<tr>
+<td style="text-align:center">自建成本可降至 %</td>
+<td style="text-align:center">4%</td>
+<td style="text-align:center">6%</td>
+<td style="text-align:center">8%</td>
+<td style="text-align:center">12%</td>
+<td style="text-align:center">14%</td>
+</tr>
+</tbody>
+</table>
+<p>在《<a href="/zh/blog/cloud/ebs">云盘是不是杀猪盘</a>》中我们已经详细对比过云盘与本地盘的性能、可靠性与成本，因此这里主要使用与本地 NVMe SSD 最接近的 ESSD 云盘 PL3 作为对比。如果我们为每核 CPU 配置 64 GiB 的 PL3 块存储，则调整后的云服务器单价为：<strong>381 ¥</strong>。在此基础上：按量付费需要额外支付 50% 溢价，为 <strong>571 ¥</strong>；包年预付为 <strong>298 ¥</strong>，包三年可以打 44 折为 <strong>181 ¥</strong>，预付五年可以打三折为 <strong>165</strong>。</p>
+<p>与 DHH / 探探自建的含存储单价 <strong>22.4 ¥</strong> 相比，云服务器单价达到了自建的 <strong>6 ～ 25</strong> 倍！</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=79"><img src="/img/blog/cloud/ecs-1.png"></a></p>
+<blockquote>
+<p>图：带64x存储单价对比</p>
+</blockquote>
+<hr>
+<h2 id="云存储对单价的影响">云存储对单价的影响</h2>
+<p>在影响服务器价格的因素中，存储是变数最大的一个。</p>
+<p>例如，以上面的标准配置：<strong>1核:4x内存:64x存储</strong>，在使用不同规格的 ESSD 的情况下，存储费用占服务器费用的比例差异非常之大。</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=69"><img src="/img/blog/cloud/ecs-3.png"></a></p>
+<p>使用 PL3 ESSD 的情况下，<strong>存储费用占比</strong>可以达到 <strong>67% ~ 77%</strong>，我们也可以选择更烂的乞丐盘作为存储，以IOPS/带宽吞吐性能为代价 “降低成本”。例如，使用 PL2 以牺牲 <strong>90%</strong> 的 IOPS 性能为代价，将这一比例降低至 51% ～ 63%，PL1/PL Auto 以牺牲 95% 的性能为代价，将此比例降低至 34% ～ 46%。PL0 则以 99% 的性能为代价，将此比例降低至 20% ～ 30% 。</p>
+<table>
+<thead>
+<tr>
+<th><strong>云盘规格</strong></th>
+<th><strong>预付五年</strong></th>
+<th><strong>预付四年</strong></th>
+<th><strong>预付三年</strong></th>
+<th><strong>预付二年</strong></th>
+<th><strong>包年价格</strong></th>
+<th><strong>包月价格</strong></th>
+<th><strong>按量付费</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>+PL3 ESSD</strong></td>
+<td>¥165</td>
+<td>¥172</td>
+<td>¥181</td>
+<td>¥247</td>
+<td>¥298</td>
+<td>¥381</td>
+<td>¥571</td>
+</tr>
+<tr>
+<td><strong>+PL2 ESSD</strong></td>
+<td>¥101</td>
+<td>¥108</td>
+<td>¥117</td>
+<td>¥158</td>
+<td>¥190</td>
+<td>¥253</td>
+<td>¥379</td>
+</tr>
+<tr>
+<td><strong>+PL1 ESSD</strong></td>
+<td>¥69</td>
+<td>¥76</td>
+<td>¥85</td>
+<td>¥113</td>
+<td>¥135</td>
+<td>¥189</td>
+<td>¥283</td>
+</tr>
+<tr>
+<td><strong>+PL0 ESSD</strong></td>
+<td>¥53</td>
+<td>¥60</td>
+<td>¥69</td>
+<td>¥91</td>
+<td>¥108</td>
+<td>¥157</td>
+<td>¥235</td>
+</tr>
+<tr>
+<td><strong>纯算力价格</strong></td>
+<td>¥37</td>
+<td>¥44</td>
+<td>¥53</td>
+<td>¥68</td>
+<td>¥81</td>
+<td>¥125</td>
+<td>¥187</td>
+</tr>
+</tbody>
+</table>
+<p>请注意，ESSD 块存储和 ECS 算力的折扣力度是不同步的，由于 SSD 的顶配折扣（5折）比纯算力的顶配折扣（3折）要更弱，所以存储费用比例随着预付费时间增加会越来越高。</p>
+<table>
+<thead>
+<tr>
+<th><strong>云盘规格</strong></th>
+<th><strong>预付五年</strong></th>
+<th><strong>预付四年</strong></th>
+<th><strong>预付三年</strong></th>
+<th><strong>预付二年</strong></th>
+<th><strong>包年价格</strong></th>
+<th><strong>包月价格</strong></th>
+<th><strong>按量付费</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>+PL3 ESSD</strong></td>
+<td>77%</td>
+<td>75%</td>
+<td>71%</td>
+<td>72%</td>
+<td>73%</td>
+<td>67%</td>
+<td>67%</td>
+</tr>
+<tr>
+<td><strong>+PL2 ESSD</strong></td>
+<td>63%</td>
+<td>60%</td>
+<td>55%</td>
+<td>57%</td>
+<td>57%</td>
+<td>51%</td>
+<td>51%</td>
+</tr>
+<tr>
+<td><strong>+PL1 ESSD</strong></td>
+<td>46%</td>
+<td>42%</td>
+<td>38%</td>
+<td>40%</td>
+<td>40%</td>
+<td>34%</td>
+<td>34%</td>
+</tr>
+<tr>
+<td><strong>+PL0 ESSD</strong></td>
+<td>30%</td>
+<td>27%</td>
+<td>23%</td>
+<td>25%</td>
+<td>25%</td>
+<td>20%</td>
+<td>20%</td>
+</tr>
+<tr>
+<td><strong>纯算力价格</strong></td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+</tbody>
+</table>
+<p>有人主张说，云上的 ESSD 应该和 SAN 存储对比，本地 NVMe SSD 应该与实例存储进行对比。在《<strong><a href="/zh/blog/cloud/ebs">云盘是不是杀猪盘</a></strong>》中已经解释过这个问题。直接面向用户的数据库类服务使用的几乎都是 EBS 而非实例存储；此外，阿里云并非没有带本地 NVMe SSD 实例存储的机型，例如 <code>i</code> 系列，但这里的单价也远远说不上便宜。</p>
+<hr>
+<h2 id="预付费对单价的影响">预付费对单价的影响</h2>
+<p>预付费方式对云服务器的价格有着显著影响：<strong>算力的价格以包月价格作为标准</strong>，按需付费价格上浮 50%，包年打 65 折，包二、三、四、五年的折扣分别是55，44，35，30 折。存储的价格同样以包月价格作为基准，按需付费的价格上浮 51.25%，包年打85折，两年七折，三年以上五折。ECS 算力的单价（¥/核月）与块存储 ESSD 的单价（¥/GiB月）和折扣规则如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">付费模式</th>
+<th style="text-align:center">算力折扣</th>
+<th style="text-align:center">算力单价</th>
+<th style="text-align:center">ESSD折扣</th>
+<th style="text-align:center">PL3</th>
+<th style="text-align:center">PL2</th>
+<th style="text-align:center">PL1</th>
+<th style="text-align:center">PL0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">按量付费</td>
+<td style="text-align:center">150%</td>
+<td style="text-align:center">187</td>
+<td style="text-align:center">151.25%</td>
+<td style="text-align:center">6.05</td>
+<td style="text-align:center">3.02</td>
+<td style="text-align:center">1.51</td>
+<td style="text-align:center">0.76</td>
+</tr>
+<tr>
+<td style="text-align:center">包月付费</td>
+<td style="text-align:center">100%</td>
+<td style="text-align:center">125</td>
+<td style="text-align:center">100%</td>
+<td style="text-align:center">4.00</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+</tr>
+<tr>
+<td style="text-align:center">预付一年</td>
+<td style="text-align:center">65%</td>
+<td style="text-align:center">81</td>
+<td style="text-align:center">85%</td>
+<td style="text-align:center">3.40</td>
+<td style="text-align:center">1.70</td>
+<td style="text-align:center">0.85</td>
+<td style="text-align:center">0.43</td>
+</tr>
+<tr>
+<td style="text-align:center">预付二年</td>
+<td style="text-align:center">55%</td>
+<td style="text-align:center">68</td>
+<td style="text-align:center">70%</td>
+<td style="text-align:center">2.80</td>
+<td style="text-align:center">1.40</td>
+<td style="text-align:center">0.70</td>
+<td style="text-align:center">0.35</td>
+</tr>
+<tr>
+<td style="text-align:center">预付三年</td>
+<td style="text-align:center">44%</td>
+<td style="text-align:center">53</td>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+<tr>
+<td style="text-align:center">预付四年</td>
+<td style="text-align:center">35%</td>
+<td style="text-align:center">44</td>
+<td style="text-align:center">50%</td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+<tr>
+<td style="text-align:center">预付五年</td>
+<td style="text-align:center"><strong>30%</strong></td>
+<td style="text-align:center">37</td>
+<td style="text-align:center"><strong>50%</strong></td>
+<td style="text-align:center">2.00</td>
+<td style="text-align:center">1.00</td>
+<td style="text-align:center">0.50</td>
+<td style="text-align:center">0.25</td>
+</tr>
+</tbody>
+</table>
+<p>对于纯算力来说，最近三代主流实例族的价格与比例如下表所示，不难看出实际定价相当符合上面给出的模型：</p>
+<table>
+<thead>
+<tr>
+<th><strong>实例族单价</strong></th>
+<th><strong>预付五年</strong></th>
+<th><strong>预付四年</strong></th>
+<th><strong>预付三年</strong></th>
+<th><strong>预付二年</strong></th>
+<th><strong>包年价格</strong></th>
+<th><strong>包月价格</strong></th>
+<th><strong>按量付费</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>c6</strong></td>
+<td>¥27</td>
+<td>¥31</td>
+<td>¥38</td>
+<td>¥49</td>
+<td>¥58</td>
+<td>¥88</td>
+<td>¥133</td>
+</tr>
+<tr>
+<td><strong>c7</strong></td>
+<td>¥28</td>
+<td>¥33</td>
+<td>¥38</td>
+<td>¥52</td>
+<td>¥62</td>
+<td>¥96</td>
+<td>¥144</td>
+</tr>
+<tr>
+<td><strong>c8i</strong></td>
+<td>¥30</td>
+<td>¥35</td>
+<td>¥44</td>
+<td>¥56</td>
+<td>¥66</td>
+<td>¥101</td>
+<td>¥152</td>
+</tr>
+<tr>
+<td><strong>g6</strong></td>
+<td>¥34</td>
+<td>¥40</td>
+<td>¥49</td>
+<td>¥62</td>
+<td>¥74</td>
+<td>¥114</td>
+<td>¥170</td>
+</tr>
+<tr>
+<td><strong>g7</strong></td>
+<td>¥37</td>
+<td>¥43</td>
+<td>¥52</td>
+<td>¥67</td>
+<td>¥79</td>
+<td>¥123</td>
+<td>¥185</td>
+</tr>
+<tr>
+<td><strong>g8i</strong></td>
+<td>¥39</td>
+<td>¥46</td>
+<td>¥56</td>
+<td>¥72</td>
+<td>¥85</td>
+<td>¥130</td>
+<td>¥195</td>
+</tr>
+<tr>
+<td><strong>r6</strong></td>
+<td>¥45</td>
+<td>¥53</td>
+<td>¥65</td>
+<td>¥83</td>
+<td>¥98</td>
+<td>¥150</td>
+<td>¥225</td>
+</tr>
+<tr>
+<td><strong>r7</strong></td>
+<td>¥49</td>
+<td>¥57</td>
+<td>¥70</td>
+<td>¥89</td>
+<td>¥105</td>
+<td>¥164</td>
+<td>¥246</td>
+</tr>
+<tr>
+<td><strong>r8i</strong></td>
+<td>¥52</td>
+<td>¥61</td>
+<td>¥75</td>
+<td>¥95</td>
+<td>¥113</td>
+<td>¥173</td>
+<td>¥260</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th><strong>实例族折扣</strong></th>
+<th><strong>预付五年</strong></th>
+<th><strong>预付四年</strong></th>
+<th><strong>预付三年</strong></th>
+<th><strong>预付二年</strong></th>
+<th><strong>包年价格</strong></th>
+<th><strong>包月价格</strong></th>
+<th><strong>按量付费</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>c6</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>c7</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>40%</td>
+<td>54%</td>
+<td>64%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>c8i</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>g6</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>g7</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>54%</td>
+<td>64%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>g8i</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>r6</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>r7</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>54%</td>
+<td>64%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+<tr>
+<td><strong>r8i</strong></td>
+<td>30%</td>
+<td>35%</td>
+<td>43%</td>
+<td>55%</td>
+<td>65%</td>
+<td>100%</td>
+<td>150%</td>
+</tr>
+</tbody>
+</table>
+<p>上图展示了不同实例族在不同付费模式下的价格对比。如果我们对所有实例价格取一个平均（大致相当于 1c4g 机型的标准价），不同付费模式下的算力均价如柱状图所示：</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=79"><img src="/img/blog/cloud/ecs-5.png"></a></p>
+<hr>
+<h2 id="实例族对价格的影响">实例族对价格的影响</h2>
+<p>实例族对价格的影响主要取决于三点：<strong>内存配比</strong>，<strong>芯片架构</strong>，<strong>实例代际</strong>。</p>
+<p>首先，同一实例族内的 <strong>实例单价与CPU核数无关</strong>，即最终算力部分的价格线性正比于 CPU 核数。因此不会出现规格越大，单价越便宜或越贵的现象（这意味着云服务器实例规格越大，性价比越低）。</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=16"><img src="/img/blog/cloud/ecs-6.png"></a></p>
+<p>内存配比指的是一个 CPU 核配比多少倍的内存，内存的单位是 GiB。在阿里云上，通用型（g）实例的内存配比为1:4，标记为 <code>4x</code> ，即一核CPU配 4 GiB 内存。计算型（c）实例内存配比为 1:2，内存型（r）实例内存配比为 1:8 。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">代际</th>
+<th style="text-align:center">c 计算型 2x</th>
+<th style="text-align:center">g 通用型 4x</th>
+<th style="text-align:center">r 内存型 8x</th>
+<th style="text-align:center">c / g</th>
+<th style="text-align:center">r / g</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">6</td>
+<td style="text-align:center">¥ 88</td>
+<td style="text-align:center">¥ 114</td>
+<td style="text-align:center">¥ 150</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">132%</td>
+</tr>
+<tr>
+<td style="text-align:center">7</td>
+<td style="text-align:center">¥ 96</td>
+<td style="text-align:center">¥ 123</td>
+<td style="text-align:center">¥ 164</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">133%</td>
+</tr>
+<tr>
+<td style="text-align:center">8</td>
+<td style="text-align:center">¥ 101</td>
+<td style="text-align:center">¥ 130</td>
+<td style="text-align:center">¥ 173</td>
+<td style="text-align:center">78%</td>
+<td style="text-align:center">133%</td>
+</tr>
+</tbody>
+</table>
+<p>从统计上看，相比 <code>4x</code> 通用型实例族，同核数的内存型实例 <code>8x</code> 内存翻倍，价格是通用型实例的 <strong>132%</strong> ；同核数的计算型实例 <code>2x</code> 内存减半，价格是通用型实例的 <strong>78%</strong>。
+我们还可以根据这里的规律计算出阿里云上内存的定价约为 12 元/GiB月：也不算便宜，16G用俩个月就够买一条了。</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=45"><img src="/img/blog/cloud/ecs-7.png"></a></p>
+<p>此外，实例/CPU 的代际也对价格有影响，例如以当下的八代实例为基准，上一代 Gen7 实例的价格会在本代基础上打 95 折，再上一代 Gen6 的实例会在本代基础上打 87 折。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">代际</th>
+<th style="text-align:center">Intel</th>
+<th style="text-align:center">ARM</th>
+<th style="text-align:center">ARM / Intel</th>
+<th style="text-align:center">倚天</th>
+<th style="text-align:center">倚天 / Intel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">6</td>
+<td style="text-align:center">¥ 117</td>
+<td style="text-align:center">¥ 104</td>
+<td style="text-align:center">89%</td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">7</td>
+<td style="text-align:center">¥ 128</td>
+<td style="text-align:center">¥ 105</td>
+<td style="text-align:center">82%</td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">8</td>
+<td style="text-align:center">¥ 135</td>
+<td style="text-align:center">¥ 125</td>
+<td style="text-align:center">92%</td>
+<td style="text-align:center">¥ 96</td>
+<td style="text-align:center">71%</td>
+</tr>
+</tbody>
+</table>
+<p>从芯片架构上看，ARM 实例价格是标准 Intel 实例的九折，阿里自研倚天芯片实例的价格是标准 Intel 实例的七折。30% off 就想找小白鼠尝鲜，诚意有些不足了。</p>
+<hr>
+<h2 id="可用区对价格的影响">可用区对价格的影响</h2>
+<p>从大的层面上来说，阿里云的可用区可以分为国内/国际区域，两者的价格有着泾渭分明的区别。海外可用区（包括香港）的价格要比国内可用区高很多，最贵的可用区是香港，各实例族价格几乎是国内可用区的一倍。</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=52"><img src="/img/blog/cloud/ecs-8.png"></a></p>
+<p>国内可用区价格上大体分为两类：中心城市（北上广深杭+宁汉蓉榕青）和犄角旮旯（乌兰察布，河源，呼和浩特，张家口）。中心城市可用区的实例定价保持高度一致（成都例外，有几个实例族稍微便宜点）。犄角旮旯地方的实例价格会便宜一些，相比中心城市最高可能有 30% 的折扣。</p>
+<p><a href="https://demo.pigsty.cc/d/ecs?viewPanel=21"><img src="/img/blog/cloud/ecs-9.png"></a></p>
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/cloud/cloudflare/" aria-label="Previous - 吊打公有云的赛博佛祖Cloudflare" class="btn btn-primary"><span class="me-1">←</span>Previous</a>
+  </li>
+  <li>
+    <a class="btn btn-primary disabled">Next<span class="ms-1">→</span></a>
+  </li>
+</ul>
+
+	</div>
+
+
+          </main>
+        </div>
+      </div>
+      <footer class="td-footer row d-print-none">
+  <div class="container-fluid">
+    <div class="row mx-md-2">
+      <div class="td-footer__left col-6 col-sm-4 order-sm-1">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Mail" aria-label="Mail">
+    <a target="_blank" rel="noopener" href="mailto:rh@vonng.com" aria-label="Mail">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="GitHub" aria-label="GitHub">
+    <a target="_blank" rel="noopener" href="https://github.com/Vonng/pigsty" aria-label="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Twitter" aria-label="Twitter">
+    <a target="_blank" rel="noopener" href="https://twitter.com/GobeUncleWang" aria-label="Twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__right col-6 col-sm-4 order-sm-3">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="WeChat" aria-label="WeChat">
+    <a target="_blank" rel="noopener" href="/zh/docs/ref/wechat" aria-label="WeChat">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Discord" aria-label="Discord">
+    <a target="_blank" rel="noopener" href="https://discord.gg/wDzt5VyWEz" aria-label="Discord">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Telegram" aria-label="Telegram">
+    <a target="_blank" rel="noopener" href="https://t.me/joinchat/gV9zfZraNPM3YjFh" aria-label="Telegram">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__center col-12 col-sm-4 py-2 order-sm-2">
+        <span class="td-footer__copyright">&copy;
+    2018&ndash;2024
+    <span class="td-footer__authors">Ruohang Feng</span></span><span class="td-footer__all_rights_reserved">All Rights Reserved</span></span><span class="ms-2"><a href="https://vonng.com/en/" target="_blank" rel="noopener">@Vonng</a></span>
+<br><span>Pigsty® distributed under <a href="/docs/ref/license" target="_blank" rel="noopener">AGPLv3</a></span>
+<br><span class="ms-2"><a href="/docs/ref/privacy" target="_blank" rel="noopener">Privacy Policy</a></span>
+<span><a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备15016890号</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <script src="/js/main.js"></script>
+<script defer src="/js/click-to-copy.js" crossorigin="anonymous"></script>
+<script src='/js/tabpane-persist.js'></script>
+
+  </body>
+</html>
