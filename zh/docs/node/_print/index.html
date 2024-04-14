@@ -91,7 +91,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.358bab7e981dc780cb1eb06a8ad2edeb.json"
+    data-offline-search-index-json-src="/offline-search-index.fb7c482ae229493a15dedf6d16bd42bf.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -5612,7 +5612,7 @@ IP地址即配置清单中主机的<code>inventory_hostname</code> ，体现为<
 来暴露服务，并使用 <code>node.yml -t haproxy_config,haproxy_reload</code> 来更新配置。</p>
 <p>以下是使用它暴露MinIO服务的示例：<a href="/zh/docs/minio#%E6%9A%B4%E9%9C%B2%E6%9C%8D%E5%8A%A1">暴露MinIO服务</a></p>
 <hr>
-<h2 id="为什么我的-etcyumreposd-全没了">为什么我的 /etc/yum.repos.d/* 全没了？</h2>
+<h2 id="为什么我的-etcyumreposd-全没了">为什么我的 <code>/etc/yum.repos.d/*</code> 全没了？</h2>
 <p>Pigsty会在infra节点上构建的本地软件仓库源中包含所有依赖项。而所有普通节点会根据 <a href="/zh/docs/reference/param#node_repo_modules"><code>node_repo_modules</code></a> 的默认配置 <code>local</code> 来引用并使用 Infra 节点上的本地软件源。</p>
 <p>这一设计从而避免了互联网访问，增强了安装过程的稳定性与可靠性。所有原有的源定义文件会被移动到 <code>/etc/yum.repos.d/backup</code> 目录中，您只要按需复制回来即可。</p>
 <p>如果您想在普通节点安装过程中保留原有的源定义文件，将 <a href="/zh/docs/reference/param#node_repo_remove"><code>node_repo_remove</code></a> 设置为<code>false</code>即可。</p>
@@ -5621,7 +5621,20 @@ IP地址即配置清单中主机的<code>inventory_hostname</code> ，体现为<
 <h2 id="为什么我的命令行提示符变样了怎么恢复">为什么我的命令行提示符变样了？怎么恢复？</h2>
 <p>Pigsty 使用的 Shell 命令行提示符是由环境变量 <code>PS1</code> 指定，定义在 <code>/etc/profile.d/node.sh</code> 文件中。</p>
 <p>如果您不喜欢，想要修改或恢复原样，可以将这个文件移除，重新登陆即可。</p>
-
+<hr>
+<h2 id="为什么我的主机名变了">为什么我的主机名变了？</h2>
+<p>在两种情况下，Pigsty 会修改您的节点主机名：</p>
+<ul>
+<li>显式定义了 <a href="/zh/docs/reference/param#nodename_overwrite"><code>nodename</code></a> 的值（默认为空）</li>
+<li>节点上声明了 <a href="/zh/docs/pgsql"><strong><code>PGSQL</code></strong></a> 模块，且启用了 <a href="/zh/docs/reference/param#node_id_from_pg"><strong><code>node_id_from_pg</code></strong></a> 参数</li>
+</ul>
+<p>如果您不希望修改主机名，可以在全局/集群/实例层面修改 <a href="/zh/docs/reference/param#nodename_overwrite"><strong><code>nodename_overwrite</code></strong></a> 参数为 <code>false</code> （默认值为 <code>true</code>）。</p>
+<p>详情请参考 <a href="/zh/docs/reference/param#node_id"><strong><code>NODE_ID</code></strong></a> 一节。</p>
+<hr>
+<h2 id="腾讯云的-opencloudos-有什么兼容性问题">腾讯云的 OpenCloudOS 有什么兼容性问题？</h2>
+<p>OpenCloudOS 上的 softdog 内核模块不可用，需要从 <code>node_kernel_modules</code> 中移除。在配置文件全局变量中添加以下配置项以覆盖：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_kernel_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">br_netfilter, ip_vs, ip_vs_rr, ip_vs_wrr, ip_vs_sh ]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
 </div>
 
 
