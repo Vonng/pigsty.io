@@ -5,7 +5,7 @@
     <description>Recent content in CloudExit on Pigsty</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh</language>
-    <lastBuildDate>Sun, 14 Apr 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 30 Apr 2024 00:00:00 +0000</lastBuildDate>
     
 	  <atom:link href="/zh/tags/cloudexit/index.xml" rel="self" type="application/rss+xml" />
     
@@ -25,6 +25,428 @@
         
         
         
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 云上黑暗森林：打爆云账单，只需要S3桶名</title>
+      <link>/zh/blog/cloud/s3-scam/</link>
+      <pubDate>Tue, 30 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/s3-scam/</guid>
+      <description>
+        
+        
+        &lt;p&gt;公有云上的黑暗森林法则出现了：&lt;strong&gt;只要你的 S3 对象存储桶名暴露，任何人都有能力刷爆你的云账单。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;试想一下，你在自己喜欢的区域创建了一个空的、&lt;strong&gt;私有的&lt;/strong&gt; AWS S3 存储桶。第二天早上，你的 AWS 账单会是什么样子？&lt;/p&gt;
+&lt;p&gt;几周前，我开始为客户开发一个文档索引系统的概念验证原型 (PoC)。我在 &lt;code&gt;eu-west-1&lt;/code&gt; 区域创建了一个 S3 存储桶，并上传了一些测试文件。两天后我去查阅 AWS 账单页面，主要是为了确认我的操作是否在免费额度内。结果显然事与愿违 —— 账单超过了 &lt;strong&gt;1300美元&lt;/strong&gt;，账单面板显示，执行了将近 &lt;strong&gt;1亿次&lt;/strong&gt; S3 PUT 请求，仅仅发生在一天之内！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/s3-scam-1.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;我的 S3 账单，按每天/每个区域计费&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;这些请求从哪儿来&#34;&gt;这些请求从哪儿来？&lt;/h2&gt;
+&lt;p&gt;默认情况下，AWS 并不会记录对你的 S3 存储桶的请求操作。但你可以通过 &lt;a href=&#34;https://docs.aws.amazon.com/AmazonS3/latest/userguide/cloudtrail-logging.html&#34;&gt;&lt;strong&gt;AWS CloudTrail&lt;/strong&gt;&lt;/a&gt; 或 &lt;a href=&#34;https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html&#34;&gt;&lt;strong&gt;S3 服务器访问日志&lt;/strong&gt;&lt;/a&gt; 启用此类日志记录。开启 CloudTrail 日志后，我立刻发现了成千上万的来自不同账户的写请求。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;为何会有第三方账户对我的 S3 存储桶发起未授权请求？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这是针对我的账户的类 DDoS 攻击吗？还是针对 AWS 的？事实证明，&lt;strong&gt;一个流行的开源工具的默认配置，会将备份存储至 S3 中。这个工具的默认存储桶名称竟然和我使用的完全一致&lt;/strong&gt;。这就意味着，每一个部署该工具且未更改默认设置的实例，都试图将其备份数据存储到我的 S3 存储桶中！&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;备注：遗憾的是，我不能透露这个工具的名称，因为这可能会使相关公司面临风险（详情将在后文解释）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;所以，大量未经授权的第三方用户，试图在我的私有 S3 存储桶中存储数据。但为何我要为此买单？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;对未授权的请求，S3也会向你收费！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在我与 AWS 支持的沟通中，这一点得到了证实，他们的回复是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;是的，S3 也会对未授权请求（4xx）收费，这是符合预期的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;因此，如果我现在打开终端输入：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;aws s3 cp ./file.txt s3://your-bucket-name/random_key
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我会收到 &lt;strong&gt;&lt;code&gt;AccessDenied&lt;/code&gt;&lt;/strong&gt; 错误，&lt;strong&gt;但你要为这个请求买单&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;还有一个问题困扰着我：为什么我的账单中有一半以上的费用来自 &lt;strong&gt;us-east-1&lt;/strong&gt; 区域？我在那里根本没有存储桶！原来，未指定区域的 S3 请求默认发送至 &lt;strong&gt;us-east-1&lt;/strong&gt;，然后根据具体情况进行重定向。而你还需要支付重定向请求的费用。&lt;/p&gt;
+&lt;h3 id=&#34;安全层面的问题&#34;&gt;安全层面的问题&lt;/h3&gt;
+&lt;p&gt;现在我明白了，为什么我的 S3 存储桶会收到数以百万计的请求，以及为什么我最终面临一笔巨额的 S3 账单。当时，我还想到了一个点子。如果所有这些配置错误的系统，都试图将数据备份到我的 S3 存储桶，如果我将其设置为 “&lt;strong&gt;公共写入&lt;/strong&gt;” 会怎样？我将存储桶公开不到 30 秒，就在这短短时间内收集了超过 10GB 的数据。当然，我不能透露这些数据的主人是谁。但这种看似无害的配置失误，竟可能导致严重的数据泄漏，令人震惊！&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;我从中学到了什么&#34;&gt;我从中学到了什么？&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;第一课：任何知道你S3存储桶名的人，都可以随意打爆你的AWS账单&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;除了删除存储桶，你几乎无法防止这种情况发生。当直接通过 S3 API 访问时，你无法使用 CloudFront 或 WAF 来保护你的存储桶。标准的 S3 PUT 请求费用仅为每一千请求 0.005 美元，但一台机器每秒就可以轻松发起数千次请求。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第二课：为你的存储桶名称添加随机后缀可以提高安全性。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这种做法可以降低因配置错误或有意攻击而受到的威胁。至少应避免使用简短和常见的名称作为 S3 存储桶的名称。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第三课：执行大量 S3 请求时，确保明确指定 AWS 区域。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这样你可以避免因 API 重定向而产生额外的费用。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;尾声&#34;&gt;尾声&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;我向这个脆弱开源工具的维护者报告了我的发现。他们迅速修正了默认配置，不过已部署的实例无法修复了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;我还向 AWS 安全团队报告了此事。我希望他们可能会限制这个不幸的 S3 存储桶名称，但他们不愿意处理第三方产品的配置不当问题。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;我向在我的存储桶中发现数据的两家公司报告了此问题。他们没有回复我的邮件，可能将其视为垃圾邮件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;AWS 最终同意取消了我的 S3 账单，但强调了这是一个例外情况。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;感谢你花时间阅读我的文章。希望它能帮你避免意外的 AWS 费用！&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;下云老冯评论&#34;&gt;下云老冯评论&lt;/h2&gt;
+&lt;p&gt;公有云上的黑暗森林法则出现了：&lt;strong&gt;只要你的 S3 对象存储桶名暴露，任何人都有能力刷爆你的 AWS 账单&lt;/strong&gt;。只需要知道你的存储桶名称，别人不需要知道你的 ID，也不需要通过认证，直接强行 PUT / GET 你的桶，不管成败，都会被收取费用。&lt;/p&gt;
+&lt;p&gt;这引入了一种类似于 DDoS 的新攻击类型 —— DoCC （Denial of Cost Control），刷爆账单攻击。&lt;/p&gt;
+&lt;p&gt;在一些群里，AWS 的售后，与工程师给出了他们的解释 —— “AWS设计收费策略有一个原则：就是如果AWS产生了成本（用户本身有一定原因），就一定要向用户收费”，AWS 销售给出的解释则是这个客户不会使用 AWS ，应该参加 AWS SA 考试培训后再上岗。&lt;/p&gt;
+&lt;p&gt;但从常理来看，这完全不合理 —— 由别人发起的，连 Auth 都没有通过的请求，为什么要向用户收费？而用户除了选择不用这一个选项之外，似乎压根没有办法防止这种情况发生 —— 这是一个设计上的漏洞，也是一个安全上的漏洞。&lt;/p&gt;
+&lt;p&gt;但是在 AWS 看来，该特性被视为 Feature，而不是安全漏洞或者 Bug，可以用来咔咔爆用户的金币。同样的设计逻辑贯穿在 AWS 的产品设计逻辑中，例如，Route53 查询没有解析的域名也会收费，所以知道域名是 AWS 解析的话，也可以进行 DDoS。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;我并不确定本土云厂商是否使用了同样的处理逻辑。但他们基本都是直接或间接借鉴 AWS 的。所以有比较大的概率，也会是一样的情况。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/s3-scam-2.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;作为信安专业出身，我很清楚业界的一些玩法，比如打DDoS 卖高防 —— 来自某群友的截图&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;p&gt;在 《&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487400&amp;idx=1&amp;sn=cf5b94165d2791030e0e874dca8383c7&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Cloudflare圆桌访谈&lt;/strong&gt;&lt;/a&gt;》中，我也提到过安全问题，比如监守自盗刷流量的问题。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;最后我想说一下安全，我认为安全才是 Cloudflare 核心价值主张。为什么这么说，还是举一个例子。有一个独立站长朋友用了某个头部本土云 CDN ，最近两年有莫名其妙的超多流量。一个月海外几个T流量，一个IP 过来吃个10G 流量然后消失掉。后来换了个地方提供服务，这些奇怪的流量就没了。运行成本变为本来的 1/10，这就有点让人细思恐极 —— &lt;strong&gt;是不是这些云厂商坚守自盗，在盗刷流量？或者是是云厂商本身（或其附属）组织在有意攻击，从而推广他们的高防 IP 服务？&lt;/strong&gt; 这种例子其实我是有所耳闻的。&lt;/p&gt;
+&lt;p&gt;因此，在使用本土云 CDN 的时候，很多用户会有一些天然的顾虑与不信任。但 Cloudflare 就解决了这个问题 —— 第一，流量不要钱，按请求量计费，所以刷流量没意义；第二，它替你抗 DDoS，即使是 Free Plan 也有这个服务，CF不能砸自己的招牌 —— 这解决了一个用户痛点，就是把账单刷爆的问题 —— 我确实有见过这样的案例，公有云账号里有几万块钱，一下子给盗刷干净了。用 Cloudflare 就彻底没有这个问题，我可以确保账单有高度的确定性 —— 如果不是确定为零的话。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Well，总的来说，账单被刷爆，也算一种公有云上独有的安全风险了 —— 希望云用户保持谨慎小心，一点小失误，也许就会在账单上立即产生难以挽回的损失。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/rds-3.jpeg&#34;&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: Cloudflare圆桌访谈与问答录</title>
+      <link>/zh/blog/cloud/cf-interview/</link>
+      <pubDate>Tue, 23 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/cf-interview/</guid>
+      <description>
+        
+        
+        &lt;p&gt;上周我作为圆桌嘉宾受邀参加了 Cloudflare 在深圳举办的 Immerse 大会，在 Cloudflare Immerse 鸡尾酒会和晚宴上，我与 Cloudflare 亚太区CMO，大中华区技术总监，以及一线工程师深入交流探讨了许多关于 Cloudflare 的问题。&lt;/p&gt;
+&lt;p&gt;本文是圆桌会谈纪要与问答采访的摘录，从用户视角点评 Cloudflare 请参考本号前一篇文章：《&lt;a href=&#34;/zh/blog/cloud/cloudflare&#34;&gt;&lt;strong&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/strong&gt;&lt;/a&gt;》&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;第一部分圆桌访谈&#34;&gt;第一部分：圆桌访谈&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;您与 Cloudflare 如何结缘？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我是冯若航，现在做 &lt;strong&gt;PostgreSQL&lt;/strong&gt; 数据库发行版 &lt;a href=&#34;https://pigsty.io/zh/&#34;&gt;&lt;strong&gt;Pigsty&lt;/strong&gt;&lt;/a&gt;，运营着一个开源社区，同时作为一个数据库 &amp;amp; 云计算领域的 KOL，在国内宣扬下云理念。在 Cloudflare 的场子里讲下云挺有意思，但我并不是来踢馆的。&lt;/p&gt;
+&lt;p&gt;事实上我与 Cloudflare 还有好几层缘分，所以今天很高兴在这里和大家分享一下我的&lt;strong&gt;三重视角&lt;/strong&gt; ：作为一个独立开发者终端用户，作为一个开源社区的成员与运营者，作为一个公有云计算反叛军，我是如何看待 Cloudflare 的。&lt;/p&gt;
+&lt;p&gt;作为一个&lt;strong&gt;开源软件供应商&lt;/strong&gt;，我们需要一种稳定可靠的软件分发方式。我们最开始使用了本土的阿里云与腾讯云，在国内的体验尚可，但当我们需要走出海外，面向国外用户时，使用体验确实不尽如人意。我们尝试了 AWS，Package Cloud ，但最终选择了 Cloudflare。包括我们有几个网站也托管到了CF。&lt;/p&gt;
+&lt;p&gt;作为 &lt;strong&gt;PostgreSQL 社区的一员&lt;/strong&gt;，我们知道 Cloudflare 深度使用了 PostgreSQL 作为底层存储的数据库。并且不同于其他云厂商喜欢将其包装为 RDS 白嫖社区，Cloudflare 一直是杰出的开源社区参与者与建设者。甚至像 Pingora 和 Workerd 这样的核心组件都是开源的。我对此给出高度评价，这是开源软件社区与云厂商共存的典范。&lt;/p&gt;
+&lt;p&gt;作为&lt;strong&gt;下云理念的倡导者&lt;/strong&gt;，我一直认为传统公有云使用了一种非常不健康的商业模式。所以在中国引领着一场针对公有云的&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486813&amp;idx=1&amp;sn=ffb126fdd061c1e27626dd558f6fa26a&amp;chksm=fe4b3886c93cb190e2acf7af6cfd25f298199f6ee73da566bed050c066b96753b913e3453d4f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;下云运动&lt;/strong&gt;&lt;/a&gt;。我认为 Cloudflare 也许是这场运动中的重要盟友 —— 传统 IDC 开源自建，难以解决 “在线” 的问题，而 Cloudflare 的接入能力，边缘计算能力，都弥补了这一块短板。所以我非常看好这种模式。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-1.jpg&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;您用到了哪些 Cloudflare的服务，打动你的是什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我用到了 Cloudflare 的静态网站托管服务 Pages，对象存储服务 R2 和边缘计算 Worker。最打动我的有这么几点：易用性，成本，质量，安全，专业的服务态度，以及这种模式的前景与未来。&lt;/p&gt;
+&lt;p&gt;首先聊一聊&lt;strong&gt;易用性&lt;/strong&gt;吧，我使用的第一项服务是 Pages。我自己有一个网站，静态 HTML 托管在这里。我把这个网站搬上 Cloudflare 用了多长时间？一个小时！我只是创建了一个新的 GitHub Repo，把静态内容提交上去，然后在 Cloudflare 点点按钮，绑定一个新的子域名，链接到 GitHub Repo，整个网站瞬间就可以被全世界访问，你不需要操心什么高可用，高并发，全球部署，HTTPS 证书，抗 DDoS 之类的问题 —— 这种丝滑的用户体验让我非常舒适，并很乐意在这上面花点钱解锁额外功能。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;再来聊一聊&lt;strong&gt;成本&lt;/strong&gt;吧。在独立开发者，个人站长这个圈子里，我们给 Cloudflare 起了一个外号 —— “&lt;strong&gt;赛博佛祖&lt;/strong&gt;”。这主要是因为 Cloudflare 提供了非常慷慨的免费计划。Cloudflare 有着相当独特的商业模式 —— &lt;strong&gt;免流量费，靠安全赚钱&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;比如说 R2，我认为这就是专门针对 AWS S3 进行啪啪打脸的。我曾经作为大甲方对各种云服务与自建的成本进行过精算 —— 得出会让普通用户感到震惊的结论。云上的&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486688&amp;idx=1&amp;sn=bbdee063b65994cb5e15d3e3b7d87523&amp;chksm=fe4b393bc93cb02d76c48f0fbfe3d60c8821b8079b1cfc05f8ccc56c1351b4a7a76b5794019a&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;对象存储&lt;/strong&gt;&lt;/a&gt; / &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=4&amp;sn=93746ecea381afd8e2f9820447b09ec7&amp;chksm=fe4b3ceac93cb5fc44f33ffff226747bc317854acbb3882aeb0d9a7e196eeb5df002d0e77275&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;块存储&lt;/strong&gt;&lt;/a&gt; 比本地自建贵了两个数量级，堪称史诗级杀猪盘。AWS S3 标准档价格 0.023 $/GB·月，而 Cloudflare R2 价格 0.015 $/GB·月，看上去只是便宜了 1/3 。但重要的是&lt;strong&gt;流量费全免&lt;/strong&gt;！这就带来质变了！&lt;/p&gt;
+&lt;p&gt;比如，我自己那个网站也还算有点流量，最近一个月跑了 300GB ，没收钱，我有一个朋友每月跑掉 3TB 流量，没收钱；然后我在推特上看到有个朋友 Free Plan 跑黄网图床，每月 1PB 流量，这确实挺过分了，于是 CF 联系了他 —— 建议购买企业版，也仅仅是 “建议”。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;接下来我们来聊一聊&lt;strong&gt;质量&lt;/strong&gt;。我讲下云的一个前提是：各家公有云厂商卖的是没有不可替代性的大路货标准品。比如那种在&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487223&amp;idx=1&amp;sn=da885170d5d65a3c646d8b3d9da3aed3&amp;chksm=fe4b3b2cc93cb23a5625e8c183860a9e1528eca0a1311439f1ec308a74d53f10cf5dbbb9a1d0&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;老罗直播间&lt;/strong&gt;&lt;/a&gt;中，夹在吸尘器与牙膏中间卖的云服务器。但是 Cloudflare 确实带来了一些不一样的东西。&lt;/p&gt;
+&lt;p&gt;举个例子，Cloudflare Worker 确实很有意思，比起传统云上笨拙的开发部署体验来说，CF worker 真正做到了让开发者爽翻天的 Serverless 效果。开发者不需要操心什么数据库连接串，AccessPoint，AK/SK密钥管理，用什么数据库驱动，怎么管理本地日志，怎么搭建 CI/CD 流程这些繁琐问题，最多在环境变量里面指定一下存储桶名称这类简单信息就够了。写好 Worker 胶水代码实现业务逻辑，命令行一把梭就可以完成全球部署上线。&lt;/p&gt;
+&lt;p&gt;与之对应的是传统公有云厂商提供的各种所谓 Serverless 服务，比如 RDS Serverless，就像一个恶劣的笑话，单纯是一种计费模式上的区别 —— 既不能 Scale to Zero，也没什么易用性上的改善 —— 你依然要在控制台去点点点创建一套 RDS，而不是像 Neon 这种真 Serverless 一样用连接串连上去就能直接迅速拉起一个新实例。更重要的是，稍微有个几十上百的QPS，相比包年包月的账单就要爆炸上天了 —— 这种平庸的 “Serverless” 确实污染了这个词语的本意。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;最后我想说一下&lt;strong&gt;安全&lt;/strong&gt;，我认为安全才是 Cloudflare 核心价值主张。为什么这么说，还是举一个例子。有一个独立站长朋友用了某个头部本土云 CDN ，最近两年有莫名其妙的超多流量。一个月海外几个T流量，一个IP 过来吃个10G 流量然后消失掉。后来换了个地方提供服务，这些奇怪的流量就没了。运行成本变为本来的 1/10，这就有点让人细思恐极 —— &lt;strong&gt;是不是这些云厂商坚守自盗，在盗刷流量？或者是是云厂商本身（或其附属）组织在有意攻击，从而推广他们的高防 IP 服务&lt;/strong&gt;？这种例子其实我是有所耳闻的。&lt;/p&gt;
+&lt;p&gt;因此，在使用本土云 CDN 的时候，很多用户会有一些天然的顾虑与不信任。但 Cloudflare 就解决了这个问题 —— 第一，流量不要钱，按请求量计费，所以刷流量没意义；第二，它替你抗 DDoS，即使是 Free Plan 也有这个服务，CF不能砸自己的招牌 —— 这解决了一个用户痛点，就是把账单刷爆的问题 —— 我确实有见过这样的案例，公有云账号里有几万块钱，一下子给盗刷干净了。用 Cloudflare 就彻底没有这个问题，我可以确保账单有高度的确定性 —— 如果不是确定为零的话。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;专业的服务态度指的是？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;本土云厂商在面对大故障时，体现出相当业余的专业素养与服务态度，这一点我专门写了好几篇文章进行批判。说起来特别赶巧，去年双十一，阿里云出了一个史诗级&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;全球大故障&lt;/strong&gt;&lt;/a&gt;。Cloudflare 也出了个机房断电故障。一周前 4.8 号，腾讯云也出了个翻版&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;全球故障&lt;/strong&gt;&lt;/a&gt;，Cloudflare 也恰好在同一天又出了 Code Orange 机房断电故障。作为一个工程师，我理解故障是难以避免的 —— &lt;strong&gt;但出现故障后，体现出来的专业素养和服务态度是天差地别的&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;首先，阿里云和腾讯云的故障都是人为操作失误/糟糕的软件工程/架构设计导致的，而 Cloudflare 的问题是机房断电，某种程度上算不可抗力的天灾。其次，在处理态度上，阿里云到现在都没发布一个像样的故障复盘，我替它做了一个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;非官方故障复盘&lt;/strong&gt;&lt;/a&gt;；至于腾讯云，我干脆连故障通告都替他们发了 —— 比官网还快10分钟。腾讯云倒是在前天发布了一个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;故障复盘&lt;/strong&gt;&lt;/a&gt;，但是也比较敷衍，专业素养不足，这种复盘报告拿到 Apple 和 Google 都属于不合格的 Post-Mortem ……&lt;/p&gt;
+&lt;p&gt;Cloudflare 则恰恰相反，在故障的当天 CEO 亲自出来撰写故障复盘，细节翔实，态度诚恳，你见过本土云厂商这么做吗？没有!&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;您对 Cloudflare 未来有什么期待？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我主张下云理念，是针对中型以上规模的企业。像我之前任职的探探，以及美国 DHH 37 Signal 这样的。但是 IDC 自建有个问题，&lt;strong&gt;接入&lt;/strong&gt;的问题，&lt;strong&gt;在线的问题&lt;/strong&gt; —— 你可以自建KVM，K8S，RDS，甚至是对象存储。但你不可能自建 CDN 吧？Cloudflare 就很好地弥补了这个缺憾。&lt;/p&gt;
+&lt;p&gt;我认为，Cloudflare 是下云运动的坚实盟友。Cloudflare 并没有提供传统公有云上的那些弹性计算、存储、&lt;strong&gt;K8S&lt;/strong&gt;、&lt;strong&gt;RDS&lt;/strong&gt; 服务。但幸运地是，Cloudflare 可以与公有云 / IDC 良好地配合协同 —— 从某种意义上来说，因为 Cloudflare 成功解决了 “在线” 的问题，这使得传统数据库中心 IDC 2.0 也同样可以拥有比肩甚至超越公有云的 “在线” 能力，两者配合，在事实上摧毁了一些公有云的护城河，并挤压了传统公有云厂商的生存空间。&lt;/p&gt;
+&lt;p&gt;我非常看好 Cloudflare 这种模式，实际上，这种丝滑的体验才配称的上是云，配享太庙，可以心安理得吃高科技行业的高毛利。实际上，&lt;strong&gt;我认为 Cloudflare 应该主动出击，去与传统公有云抢夺云计算的定义权&lt;/strong&gt; —— 我希望未来人们说起云的时候，指的应该是 Cloudflare 这种慷慨体面的连接云，而不是传统公有杀猪云。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;第二部分互动问答&#34;&gt;第二部分：互动问答&lt;/h2&gt;
+&lt;p&gt;在 Cloudflare Immerse 鸡尾酒会和晚宴上，我与 Cloudflare 亚太区CMO，大中华区技术总监，以及一线工程师深入交流探讨了许多关于 Cloudflare 的问题，收获颇丰，这里给出了一些适合公开的问题与答案。因为我也不会录音，因此这里的文字属于我的事后回忆与阅读理解，&lt;strong&gt;仅供参考，不代表 CF 官方观点&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-2.jpg&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 如何定位自己，和 AWS 这种传统公有云是什么关系？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;其实 Cloudflare 不是传统公有云，而是一种 &lt;strong&gt;SaaS&lt;/strong&gt;。我们现在管自己叫做 “Connectivity Cloud”（翻译为：&lt;strong&gt;全球联通云&lt;/strong&gt;），旨在为所有事物之间建立连接，与所有网络相集成；内置情报防范安全风险，并提供统一、简化的界面以恢复&lt;strong&gt;可见性&lt;/strong&gt;与&lt;strong&gt;控制&lt;/strong&gt;。从传统的视角来看，我们做的像是安全、CDN与边缘计算的一个整合。AWS 的 CloudFront 算是我们的竞品。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-3.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 为什么提供了如此慷慨的免费计划，到底靠什么赚钱？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Cloudflare 的免费服务就像 Costco 的5美元烤鸡一样。实际上除了免费套餐，那个 Workers 和 Pages 的付费计划也是每月五美元，跟白送的一样，Cloudflare 也不是从这些用户身上赚钱的。&lt;/p&gt;
+&lt;p&gt;Cloudflare 的核心商业模式是&lt;strong&gt;安全&lt;/strong&gt;。相比于只服务付费客户，更多的免费用户可以带来更深入的数据洞察 —— 也就能够发现更为广泛的攻击与威胁情报，为付费用户提供更好的安全服务。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;我们的 Free 计划有何优势？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在 Cloudflare，我们的使命是帮助建立更好的互联网。我们认为 web 应该是开放和免费的，所有网站和 web 用户，无论多小，都应该是安全、稳固、快速的。由于&lt;a href=&#34;https://webmasters.stackexchange.com/questions/88659/how-can-cloudflare-offer-a-free-cdn-with-unlimited-bandwidth&#34;&gt;种种原因&lt;/a&gt;，Cloudflare 始终都提供慷慨的免费计划。&lt;/p&gt;
+&lt;p&gt;我们努力将网络运营成本降至最低，从而能在我们的 Free 计划中提供巨大价值。最重要的是，通过保护更多网站，我们能就针对我们网络的各类攻击获得更完善的数据，从而能为所有网站提供更佳的安全和保护。&lt;/p&gt;
+&lt;p&gt;作为隐私第一的公司，我们绝不出售您的数据。事实上，Cloudflare 承认个人数据隐私是一项基本人权，并已采取&lt;a href=&#34;https://blog.cloudflare.com/certifying-our-commitment-to-your-right-to-information-privacy/&#34;&gt;一系列措施&lt;/a&gt;来证明我们对隐私的承诺。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;实际上 Cloudflare 的 CEO 在 StackOverflow &lt;a href=&#34;https://webmasters.stackexchange.com/questions/88659/how-can-cloudflare-offer-a-free-cdn-with-unlimited-bandwidth&#34;&gt;亲自对这个问题作出过回答&lt;/a&gt;：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-4.webp&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Five reasons we offer a free version of the service and always will:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Data: we see a much broader range of attacks than we would if we only had our paid users. This allows us to offer better protection to our paid users.&lt;/li&gt;
+&lt;li&gt;Customer Referrals: some of our most powerful advocates are free customers who then &amp;ldquo;take CloudFlare to work.&amp;rdquo; Many of our largest customers came because a critical employee of theirs fell in love with the free version of our service.&lt;/li&gt;
+&lt;li&gt;Employee Referrals: we need to hire some of the smartest engineers in the world. Most enterprise SaaS companies have to hire recruiters and spend significant resources on hiring. We don&amp;rsquo;t but get a constant stream of great candidates, most of whom are also CloudFlare users. In 2015, our employment acceptance rate was 1.6%, on par with some of the largest consumer Internet companies.&lt;/li&gt;
+&lt;li&gt;QA: one of the hardest problems in software development is quality testing at production scale. When we develop a new feature we often offer it to our free customers first. Inevitably many volunteer to test the new code and help us work out the bugs. That allows an iteration and development cycle that is faster than most enterprise SaaS companies and a MUCH faster than any hardware or boxed software company.&lt;/li&gt;
+&lt;li&gt;Bandwidth Chicken &amp;amp; Egg: in order to get the unit economics around bandwidth to offer competitive pricing at acceptable margins you need to have scale, but in order to get scale from paying users you need competitive pricing. Free customers early on helped us solve this chicken &amp;amp; egg problem. Today we continue to see that benefit in regions where our diversity of customers helps convince regional telecoms to peer with us locally, continuing to drive down our unit costs of bandwidth.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Today CloudFlare has 70%+ gross margins and is profitable (EBITDA)/break even (Net Income) even with the vast majority of our users paying us nothing.&lt;/p&gt;
+&lt;p&gt;Matthew Prince Co-founder &amp;amp; CEO, CloudFlare&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;创始人的情怀与愿景其实挺重要的 …… ，Cloudflare 早期的许多服务一直都是免费提供的，第一个付费服务其实是 SSL 证书，现在也不要钱了。总的来说，就是靠企业级客户为安全付费。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare付费用户都是什么样的？怎么从免费用户成为付费用户的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们的免费客户转变为企业级付费客户的主要契机是安全问题。Cloudflare 控制台上有个 “&lt;strong&gt;遭受攻击&lt;/strong&gt;” 的按钮 —— 是这样的，只要用户在控制台上点这个 “Under Attack” 按钮，即使是免费客户，我们也会第一时间有人响应，帮助客户解决问题。例如在疫情期间，某头部视频会议厂商遭受到了安全攻击。我们立即抽调人手替客户解决问题 —— 他们很满意，我们就签了单子。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-5.webp&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 的免费套餐有可能会在未来取消吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Costco 有个 1.5 美元的热狗汽水套餐，创始人承诺永远不会提高热狗和苏打水套餐的价格。我知道像 Vercel，Planetscale 之类的 SaaS 厂商开始削减免费套餐，但我认为这事基本不太可能发生在 Cloudflare 上。因为如上所述，我们有充分的理由继续提供免费计划。实际上我们的大多数客户都没付钱，在使用 Free Plan。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-6.webp&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;为什么Cloudflare 会在故障后由 CEO 亲自出马复盘？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们的 CEO 是技术出身，工程师背景。出现故障的时候 IM 里一堆人在掰扯，CEO 跳出来说：够了，我来写故障复盘报告 —— 然后故障当天就发出来了，这种事放在公有云厂商里绝对是相当罕见的了… 我们其实也很震惊…。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-7.webp&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 在中国区域访问为什么这么慢？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;中国区域带宽/流量费用太贵了，所以普通用户访问其实访问的其实主要是北美地区的机房与节点。我们在 全世界 95% 的地区都有非常优秀的延迟表现（比），但剩下 5% 嘛主要指的就是 …… ，在这里&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-8.webp&#34;&gt;&lt;/p&gt;
+&lt;p&gt;如果你的主要用户群体都是国内，又比较在乎速度，可以考虑一下 Cloudflare 企业版，或者是本土 CDN 厂商。我们和京东云有合作，企业级客户在国内也可以使用他们提供的这些节点。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;中国区域用户使用 Cloudflare 的主要动机是什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;主要是因为&lt;strong&gt;安全&lt;/strong&gt;：Cloudflare 即使是免费计划中，也提供了抗 DDoS 服务。中国的用户使用 Cloudflare 主要是为了出海。而那些纯粹面向本土的中国客户，宁可慢一点也要用 CF 的主要动机就是安全（抗DDoS）。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 会在中国被封禁吗？有什么运营风险吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我觉得这件事不太可能会发生，你知道现在有多少网站托管在 Cloudflare 上面吗 … 这一炮打下去，大半个互联网都访问不了了。Cloudflare 本身并没有在中国地区运营…… ，在中国也主要服务于 C2G （China to Global）业务。
+你刚才问为什么 Cloudflare 域名不备案为什么就能访问，就是这个原因 —— 我们压根没在中国运营。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;在与本土云厂商合作中，资源互换主要是一种什么形式？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;有一些本土云厂商通过资源互换的方式合作，所谓资源互换嘛，&lt;code&gt;&amp;lt;Redacted&amp;gt;&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;你们如何看待腾讯云模仿你们的产品 EdgeOne ？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;做生意和气生财，我们不好公开评论其他云。但私下里说，CopyCat……&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 企业版的主要价值点在于？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;流量优先级。举个例子你出海的流量大概率是从上海的某一根跨海光纤出去的，平时这条线路的使用率是 &lt;code&gt;&amp;lt;Redacted&amp;gt;&lt;/code&gt; % ，但是在高峰期，我们就会优先保证企业级用户的服务质量。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/blog/cloud/cf-interview-9.webp&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare 考虑推出托管的 RDS，Postgres数据库服务吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;现在那个 D1 其实是 SQLite，目前没有计划做这种托管数据库服务，但是生态里已经有可以满足这种需求的供应商了，你看有不少在 Worker 里使用 Neon （Serverless Postgres）的例子。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 云数据库的确是智商税</title>
+      <link>/zh/blog/cloud/rds-scam/</link>
+      <pubDate>Wed, 17 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/rds-scam/</guid>
+      <description>
+        
+        
+        &lt;p&gt;RDS带来的数据库范式转变，&lt;/p&gt;
+&lt;p&gt;云数据库是不是天价大锅饭。&lt;/p&gt;
+&lt;p&gt;质量安全效率成本剖析核算，&lt;/p&gt;
+&lt;p&gt;下云数据库自建，如何实战！&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;rds带来的数据库范式转变&#34;&gt;RDS带来的数据库范式转变&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;上期内容老罗直播回顾&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;上期我们聊了老罗的直播。交个朋友淘宝直播间。先卖扫地机器人，姗姗来迟的老罗照本宣科念台词卖了四十分钟”云“，然后瞬间画风一转，马不停蹄地卖起了 &lt;strong&gt;高露洁无水酵素牙膏&lt;/strong&gt;。这很明显是一场失败的直播尝试，超过千家企业在直播间下单了云服务器，如果是 100 ～ 200 块的云服务器，每家限购一台，也就是撑死了二十万的营收，说不定还没有罗老师出场费高。&lt;/p&gt;
+&lt;p&gt;我写了一篇文章《&lt;a href=&#34;https://mp.weixin.qq.com/s/s_MCdaCByDBuocXkY1tvKw&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;》揶揄直播卖虚拟机的阿里云是个牙膏云，然后马上就有个朋友写了一篇《&lt;a href=&#34;https://mp.weixin.qq.com/s/ffrwbLiGxTLO1jVh8mHiBA&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;》说：“任何一家云厂商都不配牙膏云这个称号。从利润率，到社会价值，到品牌管理，质量管理和市场教育，公有云厂商们都被牙膏厂全方面吊打”。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;云数据库是什么，是一种软件范式转移吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;最初，软件吞噬世界&lt;/strong&gt;，以 Oracle 为代表的商业数据库，用软件取代了人工簿记，用于数据分析与事务处理，极大地提高了效率。不过 Oracle 这样的商业数据库非常昂贵，一核·一月光是软件授权费用就能破万，不是大型机构都不一定用得起，即使像壕如淘宝，上了量后也不得不”去O“。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;接着，开源吞噬软件&lt;/strong&gt;，像 PostgreSQL 和 MySQL 这样”&lt;strong&gt;开源&lt;/strong&gt;免费“的数据库应运而生。软件开源本身是免费的，每核每月只需要几十块钱的硬件成本。大多数场景下，如果能找到一两个数据库专家帮企业用好开源数据库，那可是要比傻乎乎地给 Oracle 送钱要实惠太多了。&lt;/p&gt;
+&lt;p&gt;开源软件带来了巨大的行业变革，可以说，&lt;strong&gt;互联网的历史就是开源软件的历史&lt;/strong&gt;。尽管如此，开源软件免费，但 &lt;strong&gt;专家稀缺昂贵&lt;/strong&gt;。能帮助企业 &lt;strong&gt;用好/管好&lt;/strong&gt; 开源数据库的专家非常稀缺，甚至有价无市。某种意义上来说，这就是”开源“这种模式的商业逻辑：&lt;strong&gt;免费的开源软件吸引用户，用户需求产生开源专家岗位，开源专家产出更好的开源软件&lt;/strong&gt;。但是，专家的稀缺也阻碍了开源数据库的进一步普及。于是，“云软件”出现了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;然后，云吞噬开源&lt;/strong&gt;。公有云软件，是互联网大厂将自己使用开源软件的能力产品化对外输出的结果。公有云厂商把开源数据库内核套上壳，包上管控软件跑在托管硬件上，并雇佣共享 DBA 专家提供支持，便成了&lt;strong&gt;云数据库服务&lt;/strong&gt; （RDS） 。&lt;strong&gt;这诚然是有价值的服务，也为很多软件变现提供了新的途径。但云厂商的搭便车行径，无疑对开源软件社区是一种剥削与攫取&lt;/strong&gt;，而捍卫计算自由的开源组织与开发者自然也会展开反击。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：为什么云数据库是智商税？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;用云数据库，实际上就是用五星级酒店米其林的价格，吃预制菜料理包。&lt;/p&gt;
+&lt;p&gt;你在家用微波炉加热黄焖鸡米饭料理包花费10元，餐馆老板替你用微波炉加热装碗上桌收费30元，你不会计较什么，房租水电人工服务也都是要钱的。但如果现在老板端出同样一碗饭跟你收费 1000 元并说：我们提供的不是黄焖鸡米饭，&lt;strong&gt;而是可靠质保的弹性餐饮服务&lt;/strong&gt;，大厨品控掌握火候，按量付费想吃多少有多少，按需付费吃多少盛多少，不吃黄焖鸡还有麻辣烫串串香可选，反正就值这个价，你会不会有打一顿这个老板的冲动？这样的事情就发生在云服务器、块存储和云数据库上面。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：为什么有此一说？为什么会觉得贵？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;首先说一下立场，中大规模的企业级用户。探探的数据库例子，我们在云下，评估上云的价格。我们用的服务器，一台是……5年7.5万，每年TCO 1.5w。两台组个高可用，就是每年3万块钱，阿里云华东1默认可用区，独享的64核256GB实例：pg.x4m.8xlarge.2c，并加装一块3.2TB的ESSD PL3云盘。每年的费用在25万（3年）到75万（按需）不等。 AWS 总体在每年160 ～ 217万元不等。&lt;/p&gt;
+&lt;p&gt;不只是我们，Ruby on Rails 的作者 DHH 在 2023 年分享了他们 37 Signal 公司从云上下来的完整历程。&lt;/p&gt;
+&lt;p&gt;介绍 &lt;a href=&#34;https://pigsty.io/zh/blog/cloud/odyssey/&#34;&gt;DHH 下云的例子&lt;/a&gt;，每年 300w 美元年消费。一次性投入&lt;strong&gt;60万美元&lt;/strong&gt;买了服务器自己托管后，年支出降到了 100 万美元，原来的1/3 。五年能省下 700 万美金。下云花了半年时间，也没有使用更多的人手来运营。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：比如经典商业数据库 Oracle，DB2， SQL Server 都卖的很贵，云厂商为什么不能卖贵？这不是正常的商业逻辑吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;反问：商业数据库时代，数据库有多贵，给大家介绍一下。范式转移&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：你觉得卖的贵，我要 Argue 一下，这不是正常的商业逻辑吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;卖的贵不是大问题 —— 有只要最好的东西，根本不看价格的客户。然而问题在于云数据库不够好，第一：内核是开源 PG / MySQL，实际上自己做的就是个管控。而且在其营销却宣传中，好像是包治百病的万灵药，存算分离，Serverless，HTAP，云原生，超融合…，RDS 是先进的汽车，而老的数据库是马车……，blah&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：如果不是马车和汽车，那应该是什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;区别最多算油车和电车，阐述数据库行业与汽车行业的类比。数据库：汽车；DBA：司机；商业数据库：品牌汽车；开源数据库：组装车；云数据库：出租车+出租司机，嘀嘀打车；这种模式是有其适用光谱的。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库的适用光谱？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;起步阶段，流量极小的简单应用 / 2 毫无规律可循，大起大落的负载 / 3 全球化出海合规场景 ，租售比。小微企业别折腾，上云（但上什么云值得商榷），大企业毫无疑问，下云。更务实的做法是买基线，租尖峰，混合云 —— 主体下云，弹性上云。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：这么看来，云计算其实是有它的价值与生态位的。&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;《科技封建主义》，垄断巨头对生态造成的伤害。 / 2. 云营销，吹牛是要上税的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;抛开宏大叙事不谈，但云数据库的费用可不便宜。…… （弹性/百公里加速），引出成本问题。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云数据库是不是天价大锅饭&#34;&gt;云数据库是不是天价大锅饭&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;问：我们先来聊聊第一个问题，成本，成本不是云数据库所宣称的一项优势吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;看和谁比，和传统商业数据库 Oracle 比可以，和开源数据库比就不行了 —— 特别是小规模可以（DBA），有点规模就不行了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云是不是可以省下DBA/数据库专家的成本？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;是的，好DBA稀缺难找。但用云数据库不代表你就不需要DBA了，你只是省去了系统建设的工作与日常运维性的工作，还有省不掉的部分。第二，我们可以具体算一笔账，在什么规模下，雇佣一个 DBA 相比云数据库是合算的。（聊一聊几种价格的模型）&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：RDS 和DBA 是什么关系？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;RDS 和 DBA 提供的核心价值不是数据库产品，而是用好开源数据库内核的能力。…… 只不过一个主要靠DBA老司机，一个主要靠管控软件。一个是雇佣，一个是租赁。我觉得生态里还缺一种模式 —— 拥有管控软件，所以我做的东西就是开源的数据库管控软件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：所以云数据库成本上不占优势？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;极小规模有优势，标准尺寸或者大规模数据库没有任何成本优势。&lt;/p&gt;
+&lt;p&gt;比较成本你要看怎么比。云数据库的计费项：计算+存储，当然还有流量费，数据库代理费，监控费用，备份费用。&lt;/p&gt;
+&lt;p&gt;大头是计算与存储，计算的单位是……，存储的单位是……（一些关键数字）&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：实例部分的钱怎么算？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;阿里 RDS: 7x-11x，PolarDB: 6x~10x，AWS: 14x ~ 22x&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;双实例高可用版价格&lt;/th&gt;
+&lt;th&gt;4x 核月单价&lt;/th&gt;
+&lt;th&gt;8x 核月单价&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;高可用RDS系列核月均价&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥339&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥432&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS RDS 高可用参考价&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥1,160&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥1,582&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 PolarDB 参考价&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥250&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥400&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;DHH探探自建1C算力（不含存储）&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;¥40&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;云服务器，云上按量，包月，包年，预付五年的单价分别为 &lt;strong&gt;187¥，125¥，81¥，37¥&lt;/strong&gt;，相比自建的 &lt;strong&gt;20¥&lt;/strong&gt; 分别溢价了 &lt;strong&gt;8x, 5x, 3x, 1x&lt;/strong&gt;。在配置常用比例的块存储后（1核:64GB, ESSD PL3），单价分别为：&lt;strong&gt;571¥，381¥，298¥，165¥&lt;/strong&gt;，相比自建的 &lt;strong&gt;22.4¥&lt;/strong&gt; 溢价了 &lt;strong&gt;24x, 16x, 12x, 6x&lt;/strong&gt; 。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：存储部分的钱怎么算？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;先来看零售单价，GB·月单价 ，两分钱，阿里云 ESSD 上分了几个不同的档次，从 1- 4块钱。&lt;/p&gt;
+&lt;p&gt;1TB 存储·月价格（满折扣）：自己买 16 ，AWS 1900，阿里云 3200&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：上面聊了很多成本的问题，但你怎么能盯着成本呢？成本到底有多重要？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在你技术与产品有领先优势的情况下，成本没那么重要。但当技术与产品拉不开差距的时候，即 —— 你卖的是没有不可替代性的大路货标准品，成本就非常重要了。在十年前，云数据库也许是属于产品/技术主导的状态，可以心安理得的吃高毛利。但是在十年后的今天。云不是高科技了，云已经烂大街了。市场已经从价值定价转向了成本定价，成本至关重要。&lt;/p&gt;
+&lt;p&gt;阿里的主营业务电商，被“廉价”的拼多多打的稀里哗啦，拼多多靠的是什么？就是一个朴实无华的便宜。你淘宝天猫能卖的，我能卖一样还更便宜，这就是核心竞争力。你又不是爱马仕，劳力士，买个包买个表都要配几倍货才卖给你的奢侈品逻辑，在老罗直播间里夹在牙膏和吸尘器中间的大路货云服务器能拼什么，还不是一个便宜？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：那么什么时候成本不重要呢？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第二个点是经济上行繁荣期，创业公司拼速度的发展期，扣成本可能为时过早。但现在很明显，是经济下行萧条期……。再比如说，如果你的东西足够好，那么用户也可以不在意成本。就好比你去五星级酒店，米其林餐厅吃饭，不会在意他们用的食材是多少成本；对吧，OpenAI ChatGPT 别无分号，仅此一家，爱买不买。但是，去菜市场买菜，那是是会看成本的。云数据库，云服务器，云盘，都是“食材”，而不是菜品，是要核算成本，比价的。（黄焖鸡米饭的故事）&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;质量安全效率成本剖析核算&#34;&gt;质量安全效率成本剖析核算&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;问：性价比里的价格成本聊透了，那我们来聊聊质量、安全、效率&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;云数据库很贵，所以在卖的时候都有一些话术。虽然我们贵，但是我们好呀！&lt;em&gt;&lt;strong&gt;数据库是基础软件里的皇冠明珠，凝聚着无数无形知识产权BlahBlah&lt;/strong&gt;&lt;/em&gt;。因此软件的价格远超硬件非常合理…… 但是，云数据库真的好吗？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：在功能上，云数据库怎么样？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;只能 OLTP 的 MySQL 咱就不说了，但是 RDS PostgreSQL 还是可以聊一聊的。尽管 PostgreSQL 是世界上最先进的开源关系型数据库，但其独一无二的特点在于其&lt;strong&gt;极致可扩展性，与繁荣的扩展生态&lt;/strong&gt;！不幸地是，&lt;strong&gt;《&lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;云 RDS 阉割掉了 PostgreSQL 的灵魂&lt;/a&gt;&lt;/strong&gt;》 —— 用户无法在 RDS 上自由加装扩展，而一些强力扩展也注定不会出现在 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng&amp;mid=2247485745&amp;idx=5&amp;sn=a7d610ea37c3f3fa78ee4ba0ee705962&amp;chksm=fe4b3ceac93cb5fc6f1975f94be04424e7b3690eedd1658951deb8d016f5f19ade8806d86417&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;RDS&lt;/strong&gt;&lt;/a&gt; 中。使用 RDS 无法发挥出 PostgreSQL 真正的实力，而这是一个对云厂商来说&lt;strong&gt;无法解决的缺陷&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：在功能扩展上，云上的 PostgreSQL 数据库有什么缺陷？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Contrib 模块作为 PostgreSQL 本体的一部分，已经包含了 73 个扩展插件，在 PG 自带的 73 个扩展中，阿里云保留了23个阉割了49个；AWS 保留了 49 个，阉割了 24 个。PostgreSQL 官方仓库 PGDG 收录的约 100 个扩展，Pigsty 作为PG发行版自身维护打包了20个强力扩展插件，在 EL/Deb 平台上总共可用的扩展已经达到了 234 个 —— AWS RDS 只提供了 94 个扩展，阿里云 RDS 提供了 104 个扩展。&lt;/p&gt;
+&lt;p&gt;在重要的扩展中，情况更严重。AWS与阿里云缺失的扩展有：（时序 TimescaleDB，分布式 Citus，列存 Hydra，全文检索 BM25，OLAP PG Analytics，消息队列 pgq，甚至一些基本的重要组件都没有提供，比如做 CDC 的 WAL2JSON），版本跟进跟进速度也不理想。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库为什么不能提供这些扩展？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;云厂商的口径是：安全性，稳定性，但这根本说不通。云上的扩展都是从 PostgreSQL 官方仓库 PGDG 下载打好包，测试好的 rpm / deb 包来用的。需要云厂商测试什么东西？但我认为更重要的一个问题是开源协议的问题，AGPLv3 带来的挑战。开源社区面对云厂商白嫖的挑战，已经开始集体转向了，越来越多的开源软件使用更为严格，歧视云厂商的软件许可证。比如 XXX 都用 AGPL 发布，云厂商就不可能提供，否则就要把自己的摇钱树 —— 管控软件开源。&lt;/p&gt;
+&lt;p&gt;这个我们后面可以单独开一期来聊这个事情。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：上面提到了安全性的问题，那么云数据库真的安全吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;1、多租户安全挑战（恶意的邻居，Kubecon 案例）；2. 公网的更大攻击面（SSH爆破，SHGA）；&lt;/p&gt;
+&lt;p&gt;3、糟糕的工程实践（AK/SK，Replicator密码，HBA修改）； 4 没有保密性、完整性兜底。&lt;/p&gt;
+&lt;p&gt;5、缺乏可观测性，因此难以发现安全问题，更难取证，就更别提追索了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库的可观测性一团稀烂，怎么说？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;信息、数据、情报对于管理来说什么至关重要。但是云上提供的这个监控系统吧，质量只能说一言难进。早在 2017 年的时候我就调研过世面上所有 PostgreSQL 数据库监控系统 …… 指标数量，图表数量，信息含量。可观测性理念，都一塌糊涂。监控的颗粒度也很低（分钟级），想要5秒级别的？不好意思请加钱。&lt;/p&gt;
+&lt;p&gt;AustinDatabase 号主今天刚发了一篇《&lt;a href=&#34;https://mp.weixin.qq.com/s/IMgJBZ9uqU5x738p9mED4w&#34;&gt;上云后给我一个 不裁 DBA的理由&lt;/a&gt;》聊到这个问题：在阿里云上想开 Ticket 找人分析问题，客服会疯狂给你推荐 DAS（数据库自动驾驶服务），请加钱，每月每实例 6K 的天价。&lt;/p&gt;
+&lt;p&gt;没有足够好的监控系统，你怎么定责，怎么追索？（比如硬件问题，超卖，IO抢占导致的性能雪崩，主从切换，给客户造成了损失）&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：除了安全和可观测性的问题，相当一部分用户更在意的是质量可靠性&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;云数据库并不提供对可靠性兜底，没有SLA 条款兜底这个。&lt;/p&gt;
+&lt;p&gt;只有可用性的 SLA ，还是很逊色的 SLA，赔付比例跟玩一样。 营销混淆：将 SLA 混淆为真实可靠性战绩。&lt;/p&gt;
+&lt;p&gt;乞丐版的标准版数据库甚至连 WAL 归档与 PITR 都没有，就单纯给你回滚到特定备份，用户也没有能力自助解决问题。&lt;/p&gt;
+&lt;p&gt;著名的双十一大故障，草台班子理论，降本增笑。中亭团伙……可观测性团队的草台班子，都是刚毕业的在维护。&lt;/p&gt;
+&lt;p&gt;业务连续性上的战绩并不理想：RTO，RPO ，嘴上说的都是 =0 =0，实际…… 。腾讯云硬盘故障导致初创公司数据丢失的案例。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库真的好吗？（性能维度）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们先来聊一聊性能吧。刚才聊了云盘的价格，没说云盘的性能，EBS 块存储的典型性能，IOPS，延迟，本地盘。更重要的是这个高等级的云盘还&lt;a href=&#34;https://pigsty.io/zh/blog/cloud/ecs/#%E4%BA%91%E5%AD%98%E5%82%A8%E5%AF%B9%E5%8D%95%E4%BB%B7%E7%9A%84%E5%BD%B1%E5%93%8D&#34;&gt;不是你想用就给你用的&lt;/a&gt;。如果你买的量低于1.2TB，他们是不卖给你 ESSD PL3 的。而次一档的 ESSD PL2 的 IOPS 吞吐量就只有 ESSD PL3 的 1/10 。&lt;/p&gt;
+&lt;p&gt;第二个问题是资源利用率。RDS 管控 2GB 的管控……，什么都不干内存吃一半。Java管控，日志Agent。&lt;/p&gt;
+&lt;p&gt;高可用版的云数据库，有个备库，但是不给你读。吃你一倍的资源对不对，你想要只读实例要额外单独申请。&lt;/p&gt;
+&lt;p&gt;最后，资源利用率提高的是云厂商白赚，好处让云厂商赚走了，代价让用户承担了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：其他的点呢？比如可维护性？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;每个操作要发验证码短信，100套 PostgreSQL 集群怎么办？ClickOps小农经济，企业用户和开发者真正的正道是 IaC，但是在这一点上比较拉垮。K8S Pigsty 都做的很好，原生内置了 IaC。RPA 机器人流程自动化。糟糕的API 设计，举个例子，几种不同风格的&lt;a href=&#34;https://help.aliyun.com/zh/rds/developer-reference/api-rds-2014-08-15-errorcodes?spm=a2c4g.11186623.0.0.604b1fbaxZLPDN&#34;&gt;错误代码&lt;/a&gt;，&lt;a href=&#34;https://help.aliyun.com/zh/rds/developer-reference/instance-state-table?spm=a2c4g.11186623.0.0.437f5df9BftH2v&#34;&gt;实例状态表&lt;/a&gt;，（驼峰法，蛇形法，全大写，两段式）体现出了低劣的软件工程质量水平。&lt;/p&gt;
+&lt;p&gt;业务连续性，RTO RPO，比如做 PITR 是通过创建一个新的按量付费的实例来实现的。那原来的实例怎么办？怎么回滚？怎么保障恢复的时长？这种合格DBA都应该知道的东西，云RDS 为什么不知道？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云数据库有没有啥出彩之处&#34;&gt;云数据库有没有啥出彩之处？&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库就没有一些做的出色的地方吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;有，弹性，公有云的弹性就是针对其商业模式设计的：启动成本极低，维持成本极高。低启动成本吸引用户上云，而且良好的弹性可以随时适配业务增长，可是业务稳定后形成供应商锁定，尾大不掉，极高的维持成本就会让用户痛不欲生了。这种模式有一个俗称 —— &lt;strong&gt;杀猪盘&lt;/strong&gt;。这个模式发展到极致就是 Serverless。 云厂商的假 Serverless。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：还有一个与弹性经常一起说的，叫敏捷？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;敏捷，以前算是云数据库的独门优势，但现在也没有了。第一，真正的 Serverless ，Neon，Supabase，Vercel 免费套餐，赛博菩萨。第二，Pigsty 管控，上线一套新数据库也是5分钟。云厂商的极致弹性，秒级扩容其实骗人的，几百秒也是秒……&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：聊聊 Serverless，这会是未来吗？为什么说这是榨钱术？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;云厂商的 RDS Serverles，本质上是一种弹性计费模式，而不是什么技术创新。真正技术创新的  Serverless RDS，可以参考 Neon：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Scale to Zero，&lt;/li&gt;
+&lt;li&gt;无需事先配置，直接连上去自动创建实例并使用。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;RDS Serverless 是一种营销宣传骗术。只是计费模式的区别，是一个恶劣的笑话。按照云厂商的营销策略，我拿个共享的 PG 集群，来一个租户就新建一个 Database 给他，不做资源隔离随便用，然后按实际的 Query 数量或者 Query Time 收费，这也可以叫 Serverless。&lt;/p&gt;
+&lt;p&gt;然后按照这个定义，云厂商的各种产品一下子就全部都变成 Serverless 了。然后 Serverless 这个词的实质意思就被篡夺了，变成平庸无聊的计费技术。真正做的好的 Serverless ，应该去看看赛博菩萨 Cloudflare。&lt;/p&gt;
+&lt;p&gt;这里我还提一点，Serverless 说是要解决极致弹性的问题，但弹性本身其实没有多重要&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：为什么弹性不重要，传统企业如何应对弹性问题？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;弹性峰值能到平时的几十上百倍，我觉得弹性有价值。否则以现在物理资源的价格，直接超配十倍也没多少钱……云厂商的弹性溢价差不多就是十几倍。大甲方的思路很清晰，有这个钱租赁，我干嘛不超配10倍。小用户用 serverless 可以理解。弹性转折点，40 QPS 。唯一场景就是那些 MicroSaaS。但那些 MicroSaas 可以直接用免费套餐的 Vercel，Neon，Supabase，Cloudflare……&lt;/p&gt;
+&lt;p&gt;传统企业如何解决？我们有 15 % 的 机器 Buffer 池，如果不够用，把低利用率的从库摘几台就够了，机器到位，PG 5分钟上线。服务器到上架IDC大概两周左右，现在 IDC 上架已经到 半天 / 一天了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：所以云数据库整体来看，到底怎么样？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;刚才，我们已经从质量、效率、安全、成本剖析了云数据库的方方面面。基本上除了弹性，表现都很一般，而唯一能称得上出彩的弹性，其实也没他们说的那么重要。我对云数据库的总体评价就是 —— 预制菜，能不能吃？能吃，也吃不死人，但你也不要指望这种大锅饭能好吃到哪里去。&lt;/p&gt;
+&lt;p&gt;草台班子，也没有什么品牌形象。例如 IBM DeveloperWorks。 《&lt;a href=&#34;https://mp.weixin.qq.com/s/Fc5oALMo1OJGIRK_Tf5VVA&#34;&gt;破防了，谁懂啊家人们：记一次mysql问题排查&lt;/a&gt;》&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;下云数据库自建如何实战&#34;&gt;下云数据库自建，如何实战！&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;问：什么时候应该用云数据库，什么时候不应该。或者说，什么规模应该上云，什么规模应该下云？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;光谱的两端，DBaaS 替代，开源自建。经典阈值，团队水平。&lt;/p&gt;
+&lt;p&gt;平均水准的技术团队：100 ～ 300 万年消费，云上 KA。没有任何懂的人，服务器厂商给出的估算规模是1000万。&lt;/p&gt;
+&lt;p&gt;优秀的技术团队：一台物理机 ～ 一个机柜的量，下云，年消费几万到几十万。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：小企业用数据库有什么其他选择？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Neon，Supabase，Vercel，或者在赛博佛祖 Cloudflare 上直接托管。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：你给云数据库旷旷一顿批判，那是你站在头部甲方，顶级DBA的视角去看的。一般企业没有这个条件，怎么办？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;做好三件事：管控软件的开源替代怎么解决，硬件资源的置备供给怎么解决，人怎么解决？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：开源管控软件，怎么说？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;举个例子，管理服务器的开源管控软件， KVM / Proxmox / OpenStack，新一代的就是 Kubernetes。对象存储的开源平替 MinIO，或者物美价廉的 Cloudflare R2&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：硬件资源如何置备管理？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;IDC：Deft，Equinix，世纪互联。IDC 也可以按月付费，人家很清楚，一点儿都不贪心，30% 的毛利明明白白。&lt;/p&gt;
+&lt;p&gt;服务器 + 30% 毛利，按月付费，机柜成本：4000 ～ 6000 ¥/月（42U  10A/20A），可放十几台服务器。网络带宽：独享带宽（通用） 100 块 / MB·月 ；专用带宽可达  20 ¥ / MB·月&lt;/p&gt;
+&lt;p&gt;你也可以考虑长租公有云厂商的云服务器，租五年的话，比 IDC 贵一倍。请选择那些带有本地 NVMe 存储的实例自建，不要使用EBS云盘。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：还有个问题，在线的问题如何解决？云上的网络/可用区不是一般 IDC 可以解决的吧？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Cloudflare 解决问题。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：人怎么解决，DBA ？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当下的经济形势与就业率背景，用合理的价格想要找到能用的人并不难。初级的运维与DBA遍地都是，高级的专家找咨询公司，比如我就提供这样的服务。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：专业的人做专业的事情，从云上集中管理到云下自建，是不是一种开倒车的行为？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;云厂商是不是最专业的人在做这件事，我相当怀疑。1. 云厂商摊子铺得太大，每个具体领域投入的人并不多；2. 云厂商的精英员工流失严重，自己出来创业的很不少。3. 自建绝不是开是历史倒车，而是历史前进的一个过程。历史发展本来就是钟摆式往复，螺旋式发展上升的一个过程。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;问：云数据库的问题解决了，但是想要从云上下来，需要解决的问题不止数据库，其他的东西怎么办？对象存储，虚拟化，容器&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;留待下一期来讨论！&lt;/p&gt;
+
       </description>
     </item>
     
