@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.331109f236804fd63e762e265501e724.json"
+    data-offline-search-index-json-src="/offline-search-index.3e882720af9260910503ccc3f7ab6d3b.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -166,7 +166,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>4: <a href="#pg-98b26a9bc06a81265708ed506c8f09c7">Planning</a></li>
+<li>4: <a href="#pg-24263fa625b63eabb5c32f29ec96c5f7">Preparation</a></li>
 
 
     
@@ -174,7 +174,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>5: <a href="#pg-98758ad7ef56ab0b1a9ad8320b14506b">Playbooks</a></li>
+<li>5: <a href="#pg-98b26a9bc06a81265708ed506c8f09c7">Planning</a></li>
 
 
     
@@ -182,7 +182,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>6: <a href="#pg-2b6cc71ea6f4c2bb3c7905255869cead">Provisioning</a></li>
+<li>6: <a href="#pg-98758ad7ef56ab0b1a9ad8320b14506b">Playbooks</a></li>
 
 
     
@@ -190,7 +190,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>7: <a href="#pg-d6a656f7f8306b7de558a78bf1164ae0">Security</a></li>
+<li>7: <a href="#pg-2b6cc71ea6f4c2bb3c7905255869cead">Provisioning</a></li>
 
 
     
@@ -198,7 +198,15 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>8: <a href="#pg-262f396efed9aff5d120f3d92b472bdf">FAQ</a></li>
+<li>8: <a href="#pg-d6a656f7f8306b7de558a78bf1164ae0">Security</a></li>
+
+
+    
+  
+    
+    
+	
+<li>9: <a href="#pg-262f396efed9aff5d120f3d92b472bdf">FAQ</a></li>
 
 
     
@@ -249,6 +257,9 @@ You can add <a href="/docs/setup/install/#more">more</a> nodes into Pigsty and d
 <p><a href="https://asciinema.org/a/566220"><img alt="asciicast" src="https://asciinema.org/a/566220.svg"></a></p>
 <hr>
 <h2 id="prepare">Prepare</h2>
+<blockquote>
+<p>Check <a href="/docs/setup/prepare/">Preparation</a> for a complete guide of resource preparation.</p>
+</blockquote>
 <p>Pigsty support the <code>Linux</code> kernel and <code>x86_64/amd64</code> arch. It can run on any nodes: bare metal, virtual machines, or VM-like containers, but a <strong>static</strong> IPv4 address is required.
 The minimum spec is <code>1C1G</code>. It is recommended to use bare metals or VMs with at least <code>2C4G</code>. There&rsquo;s no upper limit, and node param will be auto-tuned.</p>
 <p>We recommend using fresh <strong>RockyLinux 8.9</strong> or <strong>Ubuntu 22.04.3</strong> as underlying operating systems.
@@ -1196,7 +1207,217 @@ The criteria for the existence of a local repo is: the presence of a marker file
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-98b26a9bc06a81265708ed506c8f09c7">4 - Planning</h1>
+	<h1 id="pg-24263fa625b63eabb5c32f29ec96c5f7">4 - Preparation</h1>
+    <div class="lead">How to prepare the nodes, network, OS distros, admin user, ports, and permissions for Pigsty.</div>
+	<hr>
+<h2 id="node">Node</h2>
+<p>Pigsty supports the <code>Linux</code> kernel and <code>x86_64/amd64</code> arch, applicable to any node.</p>
+<p>A &ldquo;node&rdquo; refers to a resource that is SSH accessible and offers a bare OS environment, such as a physical machine, a virtual machine, or an OS container equipped with <code>systemd</code> and <code>sshd</code>.</p>
+<p>Deploying Pigsty requires at least 1 node. The minimum spec requirement is <code>1C1G</code>, but it is recommended to use at least <code>2C4G</code>, with no upper limit: parameters will automatically optimize and adapt.</p>
+<p>For demos, personal sites, devbox, or standalone monitoring infra, <strong>1-2</strong> nodes are recommended, while at least 3 nodes are suggested for an HA PostgreSQL cluster. For critical scenarios, <strong>4-5</strong> nodes are advisable.</p>
+
+
+<div class="alert alert-success" role="alert">
+<h4 class="alert-heading">Leverage IaC Tools for chores</h4>
+
+    <p>Managing a large-scale prod env could be tedious and error-prone. We recommend using Infrastructure as Code (IaC) tools to address these issues.</p>
+<p>You can use the <a href="/docs/setup/provision/#terraform"><strong>Terraform</strong></a> and <a href="/docs/setup/provision/#vagrant"><strong>Vagrant</strong></a> templates provided by Pigsty,
+to create the required node environment with just one command through IaC, provisioning network, OS image, admin user, privileges, etc&hellip;</p>
+
+
+</div>
+
+<hr>
+<h2 id="network">Network</h2>
+<p>Pigsty requires nodes to use <strong>static IPv4 addresses</strong>, which means you should explicitly assign your nodes a specific fixed IP address rather than using DHCP-assigned addresses.</p>
+<p>The IP address used by a node should be the primary IP address for internal network communications and will serve as the node&rsquo;s unique identifier.</p>
+<p>If you wish to use the optional Node VIP and PG VIP features, ensure all nodes are located within an L2 network.</p>
+<p>Your firewall policy should ensure the required ports are open between nodes. For a detailed list of ports required by different modules, refer to <a href="/docs/node/"><strong>Node: Ports</strong></a>.</p>
+
+
+<div class="alert alert-warning" role="alert">
+<h4 class="alert-heading">Which Ports Should Be Exposed?</h4>
+
+    <p>For beginners or those who are just trying it out, you can just open ports <code>5432</code> (PostgreSQL database) and <code>3000</code> (Grafana visualization interface) to the world.</p>
+<p>For a serious prod env, you should only expose the necessary ports to the exterior, such as <code>80/443</code> for web services, open to the office network (or the entire Internet).</p>
+<p>Exposing database service ports directly to the Internet is not advisable. If you need to do this, consider consulting <a href="/docs/setup/security/">Security Best Practices</a> and proceed cautiously.</p>
+<p>The method for exposing ports depends on your network implementation, such as security group policies, local iptables records, firewall configurations, etc.</p>
+
+
+</div>
+
+<hr>
+<h2 id="operating-system">Operating System</h2>
+<p>Pigsty supports various Linux OS. We recommend using <strong>RockyLinux 8.9</strong> or <strong>Ubuntu 22.04.3</strong> as the default OS for installing Pigsty.</p>
+<p>Pigsty supports RHEL (7,8,9), Debian (11,12), Ubuntu (20,22), and many other compatible OS distros. Check <a href="/zh/docs/reference/compatibility"><strong>Compatibility</strong></a> For a complete list of compatible OS distros.</p>
+<p>When deploying on multiple nodes, we <strong>strongly recommend</strong> using the <strong>same version</strong> of the OS distro and the Linux kernel on all nodes.</p>
+<p>We <strong>strongly recommend</strong> using a clean, minimally installed OS environment with <code>en_US</code> set as the primary language.</p>
+
+
+<div class="alert alert-success" role="alert">
+<h4 class="alert-heading">How to enable en_US locale?</h4>
+
+    <p>To ensure the <code>en_US</code> locale is available when using other primary language:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>yum install -y glibc-locale-source glibc-langpack-en
+</span></span><span style="display:flex;"><span>localedef -i en_US -f UTF-8 en_US.UTF-8
+</span></span><span style="display:flex;"><span>localectl set-locale <span style="color:#000">LANG</span><span style="color:#ce5c00;font-weight:bold">=</span>en_US.UTF-8
+</span></span></code></pre></div><p>Note: The PostgreSQL cluster deployed by Pigsty defaults to the <code>C.UTF8</code> locale, but character set definitions use <code>en_US</code> to ensure the <code>pg_trgm</code> extension functions properly.
+If you do not need this feature, you can configure the value of <a href="/docs/reference/param/#pg_lc_ctype"><strong><code>pg_lc_ctype</code></strong></a> to <code>C.UTF8</code> to avoid this issue when en locale is missing.</p>
+
+
+</div>
+
+<hr>
+<h2 id="admin-user">Admin User</h2>
+<p>You&rsquo;ll need an &ldquo;<strong>admin user</strong>&rdquo; on all nodes where Pigsty is meant to be deployed — an OS user with nopass <code>ssh</code> login and nopass <code>sudo</code> permissions.</p>
+<p>On the nodes where Pigsty is installed, you need an &ldquo;<strong>administrative user</strong>&rdquo; who has nopass <code>ssh</code> login and nopass <code>sudo</code> permissions.</p>
+<p>No password <code>sudo</code> is required to execute commands during the installation process, such as installing packages, configuring system settings, etc.</p>
+
+
+<div class="alert alert-success" role="alert">
+<h4 class="alert-heading">How to configure nopass sudo for admin user?</h4>
+
+    <p>Assuming your admin username is <code>vagrant</code>, you can create a file in <code>/etc/sudoers.d/vagrant</code> and add the following content:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>%vagrant <span style="color:#000">ALL</span><span style="color:#ce5c00;font-weight:bold">=(</span>ALL<span style="color:#ce5c00;font-weight:bold">)</span> NOPASSWD: ALL
+</span></span></code></pre></div><p>This will allow the <code>vagrant</code> user to execute all commands without a sudo password. If your username is not <code>vagrant</code>, replace <code>vagrant</code> in the above steps with your username.</p>
+
+
+</div>
+
+
+
+<div class="alert alert-danger" role="alert">
+<h4 class="alert-heading">Avoid using the root user</h4>
+
+    <p>While it is possible to install Pigsty using the <code>root</code> user, we do not recommend it.</p>
+<p>We recommend using a dedicated admin user, such as <code>dba</code>, different from the root user (<code>root</code>) and the database superuser (<code>postgres</code>).</p>
+<p>There is a dedicated playbook subtask that can use an existing admin user (e.g., <code>root</code>) with ssh/sudo password input to <a href="/docs/node/#create-admin">create</a> a dedicated admin user.</p>
+
+
+</div>
+
+<hr>
+<h2 id="ssh-permission">SSH Permission</h2>
+<p>In addition to nopass <code>sudo</code> privilege, Pigsty also requires the admin user to have nopass <code>ssh</code> login privilege (login via ssh key).</p>
+<p>For <a href="/docs/concept/arch/#singleton-meta">single-host installations</a> setup, this means the admin user on the local node should be able to log in to the host itself via ssh without a password.</p>
+<p>If your Pigsty deployment involves multiple nodes, this means the admin user on the <a href="/docs/node/#admin-node">admin node</a> should be able to log in to all nodes managed by Pigsty (including the local node) via ssh without a password, and execute <code>sudo</code> commands without a password as well.</p>
+<p>During the <a href="/docs/setup/install/#configuration"><strong><code>configure</code></strong></a> procedure, if your current admin user does not have any SSH key, it will attempt to address this issue by generating a new <code>id_rsa</code> key pair and adding it to the local <code>~/.ssh/authorized_keys</code> file to ensure local SSH login capability for the local admin user.</p>
+<p>By default, Pigsty creates an admin user <code>dba</code> (<code>uid=88</code>) on all managed nodes. If you are already using this user, we recommend that you change the <a href="/docs/reference/param/#node_admin_username"><code>node_admin_username</code></a> to a new username with a different uid, or disable it using the <a href="/docs/reference/param/#node_admin_enabled"><code>node_admin_enabled</code></a> parameter.</p>
+
+
+<div class="alert alert-success" role="alert">
+<h4 class="alert-heading">How to configure nopass SSH login for admin user?</h4>
+
+    <p>Assuming your admin username is <code>vagrant</code>, execute the following command as the <code>vagrant</code> user will generate a public/private key pair for login. If a key pair already exists, there is no need to generate a new one.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh-keygen -t rsa -b <span style="color:#0000cf;font-weight:bold">2048</span> -N <span style="color:#4e9a06">&#39;&#39;</span> -f ~/.ssh/id_rsa -q
+</span></span></code></pre></div><p>The generated public key is by default located at: <code>/home/vagrant/.ssh/id_rsa.pub</code>, and the private key at: <code>/home/vagrant/.ssh/id_rsa</code>. If your OS username is not <code>vagrant</code>, replace <code>vagrant</code> in the above commands with your username.</p>
+<p>You should append the public key file (<code>id_rsa.pub</code>) to the <code>authorized_keys</code> file of the user you need to log into: <code>/home/vagrant/.ssh/authorized_keys</code>. If you already have password access to the remote machine, you can use <code>ssh-copy-id</code> to copy the public key:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh-copy-id &lt;ip&gt;                        <span style="color:#8f5902;font-style:italic"># Enter password to complete public key copying</span>
+</span></span><span style="display:flex;"><span>sshpass -p &lt;password&gt; ssh-copy-id &lt;ip&gt;  <span style="color:#8f5902;font-style:italic"># Or: you can embed the password directly in the command to avoid interactive password entry (cautious!)</span>
+</span></span></code></pre></div><p>Pigsty recommends provisioning the admin user during node provisioning and making it viable by default.</p>
+
+
+</div>
+
+<hr>
+<h2 id="ssh-accessibility">SSH Accessibility</h2>
+<p>If your environment has some restrictions on SSH access, such as a bastion server or ad hoc firewall rules that prevent simple SSH access via <code>ssh &lt;ip&gt;</code>, consider using SSH aliases.</p>
+<p>For example, if there&rsquo;s a node with IP <code>10.10.10.10</code> that can not be accessed directly via ssh but can be accessed via an ssh alias <code>meta</code> defined in <code>~/.ssh/config</code>,
+then you can configure the <code>ansible_host</code> parameter for that node in the <a href="/docs/setup/config/"><strong>inventory</strong></a> to specify the SSH Alias on the host level:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">nodes</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">    
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># 10.10.10.10 can not be accessed directly via ssh, but can be accessed via ssh alias &#39;meta&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ansible_host</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">meta }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>If the ssh alias does not meet your requirement, there are a plethora of custom <a href="https://docs.ansible.com/archive/ansible/2.4/intro_inventory.html#list-of-behavioral-inventory-parameters"><strong>ssh connection parameters</strong></a> that can bring fine-grained control over SSH connection behavior.</p>
+<p>If the following cmd can be successfully executed on the admin node by the admin user, it means that the target node&rsquo;s admin user is properly configured.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh &lt;ip<span style="color:#000;font-weight:bold">|</span>alias&gt; <span style="color:#4e9a06">&#39;sudo ls&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="software">Software</h2>
+<p>On the <a href="/docs/node/#admin-node"><strong>admin node</strong></a>, Pigsty requires <a href="/docs/setup/playbook/#ansible"><strong><code>ansible</code></strong></a> to initiate control.
+If you are using the singleton meta installation, Ansible is required on this node. It is not required for common nodes.</p>
+<p>The <a href="/docs/setup/offline/#bootstrap"><strong><code>bootstrap</code></strong></a> procedure will make every effort to do this for you.
+But you can always choose to install Ansible manually. The process of manually installing Ansible varies with different OS distros / major versions (usually involving an additional weak dependency <code>jmespath</code>):</p>
+
+
+
+
+
+
+<ul class="nav nav-tabs" id="tabs-6" role="tablist">
+  <li class="nav-item">
+      <button class="nav-link disabled"
+          id="tabs-06-00-tab" data-bs-toggle="tab" data-bs-target="#tabs-06-00" role="tab"
+          aria-controls="tabs-06-00" aria-selected="false">
+        Install Ansible
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link active"
+          id="tabs-06-01-tab" data-bs-toggle="tab" data-bs-target="#tabs-06-01" role="tab"
+          aria-controls="tabs-06-01" aria-selected="true">
+        EL 8 / 9
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link"
+          id="tabs-06-02-tab" data-bs-toggle="tab" data-bs-target="#tabs-06-02" role="tab"
+          aria-controls="tabs-06-02" aria-selected="false">
+        EL 7
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link"
+          id="tabs-06-03-tab" data-bs-toggle="tab" data-bs-target="#tabs-06-03" role="tab"
+          aria-controls="tabs-06-03" aria-selected="false">
+        Debian / Ubuntu
+      </button>
+    </li><li class="nav-item">
+      <button class="nav-link"
+          id="tabs-06-04-tab" data-bs-toggle="tab" data-bs-target="#tabs-06-04" role="tab"
+          aria-controls="tabs-06-04" aria-selected="false">
+        MacOS
+      </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="tabs-6-content">
+    <div class="tab-pane fade"
+        id="tabs-06-00" role="tabpanel" aria-labelled-by="tabs-06-00-tab" tabindex="6">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"></code></pre></div>
+    </div>
+    <div class="tab-pane fade show active"
+        id="tabs-06-01" role="tabpanel" aria-labelled-by="tabs-06-01-tab" tabindex="6">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>sudo dnf install -y ansible python3.11-jmespath</span></span></code></pre></div>
+    </div>
+    <div class="tab-pane fade"
+        id="tabs-06-02" role="tabpanel" aria-labelled-by="tabs-06-02-tab" tabindex="6">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>sudo yum install -y ansible   <span style="color:#8f5902;font-style:italic"># EL7 does not need to install jmespath explicitly</span></span></span></code></pre></div>
+    </div>
+    <div class="tab-pane fade"
+        id="tabs-06-03" role="tabpanel" aria-labelled-by="tabs-06-03-tab" tabindex="6">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>sudo apt install -y ansible python3-jmespath</span></span></code></pre></div>
+    </div>
+    <div class="tab-pane fade"
+        id="tabs-06-04" role="tabpanel" aria-labelled-by="tabs-06-04-tab" tabindex="6">
+        <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Bash" data-lang="Bash"><span style="display:flex;"><span>brew install ansible</span></span></code></pre></div>
+    </div>
+</div>
+
+<p>To install Pigsty, you also need to prepare the Pigsty source package. You can directly download a specific version from the <a href="https://github.com/Vonng/pigsty/releases/">GitHub Release</a> page or use the following command to obtain the latest stable version:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -L https://get.pigsty.cc/latest  <span style="color:#000;font-weight:bold">|</span> bash
+</span></span></code></pre></div><p>If your env does not have Internet access, consider using the <a href="/docs/setup/offline/#offline-packages"><strong>offline packages</strong></a>, which are pre-packed for different OS distros, and can be downloaded from the GitHub Release page.</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-98b26a9bc06a81265708ed506c8f09c7">5 - Planning</h1>
     <div class="lead">Prepare required resources according to your needs.</div>
 	
 </div>
@@ -1213,7 +1434,7 @@ The criteria for the existence of a local repo is: the presence of a marker file
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-98758ad7ef56ab0b1a9ad8320b14506b">5 - Playbooks</h1>
+	<h1 id="pg-98758ad7ef56ab0b1a9ad8320b14506b">6 - Playbooks</h1>
     <div class="lead">Pigsty implement module controller with ansible idempotent playbooks, here are some necessary info you need to learn about it.</div>
 	<p>Playbooks are used in Pigsty to install <a href="/docs/concept/arch/#modules">modules</a> on nodes.</p>
 <p>To run playbooks, just treat them as executables. e.g. run with <code>./install.yml</code>.</p>
@@ -1392,7 +1613,7 @@ Make sure that infra nodes are init first. If you really want to init all nodes 
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-2b6cc71ea6f4c2bb3c7905255869cead">6 - Provisioning</h1>
+	<h1 id="pg-2b6cc71ea6f4c2bb3c7905255869cead">7 - Provisioning</h1>
     <div class="lead">Introduce the 4 node sandbox environment. and provision VMs with vagrant &amp; terraform</div>
 	<p>Pigsty runs on nodes, which are Bare Metals or Virtual Machines. You can prepare them manually, or using terraform &amp; vagrant for provisioning.</p>
 <hr>
@@ -1587,7 +1808,7 @@ however libvirt, docker, parallel desktop and vmware can also be used. We will u
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-d6a656f7f8306b7de558a78bf1164ae0">7 - Security</h1>
+	<h1 id="pg-d6a656f7f8306b7de558a78bf1164ae0">8 - Security</h1>
     <div class="lead">Security considerations and best-practices in Pigsty</div>
 	<p>Pigsty already provides a secure-by-default <a href="/docs/pgsql/hba/">authentication</a> and <a href="/docs/pgsql/acl/">access control</a> model, which is sufficient for most scenarios.</p>
 <p><a href="/docs/pgsql/acl/"><img alt="pigsty-acl.jpg" src="/img/pigsty/acl.jpg"></a></p>
@@ -1788,7 +2009,7 @@ however libvirt, docker, parallel desktop and vmware can also be used. We will u
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-262f396efed9aff5d120f3d92b472bdf">8 - FAQ</h1>
+	<h1 id="pg-262f396efed9aff5d120f3d92b472bdf">9 - FAQ</h1>
     <div class="lead">Frequently asked questions about download, setup, configuration, and installation in Pigsty.</div>
 	<blockquote>
 <p>If you have any unlisted questions or suggestions, please create an <a href="https://github.com/Vonng/pigsty/issues/new">Issue</a> or ask the <a href="/docs/overview#about">community</a> for help.</p>

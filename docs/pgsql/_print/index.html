@@ -91,7 +91,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.331109f236804fd63e762e265501e724.json"
+    data-offline-search-index-json-src="/offline-search-index.3e882720af9260910503ccc3f7ab6d3b.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -2709,8 +2709,7 @@ Cluster services will be <a href="/docs/pgsql/admin/#reload-service">reloaded</a
 <hr>
 <h2 id="adding-packages">Adding Packages</h2>
 <p>To add newer version of RPM packages, you have to add them to <a href="/docs/reference/param/#repo_packages"><code>repo_packages</code></a> and <a href="/docs/reference/param/#repo_url_packages"><code>repo_url_packages</code></a></p>
-<p>And remove <code>/www/pigsty/repo_complete</code> flag file then rebuild repo with <code>./infra.yml -t repo_build</code>.</p>
-<p>Then you can install these packages with <code>ansible</code> module <code>package</code>:</p>
+<p>Then rebuild repo on infra nodes with <code>./infra.yml -t repo_build</code> subtask, Then you can install these packages with <code>ansible</code> module <code>package</code>:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ansible pg-test -b -m package -a <span style="color:#4e9a06">&#34;name=pg_cron_15,topn_15,pg_stat_monitor_15*&#34;</span>  <span style="color:#8f5902;font-style:italic"># install some packages</span>
 </span></span></code></pre></div><details><summary>Update Packages Manually</summary>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># add repo upstream on admin node, then download them manually</span>
@@ -8125,12 +8124,25 @@ You can do that by changing HBA rules &amp; reload (recommended), or just shutti
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-rm.yml -e <span style="color:#000">pg_safeguard</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">false</span> -l &lt;cls_to_remove&gt;    <span style="color:#8f5902;font-style:italic"># force override pg_safeguard</span>
 </span></span></code></pre></div><hr>
 <h2 id="fail-to-wait-for-postgrespatroni-primary">Fail to wait for postgres/patroni primary</h2>
+<p>There are several possible reasons for this error, and you need to <a href="https://github.com/Vonng/pigsty/discussions/338">check</a> the system logs to determine the actual cause.</p>
 <p>This usually happens when the cluster is misconfigured, or the previous primary is improperly removed. (e.g., trash metadata in DCS with the same cluster name).</p>
 <p>You must check <code>/pg/log/*</code> to find the reason.</p>
 <p>To delete trash meta from etcd, you can use <code>etcdctl del --prefix /pg/&lt;cls&gt;</code>, do with caution!</p>
+<ul>
+<li>1: Misconfiguration. Identify the incorrect parameters, modify them, and apply the changes.</li>
+<li>2: Another cluster with the same cls name already exists in the deployment</li>
+<li>3: The previous cluster on the node, or previous cluster with same name was not correctly removed.
+<ul>
+<li>To remove obsolete cluster metadata, you can use <code>etcdctl del --prefix /pg/&lt;cls&gt;</code> to manually delete the residual data.</li>
+</ul>
+</li>
+<li>4: The RPM packages related to your PostgreSQL or node were not successfully installed.</li>
+<li>5: Your Watchdog kernel module was not correctly enabled or loaded, but required.</li>
+<li>6: The locale or ctype specified <code>pg_lc_collate</code> and <code>pg_lc_ctype</code> does not exist in OS</li>
+</ul>
+<p>Feel free to submit an issue or seek help from the community.</p>
 <hr>
 <h2 id="fail-to-wait-for-postgrespatroni-replica">Fail to wait for postgres/patroni replica</h2>
-<p>There are several possible reasons:</p>
 <p><strong>Failed Immediately</strong>: Usually, this happens because of misconfiguration, network issues, broken DCS metadata, etc&hellip;, you have to inspect <code>/pg/log</code> to find out the actual reason.</p>
 <p><strong>Failed After a While</strong>: This may be due to source instance data corruption. Check PGSQL FAQ: How to create replicas when data is corrupted?</p>
 <p><strong>Timeout</strong>: If the <code>wait for postgres replica</code> task takes 30min or more and fails due to timeout, This is common for a huge cluster (e.g., 1TB+, which may take hours to create a replica). In this case, the underlying creating replica procedure is still proceeding. You can check cluster status with <code>pg list &lt;cls&gt;</code> and wait until the replica catches up with the primary. Then continue the following tasks:</p>
