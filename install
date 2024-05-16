@@ -2,15 +2,25 @@
 # set -o pipefail
 #==============================================================#
 # File      :   install
-# Desc      :   download & install pigsty
+# Desc      :   download & install pigsty from get.pigsty.cc
 # Ctime     :   2022-10-30
-# Mtime     :   2023-08-19
-# Path      :   https://pigsty.io/install
-# Usage     :   bash -c "$(curl -fsSL https://pigsty.io/install)"
+# Mtime     :   2024-05-16
+# Path      :   https://get.pigsty.cc/{i,install,latest,beta}
+# Usage     :   bash -c "$(curl -fsSL https://get.pigsty.cc/i)"
 # Deps      :   curl
 # Author    :   Ruohang Feng (rh@vonng.com)
 # License   :   AGPLv3
 #==============================================================#
+DEFAULT_VERSION=v2.7.0
+
+# To install the latest version of pigsty (v2.7.0):
+# bash -c "$(curl -fsSL https://get.pigsty.cc/i)"
+# bash -c "$(curl -fsSL https://get.pigsty.cc/install)"
+# bash -c "$(curl -fsSL https://get.pigsty.cc/latest)"
+#
+# To install a specific version of pigsty (e.g. v2.6.0)
+# bash -c "$(curl -fsSL https://get.pigsty.cc/i)" -- v2.6.0
+# curl -fsSL https://get.pigsty.cc/i | bash -s v2.6.0
 
 
 #--------------------------------------------------------------#
@@ -36,7 +46,6 @@ function log_line()  { printf "${__CM}[$*] =====================================
 #--------------------------------------------------------------#
 # Version
 #--------------------------------------------------------------#
-DEFAULT_VERSION=v2.6.0
 VALID_VERSIONS="\
 v1.0.0 v1.1.1 v1.2.0 v1.3.0 v1.4.0 v1.4.1 v1.5.0 v1.5.1 v2.0.0 \
 v2.0.1 v2.0.2 v2.1.0 v2.2.0 v2.3.0 v2.3.1 v2.4.0 v2.4.1 v2.5.0 v2.5.1 v2.6.0 v2.7.0"
@@ -92,7 +101,6 @@ log_title "Demo" "https://demo.pigsty.cc"
 log_title "Repo" "https://github.com/Vonng/pigsty"
 log_title "Docs" "https://pigsty.io/docs/setup/install"
 
-# the VERSION is set and checked after this
 log_line "Download"
 
 log_info "version = ${VERSION} (from ${VERSION_FROM})"
@@ -101,10 +109,13 @@ log_info "version = ${VERSION} (from ${VERSION_FROM})"
 #--------------------------------------------------------------#
 # Download
 #--------------------------------------------------------------#
-SITE="https://get.pigsty.cc"
-SOURCE_FILENAME="pigsty-${VERSION}.tgz"
-SOURCE_URL="${SITE}/${VERSION}/${SOURCE_FILENAME}"
-DOWNLOAD_TO="/tmp/${SOURCE_FILENAME}"
+PIGSTY_BASEURL="https://get.pigsty.cc"
+GITHUB_BASEURL="https://github.com/Vonng/pigsty/releases/download"
+
+SRC_FILENAME="pigsty-${VERSION}.tgz"
+PIGSTY_SRC_URL="${PIGSTY_BASEURL}/${VERSION}/${SRC_FILENAME}"
+GITHUB_SRC_URL="${GITHUB_BASEURL}/${VERSION}/${SRC_FILENAME}"
+DOWNLOAD_TO="/tmp/${SRC_FILENAME}"
 
 # download file from url, if file already exists with same size, skip download
 function download_file(){
@@ -130,14 +141,14 @@ function download_file(){
     return $?
 }
 
-download_file "${SOURCE_URL}" "${DOWNLOAD_TO}"
+download_file "${PIGSTY_SRC_URL}" "${DOWNLOAD_TO}"
 if [[ $? -ne 0 ]]; then
-    log_error "fail to download pigsty source from ${SOURCE_URL}"
+    log_error "fail to download pigsty source from ${PIGSTY_SRC_URL}"
     log_hint "check: https://pigsty.io/docs/setup/install"
+    log_hint "alternative url: ${GITHUB_SRC_URL}"
     exit 2
 fi
 log_info "md5sums = $(md5sum ${DOWNLOAD_TO})"
-
 
 
 #--------------------------------------------------------------#
@@ -148,12 +159,12 @@ INSTALL_DIR=$(dirname ${INSTALL_TO})
 
 log_line "Install"
 if [[ $(whoami) == "root" ]]; then
-    log_warn "os user = root , it's recommneded to install as a sudo-able admin"
+    log_warn "os user = root , it's recommended to install as a sudo-able admin"
 fi
 
 # extract to home dir if ~/pigsty not exists
 if [[ ! -d ${INSTALL_TO} ]]; then
-    log_info "install = ${INSTALL_TO} ,from ${DOWNLOAD_TO}"
+    log_info "install = ${INSTALL_TO}, from ${DOWNLOAD_TO}"
     tar -xf "${DOWNLOAD_TO}" -C "${INSTALL_DIR}";
 else
     log_warn "pigsty already installed on '${INSTALL_TO}', if you wish to overwrite:"
@@ -173,7 +184,6 @@ OS_VERSION=""
 OS_PACKAGE=""
 OS_MANAGER=""
 OS_CODENAME=""
-
 PIGSTY_VERSION=${VERSION}
 
 function check_os(){
@@ -227,40 +237,39 @@ function check_os(){
 check_os
 
 PKG_FILENAME=""
-PKG_BASEURL="https://github.com/Vonng/pigsty/releases/download/${PIGSTY_VERSION}"
+
 
 function check_offline_pkg_available(){
     if [[ ${KERNEL} != "Linux" || ${ARCH} != "x86_64" ]]; then
         return 0
     fi
 
-    # EL 7,8,9 & Debian 11,12 & Ubuntu 20/22
-    if [[ ${OS_PACKAGE} == "rpm" ]]; then
-        if [[ ${OS_VERSION} == "7" || ${OS_VERSION} == "8" || ${OS_VERSION} == "9" ]]; then
-            PKG_FILENAME="pigsty-pkg-${PIGSTY_VERSION}.el${OS_VERSION}.x86_64.tgz"
-        fi
-    elif [[ ${OS_PACKAGE} == "deb" ]]; then
-        if [[ ${OS_CODENAME} == "jammy" || ${OS_CODENAME} == "focal" || ${OS_CODENAME} == "bookworm" || ${OS_CODENAME} == "bullseye" ]]; then
-            PKG_FILENAME="pigsty-pkg-${PIGSTY_VERSION}.${OS_VENDOR}${OS_VERSION}.x86_64.tgz"
-        fi
+    # EL 8, Debian 12, Ubuntu 22 has official offline packages!
+    if [[ ${OS_PACKAGE} == "rpm" && ${OS_VERSION} == "8" ]]; then
+        PKG_FILENAME="pigsty-pkg-${PIGSTY_VERSION}.el${OS_VERSION}.x86_64.tgz"
+    elif [[ ${OS_PACKAGE} == "deb" && ${OS_CODENAME} == "jammy" ]]; then
+        PKG_FILENAME="pigsty-pkg-${PIGSTY_VERSION}.${OS_VENDOR}${OS_VERSION}.x86_64.tgz"
+    elif [[ ${OS_PACKAGE} == "deb" && ${OS_CODENAME} == "bookworm" ]]; then
+        PKG_FILENAME="pigsty-pkg-${PIGSTY_VERSION}.${OS_VENDOR}${OS_VERSION}.x86_64.tgz"
     fi
 }
 
+# if current OS is el8, debian 12, ubuntu 22, print offline package hint
 check_offline_pkg_available
-
 if [[ ${PKG_FILENAME} != "" ]]; then
-    PKG_URL="${PKG_BASEURL}/${PKG_FILENAME}"
+    log_line "Resource"
+    log_title "HINT" "${OS_VENDOR} ${OS_VERSION} ${OS_CODENAME} have [OPTIONAL] offline package available: https://pigsty.io/docs/setup/offline"
 
-    log_title "Info" "${OS_VENDOR} ${OS_VERSION} ${OS_CODENAME} has [OPTIONAL] offline package available, https://pigsty.io/docs/setup/offline"
-    log_hint "curl -fSL ${PKG_URL} -o /tmp/pkg.tgz"
-    #log_warn 'RPM/DEB pkg conflict MAY occur if OS minor version miscmatch! use with caution!'
+    log_hint "curl -fSL ${GITHUB_BASEURL}/${PIGSTY_VERSION}/${PKG_FILENAME} -o /tmp/pkg.tgz"
+    log_hint "curl -fSL ${PIGSTY_BASEURL}/${PIGSTY_VERSION}/${PKG_FILENAME} -o /tmp/pkg.tgz # or use alternative CDN"
+    #log_warn 'RPM/DEB pkg conflict MAY occur if OS minor version mismatch! use with caution!'
 fi
 
 
 #--------------------------------------------------------------#
 # Next Hint
 #--------------------------------------------------------------#
-log_line "Todolist"
+log_line "TodoList"
 log_hint "cd ${INSTALL_TO}"
 log_hint './bootstrap      # [OPTIONAL] install ansible & use offline package'
 log_hint './configure      # [OPTIONAL] preflight-check and config generation'
