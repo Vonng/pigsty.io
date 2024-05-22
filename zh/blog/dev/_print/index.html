@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.2fb3143c95bd4d2d7a110ee05f8218f9.json"
+    data-offline-search-index-json-src="/offline-search-index.ec7e3fd7b72c854e2b36c6a129111986.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -148,7 +148,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-1da19e2c3ca32434fd678c4810c22222">AI大模型与向量库 PGVector</a></li>
+    <li><a href="#pg-f4c27180e5738b29e02b7307c1b016f6">AI大模型与向量库 PGVector</a></li>
 
 
 
@@ -158,7 +158,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-4f799cfe00cd17f85f55fef5d95e5d69">高级模糊查询的实现</a></li>
+    <li><a href="#pg-8d4491a0bd13c54cde6e64007c9ef59e">高级模糊查询的实现</a></li>
 
 
 
@@ -178,7 +178,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-a6e07a14d6cdedce4c0034ad0de6a7c4">事务隔离等级注意事项</a></li>
+    <li><a href="#pg-459077b7c73927d841574630d5fb1203">事务隔离等级注意事项</a></li>
 
 
 
@@ -229,16 +229,6 @@ This is the multi-page printable view of this section.
 	
 
     <li><a href="#pg-80c8b198e057fa55db537cdeda973043">PostgreSQL的触发器使用注意事项</a></li>
-
-
-
-    
-  
-    
-    
-	
-
-    <li><a href="#pg-ff420f3514383c95cae5f21fe11bc6b9">理解字符编码原理</a></li>
 
 
 
@@ -299,16 +289,6 @@ This is the multi-page printable view of this section.
 	
 
     <li><a href="#pg-a586e1f27bf6289d48a1f51adcf91003">用 Exclude 实现互斥约束</a></li>
-
-
-
-    
-  
-    
-    
-	
-
-    <li><a href="#pg-d56766a08ea9cfa2db09a9b26cb09ded">file_fdw妙用无穷——从数据库读取系统信息</a></li>
 
 
 
@@ -382,42 +362,39 @@ This is the multi-page printable view of this section.
   
 
 <div class="td-content" style="">
-    <h1 id="pg-1da19e2c3ca32434fd678c4810c22222">AI大模型与向量库 PGVector</h1>
+    <h1 id="pg-f4c27180e5738b29e02b7307c1b016f6">AI大模型与向量库 PGVector</h1>
 	
 	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com/s/R4jp1uTCiLOLGsiADZ9jxQ">微信公众号</a></b> |
         
 		<time datetime="2023-05-10" class="text-muted">2023年05月10日</time>
         
 	</div>
-	<blockquote>
-<p><a href="https://mp.weixin.qq.com/s/R4jp1uTCiLOLGsiADZ9jxQ">微信公众号原文</a></p>
-</blockquote>
-<p>新 AI 应用在过去一年中出现了指数爆炸的增长态势，而这些应用面临的一个共同挑战是如何大规模地<strong>存储</strong>与<strong>查询</strong>以向量表示的 AI Embedding。本文聚焦被 AI 炒火了的<strong>向量数据库</strong>，介绍了AI嵌入与向量存储检索的基本原理，并用一个具体的知识库检索案例来串联介绍向量数据库插件 <strong>PGVECTOR</strong> 的功能、性能、获取与应用。</p>
+	<p>新 AI 应用在过去一年中出现了指数爆炸的增长态势，而这些应用面临的一个共同挑战是如何大规模地<strong>存储</strong>与<strong>查询</strong>以向量表示的 AI Embedding。本文聚焦被 AI 炒火了的<strong>向量数据库</strong>，介绍了AI嵌入与向量存储检索的基本原理，并用一个具体的知识库检索案例来串联介绍向量数据库插件 <strong>PGVECTOR</strong> 的功能、性能、获取与应用。</p>
 <hr>
 <h2 id="ai是怎么工作的">AI是怎么工作的</h2>
 <p>GPT 展现出来了强大的智能水平，它的成功有很多因素，但在工程上关键的一步是：<strong>神经网络与大语言模型将一个语言问题转化为数学问题，并使用工程手段高效解决了这个数学问题</strong>。</p>
 <p>对于AI来说，各种各样的知识与概念在内部都使用数学向量来存储表示输入输出。将词汇/文本/语句/段落/图片/音频各种对象转换为数学向量的这个过程被叫做<strong>嵌入</strong>（<strong>Embedding</strong>）。</p>
 <p>例如 OpenAI 就使用 <strong>1536</strong> 维的浮点数向量空间。当你问 ChatGPT 一个问题时，输入的文本首先被编码转换成为一个<strong>数学向量</strong>，才能作为神经网络的输入。而神经网络的直接输出结果，也是一个向量，向量被重新解码为人类的自然语言或其他形式，再呈现到人类眼前。</p>
-<p><img alt="llm-pgvector-1.jpeg" src="/img/blog/pg/llm-pgvector-1.jpeg"></p>
+<p><img alt="llm-pgvector-1.jpeg" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-1.jpeg"></p>
 <p>人工智能大模型的“思考过程”，在数学上就是一系列向量与矩阵之间的加乘正逆运算。这种向量对于人类来说过于抽象，无法理解。但这种形式很适合使用 GPU/FPGA/ASIC 这样的专用硬件来高效实现 —— AI 有了一个硅基的仿生大脑，带有更多的神经元，更快的处理速度，以及更强大的学习算法，惊人的智能水平，高速自我复制与永生的能力。</p>
 <p>语言大模型解决的是 <strong>编码</strong> - <strong>运算</strong> - <strong>输出</strong> 的问题，但是只有计算是不够的，还有一个重要的部分是<strong>记忆</strong>。大模型本身可以视作人类公开数据集的一个压缩存储，这些知识通过训练被编码到了模型中，内化到了模型的权重参数里。<strong>而精确性的，长期性的，过程性的，大容量的外部记忆存储，就需要用到向量数据库了。</strong></p>
-<p><img alt="llm-pgvector-2.png" src="/img/blog/pg/llm-pgvector-2.png"></p>
+<p><img alt="llm-pgvector-2.png" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-2.png"></p>
 <p>所有的概念都可以用向量来表示，而向量空间有一些很好的数学性质，比如可以计算两个向量的“<strong>距离</strong>”。<strong>这意味着任意两个抽象概念之间的“相关性”，都可以用对应编码向量的距离来衡量</strong>。</p>
 <p>这个看上去简单的功能却有着非常强大的效果，例如最经典的应用场景就是搜索。比如，您可以预处理你的知识库，将每个文档都是用模型转换成抽象向量存储在向量数据库中，当你想要检索时，只需要将您的问题也用模型编码成为一个一次性的查询向量，并在数据库中找到与此查询向量“**距离最近“**的文档作为回答返回给用户即可。</p>
-<p><img alt="llm-pgvector-3.jpeg" src="/img/blog/pg/llm-pgvector-3.jpeg"></p>
+<p><img alt="llm-pgvector-3.jpeg" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-3.jpeg"></p>
 <p>通过这种方式，一个模糊而困难的自然语言处理问题，转换成为了一个简单清晰的数学问题。而向量数据库，就可以用来高效地解决这个数学问题。</p>
 <hr>
 <h2 id="向量数据库能干什么">向量数据库能干什么？</h2>
 <p>数据库有事务处理（OLTP）与数据分析（OLAP）两大核心场景，向量数据库自然也不例外。典型的事务处理场景包括：知识库，问答，推荐系统，人脸识别，图片搜索，等等等等。知识问答：给出一个自然语言描述的问题，返回与这些输入最为接近的结果；以图搜图：给定一张图片，找出与这张图片在逻辑上最接近的其他相关图片。</p>
 <p>这些功能说到底都是一个共同的数学问题：**向量最近邻检索（KNN）：**给定一个向量，找到距离此向量最近的其他向量。</p>
 <p>典型的分析场景是<strong>聚类</strong>：将一系列向量按照距离亲疏远近分门别类，找出内在的关联结构，并对比急簇之间的差异。</p>
-<p><img alt="llm-pgvector-4.jpeg" src="/img/blog/pg/llm-pgvector-4.jpeg"></p>
+<p><img alt="llm-pgvector-4.jpeg" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-4.jpeg"></p>
 <hr>
 <h2 id="pg向量插件-pgvector">PG向量插件 PGVECTOR</h2>
 <p>市面上有许多向量数据库产品，商业的有 Pinecone，Zilliz，开源的有 Milvus，Qdrant 等，基于已有流行数据库以插件形式提供的则有 <code>pgvector</code> 与 Redis Stack。</p>
 <p>在所有现有向量数据库中，<strong>pgvector</strong> 是一个独特的存在 —— 它选择了在现有的世界上最强大的开源关系型数据库 PostgreSQL 上以插件的形式添砖加瓦，而不是另起炉灶做成另一个专用的“数据库” [1]。<strong>pgvector</strong> 有着优雅简单易用的接口，不俗的性能表现，更是继承了PG生态的超能力集合。</p>
-<p><img alt="llm-pgvector-5.png" src="/img/blog/pg/llm-pgvector-5.png"></p>
+<p><img alt="llm-pgvector-5.png" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-5.png"></p>
 <p><strong>一个合格的向量数据库，首先得是一个合格的数据库，而从零开始做到这一点并不容易</strong>。<strong>比起使用一种全新的独立数据库品类，为现有数据库加装向量搜索的能力显然是一个更为务实，简单，经济的选择</strong>。</p>
 <hr>
 <h2 id="pgvector-知识检索案例">PGVECTOR 知识检索案例</h2>
@@ -451,12 +428,12 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>    <span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">execute</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;&#34;&#34;SELECT id, txt, vec &lt;-&gt; </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> AS d FROM sentences ORDER BY 3 LIMIT </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">;&#34;&#34;&#34;</span> <span style="color:#ce5c00;font-weight:bold">%</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">item</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">limit</span><span style="color:#000;font-weight:bold">))</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#204a87;font-weight:bold">for</span> <span style="color:#204a87">id</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">txt</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">distance</span> <span style="color:#204a87;font-weight:bold">in</span> <span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">fetchall</span><span style="color:#000;font-weight:bold">():</span>
 </span></span><span style="display:flex;"><span>        <span style="color:#204a87">print</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;</span><span style="color:#4e9a06">%-6d</span><span style="color:#4e9a06"> [</span><span style="color:#4e9a06">%.3f</span><span style="color:#4e9a06">]</span><span style="color:#4e9a06">\t</span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">&#34;</span> <span style="color:#ce5c00;font-weight:bold">%</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#204a87">id</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">distance</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#000">txt</span><span style="color:#000;font-weight:bold">))</span>
-</span></span></code></pre></div><p><img alt="llm-pgvector-6.png" src="/img/blog/pg/llm-pgvector-6.png"></p>
+</span></span></code></pre></div><p><img alt="llm-pgvector-6.png" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-6.png"></p>
 <hr>
 <h2 id="pgvector-的性能">PGVECTOR 的性能</h2>
 <p>当功能、正确性、安全性满足需求后，用户的目光就会转向<strong>性能</strong>。PGVECTOR 有着不错的性能表现，尽管比起专用的高性能向量计算Library来说有些差距，但性能对于生产环境中使用已经是绰绰有余了。</p>
 <p>对于向量数据库来说，最近邻查询的延迟是一个重要的性能指标，<strong>ANN-Benchmark</strong> 则是一个相对权威的最近邻性能评测基准[2]。pgvector 的索引算法是 ivfflat ，在几个常见的基准测试中表现如下图所示：</p>
-<p><img alt="llm-pgvector-7.png" src="/img/blog/pg/llm-pgvector-7.png"></p>
+<p><img alt="llm-pgvector-7.png" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-7.png"></p>
 <p>为了对 <code>pgvector</code> 的性能表现在直觉上有一个把握，在 M1 Max 芯片 Macbook 下单核运行一些简单的测试：从1百万条随机 1536 维向量（正好是 OpenAI 的输出向量维度）中找出余弦距离最近的TOP 1 ～ 50 条向量，每次耗时大约 8ms 。从 1 亿条随机 128 维向量 （SIFT图像数据集的维度）中找出 L2 欧几里得距离 TOP 1 向量耗时 5ms，TOP 100 耗时也只要 21ms 。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- 1M 个 1536 维向量，随机取 TOP1～50，余弦距离， 单核：插入与索引耗时均为5～6分钟，大小8GB左右。随机向量最近邻 Top1 召回：8ms
 </span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IF</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">EXISTS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">vtest</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline"> 
@@ -501,7 +478,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>INSERT INTO items (vec) VALUES (&#39;[1,1]&#39;), (&#39;[-2,-2]&#39;), (&#39;[-3,4]&#39;);
 </span></span><span style="display:flex;"><span>SELECT *, vec &lt;=&gt; &#39;[0,1]&#39; AS d FROM items ORDER BY 2 LIMIT 3;
 </span></span></code></pre></div><p>更简单的选择是本地优先的开源 RDS PostgreSQL 替代 —— Pigsty ，在三月底发布的v2.0.2 中， <code>pgvector</code> 已经默认启用，开箱即用。您可以在一台全新虚拟机上一键完成安装，自带时序地理空间向量插件，监控备份高可用齐全。分文不收，立等可取。</p>
-<p><img alt="llm-pgvector-8.png" src="/img/blog/pg/llm-pgvector-8.png"></p>
+<p><img alt="llm-pgvector-8.png" src="/zh/blog/dev/llm-and-pgvector/llm-pgvector-8.png"></p>
 <p>Supabase，Neon 也提供了带有 <code>pgvector</code> 插件的付费托管 PostgreSQL 服务，AWS RDS for PostgreSQL 也已经在五月初刚刚支持了此扩展 。提供托管服务的完整供应商列表可以参考 <code>pgvector</code> 的 Github Issue [6]。</p>
 <hr>
 <h2 id="参考">参考</h2>
@@ -530,7 +507,7 @@ This is the multi-page printable view of this section.
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-4f799cfe00cd17f85f55fef5d95e5d69">高级模糊查询的实现</h1>
+    <h1 id="pg-8d4491a0bd13c54cde6e64007c9ef59e">高级模糊查询的实现</h1>
 	<div class="lead">如何在PostgreSQL中实现比较复杂的模糊查询逻辑？</div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
@@ -1013,7 +990,7 @@ This is the multi-page printable view of this section.
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-a6e07a14d6cdedce4c0034ad0de6a7c4">事务隔离等级注意事项</h1>
+    <h1 id="pg-459077b7c73927d841574630d5fb1203">事务隔离等级注意事项</h1>
 	<div class="lead">PostgreSQL实际上只有两种事务隔离等级：<strong>读已提交（Read Commited）<strong>与</strong>可序列化（Serializable）</strong></div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
@@ -1956,15 +1933,12 @@ This is the multi-page printable view of this section.
     <h1 id="pg-15d5b18d2862f9fbfdff194078c65cf9">PostgreSQL中的锁</h1>
 	<div class="lead">详细介绍PostgreSQL中的各种锁</div>
 	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） ｜ <a href="https://mp.weixin.qq.com/s/JCKKM8vDkBlq0-PlPqfh7Q">微信公众号</a></b> |
         
 		<time datetime="2019-06-11" class="text-muted">2019年06月11日</time>
         
 	</div>
-	<blockquote>
-<p><a href="https://mp.weixin.qq.com/s/JCKKM8vDkBlq0-PlPqfh7Q">微信公众号原文</a></p>
-</blockquote>
-<p>PostgreSQL的并发控制以 <strong>快照隔离（SI）</strong> 为主，以 <strong>两阶段锁定（2PL）</strong> 机制为辅。PostgreSQL对DML（<code>SELECT, UPDATE, INSERT, DELETE</code>等命令）使用SSI，对DDL（<code>CREATE TABLE</code>等命令）使用2PL。</p>
+	<p>PostgreSQL的并发控制以 <strong>快照隔离（SI）</strong> 为主，以 <strong>两阶段锁定（2PL）</strong> 机制为辅。PostgreSQL对DML（<code>SELECT, UPDATE, INSERT, DELETE</code>等命令）使用SSI，对DDL（<code>CREATE TABLE</code>等命令）使用2PL。</p>
 <p>PostgreSQL有好几类锁，其中最主要的是 <strong>表级锁</strong> 与 <strong>行级锁</strong>，此外还有页级锁，咨询锁等，<strong>表级锁</strong> 通常是各种命令执行时自动获取的，或者通过事务中的<code>LOCK</code>语句显式获取；而行级锁则是由<code>SELECT FOR UPDATE|SHARE</code>语句显式获取的。执行数据库命令时，都是先获取表级锁，再获取行级锁。本文主要介绍PostgreSQL中的表锁。</p>
 <hr>
 <h2 id="表级锁">表级锁</h2>
@@ -2249,7 +2223,9 @@ This is the multi-page printable view of this section.
 		<time datetime="2019-04-12" class="text-muted">2019年04月12日</time>
         
 	</div>
-	<p>Here is the detail of why that query have O(N^2) inside GIN implementation.</p>
+	<p>GIN索引如果使用很长的关键词列表进行搜索，会导致性能显著下降。本文解释了为什么GIN索引关键词搜索的时间复杂度为O(n^2)</p>
+<p>Here is the detail of why that query have O(N^2) inside GIN implementation.</p>
+<hr>
 <h2 id="details">Details</h2>
 <p>Inspect the index <code>example_keys_idx</code></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">postgres</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#8f5902;font-style:italic"># select oid,* from pg_class where relname = &#39;example_keys_idx&#39;;</span>
@@ -2893,317 +2869,6 @@ This is the multi-page printable view of this section.
 <p>在表上创建触发器会先尝试获取表级的<code>Share Row Exclusive Lock</code>。这种锁会阻止底层表的数据变更，且自斥。因此创建触发器会阻塞对表的写入。</p>
 <h3 id="触发器与copy的关系">触发器与COPY的关系</h3>
 <p>COPY只是消除了数据解析打包的开销，实际写入表中时仍然会触发触发器，就像INSERT一样。</p>
-
-</div>
-
-
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-
-  
-
-<div class="td-content" style="page-break-before: always">
-    <h1 id="pg-ff420f3514383c95cae5f21fe11bc6b9">理解字符编码原理</h1>
-	<div class="lead">如果不了解字符编码的基本原理，即使只是简单常规的字符串比较、排序、随机访问操作，都可能会一不小心栽进大坑中。尝试写这一篇科普文，希望能讲清楚这个问题。</div>
-	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
-        
-		<time datetime="2018-07-01" class="text-muted">2018年07月01日</time>
-        
-	</div>
-	<p>程序员，是与<strong>Code（代码/编码）<strong>打交道的，而字符编码又是最为基础的编码。	如何</strong>使用二进制数来表示字符</strong>，这个<strong>字符编码</strong>问题并没有看上去那么简单，实际上它的复杂程度远超一般人的想象：输入、比较排序与搜索、反转、换行与分词、大小写、区域设置，控制字符，组合字符与规范化，排序规则，处理不同语言中的特异需求，变长编码，字节序与BOM，Surrogate，历史兼容性，正则表达式兼容性，微妙与严重的安全问题等等等等。</p>
-<p>如果不了解字符编码的基本原理，即使只是简单常规的字符串比较、排序、随机访问操作，都可能会一不小心栽进大坑中。但根据我的观察，很多工程师与程序员却对字符编码本身几近一无所知，只是对诸如ASCII，Unicode，UTF这些名词有一些模糊的感性认识。因此尝试写这一篇科普文，希望能讲清楚这个问题。</p>
-<hr>
-<h2 id="0x01-基本概念">0x01 基本概念</h2>
-<blockquote>
-<p>万物皆数  —— 毕达哥拉斯</p>
-</blockquote>
-<p>为了解释字符编码，我们首先需要理解什么是编码，什么又是字符？</p>
-<h3 id="编码">编码</h3>
-<p>从程序员的视角来看，我们有着许许多多的<strong>基础</strong>数据类型：整数，浮点数，字符串，指针。程序员将它们视作理所当然的东西，但从数字计算机的物理本质来看，只有一种类型才是真正的基础类型：二进制数。</p>
-<p>而<strong>编码（Code）<strong>就是这些高级类型与底层二进制表示之间映射转换的桥梁。编码分为两个部分：<strong>编码（encode）<strong>与</strong>解码（decode）</strong>，以无处不在的自然数为例。数字42，这个纯粹抽象的数学概念，在计算机中可能就会表示为<code>00101010</code>的二进制位串（假设使用8位整型）。从抽象数字42到二进制数表示<code>00101010</code>的这个过程就是</strong>编码</strong>。相应的，当计算机读取到<code>00101010</code>这个二进制位串时，它会根据<strong>上下文</strong>将其解释为抽象的数字42，这个过程就是<strong>解码（decode）</strong>。</p>
-<p>任何‘高级’数据类型与底层二进制表示之间都有着编码与解码的过程，比如单精度浮点数，这种看上去这么基础的类型，也存在着一套相当复杂的编码过程。例如在<code>float32</code>中，1.0和-2.0就表示为如下的二进制串：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0 01111111 00000000000000000000000 = 1
-</span></span><span style="display:flex;"><span>1 10000000 00000000000000000000000 = −2
-</span></span></code></pre></div><p>字符串当然也不例外。字符串是如此的重要与基础，以至于几乎所有语言都将其作为内置类型而实现。字符串，它首先是一个<strong>串（String）</strong>，所谓串，就是由同类事物依序构成的序列。对于字符串而言，就是由**字符（Character）**构成的序列。字符串或字符的编码，实际上就是将抽象的字符序列映射为其二进制表示的规则。</p>
-<p>不过，在讨论字符编码问题之前，我们先来看一看，什么是<strong>字符</strong>？</p>
-<h3 id="字符">字符</h3>
-<p>字符是指字母、数字、标点、表意文字（如汉字）、符号、或者其他文本形式的书写“<strong>原子</strong>”。它是书面语中最小语义单元的抽象实体。这里说的字符都是<strong>抽象字符（abstract character）</strong>，其确切定义是：用于组织、控制、显示文本数据的信息单元。</p>
-<p>抽象字符是一种抽象的符号，与具体的形式无关：区分<strong>字符（character）<strong>与</strong>字形（Glyph）<strong>是非常重要的，我们在屏幕上看到的有形的东西是</strong>字形（Glyph）</strong>，它是抽象字符的视觉表示形式。抽象<strong>字符</strong>通过<strong>渲染（Render）<strong>呈现为</strong>字形</strong>，用户界面呈现的<strong>字形</strong>通过人眼被感知，通过人脑被认知，最终又在人的大脑中还原为抽象的实体概念。字形在这个过程中起到了媒介的作用，但决不能将其等价为抽象字符本身。</p>
-<p><img src="/img/blog/pg/char-glyph.png"></p>
-<p>要注意的是，虽然<strong>多数</strong>时候字形与字符是一一对应的，但仍然存在一些多对多的情况：一个字形可能由多个字符组合而成，例如抽象字符<code>à</code>（拼音中的第四声a），我们将其视作单个‘字符’，但它既可以真的是一个单独的字符，也可以由字符<code>a</code>与去声撇号字符<code>	̀</code>组合而成。另一方面，一个字符也可能由多个字形组成，例如很多阿拉伯语印地语中的文字，由很多图元（字形）组成的符号，复杂地像一幅画，实际上却是单个字符。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;&gt;</span> <span style="color:#204a87">print</span> <span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;</span><span style="color:#4e9a06">\u00e9</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;e</span><span style="color:#4e9a06">\u0301</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">u</span><span style="color:#4e9a06">&#39;e</span><span style="color:#4e9a06">\u0301\u0301\u0301</span><span style="color:#4e9a06">&#39;</span>
-</span></span><span style="display:flex;"><span><span style="color:#000">é</span> <span style="color:#000">é</span> <span style="color:#000">é</span><span style="color:#a40000">́́</span>
-</span></span></code></pre></div><p>字形的集合构成了<strong>字体（font）</strong>，不过那些都属于<strong>渲染</strong>的内容：渲染是将字符序列映射为字形序列的过程。	那是另一个堪比字符编码的复杂主题，本文不会涉及渲染的部分，而专注于另一侧：<strong>将抽象字符转变为二进制字节序列的过程</strong>，即，<strong>字符编码（Character Encoding）</strong>。</p>
-<h3 id="思路">思路</h3>
-<p>我们会想，如果有一张表，能将所有的<strong>字符</strong>一一映射到<strong>字节byte(s)</strong>，问题不就解决了吗？实际上对于英文和一些西欧文字而言，这么做是很直观的想法，ASCII就是这样做的：它通过ASCII编码表，使用一个字节中的7位，将128个字符编码为相应的二进制值，一个字符正好对应一个字节（单射而非满射，一半字节没有对应字符）。一步到位，简洁、清晰、高效。</p>
-<p>计算机科学发源于欧美，因而文本处理的问题，一开始指的就是英文处理的问题。不过计算机是个好东西，世界各族人民都想用。但语言文字是一个极其复杂的问题：学一门语言文字已经相当令人头大，更别提设计一套能够处理世界各国语言文字的编码标准了。从简单的ASCII发展到当代的大一统<strong>Unicode标准</strong>，人们遇到了各种问题，也走过一些弯路。</p>
-<p>好在计算机科学中，有句俗语：“<em>计算机科学领域的任何问题都可以通过增加一个间接的中间层来解决</em>”。字符编码的模型与架构也是随着历史而不断演进的，下面我们就先来概览一下现代编码模型中的体系结构。</p>
-<hr>
-<h2 id="0x02-模型概览">0x02 模型概览</h2>
-<ul>
-<li>现代编码模型自底向上分为五个层次：</li>
-<li><strong>抽象字符表（Abstract Character Repertoire, ACR）</strong></li>
-<li><strong>编码字符集（Coded Character Set, CCS）</strong></li>
-<li><strong>字符编码表（Character Encoding Form, CEF）</strong></li>
-<li><strong>字符编码方案（Character Encoding Schema, CES）</strong></li>
-<li><strong>传输编码语法（Transfer Encoding Syntax, TES）</strong></li>
-</ul>
-<p>我们所熟悉的诸多名词，都可以归类到这个模型的相应层次之中。例如，<strong>Unicode字符集（UCS）</strong>，ASCII字符集，GBK字符集，这些都属于编码字符集CCS；而常见的UTF8，UTF16，UTF32这些概念，都属于<strong>字符编码表CEF</strong>，不过也有同名的字符编码方案CES。而我们熟悉的<code>base64</code>，<code>URLEncode</code>这些就属于<strong>传输编码语法TES</strong>。</p>
-<p>这些概念之间的关系可以用下图表示：</p>
-<p><img src="/img/blog/pg/char-encoding.png"></p>
-<p>可以看到，为了将一个抽象字符转换为二进制，中间其实经过了几次概念的转换。在抽象字符序列与字节序列间还有两种中间形态：码位序列与码元序列。简单来说：</p>
-<ul>
-<li>
-<p>所有待编码的抽象字符构成的集合，称为<strong>抽象字符集</strong>。</p>
-</li>
-<li>
-<p>因为我们需要指称集合中的某个具体字符，故为每一个抽象字符指定一个唯一的自然数作为标识，这个被指定的自然数，就称作字符的<strong>码位（Code Point）</strong>。</p>
-</li>
-<li>
-<p>码位与字符集中的抽象字符是一一对应的。抽象字符集中的字符经过<strong>编码</strong>就形成了<strong>编码字符集</strong>。</p>
-</li>
-<li>
-<p><strong>码位</strong>是正整数，但计算机的整数表示范围是有限的，因此需要调和无限的码位与有限的整型之间的矛盾。<strong>字符编码表</strong>将<strong>码位</strong>映射为<strong>码元序列（Code Unit Sequence）</strong>，将整数转变为计算机中的整型。</p>
-</li>
-<li>
-<p>计算机中多字节整型存在大小端字节序的问题，<strong>字符编码方案</strong>指明了字节序问题的解决方案。</p>
-</li>
-</ul>
-<p>Unicode标准为什么不像ASCII那样一步到位，直接将抽象字符映射为二进制表示呢？实际上如果只有一种字符编码方案，譬如UTF-8，那么确实是一步到位的。可惜因为一些历史原因（比如觉得65536个字符绝对够用了…），我们有好几种编码方案。但不论如何，比起各国自己搞的百花齐放的编码方案，Unicode的编码方案已经是非常简洁了。可以说，每一层都是为了解决一些问题而不得已引入的：</p>
-<ul>
-<li>抽象字符集到编码字符集解决了<strong>唯一标识字符</strong>的问题（字形无法唯一标识字符）；</li>
-<li>编码字符集到字符编码表解决了<strong>无限的自然数</strong>到<strong>有限的计算机整型</strong>的映射问题（调和无限与有限）；</li>
-<li>字符编码方案则解决了字节序的问题（解决传输歧义）。</li>
-</ul>
-<p>下面让我们来看一下每个层次之间的细节。</p>
-<hr>
-<h2 id="0x03-字符集">0x03 字符集</h2>
-<p>字符集，顾名思义就是字符的集合。字符是什么，在第一节中已经解释过了。在现代编码模型中， 有两种层次不同的字符集：<strong>抽象字符集 ACR</strong>与<strong>编码字符集 CCS</strong>。</p>
-<h3 id="抽象字符集-acr">抽象字符集 ACR</h3>
-<p>抽象字符集顾名思义，指的是<strong>抽象字符的集合</strong>。已经有了很多标准的字符集定义，US-ASCII, UCS(Unicode)，GBK这些我们耳熟能详的名字，都是(或至少是)抽象字符集</p>
-<p>US-ASCII定义了128个抽象字符的集合。GBK挑选了两万多个中日韩汉字和其他一些字符组成字符集，而UCS则尝试去容纳一切的抽象字符。它们都是抽象字符集。</p>
-<ul>
-<li>抽象字符 英文字母<code>A</code>同时属于US-ASCII, UCS, GBK这三个字符集。</li>
-<li>抽象字符 中文文字<code>蛤</code>不属于US-ASCII，属于GBK字符集，也属于UCS字符集。</li>
-<li>抽象文字 Emoji <code>😂</code>不属于US-ASCII与GBK字符集，但属于UCS字符集。</li>
-</ul>
-<p>抽象字符集可以使用类似<code>set</code>的数据结构来表示：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># ACR</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span><span style="color:#4e9a06">&#34;a&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;啊&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;あ&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;Д&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;α&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;å&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;😯&#34;</span><span style="color:#000;font-weight:bold">}</span>
-</span></span></code></pre></div><h3 id="编码字符集-ccs">编码字符集 CCS</h3>
-<p>集合的一个重要特性，就是<strong>无序性</strong>。集合中的元素都是无序的，所以抽象字符集中的字符都是<strong>无序的</strong>。</p>
-<p>这就带来一个问题，如何指称字符集中的某个特定字符呢？我们不能抽象字符的字形来指代其实体，原因如前面所说，看上去一样的字形，实际上可能由不同的字符组合而成（如字形<code>à</code>就有两种字符组合方式）。对于抽象字符，我们有必要给它们分配唯一对应的ID，用关系型数据库的话来说，字符数据表需要一个主键。这个<strong>码位分配（Code Point Allocation）<strong>的操作就称为</strong>编码（Encode）</strong>。它将抽象字符与一个正整数<strong>关联</strong>起来。</p>
-<p>如果抽象字符集中的所有字符都有了对应的<strong>码位（Code Point/Code Position）</strong>，这个集合就升级成了映射：类似于从<code>set</code>数据结构变成了<code>dict</code>。我们称这个映射为<strong>编码字符集 CCS</strong>。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># CCS</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">{</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;a&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">97</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;啊&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">21834</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;あ&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">12354</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;Д&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">1044</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;α&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">945</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;å&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">229</span><span style="color:#000;font-weight:bold">,</span>
-</span></span><span style="display:flex;"><span>  <span style="color:#4e9a06">&#34;😯&#34;</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#0000cf;font-weight:bold">128559</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
-</span></span></code></pre></div><p>注意这里的映射是单射，每个抽象字符都有唯一的正整数码位，但并不是所有的正整数都有对应的抽象字符。码位被分为七大类：图形，格式，控制，代理，非字符，保留。像代理（Surrogate, D800-DFFF）区中的码位，单独使用时就不对应任何字符。</p>
-<p>抽象字符集与编码字符集之间的区别通常是Trivial的，毕竟指定字符的同时通常也会指定一个顺序，为每个字符分配一个数字ID。所以我们通常就将它们统称为<strong>字符集</strong>。字符集解决的问题是，将抽象字符单向映射为自然数。那么既然计算机已经解决了整数编码的问题，是不是直接用字符码位的整型二进制表示就可以了呢？</p>
-<p>不幸的是，还有另外一个问题。字符集有开放与封闭之分，譬如ASCII字符集定义了128个抽象字符，再也不会增加。它就是一个封闭字符集。而Unicode尝试收纳所有的字符，一直在不断地扩张之中。截止至2016.06，Unicode 9.0.0已经收纳了128,237个字符，并且未来仍然会继续增长，它是一个开放的字符集。开放意味着字符的数量是没有上限的，随时可以添加新的字符，例如Emoji，几乎每年都会有新的表情字符被引入到Unicode字符集中。这就产生了一对内在的矛盾：<strong>无限的自然数与有限的整型值之间的矛盾</strong>。</p>
-<p>而字符编码表，就是为了解决这个问题的。</p>
-<hr>
-<h2 id="0x04-字符编码表">0x04 字符编码表</h2>
-<p>字符集解决了抽象字符到自然数的映射问题，将自然数表示为二进制就是字符编码的另一个核心问题了。<strong>字符编码表（CEF）<strong>会将一个自然数，转换为</strong>一个或多个</strong>计算机内部的整型数值。这些整型数值称为<strong>码元</strong>。<strong>码元是能用于处理或交换编码文本的最小比特组合</strong>。</p>
-<p>码元与数据的表示关系紧密，通常计算机处理字符的码元为一字节的整数倍：1字节，2字节，4字节。对应着几种基础的整型：<code>uint8</code>, <code>uint16</code>, <code>uint32</code>，单字节、双字节、四字节整型。整形的计算往往以计算机的字长作为一个基础单元，通常来讲，也就是4字节或8字节。</p>
-<p>曾经，人们以为使用16位短整型来表示字符就足够了，16位短整型可以表示2的十六次方个状态，也就是65536个字符，看上去已经足够多了。但是程序员们很少从这种事情上吸取教训：光是中国的汉字可能就有十万个，一个旨在兼容全世界字符的编码不能不考虑这一点。因此如果<strong>使用一个整型来表示一个码位</strong>，双字节的短整型<code>int16</code>并不足以表示所有字符。另一方面，四字节的int32能表示约41亿个状态，在进入星辰大海宇宙文明的阶段之前，恐怕是不太可能有这么多的字符需要表示的。（实际上到现在也就分配了不到14万个字符）。</p>
-<p>根据使用码元单位的不同，我们有了三种字符编码表：UTF8，UTF-16，UTF-32。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">属性\编码</th>
-<th style="text-align:center">UTF8</th>
-<th style="text-align:center">UTF16</th>
-<th style="text-align:center">UTF32</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">使用码元</td>
-<td style="text-align:center"><code>uint8</code></td>
-<td style="text-align:center"><code>uint16</code></td>
-<td style="text-align:center"><code>uint32</code></td>
-</tr>
-<tr>
-<td style="text-align:center">码元长度</td>
-<td style="text-align:center">1byte = 8bit</td>
-<td style="text-align:center">2byte = 16bit</td>
-<td style="text-align:center">4byte =  32bit</td>
-</tr>
-<tr>
-<td style="text-align:center">编码长度</td>
-<td style="text-align:center">1码位 = 1~4码元</td>
-<td style="text-align:center">1码位 = 1或2码元</td>
-<td style="text-align:center">1码位 = 1码元</td>
-</tr>
-<tr>
-<td style="text-align:center">独门特性</td>
-<td style="text-align:center">兼容ASCII</td>
-<td style="text-align:center">针对BMP优化</td>
-<td style="text-align:center">定长编码</td>
-</tr>
-</tbody>
-</table>
-<h3 id="定长编码与变长编码">定长编码与变长编码</h3>
-<p>双字节的整数只能表示65536个状态，对于目前已有的十四万个字符显得捉襟见肘。但另一方面，四字节整数可以表示约42亿个状态。恐怕直到人类进入宇宙深空时都遇不到这么多字符。因此对于码元而言，如果采用四字节，我们可以确保编码是<strong>定长</strong>的：一个（表示字符的）自然数码位始终能用<strong>一个</strong><code>uint32</code>表示。但如果使用<code>uint8</code>或<code>uint16</code>作为码元，超出单个码元表示范围的字符就需要使用多个码元来表示了。因此是为<strong>变长编码</strong>。因此，UTF-32是定长编码，而UTF-8和UTF-16是变长编码。</p>
-<p>设计编码时，<strong>容错</strong>是最为重要的考量之一：计算机并不是绝对可靠的，诸如比特反转，数据坏块等问题是很有可能遇到的。字符编码的一个基本要求就是<strong>自同步（self-synchronization ）</strong>。对于变长编码而言，这个问题尤为重要。应用程序必须能够从二进制数据中解析出字符的边界，才可以正确解码字符。如果如果文本数据中出现了一些细微的错漏，导致边界解析错误，我们希望错误的影响仅仅局限于那个字符，而不是后续所有的文本边界都失去了同步，变成乱码无法解析。</p>
-<p>为了保证能够从编码的二进制中自然而然的凸显出字符边界，所有的变长编码方案都应当确保编码之间不会出现<strong>重叠（Overlap）</strong>：譬如一个双码元的字符，其第二个码元本身不应当是另一个字符的表示，否则在出现错误时，程序无法分辨出它到底是一个单独的字符，还是某个双码元字符的一部分，就达不到自同步的要求。我们在UTF-8和UTF-16中可以看到，它们的编码表都是针对这一于要求而设计的。</p>
-<p>下面让我们来看一下三种具体的编码表：UTF-32, UTF-16, UTF-8。</p>
-<h3 id="utf32">UTF32</h3>
-<p>最为简单的编码方案，就是使用一个四字节标准整型<code>int32</code>表示一个字符，也就是采用四字节32位无符号整数作为码元，即，UTF-32。很多时候计算机内部处理字符时，确实是这么做的。例如在C语言和Go语言中，很多API都是使用<code>int</code>来接收单个字符的。</p>
-<p>UTF-32最突出的特性是<strong>定长编码</strong>，一个码位始终编码为一个码元，因此具有随机访问与实现简单的优势：第n个字符，就是数组中的第n个码元，使用简单，实现更简单。当然这样的编码方式有个缺陷：特别浪费存储。虽然总共有十几万个字符，但即使是中文，最常用的字符通常码位也落在65535以内，可以使用两个字节来表示。而对于纯英文文本而言，只要一个字节来表示一个字符就足够了。因此使用UTF32可能导致二至四倍的存储消耗，都是真金白银啊。当然在内存与磁盘容量没有限制的时候，用UTF32可能是最为省心的做法。</p>
-<h3 id="utf16">UTF16</h3>
-<p>UTF16是一种变长编码，使用双字节16位无符号整型作为码元。位于U+0000-U+FFFF之间的码位使用单个16位码元表示，而在U+10000-U+10FFFF之间的码位则使用两个16位的码元表示。这种由两个码元组成的码元对儿，称为<strong>代理对（Surrogate Paris）</strong>。</p>
-<p>UTF16是针对**基本多语言平面（Basic Multilingual Plane, BMP）**优化的，也就是码位位于U+FFFF以内可以用单个16位码元表示的部分。Anyway，对于落在BMP内的高频常用字符而言，UTF-16可以视作定长编码，也就有着与UTF32一样随机访问的好处，但节省了一倍的存储空间。</p>
-<p>UTF-16源于早期的Unicode标准，那时候人们认为65536个码位足以表达所有字符了。结果汉字一种文字就足够打爆它了……。**代理（Surrogate）**就是针对此打的补丁。它通过预留一部分码位作为特殊标记，将UTF-16改造成了变长编码。很多诞生于那一时期的编程语言与操作系统都受此影响（Java，Windows等）</p>
-<p>对于需要权衡性能与存储的应用，UTF-16是一种选择。尤其是当所处理的字符集仅限于BMP时，完全可以假装它是一种定长编码。需要注意的是UTF-16本质上是变长的，因此当出现超出BMP的字符时，如果以定长编码的方式来计算处理，很可能会出现错误，甚至崩溃。这也是为什么很多应用无法正确处理Emoji的原因。</p>
-<h3 id="utf8">UTF8</h3>
-<p>UTF8是一种完完全全的变长编码，它使用单字节8位无符号整数作为码元。0xFF以内的码位使用单字节编码，且与ASCII保持完全一致；U+0100-U+07FF之间的码位使用两个字节；U+0800到U+FFFF之间的码位使用三字节，超出U+FFFF的码位使用四字节，后续还可以继续扩展到最多用7个字节来表示一个字符。</p>
-<p>UTF8最大的优点，一是面向字节编码，二是兼容ASCII，三是能够自我同步。众所周知，只有多字节的类型才会存在大小端字节序的问题，如果码元本身就是单个字节，就压根不存在字节序的问题了。而兼容性，或者说ASCII透明性，使得历史上海量使用ASCII编码的程序与文件无需任何变动就能继续在UTF-8编码下继续工作（ASCII范围内）。最后，自我同步机制使得UTF-8具有良好的容错性。</p>
-<p>这些特性这使得UTF-8非常适合用于信息的传输与交换。互联网上大多数文本文件的编码都是UTF-8。而Go、Python3也采用了UTF-8作为其默认编码。</p>
-<p>当然，UTF-8也是有代价的。对于中文而言，UTF-8通常使用三个字节进行编码。比起双字节编码而言带来了50%的额外存储开销。与此同时，变长编码无法进行随机访问字符，也使得处理相比“定长编码”更为复杂，也会有更高的计算开销。对于正确性不甚在乎，但对性能有严苛要求的中文文字处理应用可能不会喜欢UTF-8。</p>
-<p>UTF-8的一个巨大优势就在于，它没有字节序的问题。而UTF-16与UTF-32就不得不操心大端字节在前还是小端字节在前的问题了。这个问题通常在**字符编码方案（Character Encoding Schema）**中通过BOM来解决。</p>
-<p><img src="/img/blog/pg/char-utf.png"></p>
-<h3 id="字符编码方案">字符编码方案</h3>
-<p>字符编码表 CEF解决了如何将<strong>自然数码位</strong>编码为<strong>码元序列</strong>的问题，无论使用哪种码元，计算机中都有相应的整型。但我们可以说编码问题就解决了吗？还不行，假设一个字符按照UTF16拆成了若干个码元组成的码元序列，因为每个码元都是一个<code>uint16</code>，实际上各由两个字节组成。因此将码元序列化为字节序列的时候，就会遇到一些问题：每个码元究竟是高位字节在前还是低位字节在前呢？这就是大小端字节序问题。</p>
-<p>对于网络交换和本地处理，大小端序各有优劣，因此不同的系统往往也会采用不同的大小端序。为了标明二进制文件的大小端序，人们引入了**字节序标记（Byte Order Mark, BOM）**的概念。BOM是放置于编码字节序列开始处的一段特殊字节序列，用于表示文本序列的大小端序。</p>
-<p>字符编码方案，实质上就是带有字节序列化方案的字符编码表。即：CES = 解决端序问题的CEF。对于大小端序标识方法的不同选择，产生了几种不同的字符编码方案：</p>
-<ul>
-<li>UTF-8：没有端序问题。</li>
-<li>UTF-16LE：小端序UTF-16，不带BOM</li>
-<li>UTF-16BE：大端序UTF-16，不带BOM</li>
-<li>UTF-16：通过BOM指定端序</li>
-<li>UTF-32LE：小端序UTF-32，不带BOM</li>
-<li>UTF-32BE：大端序UTF-32，不带BOM</li>
-<li>UTF-32：通过BOM指定端序</li>
-</ul>
-<p>UTF-8因为已经采用字节作为码元了，所以实际上不存在字节序的问题。其他两种UTF，都有三个相应地字符编码方案：一个大端版本，一个小端版本，还有一个随机应变大小端带 BOM的版本。</p>
-<p>当然要注意，在当前上下文中的UTF-8，UTF-16，UTF-32其实是CES层次的概念，即带有字节序列化方案的CEF，这会与CEF层次的同名概念产生混淆。因此，当我们在说UTF-8，UTF-16，UTF-32时，一定要注意区分它是CEF还是CES。例如，作为一种编码方案的UTF-16产生的字节序列是会带有BOM的，而作为一种编码表的UTF-16产生的码元序列则是没有BOM这个概念的。</p>
-<hr>
-<h2 id="0x05-utf-8">0x05 UTF-8</h2>
-<p>介绍完了现代编码模型，让我们深入看一下一个具体的编码方案：UTF-8。	UTF-8将Unicode码位映射成1~4个字节，满足如下规则：</p>
-<table>
-<thead>
-<tr>
-<th><strong>标量值</strong></th>
-<th>字节1</th>
-<th>字节2</th>
-<th>字节3</th>
-<th>字节4</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>00000000 0xxxxxxx</code></td>
-<td><code>0xxxxxxx</code></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>00000yyy yyxxxxxx</code></td>
-<td><code>110yyyyy</code></td>
-<td><code>10xxxxxx</code></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td><code>zzzzyyyy yyxxxxxx</code></td>
-<td><code>1110zzzz</code></td>
-<td><code>10yyyyyy</code></td>
-<td><code>10xxxxxx</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>000uuuuu zzzzyyyy yyxxxxxx</code></td>
-<td><code>11110uuu</code></td>
-<td><code>10uuzzzz</code></td>
-<td><code>10yyyyyy</code></td>
-<td><code>10xxxxxx</code></td>
-</tr>
-</tbody>
-</table>
-<p>其实比起死记硬背，UTF-8的编码规则可以通过几个约束自然而然地推断出来：</p>
-<ol>
-<li>与ASCII编码保持兼容，因此有第一行的规则。</li>
-<li>需要有自我同步机制，因此需要在首字节中保有当前字符的长度信息。</li>
-<li>需要容错机制，码元之间不允许发生重叠，这意味着字节2,3,4,…不能出现字节1可能出现的码元。</li>
-</ol>
-<p><code>0, 10, 110, 1110, 11110, …</code>这些是不会发生冲突的字节前缀，<code>0</code>前缀被ASCII兼容规则对应的码元用掉了。次优的<code>10</code>前缀就分配给后缀字节作为前缀，表示自己是某个字符的外挂部分。相应地，<code>110,1110,11110</code>这几个前缀就用于首字节中的长度标记，例如<code>110</code>前缀的首字节就表示当前字符还有一个额外的外挂字节，而<code>1110</code>前缀的首字节就表示还有两个额外的外挂字节。因此，UTF-8的编码规则其实非常简单。下面是使用Go语言编写的函数，展示了将一个码位编码为UTF-8字节序列的逻辑：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">func</span> <span style="color:#000">UTF8Encode</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span> <span style="color:#204a87;font-weight:bold">uint32</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span> <span style="color:#000;font-weight:bold">[]</span><span style="color:#204a87;font-weight:bold">byte</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#000;font-weight:bold">{</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">switch</span> <span style="color:#000;font-weight:bold">{</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">case</span> <span style="color:#000">i</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#0000cf;font-weight:bold">0xFF</span><span style="color:#000;font-weight:bold">:</span> 	<span style="color:#8f5902;font-style:italic">/* 1 byte */</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">))</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">case</span> <span style="color:#000">i</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#0000cf;font-weight:bold">0x7FF</span><span style="color:#000;font-weight:bold">:</span> 	<span style="color:#8f5902;font-style:italic">/* 2 byte */</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0xC0</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000;font-weight:bold">))</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">case</span> <span style="color:#000">i</span> <span style="color:#ce5c00;font-weight:bold">&lt;=</span> <span style="color:#0000cf;font-weight:bold">0xFFFF</span><span style="color:#000;font-weight:bold">:</span> 	<span style="color:#8f5902;font-style:italic">/* 3 byte*/</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0xE0</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#000;font-weight:bold">))</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">default</span><span style="color:#000;font-weight:bold">:</span> 			<span style="color:#8f5902;font-style:italic">/* 4 byte*/</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0xF0</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">18</span><span style="color:#000;font-weight:bold">))</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">12</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#ce5c00;font-weight:bold">&gt;&gt;</span><span style="color:#0000cf;font-weight:bold">6</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>		<span style="color:#000">b</span> <span style="color:#000;font-weight:bold">=</span> <span style="color:#204a87">append</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">b</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0x80</span><span style="color:#000;font-weight:bold">|</span><span style="color:#204a87">byte</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">)</span><span style="color:#ce5c00;font-weight:bold">&amp;</span><span style="color:#0000cf;font-weight:bold">0x3F</span><span style="color:#000;font-weight:bold">)</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#000;font-weight:bold">}</span>
-</span></span><span style="display:flex;"><span>	<span style="color:#204a87;font-weight:bold">return</span>
-</span></span><span style="display:flex;"><span><span style="color:#000;font-weight:bold">}</span>
-</span></span></code></pre></div><hr>
-<h2 id="0x06-编程语言中的字符编码">0x06 编程语言中的字符编码</h2>
-<p>讲完了现代编码模型，让我们来看两个现实编程语言中的例子：Go和Python2。这两者都是非常简单实用的语言。但在字符编码的模型设计上却是两个典型：一个正例一个反例。</p>
-<h3 id="go">Go</h3>
-<p>Go语言的缔造者之一，Ken Thompson，同时也是UTF-8的发明人（同时也是C语言，Go语言，Unix的缔造者），因此Go对于字符编码的实现堪称典范。Go的语法与C和Python类似，非常简单。它也是一门比较新的语言，抛开了一些历史包袱，直接使用了UTF-8作为默认编码。</p>
-<p>UTF-8编码在Go语言中有着特殊的位置，无论是源代码的文本编码，还是字符串的内部编码都是UTF-8。Go绕开前辈语言们踩过的坑，使用了UTF8作为默认编码是一个非常明智的选择。相比之下，Java，Javascript都使用 UCS-2/UTF16作为内部编码，早期还有随机访问的优势，可当Unicode增长超出BMP之后，这一优势也荡然无存了。相比之下，字节序，Surrogate , 空间冗余带来的麻烦却仍让人头大无比。</p>
-<p>Go语言中有三种重要的基本文本类型： <code>byte</code>, <code>rune</code>,<code>string</code>，分别是字节，字符，与字符串。其中：</p>
-<ul>
-<li>字节<code>byte</code>实际上是<code>uint8</code>的别名，<code>[]byte</code>表示字节序列。</li>
-<li>字符<code>rune</code>实质上是<code>int32</code>的别名，表示一个Unicode的<strong>码位</strong>。<code>[]rune</code>表示码位序列</li>
-<li>字符串<code>string</code>实质上是UTF-8编码的二进制字节数组（底层是字节数组），加上一个长度字段。</li>
-</ul>
-<p>而相应的编码与解码操作为：</p>
-<ul>
-<li><strong>编码</strong>：使用<code>string(rune_array)</code>将<strong>字符数组</strong>转换为UTF-8编码的字符串。</li>
-<li><strong>解码</strong>：使用<code>for i,r := range str</code>语法迭代字符串中的字符，实际上是依次将二进制UTF-8字节序列还原为码位序列。</li>
-</ul>
-<p>更详细的内容可以参阅文档，我也写过一篇博文详细解释了Go语言中的文本类型。</p>
-<h3 id="python2">Python2</h3>
-<p>如果说Go可以作为字符编码处理实现的典范，那么Python2则可以当做一个最典型的反例了。Python2使用ASCII作为默认编码以及默认源文件编码，因此如果不理解字符编码的相关知识，以及Python2的一些设计，在处理非ASCII编码很容易出现一些错误。实际上只要看到Python3与Python2在字符编码处理上的差异有多大就大概有数了。Python2用的人还是不少，所以这里的坑其实很多，但其实最严重的问题是：</p>
-<ul>
-<li>Python2的默认编码方案的非常不合理。</li>
-<li>Python2的字符串类型与字符串字面值很容易让人混淆。</li>
-</ul>
-<p><strong>第一个问题是</strong>，Python2的默认编码方案的非常不合理：</p>
-<ul>
-<li>Python2使用<code>'xxx'</code>作为<strong>字节串字面值</strong>，其类型为<code>&lt;str&gt;</code>，但<code>&lt;str&gt;</code>本质上是<strong>字节串</strong>而不是<strong>字符串</strong>。</li>
-<li>Python2使用<code>u'xxx'</code>作为<strong>字符串字面值</strong>的语法，其类型为<code>&lt;unicode&gt;</code>，<code>&lt;unicode&gt;</code>是真正意义上的<strong>字符串</strong>，每一个字符都属于UCS。</li>
-</ul>
-<p>与此同时，Python2解释器的默认编码方案(CES)是US-ASCII 。作为对照，Java，C#，Javascript等语言内部的默认编码方案都是UTF-16，Go语言的内部默认编码方案使用UTF-8。默认使用US-ASCII的python2简直是骨骼清奇，当然，这也有一部分历史原因在里头。Python3就乖乖地改成UTF-8了。</p>
-<p><strong>第二个问题</strong>：python的默认&rsquo;字符串类型<code>&lt;str&gt;</code>与其叫字符串，不如叫字节串，用下标去访问的每一个元素都是一个字节。而<code>&lt;unicode&gt;</code>类型才是真正意义上的字符串，用下标去访问的每一个元素都是一个字符(虽然底下可能每个字符长度不同)。字符串<code>&lt;unicode&gt;</code> 与 字节串<code>&lt;str&gt; </code>的关系为：</p>
-<ul>
-<li>字符串<code>&lt;unicode&gt;</code> 通过 字符编码方案编码得到字节串<code>&lt;str&gt; </code></li>
-<li>字节串<code>&lt;str&gt;</code> 通过 字符编码方案解码得到字符串<code>&lt;unicode&gt; </code></li>
-</ul>
-<p>字节串就字节串，为啥要起个类型名叫<code>&lt;str&gt;</code>呢？另外，字面值语法用一对什么前缀都没有的引号表示str，这样的设计非常反直觉。因此让很多人掉进了坑里。当然，<code>&lt;str&gt;</code>与<code>&lt;unicode&gt;</code>这样的类型设计以及两者的关系设计本身是无可厚非的。该黑的应该是这两个类型起的<strong>名字</strong>和<strong>字面值表示方法</strong>。至于怎么改进是好的，Python3已经给出答案。在理解了字符编码模型之后，什么样的操作才是正确的操作，读者应该已经心里有数了。</p>
-<blockquote>
-<p><a href="https://mp.weixin.qq.com/s/Yzd64oCjjlk4brERhKBuKA">微信公众号原文</a></p>
-</blockquote>
 
 </div>
 
@@ -4757,115 +4422,6 @@ $$</p>
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">EXCLUDE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">gist</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">ips</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WITH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFERRABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INITIALLY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DEFERRED</span><span style="color:#f8f8f8;text-decoration:underline"> 
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>​	这里<code>EXCLUDE USING gist (ips WITH &amp;&amp;)  </code> 的意思就是<code>ips</code>字段上不允许出现范围重叠，即新插入的字段不能与任何现存范围重叠（<code>&amp;&amp;</code>为真）。而<code>DEFERRABLE INITIALLY IMMEDIATE </code>表示在语句结束时再检查所有行上的约束。创建该约束会自动在<code>ips</code>字段上创建GIST索引，因此无需手工创建了。</p>
-
-</div>
-
-
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-
-  
-
-<div class="td-content" style="page-break-before: always">
-    <h1 id="pg-d56766a08ea9cfa2db09a9b26cb09ded">file_fdw妙用无穷——从数据库读取系统信息</h1>
-	<div class="lead">通过<code>file_fdw</code>，轻松查看操作系统信息，拉取网络数据，把各种各样的数据源轻松喂进数据库里统一查看管理。</div>
-	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
-        
-		<time datetime="2017-12-01" class="text-muted">2017年12月01日</time>
-        
-	</div>
-	<p>PostgreSQL是最先进的开源数据库，其中一个非常给力的特性就是FDW：外部数据包装器（Foreign Data Wrapper）。通过FDW，用户可以用统一的方式从Pg中访问各类外部数据源。<code>file_fdw</code>就是其中随数据库附赠的两个fdw之一。随着pg10的更新，<code>file_fdw</code>也添加了一颗赛艇的功能：从程序输出读取。</p>
-<p>小霸王妙用无穷，我们能通过<code>file_fdw</code>，轻松查看操作系统信息，拉取网络数据，把各种各样的数据源轻松喂进数据库里统一查看管理。</p>
-<hr>
-<h2 id="安装与配置">安装与配置</h2>
-<p><code>file_fdw</code>是Pg自带的组件，不需要奇怪的配置，在数据库中执行以下命令即可启用<code>file_fdw</code>：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE EXTENSION file_fdw;
-</span></span></code></pre></div><p>启用FDW插件之后，需要创建一个实例，也是一行SQL搞定，创建一个名为<code>fs</code>的FDW Server实例。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE SERVER fs FOREIGN DATA WRAPPER file_fdw;
-</span></span></code></pre></div><hr>
-<h2 id="创建外部表">创建外部表</h2>
-<p>举个栗子，如果我想从数据库中读取操作系统中正在运行的进程信息，该怎么做呢？</p>
-<p>最典型，也是最常用的外部数据格式就是CSV啦。不过系统命令输出的结果并不是很规整：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt;&gt;&gt; ps ux
-</span></span><span style="display:flex;"><span>USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
-</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">2658</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">148428</span>  <span style="color:#0000cf;font-weight:bold">2620</span> ?        S    11:51   0:00 sshd: vonng@pts/0,pts/2
-</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">2659</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">115648</span>  <span style="color:#0000cf;font-weight:bold">2312</span> pts/0    Ss+  11:51   0:00 -bash
-</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">4854</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">115648</span>  <span style="color:#0000cf;font-weight:bold">2272</span> pts/2    Ss   15:46   0:00 -bash
-</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">5176</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">150940</span>  <span style="color:#0000cf;font-weight:bold">1828</span> pts/2    R+   16:06   0:00 ps -ux
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26460</span>  0.0  1.2 <span style="color:#0000cf;font-weight:bold">271808</span> <span style="color:#0000cf;font-weight:bold">13060</span> ?        S    10月26   0:22 /usr/local/pgsql/bin/postgres
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26462</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">271960</span>  <span style="color:#0000cf;font-weight:bold">2640</span> ?        Ss   10月26   0:00 postgres: checkpointer process
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26463</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">271808</span>  <span style="color:#0000cf;font-weight:bold">2148</span> ?        Ss   10月26   0:25 postgres: writer process
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26464</span>  0.0  0.5 <span style="color:#0000cf;font-weight:bold">271808</span>  <span style="color:#0000cf;font-weight:bold">5300</span> ?        Ss   10月26   0:27 postgres: wal writer process
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26465</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">272216</span>  <span style="color:#0000cf;font-weight:bold">2096</span> ?        Ss   10月26   0:31 postgres: autovacuum launcher process
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26466</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">126896</span>  <span style="color:#0000cf;font-weight:bold">1104</span> ?        Ss   10月26   0:54 postgres: stats collector process
-</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26467</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">272100</span>  <span style="color:#0000cf;font-weight:bold">1588</span> ?        Ss   10月26   0:01 postgres: bgworker: logical replication launcher
-</span></span></code></pre></div><p>可以通过<code>awk</code>，将<code>ps</code>的命令输出规整为分隔符为<code>\x1F</code>的csv格式。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ps aux | awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,substr($0,index($0,$11))}&#39; OFS=&#39;\037&#39;
-</span></span></code></pre></div><p>正戏来啦！通过以下DDL创建一张外表定义</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE process_status (
-</span></span><span style="display:flex;"><span>  username TEXT,
-</span></span><span style="display:flex;"><span>  pid      INTEGER,
-</span></span><span style="display:flex;"><span>  cpu      NUMERIC,
-</span></span><span style="display:flex;"><span>  mem      NUMERIC,
-</span></span><span style="display:flex;"><span>  vsz      BIGINT,
-</span></span><span style="display:flex;"><span>  rss      BIGINT,
-</span></span><span style="display:flex;"><span>  tty      TEXT,
-</span></span><span style="display:flex;"><span>  stat     TEXT,
-</span></span><span style="display:flex;"><span>  start    TEXT,
-</span></span><span style="display:flex;"><span>  time     TEXT,
-</span></span><span style="display:flex;"><span>  command  TEXT
-</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (
-</span></span><span style="display:flex;"><span>PROGRAM $$ps aux | awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,substr($0,index($0,$11))}&#39; OFS=&#39;\037&#39;$$,
-</span></span><span style="display:flex;"><span>FORMAT &#39;csv&#39;, DELIMITER E&#39;\037&#39;, HEADER &#39;TRUE&#39;);
-</span></span></code></pre></div><p>这里，关键是通过<code>CREATE FOREIGN TABLE OPTIONS (xxxx)</code>中的<code>OPTIONS</code>提供相应的参数，在<code>PROGRAM</code>参数中填入上面的命令，pg就会在查询这张表的时候自动执行此命令，并读取其输出。<code>FORMAT</code>参数可以指定为<code>CSV</code>，<code>DELIMITER</code>参数指定为之前使用的<code>\x1F</code>，并通过<code>HEADER 'TRUE'</code>忽略CSV的第一行</p>
-<p>那么结果如何呢？</p>
-<p><img src="/img/blog/pg/file_fdw.png"></p>
-<hr>
-<h2 id="有什么用">有什么用</h2>
-<p>最简单的场景，原本系统指标监控需要编写各种监测脚本，部署在奇奇怪怪的地方。然后定期执行拉取metric，再存进数据库。现在通过file_fdw的方式，可以将感兴趣的指标直接录入数据库表，一步到位，而且维护方便，部署简单，更加可靠。在外表上加上视图，定期拉取聚合，将原本一个监控系统完成的事情，在数据库中一条龙解决了。</p>
-<p>因为可以从程序输出读取结果，因此file_fdw可以与linux生态里各类强大的命令行工具配合使用，发挥出强大的威力。</p>
-<hr>
-<h2 id="其他栗子">其他栗子</h2>
-<p>诸如此类，实际上后来我发现Facebook貌似有一个类似的产品，叫OSQuery，也是干了差不多的事。通过SQL查询操作系统的指标。但明显PostgreSQL这种方法最简单粗暴高效啦，只要定义表结构，和命令数据源就能轻松对接指标数据，用不了一天就能做出一个功能差不多的东西来。</p>
-<p>用于读取系统用户列表的DDL：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE etc_password (
-</span></span><span style="display:flex;"><span>  username  TEXT,
-</span></span><span style="display:flex;"><span>  password  TEXT,
-</span></span><span style="display:flex;"><span>  user_id   INTEGER,
-</span></span><span style="display:flex;"><span>  group_id  INTEGER,
-</span></span><span style="display:flex;"><span>  user_info TEXT,
-</span></span><span style="display:flex;"><span>  home_dir  TEXT,
-</span></span><span style="display:flex;"><span>  shell     TEXT
-</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (
-</span></span><span style="display:flex;"><span>  PROGRAM $$awk -F: &#39;NF &amp;&amp; !/^[:space:]*#/ {print $1,$2,$3,$4,$5,$6,$7}&#39; OFS=&#39;\037&#39; /etc/passwd$$, 
-</span></span><span style="display:flex;"><span>  FORMAT &#39;csv&#39;, DELIMITER E&#39;\037&#39;
-</span></span><span style="display:flex;"><span>);
-</span></span></code></pre></div><p>用于读取磁盘用量的DDL：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE disk_free (
-</span></span><span style="display:flex;"><span>  file_system TEXT,
-</span></span><span style="display:flex;"><span>  blocks_1m   BIGINT,
-</span></span><span style="display:flex;"><span>  used_1m     BIGINT,
-</span></span><span style="display:flex;"><span>  avail_1m    BIGINT,
-</span></span><span style="display:flex;"><span>  capacity    TEXT,
-</span></span><span style="display:flex;"><span>  iused       BIGINT,
-</span></span><span style="display:flex;"><span>  ifree       BIGINT,
-</span></span><span style="display:flex;"><span>  iused_pct   TEXT,
-</span></span><span style="display:flex;"><span>  mounted_on  TEXT
-</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (PROGRAM $$df -ml| awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9}&#39; OFS=&#39;\037&#39;$$, FORMAT &#39;csv&#39;, HEADER &#39;TRUE&#39;, DELIMITER E&#39;\037&#39;
-</span></span><span style="display:flex;"><span>);
-</span></span></code></pre></div><p>当然，用file_fdw只是一个很Naive的FDW，譬如这里就只能读，不能改。</p>
-<p>自己编写FDW实现增删改查逻辑也非常简单，例如Multicorn就是使用Python编写FDW的项目。</p>
-<p>SQL over everything，让世界变的更简单~</p>
 
 </div>
 

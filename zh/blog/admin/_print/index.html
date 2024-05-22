@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.2fb3143c95bd4d2d7a110ee05f8218f9.json"
+    data-offline-search-index-json-src="/offline-search-index.ec7e3fd7b72c854e2b36c6a129111986.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -148,7 +148,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-47df461004361160e9f55e70bf42c1a1">Postgres逻辑复制详解</a></li>
+    <li><a href="#pg-1a92238e99590240143d4a2a0d17f98b">PostgreSQL 逻辑复制详解</a></li>
 
 
 
@@ -158,7 +158,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-f7dcbee2dc636abe5d32bc9a6a706dd1">PostgreSQL 查询优化之 pg_stat_statements</a></li>
+    <li><a href="#pg-f7dcbee2dc636abe5d32bc9a6a706dd1">PostgreSQL 宏观查询优化之 pg_stat_statements</a></li>
 
 
 
@@ -168,7 +168,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-a2af7475b2a3088359b0673483f30bed">如何用 pg_filedump 抢救数据？</a></li>
+    <li><a href="#pg-84becda4486f629dfc08aa6043d6355d">如何用 pg_filedump 抢救数据？</a></li>
 
 
 
@@ -178,7 +178,7 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-18b7b7bb89eed72554ae4ebf8e9235ca">PG中的本地化排序规则</a></li>
+    <li><a href="#pg-2377d45fe5a041b3e08890413b2432b6">PG中的本地化排序规则</a></li>
 
 
 
@@ -188,7 +188,17 @@ This is the multi-page printable view of this section.
     
 	
 
-    <li><a href="#pg-b8a439438b13d05764aebba32ca973cb">PG复制标识详解（Replica Identity）</a></li>
+    <li><a href="#pg-eddc668f26db53c6b78bd6f6dd86dc14">PG复制标识详解（Replica Identity）</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-42550a24271212176fd42acc36caec44">PG慢查询诊断方法论</a></li>
 
 
 
@@ -199,16 +209,6 @@ This is the multi-page printable view of this section.
 	
 
     <li><a href="#pg-79b53a6d42ba827e043f36600910a088">故障档案:时间回溯导致的Patroni故障</a></li>
-
-
-
-    
-  
-    
-    
-	
-
-    <li><a href="#pg-f79faa143a21c03747b378af6cdcbef0">PG慢查询诊断方法论</a></li>
 
 
 
@@ -518,6 +518,16 @@ This is the multi-page printable view of this section.
     
 	
 
+    <li><a href="#pg-952ac87bedcf6370ba38c07b37016b21">file_fdw妙用无穷——从数据库读取系统信息</a></li>
+
+
+
+    
+  
+    
+    
+	
+
     <li><a href="#pg-c38d4e3664b5a6788de15893db6a0058">Linux 常用统计 CLI 工具</a></li>
 
 
@@ -572,15 +582,16 @@ This is the multi-page printable view of this section.
   
 
 <div class="td-content" style="">
-    <h1 id="pg-47df461004361160e9f55e70bf42c1a1">Postgres逻辑复制详解</h1>
+    <h1 id="pg-1a92238e99590240143d4a2a0d17f98b">PostgreSQL 逻辑复制详解</h1>
 	<div class="lead">本文介绍PostgreSQL 13中逻辑复制的相关原理，以及最佳实践。</div>
 	<div class="td-byline mb-4">
-		
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
         
 		<time datetime="2021-03-03" class="text-muted">2021年03月03日</time>
         
 	</div>
-	<h2 id="逻辑复制">逻辑复制</h2>
+	<hr>
+<h2 id="逻辑复制">逻辑复制</h2>
 <p><strong>逻辑复制（Logical Replication）</strong>，是一种根据数据对象的 <a href="/zh/blog/2021/03/03/pg%E5%A4%8D%E5%88%B6%E6%A0%87%E8%AF%86%E8%AF%A6%E8%A7%A3replica-identity/"><strong>复制标识</strong></a>（Replica Identity）（通常是主键）复制数据对象及其变化的方法。</p>
 <p><strong>逻辑复制</strong> 这个术语与 <strong>物理复制</strong>相对应，物理复制使用精确的块地址与逐字节复制，而逻辑复制则允许对复制过程进行精细的控制。</p>
 <p>逻辑复制基于 <strong>发布（Publication）</strong> 与 <strong>订阅</strong>（<strong>Subscription</strong>）模型：</p>
@@ -597,14 +608,18 @@ This is the multi-page printable view of this section.
 </ul>
 <p>逻辑订阅者的行为就是一个普通的PostgreSQL实例（主库），逻辑订阅者也可以创建自己的发布，拥有自己的订阅者。</p>
 <p>如果逻辑订阅者只读，那么不会有<strong>冲突</strong>。如果会写入逻辑订阅者的订阅集，那么就可能会出现冲突。</p>
-<h2 id="发布publication">发布（Publication）</h2>
+<hr>
+<h2 id="发布">发布</h2>
 <p>一个 <strong>发布（Publication）</strong> 可以在物理复制<strong>主库</strong> 上定义。创建发布的节点被称为 <strong>发布者（Publisher）</strong> 。</p>
 <p>一个 <strong>发布</strong> 是 <strong>由一组表构成的变更集合</strong>。也可以被视作一个 <strong>变更集（change set）</strong> 或 <strong>复制集（Replication Set）</strong> 。每个发布都只能在一个 <strong>数据库（Database）</strong> 中存在。</p>
 <p>发布不同于<strong>模式（Schema）</strong>，不会影响表的访问方式。（表纳不纳入发布，自身访问不受影响）</p>
 <p>发布目前只能包含<strong>表</strong>（即：索引，序列号，物化视图这些不会被发布），每个表可以添加到多个发布中。</p>
 <p>除非针对<code>ALL TABLES</code>创建发布，否则发布中的对象（表）只能（通过<code>ALTER PUBLICATION ADD TABLE</code>）被<strong>显式添加</strong>。</p>
 <p>发布可以筛选所需的变更类型：包括<code>INSERT</code>、<code>UPDATE</code>、<code>DELETE</code> 和<code>TRUNCATE</code>的任意组合，类似触发器事件，默认所有变更都会被发布。</p>
-<h3 id="复制标识zhblog20210303pg复制标识详解replica-identity"><a href="/zh/blog/2021/03/03/pg%E5%A4%8D%E5%88%B6%E6%A0%87%E8%AF%86%E8%AF%A6%E8%A7%A3replica-identity/">复制标识</a></h3>
+<h3 id="复制标识">复制标识</h3>
+<blockquote>
+<p><a href="/zh/blog/admin/replica-identity">复制标识</a></p>
+</blockquote>
 <p>一个被纳入发布中的表，必须带有 <strong>复制标识（Replica Identity）</strong>，只有这样才可以在订阅者一侧定位到需要更新的行，完成<code>UPDATE</code>与<code>DELETE</code>操作的复制。</p>
 <p>默认情况下，<strong>主键</strong> （Primary Key）是表的复制标识，<strong>非空列上的唯一索引</strong> （UNIQUE NOT NULL）也可以用作复制标识。</p>
 <p>如果没有任何复制标识，可以将复制标识设置为<code>FULL</code>，也就是把整个行当作复制标识。（一种有趣的情况，表中存在多条完全相同的记录，也可以被正确处理，见后续案例）使用<code>FULL</code>模式的复制标识效率很低（因为每一行修改都需要在订阅者上执行全表扫描，很容易把订阅者拖垮），所以这种配置只能是保底方案。使用<code>FULL</code>模式的复制标识还有一个限制，订阅端的表上的复制身份所包含的列，要么与发布者一致，要么比发布者更少。</p>
@@ -728,6 +743,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span> 20417 |   20413 |   20394
 </span></span></code></pre></div><p>这两者的区别特别需要注意：当针对<code>ALL TABLES</code>发布时，<code>pg_publication_rel</code>中不会有具体表的OID，但是在<code>pg_publication_tables</code>中可以查询到实际纳入逻辑复制的表列表。所以通常应当以<code>pg_publication_tables</code>为准。</p>
 <p>创建订阅时，数据库会先修改<code>pg_publication</code>目录，然后将发布表的信息填入<code>pg_publication_rel</code>。</p>
+<hr>
 <h2 id="订阅">订阅</h2>
 <p><strong>订阅（Subscription）</strong> 是逻辑复制的下游。定义订阅的节点被称为 <strong>订阅者（Subscriber）</strong> 。</p>
 <p>订阅定义了：如何<strong>连接</strong>到另一个数据库，以及需要订阅目标发布者上的哪些<strong>发布</strong>。</p>
@@ -826,6 +842,7 @@ This is the multi-page printable view of this section.
 <li>将复制集中的表注册到订阅端的 <code>pg_subscription_rel</code> 目录中。</li>
 <li>执行初始快照同步，注意订阅测表中的原有数据不会被删除。</li>
 </ul>
+<hr>
 <h2 id="复制冲突">复制冲突</h2>
 <p>逻辑复制的行为类似于正常的DML操作，即使数据在用户节点上的本地发生了变化，数据也会被更新。如果复制来的数据违反了任何约束，复制就会停止，这种现象被称为 <strong>冲突（Conflict）</strong> 。</p>
 <p>当复制<code>UPDATE</code>或<code>DELETE</code>操作时，缺失数据（即要更新/删除的数据已经不存在）不会产生冲突，此类操作直接跳过。</p>
@@ -869,6 +886,7 @@ This is the multi-page printable view of this section.
 </table>
 <p>解决冲突的方法，可以是改变订阅侧的数据，使其不与进入的变更相冲突，或者跳过与现有数据冲突的事务。</p>
 <p>使用订阅对应的<code>node_name</code>与LSN位置调用函数<code>pg_replication_origin_advance()</code>可以跳过事务，<code>pg_replication_origin_status</code>系统视图中可以看到当前ORIGIN的位置。</p>
+<hr>
 <h2 id="局限性">局限性</h2>
 <p>逻辑复制目前有以下限制，或者说功能缺失。这些问题可能会在未来的版本中解决。</p>
 <p><strong>数据库模式和DDL命令不会被复制</strong>。存量模式可以通过<code>pg_dump --schema-only</code>手动复制，增量模式变更需要手动保持同步（发布订阅两边的模式不需要绝对相同不需要两边的模式绝对相同)。逻辑复制对于对在线DDL变更仍然可靠：在发布数据库中执行DDL变更后，复制的数据到达订阅者但因为表模式不匹配而导致复制出错停止，订阅者的模式更新后复制会继续。在许多情况下，先在订阅者上执行变更可以避免中间的错误。</p>
@@ -882,6 +900,7 @@ This is the multi-page printable view of this section.
 <p><strong>双向复制需要极其小心</strong>：互为发布与订阅是可行的，只要两遍的表集合不相交即可。但一旦出现表的交集，就会出现WAL无限循环。</p>
 <p><strong>同一实例内的复制</strong>：同一个实例内的逻辑复制需要特别小心，必须<strong>手工创建逻辑复制槽</strong>，并在创建订阅时使用已有的逻辑复制槽，否则会卡死。</p>
 <p><strong>只能在主库上进行</strong>：目前不支持从物理复制的从库上进行逻辑解码，也无法在从库上创建复制槽，所以从库无法作为发布者。但这个问题可能会在未来解决。</p>
+<hr>
 <h2 id="架构">架构</h2>
 <p>逻辑复制始于获取发布者数据库上的快照，基于此快照拷贝表上的存量数据。一旦拷贝完成，发布者上的<strong>变更</strong>（增删改等）就会实时发送到订阅者上。</p>
 <p>逻辑复制采用与物理复制类似的架构，是通过一个<code>walsender</code>和<code>apply</code>进程实现的。发布端端<code>walsender</code>进程会加载逻辑解码插件（<code>pgoutput</code>），并开始逻辑解码WAL日志。<strong>逻辑解码插件（Logical Decoding Plugin）</strong> 会读取WAL中的变更，按照<strong>发布</strong>的定义筛选变更，将变更转变为特定的形式，以逻辑复制协议传输出去。数据会按照流复制协议传输至订阅者一侧的<code>apply</code>进程，该进程会在接收到变更时，将变更映射至本地表上，然后按照事务顺序重新应用这些变更。</p>
@@ -899,6 +918,7 @@ This is the multi-page printable view of this section.
 <h3 id="临时数据">临时数据</h3>
 <p>逻辑解码的临时数据会落盘为本地日志快照。当walsender接收到walwriter发送的<code>SIGUSR1</code>信号时，就会读取WAL日志并生成相应的逻辑解码快照。当传输结束时会删除这些快照。</p>
 <p>文件地址为：<code>$PGDATA/pg_logical/snapshots/{LSN Upper}-{LSN Lower}.snap</code></p>
+<hr>
 <h2 id="监控">监控</h2>
 <p>逻辑复制采用与物理流复制类似的架构，所以监控一个逻辑复制的<strong>发布者节点</strong>与监控一个物理复制主库差别不大。</p>
 <p>订阅者的监控信息可以通过<code>pg_stat_subscription</code>视图获取。</p>
@@ -967,6 +987,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span><span style="color:#000">ERROR</span><span style="color:#000;font-weight:bold">:</span> <span style="color:#000">duplicate</span> <span style="color:#000">key</span> <span style="color:#000">value</span> <span style="color:#000">violates</span> <span style="color:#000">unique</span> <span style="color:#000">constraint</span> <span style="color:#4e9a06">&#34;pgbench_tellers_pkey&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;Key (tid)=(9) already exists.&#34;</span><span style="color:#000;font-weight:bold">,,,,</span><span style="color:#4e9a06">&#34;COPY pgbench_tellers, line 31&#34;</span><span style="color:#000;font-weight:bold">,,,,</span><span style="color:#4e9a06">&#34;&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#4e9a06">&#34;logical replication worker&#34;</span>
 </span></span></code></pre></div><p>此外，一些监控指标也可以反映逻辑复制的状态：</p>
 <p>例如：<code>pg_replication_slots.confirmed_flush_lsn</code> 长期落后于<code>pg_cureent_wal_lsn</code>。或者<code>pg_stat_replication.flush_ag/write_lag</code> 有显著增长。</p>
+<hr>
 <h2 id="安全">安全</h2>
 <p>参与订阅的表，其Ownership与Trigger权限必须控制在超级用户所信任的角色手中（否则修改这些表可能导致逻辑复制中断）。</p>
 <p>在发布节点上，如果不受信任的用户具有建表权限，那么创建发布时应当显式指定表名而非通配<code>ALL TABLES</code>。也就是说，只有当超级用户信任所有 可以在发布或订阅侧具有建表（非临时表）权限的用户时，才可以使用<code>FOR ALL TABLES</code>。</p>
@@ -997,7 +1018,8 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span><span style="color:#c4a000">max_replication_slots: 16               # 10 -&gt; 16 </span>
 </span></span><span style="display:flex;"><span><span style="color:#c4a000">max_logical_replication_workers: 8      # 4 -&gt; 8, 6 sync worker + 1~2 apply worker</span>
 </span></span><span style="display:flex;"><span><span style="color:#c4a000">max_sync_workers_per_subscription: 6    # 2 -&gt; 6, 6 sync worker</span>
-</span></span></code></pre></div><h2 id="快速配置">快速配置</h2>
+</span></span></code></pre></div><hr>
+<h2 id="快速配置">快速配置</h2>
 <p>首先设置发布侧的配置选项 <code>wal_level = logical</code>，该参数需要重启方可生效，其他参数的默认值都不影响使用。</p>
 <p>然后创建复制用户，添加<code>pg_hba.conf</code>配置项，允许外部访问，一种典型配置是：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replicator</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">REPLICATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">BYPASSRLS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PASSWORD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;DBUser.Replicator&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1028,7 +1050,8 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  CONNECTION &#39;host=10.10.10.10 dbname=meta user=replicator&#39; 
 </span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">  PUBLICATION pg_meta_pub;
 </span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
-</span></span></code></pre></div><h2 id="复制流程">复制流程</h2>
+</span></span></code></pre></div><hr>
+<h2 id="复制流程">复制流程</h2>
 <p>逻辑复制的订阅创建后，如果一切正常，逻辑复制会自动开始，针对<strong>每张订阅中的表</strong>执行复制状态机逻辑。</p>
 <p>如下图所示。</p>
 <div class="mermaid">
@@ -1040,6 +1063,7 @@ stateDiagram-v2
 </div>
 <p>当所有的表都完成复制，进入<code>r</code>（ready）状态时，逻辑复制的存量同步阶段便完成了，发布端与订阅端整体进入同步状态。</p>
 <p>因此从逻辑上讲，存在两种状态机：<strong>表级复制小状态机</strong>与<strong>全局复制大状态机</strong>。每一个Sync Worker负责一张表上的小状态机，而一个Apply Worker负责一条逻辑复制的大状态机。</p>
+<hr>
 <h2 id="逻辑复制状态机">逻辑复制状态机</h2>
 <p>逻辑复制有两种Worker：Sync与Apply。Sync</p>
 <p>因此，逻辑复制在逻辑上分为两个部分：<strong>每张表独自进行复制</strong>，当复制进度追赶至最新位置时，由</p>
@@ -1066,6 +1090,7 @@ stateDiagram-v2
 </span></span><span style="display:flex;"><span>-------------+-----------------
 </span></span><span style="display:flex;"><span> pg_test_sub <span style="color:#000;font-weight:bold">|</span> <span style="color:#ce5c00;font-weight:bold">{</span> <span style="color:#4e9a06">&#34;r&#34;</span> : <span style="color:#0000cf;font-weight:bold">5</span> <span style="color:#ce5c00;font-weight:bold">}</span>
 </span></span></code></pre></div><p>当然，最好的方式始终是通过监控系统来跟踪复制状态。</p>
+<hr>
 <h2 id="沙箱样例-1">沙箱样例</h2>
 <p>以Pigsty标准4节点两集群沙箱为例，有两套数据库集群<code>pg-meta</code>与<code>pg-test</code>。现在将<code>pg-meta-1</code>作为发布者，<code>pg-test-1</code>作为订阅者。</p>
 <p>通常逻辑复制的前提是，发布者上设置有<code>wal_level = logical</code>，并且有一个可以正常访问，具有正确权限的复制用户。</p>
@@ -1116,6 +1141,7 @@ stateDiagram-v2
 </span></span><span style="display:flex;"><span>$ psql <span style="color:#4e9a06">${</span><span style="color:#000">PGSUB</span><span style="color:#4e9a06">}</span> -AXtwc <span style="color:#4e9a06">&#39;SELECT * FROM pgbench_accounts WHERE aid = 99999999;&#39;</span>
 </span></span><span style="display:flex;"><span>99999999<span style="color:#000;font-weight:bold">|</span>1<span style="color:#000;font-weight:bold">|</span>0<span style="color:#000;font-weight:bold">|</span>
 </span></span></code></pre></div><p>现在已经拥有一个正常工作的逻辑复制了。下面让我们来通过一系列实验来掌握逻辑复制的使用与管理，探索可能遇到的各种离奇问题。</p>
+<hr>
 <h2 id="逻辑复制实验">逻辑复制实验</h2>
 <h3 id="将表加入已有发布">将表加入已有发布</h3>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t_normal</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">id</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">BIGSERIAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PRIMARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">KEY</span><span style="color:#000;font-weight:bold">,</span><span style="color:#000">v</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">TIMESTAMP</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic">-- 常规表，带有主键
@@ -1193,6 +1219,7 @@ stateDiagram-v2
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relkind</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;r&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AND</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">nspname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">NOT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">IN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pg_catalog&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;information_schema&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;monitor&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;repack&#39;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_toast&#39;</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#000;font-weight:bold">,</span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>注意，复制身份为<code>nothing</code>的表可以加入到发布中，但在发布者上对其执行<code>UPDATE|DELETE</code>会直接导致报错。</p>
+<hr>
 <h2 id="其他问题">其他问题</h2>
 <h3 id="q逻辑复制准备工作">Q：逻辑复制准备工作</h3>
 <h3 id="q什么样的表可以逻辑复制">Q：什么样的表可以逻辑复制？</h3>
@@ -1224,7 +1251,7 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-f7dcbee2dc636abe5d32bc9a6a706dd1">PostgreSQL 查询优化之 pg_stat_statements</h1>
+    <h1 id="pg-f7dcbee2dc636abe5d32bc9a6a706dd1">PostgreSQL 宏观查询优化之 pg_stat_statements</h1>
 	
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）｜ <a href="https://mp.weixin.qq.com/s/VXkpDlUdnKlK3DKtoyg2wA">微信公众号</a></b> |
@@ -1517,18 +1544,15 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-a2af7475b2a3088359b0673483f30bed">如何用 pg_filedump 抢救数据？</h1>
+    <h1 id="pg-84becda4486f629dfc08aa6043d6355d">如何用 pg_filedump 抢救数据？</h1>
 	
 	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com/s/jmlzhktasg06MiA7b4huew">微信公众号</a></b> |
         
 		<time datetime="2023-09-27" class="text-muted">2023年09月27日</time>
         
 	</div>
-	<blockquote>
-<p><a href="https://mp.weixin.qq.com/s/jmlzhktasg06MiA7b4huew">WeChat Column</a></p>
-</blockquote>
-<p><img src="/img/blog/hero/pg-filedump.jpg"></p>
+	<p><img src="/zh/blog/admin/pg-filedump/featured.jpg"></p>
 <blockquote>
 <p>备份是DBA的生命线 —— 但如果你的 PostgreSQL 数据库已经爆炸了又没有备份，那么该怎么办呢？也许 pg_filedump 可以帮到你！</p>
 </blockquote>
@@ -1663,7 +1687,7 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-18b7b7bb89eed72554ae4ebf8e9235ca">PG中的本地化排序规则</h1>
+    <h1 id="pg-2377d45fe5a041b3e08890413b2432b6">PG中的本地化排序规则</h1>
 	<div class="lead">什么？不知道COLLATTION是什么，那记住一件事，用C COLLATE准没错！</div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
@@ -1677,6 +1701,8 @@ stateDiagram-v2
 <p>如果说服务端字符编码配置因为某些原因配置为<code>UTF8</code>之外的值也许还情有可原，那么<code>LOCALE</code>配置为<code>C</code>之外的任何选就是<strong>无可救药</strong>了。因为对于PostgreSQL来说，LOCALE不仅仅是控制日期和钱怎么显示这一类无伤大雅的东西，而是会影响到某些关键功能的使用。</p>
 <p>错误的LOCALE配置可能导致<strong>几倍到十几倍的性能损失</strong>，还会导致<code>LIKE</code>查询无法在普通索引上使用。而设置<code>LOCALE=C</code>一点也不会影响真正需要本地化规则的使用场景。所以官方文档给出的指导是：“如果你真正需要LOCALE，才去使用它”。</p>
 <p>不幸的是，在PostgreSQL<code>locale</code>与<code>encoding</code>的默认配置取决于操作系统的配置，因此<code>C.UTF8</code>可能并不是默认的配置，这就导致了很多人误用LOCALE而不自知，白白折损了大量性能，也导致了某些数据库特性无法正常使用。</p>
+<p><img src="/zh/blog/admin/collate/featured.webp"></p>
+<hr>
 <h2 id="太长不看">太长；不看</h2>
 <ul>
 <li>强制使用<code>UTF8</code>字符编码，强制数据库使用<code>C</code>的本地化规则。</li>
@@ -1684,6 +1710,7 @@ stateDiagram-v2
 <li>使用非C本地化规则，会导致<code>LIKE</code>查询无法使用普通索引，容易踩坑雪崩。</li>
 <li>使用非C本地化规则的实例，可以通过<code>text_ops COLLATE &quot;C&quot;</code>或<code>text_pattern_ops</code>建立索引，支持<code>LIKE</code>查询。</li>
 </ul>
+<hr>
 <h2 id="locale是什么">LOCALE是什么</h2>
 <p>我们经常能在操作系统和各种软件中看到 <strong><code>LOCALE</code>（区域）</strong> 的相关配置，但LOCALE到底是什么呢？</p>
 <p><strong>LOCALE</strong>支持指的是应用遵守文化偏好的问题，包括字母表、<strong>排序</strong>、数字格式等。LOCALE由很多规则与定义组成，包括：</p>
@@ -1736,6 +1763,7 @@ stateDiagram-v2
 <li><code>TW</code> 台湾：<code>zh_TW</code></li>
 <li><code>SG</code> 新加坡：<code>zh_SG</code></li>
 </ul>
+<hr>
 <h2 id="locale的例子">LOCALE的例子</h2>
 <p>我们可以参考一个典型的Locale定义文件：Glibc提供的 <a href="https://lh.2xlibre.net/locale/zh_CN/glibc/">zh_CN</a></p>
 <p>这里截取一小部分展示，看上去好像都是些鸡零狗碎的格式定义，月份星期怎么叫啊，钱和小数点怎么显示啊之类的东西。</p>
@@ -1796,6 +1824,7 @@ stateDiagram-v2
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">int_curr_symbol    &#34;CNY &#34;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>比如<code>zh_CN</code>提供的<code>LC_COLLATE</code>使用了<code>iso14651_t1_pinyin</code>排序规则，这是一个<strong>基于拼音的排序规则</strong>。</p>
 <p>下面通过一个例子来介绍LOCALE中的COLLATION如何影响Postgres的行为。</p>
+<hr>
 <h2 id="排序规则一例">排序规则一例</h2>
 <p>创建一张包含7个汉字的表，然后执行排序操作。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">some_chinese</span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1833,6 +1862,7 @@ stateDiagram-v2
 <p>PostgreSQL中使用非<code>C</code>或非<code>POSIX</code> LOCALE的最大负面影响是：</p>
 <p><strong>特定排序规则对涉及字符串大小比较的操作有巨大的性能影响，同时它还会导致无法在<code>LIKE</code>查询子句中使用普通索引。</strong></p>
 <p>另外，C LOCALE是由数据库本身确保在任何操作系统与平台上使用的，而其他的LOCALE则不然，所以使用非C Locale的可移植性更差。</p>
+<hr>
 <h2 id="性能损失">性能损失</h2>
 <p>接下来让我们考虑一个使用LOCALE排序规则的例子， 我们有Apple Store 150万款应用的名称，现在希望按照不同的区域规则进行排序。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">-- 创建一张应用名称表，里面有中文也有英文。
@@ -1898,7 +1928,7 @@ stateDiagram-v2
 </tbody>
 </table>
 <p>下面是实验5对应的详细执行计划，即使配置了足够大的内存，依然会溢出到磁盘执行外部排序。尽管如此，显式指定<code>LOCALE</code>的实验都出现了此情况，因此可以横向对比出C与<code>zh_CN</code>的性能差距来。</p>
-<p><img src="/img/blog/pg/collation-plan.jpg"></p>
+<p><img src="/zh/blog/admin/collate/collation-plan.jpg"></p>
 <p>另一个更有对比性的例子是<strong>比大小</strong>。</p>
 <p>这里，表中的所有的字符串都会和<code>World</code>比一下大小，相当于在表上进行150万次特定规则比大小，而且也不涉及到磁盘IO。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">SELECT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">count</span><span style="color:#000;font-weight:bold">(</span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FROM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">app</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">WHERE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">&gt;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;World&#39;</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1940,6 +1970,7 @@ stateDiagram-v2
 <p>如果说排序可能是O(n2)次比较操作有10倍损耗 ，那么这里的O(n)次比较3倍开销也基本能对应上。我们可以得出一个初步的粗略结论：</p>
 <p>比起<code>C</code> Locale来，使用<code>zh_CN</code>或其他Locale可能导致<strong>几倍</strong>的额外性能开销。</p>
 <p>除此之外，错误的Locale不仅仅会带来性能损失，还会导致<strong>功能损失</strong>。</p>
+<hr>
 <h2 id="功能缺失">功能缺失</h2>
 <p>除了性能表现糟糕外，另一个令人难以接受的问题是，使用非<code>C</code>的LOCALE，<strong>LIKE查询走不了普通索引</strong>。</p>
 <p>还是以刚才的实验为例，我们分别在使用<code>C</code>和<code>en_US</code>作为默认LOCALE创建的数据库实例上执行以下查询：</p>
@@ -1985,6 +2016,7 @@ stateDiagram-v2
 </span></span></span></code></pre></div><p>建立完索引后，我们可以看到原来的<code>LIKE</code>查询<strong>可以</strong>走索引了。</p>
 <p><code>LIKE</code>无法使用普通索引这个问题，看上去似乎可以通过额外创建一个<code>text_pattern_ops</code>索引来曲线解决。但这也意味着原本可以直接利用现成的<code>PRIMARY KEY</code>或<code>UNIQUE</code>约束自带索引解决的问题，现在需要额外的维护成本与存储空间。</p>
 <p>对于不熟悉这一问题的开发者来说，很有可能因为错误的LOCALE配置，导致本地没问题的模式结果在线上因为没有走索引而雪崩。（例如本地使用C，但生产环境用了非C LOCALE）。</p>
+<hr>
 <h2 id="兼容性">兼容性</h2>
 <p>假设您在接手时数据库已经使用了非<code>C</code>的LOCALE（这种事相当常见），现在您在知道了使用非C LOCALE的危害后，决定找个机会改回来。</p>
 <p>那么有哪些地方需要注意呢？具体来讲，Locale的配置影响PostgreSQL以下功能：</p>
@@ -2035,7 +2067,7 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-b8a439438b13d05764aebba32ca973cb">PG复制标识详解（Replica Identity）</h1>
+    <h1 id="pg-eddc668f26db53c6b78bd6f6dd86dc14">PG复制标识详解（Replica Identity）</h1>
 	<div class="lead">复制标识很重要，它关系到逻辑复制的成败</div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
@@ -2284,50 +2316,12 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
-    <h1 id="pg-79b53a6d42ba827e043f36600910a088">故障档案:时间回溯导致的Patroni故障</h1>
-	<div class="lead">机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致Patroni无法启动。</div>
-	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
-        
-		<time datetime="2021-02-22" class="text-muted">2021年02月22日</time>
-        
-	</div>
-	<p>摘要：机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致 Patroni 无法启动。</p>
-<p>Patroni中的故障信息如下所示：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Process %s is not postmaster, too much difference between PID file start time %s and process start time %s
-</span></span></code></pre></div><p>patroni 进程启动时间和pid时间不一致。就会认为：postgres is not running。</p>
-<p>两个时间相差超过30秒。patroni 就尿了，启动不了了。</p>
-<p>打印错误信息的代码为：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000">start_time</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87">int</span><span style="color:#000;font-weight:bold">(</span><span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">_postmaster_pid</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">get</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;start_time&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">))</span>
-</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">start_time</span> <span style="color:#204a87;font-weight:bold">and</span> <span style="color:#204a87">abs</span><span style="color:#000;font-weight:bold">(</span><span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">create_time</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#ce5c00;font-weight:bold">-</span> <span style="color:#000">start_time</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">:</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#000">logger</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">info</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Process </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> is not postmaster, too much difference between PID file start time </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> and process start time </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">pid</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">create_time</span><span style="color:#000;font-weight:bold">(),</span> <span style="color:#000">start_time</span><span style="color:#000;font-weight:bold">)</span>
-</span></span></code></pre></div><p>同时，发现了Patroni里的一个BUG：https://github.com/zalando/patroni/issues/811 错误信息里两个时间戳打反了。</p>
-<p>经验与教训： NTP 时间同步是非常重要的</p>
-
-</div>
-
-
-
-
-
-    
-	
-  
-    
-    
-	
-    
-
-
-  
-
-<div class="td-content" style="page-break-before: always">
-    <h1 id="pg-f79faa143a21c03747b378af6cdcbef0">PG慢查询诊断方法论</h1>
+    <h1 id="pg-42550a24271212176fd42acc36caec44">PG慢查询诊断方法论</h1>
 	<div class="lead">慢查询是在线业务数据库的大敌，本文介绍了使用监控系统定位诊断慢查询的一般方法论。</div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
         
-		<time datetime="2021-02-01" class="text-muted">2021年02月01日</time>
+		<time datetime="2021-02-23" class="text-muted">2021年02月23日</time>
         
 	</div>
 	<blockquote>
@@ -2345,7 +2339,7 @@ stateDiagram-v2
 <li>慢查询浪费系统资源，拉高系统水位。</li>
 </ul>
 <p>因此，一个合格的DBA必须知道如何及时定位并处理慢查询。</p>
-<p><img src="/img/blog/pg/slow-query-8.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-8.png"></p>
 <blockquote>
 <p>图：一个慢查询优化前后，系统的整体饱和度从40%降到了4%</p>
 </blockquote>
@@ -2389,12 +2383,12 @@ stateDiagram-v2
 </span></span></code></pre></div><p>现在我们已经有了一个模拟运行中的业务系统，让我们通过简单粗暴的方式来模拟一个慢查询场景。在<code>pg-test</code>集群的主库上执行以下命令，删除表<code>pgbench_accounts</code>的主键：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CONSTRAINT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts_pkey</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>该命令会移除 <code>pgbench_accounts</code> 表上的主键，导致<strong>相关查询</strong>从索引扫描变为顺序全表扫描，全部变为慢查询，访问<a href="/zh/zh/docs/pgsql/dasdhboard">PG Instance</a> ➡️ Query ➡️ QPS，结果如下图所示：</p>
-<p><img src="/img/blog/pg/slow-query-1.jpg"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-1.jpg"></p>
 <blockquote>
 <p>图1：平均查询响应时间从1ms飙升为300ms，单个从库实例的QPS从500下降至7。</p>
 </blockquote>
 <p>与此同时，实例因为慢查询堆积，系统会在瞬间<strong>雪崩过载</strong>，访问<a href="/zh/zh/docs/pgsql/dasdhboard">PG Cluster</a>首页，可以看到集群负载出现飙升。</p>
-<p><img src="/img/blog/pg/slow-query-2.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-2.png"></p>
 <blockquote>
 <p>图2：系统负载达到200%，触发机器负载过大，与查询响应时间过长的报警规则。</p>
 </blockquote>
@@ -2402,7 +2396,7 @@ stateDiagram-v2
 <h3 id="慢查询定位">慢查询：定位</h3>
 <p>首先，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Cluster</a>面板定位慢查询所在的具体实例，这里以 <code>pg-test-2</code> 为例。</p>
 <p>然后，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Query</a>面板定位具体的慢查询：编号为 <strong>-6041100154778468427</strong></p>
-<p><img src="/img/blog/pg/slow-query-3.jpg"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-3.jpg"></p>
 <blockquote>
 <p>图3：从查询总览中发现异常慢查询</p>
 </blockquote>
@@ -2414,7 +2408,7 @@ stateDiagram-v2
 </ul>
 <p>可以确定，就是这个查询变慢了！</p>
 <p>接下来，利用<a href="/zh/zh/docs/pgsql/dasdhboard/">PG Stat Statements</a>面板或<a href="/zh/zh/docs/pgsql/dasdhboard">PG Query Detail</a>，根据查询ID定位慢查询的<strong>具体语句</strong>。</p>
-<p><img src="/img/blog/pg/slow-query-4.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-4.png"></p>
 <blockquote>
 <p>图4：定位查询语句为<code>SELECT abalance FROM pgbench_accounts WHERE aid = $1</code></p>
 </blockquote>
@@ -2427,7 +2421,7 @@ stateDiagram-v2
 <p>下一步，我们就要<strong>验证猜想</strong>。</p>
 <p>第一步，使用<a href="/zh/zh/docs/pgsql/dasdhboard">PG Table Catalog</a>，我们可以检视表的详情，例如表上建立的索引。</p>
 <p>第二步，查阅 <a href="/zh/zh/docs/pgsql/dasdhboard">PG Table Detail</a> 面板，检查 <code>pgbench_accounts</code> 表上的访问，来验证我们的猜想</p>
-<p><img src="/img/blog/pg/slow-query-5.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-5.png"></p>
 <blockquote>
 <p>图5： <code>pgbench_accounts</code> 表上的访问情况</p>
 </blockquote>
@@ -2440,11 +2434,11 @@ stateDiagram-v2
 <p>这里的问题可以通过添加索引解决，<code>pgbench_accounts</code> 表上 <code>aid</code> 列缺少索引，那么我们尝试在 <code>pgbench_accounts</code> 表上为 <code>aid</code> 列添加索引，看看能否解决这个问题。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UNIQUE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">INDEX</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgbench_accounts</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">aid</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>加上索引后，神奇的事情发生了。</p>
-<p><img src="/img/blog/pg/slow-query-6.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-6.png"></p>
 <blockquote>
 <p>图6：可以看到，查询的响应时间与QPS已经恢复正常。</p>
 </blockquote>
-<p><img src="/img/blog/pg/slow-query-7.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-7.png"></p>
 <blockquote>
 <p>图7：系统的负载也恢复正常</p>
 </blockquote>
@@ -2453,7 +2447,7 @@ stateDiagram-v2
 <p>作为慢查询处理的最后一步，我们通常需要对操作的过程进行记录，对效果进行评估。</p>
 <p>有时候一个简单的优化可以产生戏剧性的效果。也许本来需要砸几十万加机器的问题，创建一个索引就解决了。</p>
 <p>这种故事，就可以通过监控系统，用很生动直观的形式表达出来，赚取KPI与Credit。</p>
-<p><img src="/img/blog/pg/slow-query-8.png"></p>
+<p><img src="/zh/blog/admin/slow-query/slow-query-8.png"></p>
 <blockquote>
 <p>图：一个慢查询优化前后，系统的整体饱和度从40%降到了4%</p>
 <p>（相当于节省了X台机器，XX万元，老板看了心花怒放，下一任CTO就是你了！）</p>
@@ -2479,6 +2473,44 @@ stateDiagram-v2
 </li>
 </ul>
 <p>监控系统在慢查询处理的整个生命周期中都能起到重要的效果。更能将运维与DBA的“经验”与“成果”，以可视化，可量化，可复制的方式表达出来。</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-79b53a6d42ba827e043f36600910a088">故障档案:时间回溯导致的Patroni故障</h1>
+	<div class="lead">机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致Patroni无法启动。</div>
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2021-02-22" class="text-muted">2021年02月22日</time>
+        
+	</div>
+	<p>摘要：机器因为故障重启，NTP服务在PG启动后修复了PG的时间，导致 Patroni 无法启动。</p>
+<p>Patroni中的故障信息如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Process %s is not postmaster, too much difference between PID file start time %s and process start time %s
+</span></span></code></pre></div><p>patroni 进程启动时间和pid时间不一致。就会认为：postgres is not running。</p>
+<p>两个时间相差超过30秒。patroni 就尿了，启动不了了。</p>
+<p>打印错误信息的代码为：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#000">start_time</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#204a87">int</span><span style="color:#000;font-weight:bold">(</span><span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">_postmaster_pid</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">get</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;start_time&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#0000cf;font-weight:bold">0</span><span style="color:#000;font-weight:bold">))</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">if</span> <span style="color:#000">start_time</span> <span style="color:#204a87;font-weight:bold">and</span> <span style="color:#204a87">abs</span><span style="color:#000;font-weight:bold">(</span><span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">create_time</span><span style="color:#000;font-weight:bold">()</span> <span style="color:#ce5c00;font-weight:bold">-</span> <span style="color:#000">start_time</span><span style="color:#000;font-weight:bold">)</span> <span style="color:#ce5c00;font-weight:bold">&gt;</span> <span style="color:#0000cf;font-weight:bold">3</span><span style="color:#000;font-weight:bold">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#000">logger</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">info</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;Process </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> is not postmaster, too much difference between PID file start time </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06"> and process start time </span><span style="color:#4e9a06">%s</span><span style="color:#4e9a06">&#39;</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">pid</span><span style="color:#000;font-weight:bold">,</span> <span style="color:#3465a4">self</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">create_time</span><span style="color:#000;font-weight:bold">(),</span> <span style="color:#000">start_time</span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><p>同时，发现了Patroni里的一个BUG：https://github.com/zalando/patroni/issues/811 错误信息里两个时间戳打反了。</p>
+<p>经验与教训： NTP 时间同步是非常重要的</p>
 
 </div>
 
@@ -3092,12 +3124,13 @@ stateDiagram-v2
     <h1 id="pg-6c9b5e7c5ee28bba5543aa06492d809a">PostgreSQL的KPI</h1>
 	<div class="lead">管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰<strong>PG Load（PG负载）</strong>。</div>
 	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com/s/bG6KG7mmu4K7JMYMI34zCQ">微信公众号</a></b> |
         
 		<time datetime="2020-05-29" class="text-muted">2020年05月29日</time>
         
 	</div>
 	<p>管数据库和管人差不多，都需要定KPI（关键性能指标）。那么数据库的KPI是什么？本文介绍了一种衡量PostgreSQL负载的方式：使用一种单一横向可比，与负载类型和机器类型基本无关的指标，名曰<strong>PG Load（PG负载）</strong>。</p>
+<hr>
 <h2 id="0x01-introduction">0x01 Introduction</h2>
 <p>在现实生产中，经常会有衡量数据库性能与负载，评估数据库水位的需求。一种最朴素的形式就是，能不能有一个类似于KPI的单一指标，能直接了当地告诉用户他心爱的数据库负载有没有超过警戒线？工作量到底饱和不饱和？</p>
 <p>当然这里其实隐含着一个重要信息，即用户期待的负载指标是一个<strong>饱和度（Saturation）<strong>指标，所谓饱和度，即服务容量有多”满“，通常是系统中目前最为受限的某种资源的某个具体指标的度量。通常来说，0%的饱和度意味着系统完全空闲，100%的饱和度意味着满载，系统在达到100%利用率前就会出现性能的严重下降，因此设定指标时还需要包括一个</strong>利用率目标</strong>，或者说<strong>水位红线、黄线</strong>，当系统瞬时负载超过红线时应当触发告警，长期负载超过黄线时应当进行扩容。</p>
@@ -3117,6 +3150,7 @@ stateDiagram-v2
 </li>
 </ul>
 <p>这些指标对于数据库性能评估都很有参考意义，但它们也都存在各式各样的问题。</p>
+<hr>
 <h2 id="0x02-常用评估指标的问题">0x02 常用评估指标的问题</h2>
 <p>让我们来看一看，这些现有的常用指标都有哪些问题。</p>
 <p>第一个Pass的当然是错误类指标，譬如连接池排队。错误类指标最大的问题就是，当错误出现时，饱和度可能已经没有意义了。<strong>评估饱和度的一个重要原因就是用于预防系统过载，如果系统已经过载大量报错，那么使用错误现象反过来定义饱和度是没有意义的</strong>。此外，错误类指标难以精确量化。我们只能说：当连接池出现排队时，数据库负载比较大；队列越长，负载越大；没有排队时，数据库负载不怎么大，仅此而已。这样的定义当然也无法让人满意。</p>
@@ -3124,6 +3158,7 @@ stateDiagram-v2
 <p>流量类的指标很有潜力，特别是QPS，TPS这样的指标相当具有代表性。但这些指标也存在问题。一个数据库实例上的查询往往是五花八门各式各样的，一个耗时10微秒的查询和一个10秒的查询在统计时都被算为一个Q，<strong>类似于QPS这样的指标无法进行横向比较，只有比较粗略的参考意义</strong>，甚至当查询类型发生变化时，都无法和自己的历史数据进行纵向比较。此外也很难针对QPS、TPS这样的指标设置利用率目标，同一个数据库执行<code>SELECT 1</code>可以打到几十万的QPS，但执行复杂SQL时可能就只能打到几千的QPS。不同负载类型和机器硬件会对数据库的QPS上限产生显著影响，只有当一个数据库上的查询都是高度单一同质且没有复杂变化的条件下，QPS才有参考意义，在这种苛刻条件下倒是可以通过压力测试设定一个QPS的水位目标。</p>
 <p>比起QPS/TPS，RT（响应时间 Response Time）这样的指标反而更具有参考价值。因为响应时间增加往往是系统饱和的前兆。根据经验法则，数据库的负载越大，查询与事务的平均响应时间也会越高。RT相比QPS的一个优势是**，RT是可以设置一个利用率目标的**，比如可以为RT设定一个绝对阈值：不允许生产OLTP库上出现RT超过1ms的慢查询。但QPS这样的指标就很难画出红线来。不过，RT也有自己的问题。第一个问题是它依然是定性而非定量的，延迟增加只是系统饱和的预警，但没法用来精确衡量系统的饱和度。第二个问题通常能从数据库与中间件获取到的RT统计指标都是平均值，但真正起到预警效果的有可能是诸如P99，P999这样的统计量。</p>
 <p>这里把常用指标都批判了一番，到底什么样的指标适合作为数据库本身的饱和度呢？</p>
+<hr>
 <h2 id="0x03-衡量pg的负载">0x03 衡量PG的负载</h2>
 <p>我们不妨参考一下**机器负载（Node Load）<strong>和</strong>CPU利用率（CPU Utilization）**的评估指标是如何设计的。</p>
 <h3 id="机器负载node-load">机器负载（Node Load）</h3>
@@ -3163,6 +3198,7 @@ stateDiagram-v2
 <p>因为前两项之商实际上就是一段时间内的每秒活跃时长总数，因此这个公式进一步可以简化为活跃时长对时间的导数除以可用并行数，即：</p>
 <p><code>rate(pg_active_seconds[time_peroid]) / parallel </code></p>
 <p><code>time_peroid</code>通常是固定的常量（1，5，15分钟），所以问题就是如何获取PG进程活跃总时长<code>pg_active_seconds</code>这个指标，以及如何评估计算数据库可用并行数<code>max_parallel </code>了。</p>
+<hr>
 <h2 id="0x04-计算pg的负载饱和度">0x04 计算PG的负载饱和度</h2>
 <h3 id="事务还是查询"><strong>事务还是查询？</strong></h3>
 <p>当我们说数据库进程 活跃/空闲 时，究竟在说什么？ <strong>PG处于活跃状态，到底是什么意思</strong>？如果PG后端进程正在执行查询，那么当然可以认为PG正处于忙碌状态。但如果如上图4所示，PG进程正在执行一个交互式事务，但没有实际执行查询，即所谓的“Idle in Transaction”状态，又应该怎么计算“活跃时长”呢？图4中两个查询中空闲的那200ms时间。那么这段时间应该算作“活跃”，还是算作“空闲”呢？</p>
@@ -3204,6 +3240,7 @@ stateDiagram-v2
 <p>如果我们仔细审视PG Load的定义，其实可以发现每秒活跃时长这个指标，其实可以粗略等价于：TPS x XactRT，或者QPS x Query RT。这个也很好理解，假设我QPS为1000，每个查询RT为1ms，则每秒花费在查询上的时间为 1000 * 1ms = 1s。</p>
 <p>因此，PG Load可以视为一个由三个核心指标复合而成的衍生指标：<code>tps * xact_rt /  cpu_count</code></p>
 <p>TPS，RT用于负载评估都有各自的问题，但它们通过简单的乘法结合成一个新的复合指标，一下子就显示出了神奇的力量。（尽管实际上是通过其他更准确的方式计算出来的）</p>
+<hr>
 <h2 id="0x05-pg-load的实际效果">0x05 PG Load的实际效果</h2>
 <p>接下来，我们来看一下PG Load用于实际生产环境的表现。</p>
 <p>PG Load最直接的作用有两个，告警以及容量评估。</p>
@@ -3218,6 +3255,7 @@ stateDiagram-v2
 <p>CPU利用率是另一个很重要的容量评估指标。我们可以看出，PG Load与CPU Usage有着很密切的关系。不过相比CPU使用率，PG Load更为纯粹地反映了数据库本身的负载水平，滤除了机器上的无关负载，也可以滤除掉数据库维护工作（备份，清理，垃圾回收）产生的杂音，更为丝滑平顺。因此非常适合用于容量评估。</p>
 <p>当系统负载长期位于30%~50%时，就应该考虑进行扩容了。</p>
 <p><img src="/img/blog/pg/pg-load-cluster.png"></p>
+<hr>
 <h2 id="0x06-结论">0x06 结论</h2>
 <p>本文介绍了一种定量衡量PG负载的方式，即PG Load指标</p>
 <p>该指标可以简单直观地反映数据库实例的负载水平</p>
@@ -9045,6 +9083,115 @@ stateDiagram-v2
   
 
 <div class="td-content" style="page-break-before: always">
+    <h1 id="pg-952ac87bedcf6370ba38c07b37016b21">file_fdw妙用无穷——从数据库读取系统信息</h1>
+	<div class="lead">通过<code>file_fdw</code>，轻松查看操作系统信息，拉取网络数据，把各种各样的数据源轻松喂进数据库里统一查看管理。</div>
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2017-12-01" class="text-muted">2017年12月01日</time>
+        
+	</div>
+	<p>PostgreSQL是最先进的开源数据库，其中一个非常给力的特性就是FDW：外部数据包装器（Foreign Data Wrapper）。通过FDW，用户可以用统一的方式从Pg中访问各类外部数据源。<code>file_fdw</code>就是其中随数据库附赠的两个fdw之一。随着pg10的更新，<code>file_fdw</code>也添加了一颗赛艇的功能：从程序输出读取。</p>
+<p>小霸王妙用无穷，我们能通过<code>file_fdw</code>，轻松查看操作系统信息，拉取网络数据，把各种各样的数据源轻松喂进数据库里统一查看管理。</p>
+<hr>
+<h2 id="安装与配置">安装与配置</h2>
+<p><code>file_fdw</code>是Pg自带的组件，不需要奇怪的配置，在数据库中执行以下命令即可启用<code>file_fdw</code>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE EXTENSION file_fdw;
+</span></span></code></pre></div><p>启用FDW插件之后，需要创建一个实例，也是一行SQL搞定，创建一个名为<code>fs</code>的FDW Server实例。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE SERVER fs FOREIGN DATA WRAPPER file_fdw;
+</span></span></code></pre></div><hr>
+<h2 id="创建外部表">创建外部表</h2>
+<p>举个栗子，如果我想从数据库中读取操作系统中正在运行的进程信息，该怎么做呢？</p>
+<p>最典型，也是最常用的外部数据格式就是CSV啦。不过系统命令输出的结果并不是很规整：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt;&gt;&gt; ps ux
+</span></span><span style="display:flex;"><span>USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">2658</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">148428</span>  <span style="color:#0000cf;font-weight:bold">2620</span> ?        S    11:51   0:00 sshd: vonng@pts/0,pts/2
+</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">2659</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">115648</span>  <span style="color:#0000cf;font-weight:bold">2312</span> pts/0    Ss+  11:51   0:00 -bash
+</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">4854</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">115648</span>  <span style="color:#0000cf;font-weight:bold">2272</span> pts/2    Ss   15:46   0:00 -bash
+</span></span><span style="display:flex;"><span>vonng     <span style="color:#0000cf;font-weight:bold">5176</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">150940</span>  <span style="color:#0000cf;font-weight:bold">1828</span> pts/2    R+   16:06   0:00 ps -ux
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26460</span>  0.0  1.2 <span style="color:#0000cf;font-weight:bold">271808</span> <span style="color:#0000cf;font-weight:bold">13060</span> ?        S    10月26   0:22 /usr/local/pgsql/bin/postgres
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26462</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">271960</span>  <span style="color:#0000cf;font-weight:bold">2640</span> ?        Ss   10月26   0:00 postgres: checkpointer process
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26463</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">271808</span>  <span style="color:#0000cf;font-weight:bold">2148</span> ?        Ss   10月26   0:25 postgres: writer process
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26464</span>  0.0  0.5 <span style="color:#0000cf;font-weight:bold">271808</span>  <span style="color:#0000cf;font-weight:bold">5300</span> ?        Ss   10月26   0:27 postgres: wal writer process
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26465</span>  0.0  0.2 <span style="color:#0000cf;font-weight:bold">272216</span>  <span style="color:#0000cf;font-weight:bold">2096</span> ?        Ss   10月26   0:31 postgres: autovacuum launcher process
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26466</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">126896</span>  <span style="color:#0000cf;font-weight:bold">1104</span> ?        Ss   10月26   0:54 postgres: stats collector process
+</span></span><span style="display:flex;"><span>vonng    <span style="color:#0000cf;font-weight:bold">26467</span>  0.0  0.1 <span style="color:#0000cf;font-weight:bold">272100</span>  <span style="color:#0000cf;font-weight:bold">1588</span> ?        Ss   10月26   0:01 postgres: bgworker: logical replication launcher
+</span></span></code></pre></div><p>可以通过<code>awk</code>，将<code>ps</code>的命令输出规整为分隔符为<code>\x1F</code>的csv格式。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ps aux | awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,substr($0,index($0,$11))}&#39; OFS=&#39;\037&#39;
+</span></span></code></pre></div><p>正戏来啦！通过以下DDL创建一张外表定义</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE process_status (
+</span></span><span style="display:flex;"><span>  username TEXT,
+</span></span><span style="display:flex;"><span>  pid      INTEGER,
+</span></span><span style="display:flex;"><span>  cpu      NUMERIC,
+</span></span><span style="display:flex;"><span>  mem      NUMERIC,
+</span></span><span style="display:flex;"><span>  vsz      BIGINT,
+</span></span><span style="display:flex;"><span>  rss      BIGINT,
+</span></span><span style="display:flex;"><span>  tty      TEXT,
+</span></span><span style="display:flex;"><span>  stat     TEXT,
+</span></span><span style="display:flex;"><span>  start    TEXT,
+</span></span><span style="display:flex;"><span>  time     TEXT,
+</span></span><span style="display:flex;"><span>  command  TEXT
+</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (
+</span></span><span style="display:flex;"><span>PROGRAM $$ps aux | awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,substr($0,index($0,$11))}&#39; OFS=&#39;\037&#39;$$,
+</span></span><span style="display:flex;"><span>FORMAT &#39;csv&#39;, DELIMITER E&#39;\037&#39;, HEADER &#39;TRUE&#39;);
+</span></span></code></pre></div><p>这里，关键是通过<code>CREATE FOREIGN TABLE OPTIONS (xxxx)</code>中的<code>OPTIONS</code>提供相应的参数，在<code>PROGRAM</code>参数中填入上面的命令，pg就会在查询这张表的时候自动执行此命令，并读取其输出。<code>FORMAT</code>参数可以指定为<code>CSV</code>，<code>DELIMITER</code>参数指定为之前使用的<code>\x1F</code>，并通过<code>HEADER 'TRUE'</code>忽略CSV的第一行</p>
+<p>那么结果如何呢？</p>
+<p><img src="/img/blog/pg/file_fdw.png"></p>
+<hr>
+<h2 id="有什么用">有什么用</h2>
+<p>最简单的场景，原本系统指标监控需要编写各种监测脚本，部署在奇奇怪怪的地方。然后定期执行拉取metric，再存进数据库。现在通过file_fdw的方式，可以将感兴趣的指标直接录入数据库表，一步到位，而且维护方便，部署简单，更加可靠。在外表上加上视图，定期拉取聚合，将原本一个监控系统完成的事情，在数据库中一条龙解决了。</p>
+<p>因为可以从程序输出读取结果，因此file_fdw可以与linux生态里各类强大的命令行工具配合使用，发挥出强大的威力。</p>
+<hr>
+<h2 id="其他栗子">其他栗子</h2>
+<p>诸如此类，实际上后来我发现Facebook貌似有一个类似的产品，叫OSQuery，也是干了差不多的事。通过SQL查询操作系统的指标。但明显PostgreSQL这种方法最简单粗暴高效啦，只要定义表结构，和命令数据源就能轻松对接指标数据，用不了一天就能做出一个功能差不多的东西来。</p>
+<p>用于读取系统用户列表的DDL：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE etc_password (
+</span></span><span style="display:flex;"><span>  username  TEXT,
+</span></span><span style="display:flex;"><span>  password  TEXT,
+</span></span><span style="display:flex;"><span>  user_id   INTEGER,
+</span></span><span style="display:flex;"><span>  group_id  INTEGER,
+</span></span><span style="display:flex;"><span>  user_info TEXT,
+</span></span><span style="display:flex;"><span>  home_dir  TEXT,
+</span></span><span style="display:flex;"><span>  shell     TEXT
+</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (
+</span></span><span style="display:flex;"><span>  PROGRAM $$awk -F: &#39;NF &amp;&amp; !/^[:space:]*#/ {print $1,$2,$3,$4,$5,$6,$7}&#39; OFS=&#39;\037&#39; /etc/passwd$$, 
+</span></span><span style="display:flex;"><span>  FORMAT &#39;csv&#39;, DELIMITER E&#39;\037&#39;
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><p>用于读取磁盘用量的DDL：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CREATE FOREIGN TABLE disk_free (
+</span></span><span style="display:flex;"><span>  file_system TEXT,
+</span></span><span style="display:flex;"><span>  blocks_1m   BIGINT,
+</span></span><span style="display:flex;"><span>  used_1m     BIGINT,
+</span></span><span style="display:flex;"><span>  avail_1m    BIGINT,
+</span></span><span style="display:flex;"><span>  capacity    TEXT,
+</span></span><span style="display:flex;"><span>  iused       BIGINT,
+</span></span><span style="display:flex;"><span>  ifree       BIGINT,
+</span></span><span style="display:flex;"><span>  iused_pct   TEXT,
+</span></span><span style="display:flex;"><span>  mounted_on  TEXT
+</span></span><span style="display:flex;"><span>) SERVER fs OPTIONS (PROGRAM $$df -ml| awk &#39;{print $1,$2,$3,$4,$5,$6,$7,$8,$9}&#39; OFS=&#39;\037&#39;$$, FORMAT &#39;csv&#39;, HEADER &#39;TRUE&#39;, DELIMITER E&#39;\037&#39;
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><p>当然，用file_fdw只是一个很Naive的FDW，譬如这里就只能读，不能改。</p>
+<p>自己编写FDW实现增删改查逻辑也非常简单，例如Multicorn就是使用Python编写FDW的项目。</p>
+<p>SQL over everything，让世界变的更简单~</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
     <h1 id="pg-c38d4e3664b5a6788de15893db6a0058">Linux 常用统计 CLI 工具</h1>
 	<div class="lead">top, free, vmstat, iostat：四大常用 CLI 工具命令速查</div>
 	<div class="td-byline mb-4">
@@ -9579,7 +9726,7 @@ stateDiagram-v2
 
 <div class="td-content" style="page-break-before: always">
     <h1 id="pg-a119d2b10267d52b4af6df40d6c9ab02">PostgreSQL MongoFDW安装部署</h1>
-	<div class="lead">了解PostgreSQL中的黄金监控指标</div>
+	<div class="lead">最近有业务要求通过PostgreSQL FDW去访问MongoDB。开始我觉得这是个很轻松的任务。但接下来的事真是让人恶心的吐了。MongoDB FDW编译起来真是要人命：混乱的依赖，临时下载和Hotpatch，错误的编译参数，以及最过分的是错误的文档。总算，我在生产环境(Linux RHEL7u2)和开发环境(Mac OS X 10.11.5)都编译成功了。赶紧记录下来，省的下次蛋疼。</div>
 	<div class="td-byline mb-4">
 		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
         

@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.2fb3143c95bd4d2d7a110ee05f8218f9.json"
+    data-offline-search-index-json-src="/offline-search-index.ec7e3fd7b72c854e2b36c6a129111986.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -211,9 +211,9 @@ This is the multi-page printable view of this section.
 <h2 id="olaps-new-challenger">OLAP&rsquo;s New Challenger</h2>
 <p>In a 2016 database meetup, I argued that a significant gap in the PostgreSQL ecosystem was the lack of a <strong>sufficiently good</strong> columnar storage engine for OLAP workloads. While PostgreSQL itself offers lots of analysis features, its performance in full-scale analysis on larger datasets doesn’t quite measure up to dedicated real-time data warehouses.</p>
 <p>Consider <a href="https://benchmark.clickhouse.com/">ClickBench</a>, an analytics performance benchmark, where we’ve documented the performance of PostgreSQL, its ecosystem extensions, and derivative databases. The untuned PostgreSQL performs poorly (<strong>x1050</strong>), but it can reach (<strong>x47</strong>) with optimization. Additionally, there are three analysis-related extensions: columnar store <strong>Hydra</strong> (<strong>x42</strong>), time-series <strong>TimescaleDB</strong> (<strong>x103</strong>), and distributed <strong>Citus</strong> (<strong>x262</strong>).</p>
-<p><img alt="pg-eat-clickbench.png" src="/img/blog/pg/pg-eat-clickbench-en.png"></p>
+<p><a href="https://benchmark.clickhouse.com/"><img alt="clickbench.png" src="/zh/blog/pg/pg-eat-db-world/clickbench-en.png"></a></p>
 <blockquote>
-<p>Clickbench c6a.4xlarge, 500gb gp2 results in relative time</p>
+<p>ClickBench c6a.4xlarge, 500gb gp2 results in relative time</p>
 </blockquote>
 <p>This performance can&rsquo;t be considered bad, especially compared to pure OLTP databases like MySQL and MariaDB (<strong>x3065, x19700</strong>); however, its third-tier performance is not &ldquo;good enough,&rdquo; lagging behind the first-tier OLAP components like Umbra, ClickHouse, Databend, SelectDB (<strong>x3~x4</strong>) by an order of magnitude. It&rsquo;s a tough spot - not satisfying enough to use, but too good to discard.</p>
 <p>However, the arrival of <a href="https://www.paradedb.com/"><strong>ParadeDB</strong></a> and <a href="https://duckdb.org/"><strong>DuckDB</strong></a> changed the game!</p>
@@ -224,13 +224,15 @@ This is the multi-page printable view of this section.
 <h2 id="the-pendulum-of-database-realm">The Pendulum of Database Realm</h2>
 <p>The distinction between OLTP and OLAP didn’t exist at the inception of databases. The separation of OLAP data warehouses from databases emerged in the 1990s due to traditional OLTP databases struggling to support analytics scenarios&rsquo; query patterns and performance demands.</p>
 <p>For a long time, best practice in data processing involved using MySQL/PostgreSQL for OLTP workloads and syncing data to specialized OLAP systems like Greenplum, ClickHouse, Doris, Snowflake, etc., through ETL processes.</p>
-<p><img src="/img/blog/pg/pg-eat-ddia.png"></p>
+<figure class="card rounded p-2 td-post-card mb-4 mt-4" style="max-width: 735px">
+<img class="card-img-top" src="/zh/blog/pg/pg-eat-db-world/ddia_hu04f70ed29e59e1b4862c5f1df5de3cec_998548_768x512_fit_catmullrom_3.png" width="725" height="512">
+</figure>
 <blockquote>
-<p>DDIA ch3, The republic of OLTP &amp; Kingdom of OLAP</p>
+<p>DDIA, Martin Kleppmann, ch3, The republic of OLTP &amp; Kingdom of OLAP</p>
 </blockquote>
 <p>Like many &ldquo;specialized databases,&rdquo; the strength of dedicated OLAP systems often lies in <strong>performance</strong> — achieving 1-3 orders of magnitude improvement over native PG or MySQL. The <strong>cost</strong>, however, is redundant data, excessive data movement, lack of agreement on data values among distributed components, extra labor expense for specialized skills, extra licensing costs, limited query language power, programmability and extensibility, limited tool integration, poor data integrity and availability compared with a complete DMBS.</p>
 <p>However, as the saying goes, &ldquo;What goes around comes around&rdquo;. With <a href="/blog/cloud/bonus/">hardware improving over thirty years following Moore&rsquo;s Law</a>, performance has increased exponentially while costs have plummeted. In 2024, a single x86 machine can have hundreds of cores (512 vCPU <a href="https://www.amd.com/zh-hans/products/cpu/amd-epyc-9754">EPYC 9754</a>x2), several TBs of RAM, a single NVMe SSD can hold up to 64TB, and a single all-flash rack can reach 2PB; object storage like S3 offers virtually unlimited storage.</p>
-<p><a href="/blog/cloud/bonus/"><img alt="io-bandwidth.png" src="/img/blog/cloud/bonus-io-bandwidth.png"></a></p>
+<p><a href="/blog/cloud/bonus/"><img alt="io-bandwidth.png" src="/zh/blog/pg/pg-eat-db-world/io-bandwidth.png"></a></p>
 <p>Hardware advancements have solved the data volume and performance issue, while database software developments (PostgreSQL, ParadeDB, DuckDB) have addressed access method challenges. This puts the fundamental assumptions of the analytics sector — the so-called “big data” industry — under scrutiny.</p>
 <p>As DuckDB&rsquo;s manifesto <a href="https://motherduck.com/blog/big-data-is-dead/">&quot;<strong>Big Data is Dead</strong>&quot;</a> suggests, <strong>the era of big data is over</strong>. Most people don&rsquo;t have that much data, and most data is seldom queried. The frontier of big data recedes as hardware and software evolve, rendering &ldquo;big data&rdquo; unnecessary for 99% of scenarios.</p>
 <p>If 99% of use cases can now be handled on a single machine with standalone DuckDB or PostgreSQL (and its replicas), what&rsquo;s the point of using dedicated analytics components? If every smartphone can send and receive texts freely, what&rsquo;s the point of pagers? (With the caveat that North American hospitals still use pagers, indicating that maybe less than 1% of scenarios might genuinely need &ldquo;big data.&rdquo;)</p>
@@ -240,11 +242,11 @@ This is the multi-page printable view of this section.
 <p>There are a plethora of niches in the database realm: time-series, geospatial, document, search, graph, vector databases, message queues, and object databases. PostgreSQL makes its presence felt across all these domains.</p>
 <p>A case in point is the PostGIS extension, which sets the de facto standard in geospatial databases; the TimescaleDB extension awkwardly positions “generic” time-series databases; and the vector extension, <strong>PGVector</strong>, turns the dedicated vector database niche into a punchline.</p>
 <p>This isn’t the first time; we’re witnessing it again in the oldest and largest subdomain: OLAP analytics. But PostgreSQL’s ambition doesn’t stop at OLAP; it’s eyeing the entire database world!</p>
-<p><a href="/docs/reference/extension/"><img alt="pigsty-ecosystem.png" src="/img/pigsty/ecosystem.jpg"></a></p>
+<p><a href="/docs/reference/extension/"><img alt="ecosystem.jpg" src="/zh/blog/pg/pg-eat-db-world/ecosystem.jpg"></a></p>
 <p>What makes PostgreSQL so capable? Sure, it&rsquo;s advanced, but so is Oracle; it&rsquo;s open-source, as is MySQL. PostgreSQL&rsquo;s edge comes from being <strong>both advanced and open-source</strong>, allowing it to compete with Oracle/MySQL. But its true uniqueness lies in its <strong>extreme extensibility and thriving extension ecosystem</strong>.</p>
-<p><a href="https://www.timescale.com/state-of-postgres/2022"><img alt="pg-survey.png" src="/img/blog/pg/pg-eat-survey.png"></a></p>
+<p><a href="https://www.timescale.com/state-of-postgres/2022/"><img alt="survey.png" src="/zh/blog/pg/pg-eat-db-world/survey.png"></a></p>
 <blockquote>
-<p>Reasons users <a href="https://www.timescale.com/state-of-postgres/2022">choose PostgreSQL</a>: <strong>Open-Source, Reliable, Extensible</strong></p>
+<p>TimescaleDB survey: <a href="https://www.timescale.com/state-of-postgres/2022/">what is the main reason you choose to use PostgreSQL</a></p>
 </blockquote>
 <p>PostgreSQL isn’t just a relational database; it’s a data management framework capable of engulfing the entire database galaxy. Besides being open-source and advanced, its core competitiveness stems from <strong>extensibility</strong>, i.e., its infra’s reusability and extension&rsquo;s composability.</p>
 <hr>
@@ -254,7 +256,7 @@ This is the multi-page printable view of this section.
 <p>For example, ElasticSearch was developed on the Lucene search library, while the Rust ecosystem has an improved next-gen full-text search library, <a href="https://github.com/quickwit-oss/tantivy">Tantivy</a>, as a Lucene alternative. ParadeDB only needs to wrap and connect it to PostgreSQL&rsquo;s interface to offer search services comparable to ElasticSearch. More importantly, it can stand on the shoulders of PostgreSQL, leveraging the entire PG ecosystem&rsquo;s united strength (e.g., mixed searches with PG Vector) to &ldquo;unfairly&rdquo; compete with another dedicated database.</p>
 <p><a href="/docs/reference/extension/"><img alt="img" src="/img/pigsty/extension.png"></a></p>
 <blockquote>
-<p>Pigsty has 234 <a href="/docs/reference/extension/"><strong>extensions</strong></a> available. And there are <a href="https://gist.github.com/joelonsql/e5aa27f8cc9bd22b8999b7de8aee9d47">1000+</a> more in the ecosystem</p>
+<p>Pigsty has 255 <a href="/docs/reference/extension/"><strong>extensions</strong></a> available. And there are <a href="https://gist.github.com/joelonsql/e5aa27f8cc9bd22b8999b7de8aee9d47"><strong>1000+</strong></a> more in the ecosystem</p>
 </blockquote>
 <hr>
 <p>The extensibility brings another huge advantage: the <strong>composability</strong> of extensions, allowing different extensions to work together, creating a synergistic effect where 1+1 &raquo; 2. For instance, TimescaleDB can be combined with PostGIS for spatio-temporal data support; the BM25 extension for full-text search can be combined with the PGVector extension, providing hybrid search capabilities.</p>
@@ -268,11 +270,11 @@ This is the multi-page printable view of this section.
 <p>Until a revolutionary hardware breakthrough occurs, the advent of practical, new, general-purpose database kernels seems unlikely. No singular database can match the overall prowess of PG, bolstered by all its extensions — not even Oracle, given PG’s ace of being open-source and free.</p>
 <p>A niche database product might carve out a space for itself if it can outperform PostgreSQL by an order of magnitude in specific aspects (typically performance). However, it usually doesn’t take long before the PostgreSQL ecosystem spawns open-source extension alternatives. Opting to develop a PG extension rather than a whole new database gives teams a crushing speed advantage in playing catch-up!</p>
 <p>Following this logic, the PostgreSQL ecosystem is poised to snowball, accruing advantages and inevitably moving towards a monopoly, mirroring the Linux kernel’s status in server OS within a few years. Developer surveys and database trend reports confirm this trajectory.</p>
-<p><a href="https://survey.stackoverflow.co/2023/#section-most-popular-technologies-databases"><img alt="pg-is-no1-2.png" src="/img/blog/db/pg-is-no1-2.png"></a></p>
+<p><a href="https://survey.stackoverflow.co/2023/#section-most-popular-technologies-databases"><img alt="sf-survey.png" src="/zh/blog/pg/pg-eat-db-world/sf-survey.png"></a></p>
 <blockquote>
 <p><a href="https://survey.stackoverflow.co/2023/#section-most-popular-technologies-databases"><strong>StackOverflow 2023 Survey: PostgreSQL, the Decathlete</strong></a></p>
 </blockquote>
-<p><a href="https://demo.pigsty.cc/d/sf-survey"><img alt="pg-is-no1-1.png" src="/img/docs/app/sf-survey.jpg"></a></p>
+<p><a href="https://demo.pigsty.cc/d/sf-survey"><img alt="sf-trend.jpg" src="/zh/blog/pg/pg-eat-db-world/sf-trend.jpg"></a></p>
 <blockquote>
 <p><a href="https://demo.pigsty.cc/d/sf-survey"><strong>StackOverflow&rsquo;s Database Trends Over the Past 7 Years</strong></a></p>
 </blockquote>
@@ -285,6 +287,7 @@ This is the multi-page printable view of this section.
 <p>This is similar to the situation with the Linux OS kernel today; despite the plethora of Linux distros, everyone opts for the same kernel. Forking the Linux kernel is seen as creating unnecessary difficulties, and the industry frowns upon it.</p>
 <p>Accordingly, the main conflict is no longer the database kernel itself but two directions— database <strong>extensions</strong> and <strong>services</strong>! The former pertains to internal extensibility, while the latter relates to external composability. Much like the OS ecosystem, the competitive landscape will concentrate on <strong>database distributions</strong>. In the database domain, only those distributions centered around extensions and services stand a chance for ultimate success.</p>
 <p>Kernel remains lukewarm, with MariaDB, the fork of MySQL’s parent, nearing delisting, while AWS, profiting from offering services and extensions on top of the free kernel, thrives. Investment has flowed into numerous PG ecosystem extensions and service distributions: Citus, TimescaleDB, Hydra, PostgresML, ParadeDB, FerretDB, StackGres, Aiven, Neon, Supabase, Tembo, PostgresAI, and our own PG distro — — <a href="https://pigsty.io/">Pigsty</a>.</p>
+<p><img src="/img/pigsty/players.png"></p>
 <hr>
 <p>A dilemma within the PostgreSQL ecosystem is the independent evolution of many extensions and tools, lacking a unifier to synergize them. For instance, Hydra releases its own package and Docker image, and so does PostgresML, each distributing PostgreSQL images with their own extensions and only their own. These images and packages are far from comprehensive database services like AWS RDS.</p>
 <p>Even service providers and ecosystem integrators like AWS fall short in front of numerous extensions, unable to include many due to various reasons (AGPLv3 license, security challenges with multi-tenancy),
@@ -468,15 +471,12 @@ thus failing to leverage the synergistic amplification potential of PostgreSQL e
     <h1 id="pg-fe0303de91d0c7a97aa03dbbd71290fa">PostgreSQL Convention 2024</h1>
 	
 	<div class="td-byline mb-4">
-		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com/s/W1hwbl3qmjC4Dcmadc8uSg">WeChat</a></b> |
         
 		<time datetime="2023-11-27" class="text-muted">2023-11-27</time>
         
 	</div>
-	<blockquote>
-<p><a href="https://mp.weixin.qq.com/s/W1hwbl3qmjC4Dcmadc8uSg">WeChat Column</a></p>
-</blockquote>
-<p><img src="/img/blog/hero/pg-convention.jpg"></p>
+	<p><img src="/img/blog/hero/pg-convention.jpg"></p>
 <ul>
 <li><a href="/blog/pg/pg-convention/#background">Background</a></li>
 <li><a href="/blog/pg/pg-convention/#0x01-naming-convention">0x01 Naming Convention</a></li>
@@ -1155,9 +1155,7 @@ thus failing to leverage the synergistic amplification potential of PostgreSQL e
 		<time datetime="2023-06-28" class="text-muted">2023-06-28</time>
         
 	</div>
-	<blockquote>
-</blockquote>
-<p>The <a href="https://survey.stackoverflow.co/2023">StackOverflow 2023 Survey</a>, featuring feedback from 90K developers across 185 countries, is out. PostgreSQL topped all three survey categories (used, loved, and wanted), earning its title as the undisputed &ldquo;Decathlete Database&rdquo; – it&rsquo;s hailed as the <strong>&ldquo;Linux of Database&rdquo;</strong>!</p>
+	<p>The <a href="https://survey.stackoverflow.co/2023">StackOverflow 2023 Survey</a>, featuring feedback from 90K developers across 185 countries, is out. PostgreSQL topped all three survey categories (used, loved, and wanted), earning its title as the undisputed &ldquo;Decathlete Database&rdquo; – it&rsquo;s hailed as the <strong>&ldquo;Linux of Database&rdquo;</strong>!</p>
 <p><img src="/img/blog/db/pg-is-no1-1.png"></p>
 <blockquote>
 <p><a href="https://demo.pigsty.cc/d/sf-survey">https://demo.pigsty.cc/d/sf-survey</a></p>
