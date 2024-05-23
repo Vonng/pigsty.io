@@ -15,6 +15,102 @@
     
     
     <item>
+      <title>Blog: PostgreSQL 17 beta1 发布！</title>
+      <link>/zh/blog/pg/pg-17-beta1/</link>
+      <pubDate>Fri, 24 May 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/pg/pg-17-beta1/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/pg/pg-17-beta1/featured_hua7b9787f044c9b20266c80ef6a5bf4e6_487810_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
+        
+        &lt;p&gt;PostgreSQL 全球开发组宣布，PostgreSQL 17 的首个 Beta 版本现已开放&lt;a href=&#34;https://www.postgresql.org/download/&#34;&gt;下载&lt;/a&gt;。
+这一版本包含了 PostgreSQL 17 正式发布时所有功能的预览，但在 Beta 测试期间，某些细节可能会有所调整。&lt;/p&gt;
+&lt;p&gt;您可以在&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;发布说明&lt;/a&gt;中找到关于 PostgreSQL 17 的所有功能和变更的信息：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;https://www.postgresql.org/docs/17/release-17.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;秉承 PostgreSQL 开源社区的精神，我们强烈支持您在您的系统上测试 PostgreSQL 17 的新功能，帮助我们发现和修复潜在的错误或其他问题。
+虽然我们不建议在生产环境中运行 PostgreSQL 17 Beta 1，但我们希望您能在测试环境中运行此 Beta 版本，并尽可能模拟您的实际工作负载。&lt;/p&gt;
+&lt;p&gt;社区将持续确保 PostgreSQL 17 作为世界上最先进的开源关系型数据库的稳定性和可靠性，但这离不开您的测试与反馈。
+详情请参阅我们的 &lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试流程&lt;/a&gt;，以及您可以如何作出贡献：https://www.postgresql.org/developer/beta/&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;postgresql-17-亮点功能&#34;&gt;PostgreSQL 17 亮点功能&lt;/h2&gt;
+&lt;h3 id=&#34;查询和写入性能改善&#34;&gt;查询和写入性能改善&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 最近的版本与构建，持续致力于整体的系统性能优化。负责回收存储空间的 PostgreSQL &lt;a href=&#34;https://www.postgresql.org/docs/17/routine-vacuuming.html&#34;&gt;Vacuum&lt;/a&gt; 进程使用了新的内部数据结构，使得垃圾回收过程的内存使用减少，最高可以减少 20 倍，同时减少了执行所需的时间。
+此外 Vacuum 进程不再受到 &lt;code&gt;1GB&lt;/code&gt; 内存的使用限制，而由 &lt;a href=&#34;https://www.postgresql.org/docs/17/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM&#34;&gt;&lt;code&gt;maintenance_work_mem&lt;/code&gt;&lt;/a&gt; 来控制，这意味着您可以为 Vacuum 进程分配更多资源。&lt;/p&gt;
+&lt;p&gt;这个版本引入了流式 I/O 接口，使得执行顺序扫描和运行 &lt;a href=&#34;https://www.postgresql.org/docs/17/sql-analyze.html&#34;&gt;&lt;code&gt;ANALYZE&lt;/code&gt;&lt;/a&gt; 的性能有所提高。
+PostgreSQL 17 还新增了配置参数，可控制 &lt;a href=&#34;https://www.postgresql.org/docs/17/runtime-config-resource.html#GUC-MULTIXACT-MEMBER-BUFFERS&#34;&gt;事务、子事务和 multixact 缓冲区&lt;/a&gt; 的大小。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 现在可以同时利用 Planner 的统计信息与 &lt;a href=&#34;https://www.postgresql.org/docs/17/queries-with.html&#34;&gt;公共表表达式 CTE&lt;/a&gt;（即 &lt;a href=&#34;https://www.postgresql.org/docs/17/queries-with.html&#34;&gt;&lt;code&gt;WITH&lt;/code&gt; 查询&lt;/a&gt;）结果中的排序顺序，进一步优化这些查询的速度。
+此外，这个版本显著提高了带有 &lt;code&gt;IN&lt;/code&gt; 子句的查询，在使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/indexes-types.html#INDEXES-TYPES-BTREE&#34;&gt;B-tree 索引&lt;/a&gt; 时的查询执行时间。
+从这个版本开始，对于那些带有 &lt;code&gt;NOT NULL&lt;/code&gt; 约束的列，如果查询中带有冗余的 &lt;code&gt;IS NOT NULL&lt;/code&gt; 语句，PostgreSQL 会直接把它优化掉，同理，那些带有 &lt;code&gt;IS NULL&lt;/code&gt; 的查询也会直接优化掉，PostgreSQL 17 还支持并行构建 &lt;a href=&#34;https://www.postgresql.org/docs/17/brin.html&#34;&gt;BRIN&lt;/a&gt; 索引。&lt;/p&gt;
+&lt;p&gt;高并发写入类的工作负载，可以显著受益于 PostgreSQL 17 的预写日志（&lt;a href=&#34;https://www.postgresql.org/docs/17/wal-intro.html&#34;&gt;WAL&lt;/a&gt;）锁管理改进，测试显示，性能提升 &lt;strong&gt;最多高达两倍&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;最后，PostgreSQL 17 添加了更多显式的 SIMD 指令，比如为 &lt;a href=&#34;https://www.postgresql.org/docs/17/functions-bitstring.html&#34;&gt;&lt;code&gt;bit_count&lt;/code&gt;&lt;/a&gt; 函数启用 AVX-512 指令支持。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;分区和分布式工作负载增强&#34;&gt;分区和分布式工作负载增强&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17  的分区管理更为灵活，新增了&lt;strong&gt;拆分&lt;/strong&gt;与&lt;strong&gt;合并&lt;/strong&gt;分区的能力，并允许分区表使用 &lt;strong&gt;身份列（Identity Column）&lt;/strong&gt; 和&lt;strong&gt;排它约束&lt;/strong&gt;（Exclude Constraints）。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/17/postgres-fdw.html&#34;&gt;PostgreSQL 外部数据包装器&lt;/a&gt;（&lt;a href=&#34;https://www.postgresql.org/docs/17/postgres-fdw.html&#34;&gt;&lt;code&gt;postgres_fdw&lt;/code&gt;&lt;/a&gt;）现在可以将 &lt;code&gt;EXISTS&lt;/code&gt; 和 &lt;code&gt;IN&lt;/code&gt; 子查询下推到远端服务器，从而提升性能。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 为逻辑复制添加了新功能，使其在高可用架构和大版本升级中更加易用。
+从 PostgreSQL 17 使用  &lt;a href=&#34;https://www.postgresql.org/docs/17/pgupgrade.html&#34;&gt;&lt;code&gt;pg_upgrade&lt;/code&gt;&lt;/a&gt; 升级到更高版本时，不再需要删除 &lt;a href=&#34;https://www.postgresql.org/docs/17/logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-SLOT&#34;&gt;逻辑复制槽&lt;/a&gt; 了，从而避免了升级后需要重新同步数据的麻烦。
+此外，你还可以控制逻辑复制的 Failover 过程，为高可用性架构中管理 PostgreSQL 提供了更好的可控制性。PostgreSQL 17 还允许逻辑复制的订阅者使用 &lt;code&gt;hash&lt;/code&gt; 索引进行查找，并引入了 &lt;code&gt;pg_createsubscriber&lt;/code&gt; 命令行工具，用于在使用物理复制的副本从库上创建逻辑复制。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;开发者体验&#34;&gt;开发者体验&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 继续深化了对 SQL/JSON 标准的支持，新增了 &lt;code&gt;JSON_TABLE&lt;/code&gt; 功能，可以将 JSON 转换为标准的 PostgreSQL 表，以及 SQL/JSON 构造函数（&lt;code&gt;JSON&lt;/code&gt;、&lt;code&gt;JSON_SCALAR&lt;/code&gt;、&lt;code&gt;JSON_SERIALIZE&lt;/code&gt;）和查询函数（&lt;code&gt;JSON_EXISTS&lt;/code&gt;、&lt;code&gt;JSON_QUERY&lt;/code&gt;、&lt;code&gt;JSON_VALUE&lt;/code&gt;）。
+值得注意的是，这些功能最初计划在 PostgreSQL 15 中发布，但出于设计权衡考虑，在 Beta 期间被撤回 —— 这也是我们希望请您在 Beta 期间帮忙测试新功能的原因之一！此外，PostgreSQL 17 为 &lt;code&gt;jsonpath&lt;/code&gt; 的实现增添了更多功能，包括将 JSON 类型的值转换为各种不同特定数据类型的能力。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-merge.html&#34;&gt;&lt;code&gt;MERGE&lt;/code&gt;&lt;/a&gt; 命令现在支持 &lt;code&gt;RETURNING&lt;/code&gt; 子句了，让您可以在同一条命令中进一步处理修改过的行。
+您还可以使用新的 &lt;code&gt;merge_action&lt;/code&gt; 函数查看 &lt;code&gt;MERGE&lt;/code&gt; 命令修改了哪一部分。
+PostgreSQL 17 还允许使用 &lt;code&gt;MERGE&lt;/code&gt; 命令更新视图，并新增了 &lt;code&gt;WHEN NOT MATCHED BY SOURCE&lt;/code&gt; 子句，允许用户指定当源中的行没有任何匹配时，应该执行什么操作。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-copy.html&#34;&gt;&lt;code&gt;COPY&lt;/code&gt;&lt;/a&gt; 命令用于高效地从 PostgreSQL 批量加载与导出数据。在 PostgreSQL 17 中，&lt;strong&gt;导出大行时的性能最多有两倍的提升&lt;/strong&gt;。
+此外，当源编码与目标编码相匹配时，&lt;code&gt;COPY&lt;/code&gt; 的性能也有所提升。COPY 新增了一个 &lt;code&gt;ON_ERROR&lt;/code&gt; 选项，即使插入行时出现错误也可继续进行。
+此外在 PostgreSQL 17 中，驱动程序可以利用 libpq API 使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/libpq-cancel.html&#34;&gt;异步和更为安全的查询取消方法&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 引入了内置的排序规则提供程序，该提供程序提供与 &lt;code&gt;C&lt;/code&gt; 排序规则类似的排序语义，但编码为 &lt;code&gt;UTF-8&lt;/code&gt; 而非 &lt;code&gt;SQL_ASCII&lt;/code&gt;。这种新的排序规则提供了不变性保证，确保您的排序结果在不同系统上都不会改变。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;安全功能&#34;&gt;安全功能&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 新增了一个新的连接参数 &lt;code&gt;sslnegotation&lt;/code&gt;，允许 PostgreSQL 在使用 &lt;a href=&#34;https://en.wikipedia.org/wiki/Application-Layer_Protocol_Negotiation&#34;&gt;ALPN&lt;/a&gt; 时直接进行 TLS 握手，减少一次网络往返。PostgreSQL 会在 ALPN 目录中注册为 &lt;code&gt;postgresql&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这个版本引入了新的 EventTrigger 事件 —— 当用户认证时触发。并且在 libpq 中提供了一个新的名为 &lt;code&gt;PQchangePassword&lt;/code&gt; 的 API，可以在客户端侧自动对密码取哈希，以防止在服务器中意外记录下明文密码。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 增加了一个新的 &lt;a href=&#34;https://www.postgresql.org/docs/17/predefined-roles.html&#34;&gt;预定义角色&lt;/a&gt;，名为 &lt;code&gt;pg_maintain&lt;/code&gt;，赋予用户执行 &lt;code&gt;VACUUM&lt;/code&gt;、&lt;code&gt;ANALYZE&lt;/code&gt;、&lt;code&gt;CLUSTER&lt;/code&gt;、&lt;code&gt;REFRESH MATERIALIZED VIEW&lt;/code&gt;、&lt;code&gt;REINDEX&lt;/code&gt; 和 &lt;code&gt;LOCK TABLE&lt;/code&gt; 的权限，
+并确保  &lt;code&gt;search_path&lt;/code&gt; 对于 &lt;code&gt;VACUUM&lt;/code&gt;、&lt;code&gt;ANALYZE&lt;/code&gt;、&lt;code&gt;CLUSTER&lt;/code&gt;、&lt;code&gt;REFRESH MATERIALIZED VIEW&lt;/code&gt; 和 &lt;code&gt;INDEX&lt;/code&gt; 等维护操作是安全的。
+最后，用户现在可以使用 &lt;code&gt;ALTER SYSTEM&lt;/code&gt; 来设置系统无法识别的未定义配置参数了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;备份与导出管理&#34;&gt;备份与导出管理&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 可以使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgbasebackup.html&#34;&gt;&lt;code&gt;pg_basebackup&lt;/code&gt;&lt;/a&gt; 进行增量备份，并增加了一个新的实用工具 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgcombinebackup.html&#34;&gt;&lt;code&gt;pg_combinebackup&lt;/code&gt;&lt;/a&gt;，用于备份恢复过程中将备份合并。
+该版本为 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgdump.html&#34;&gt;&lt;code&gt;pg_dump&lt;/code&gt;&lt;/a&gt; 新增了一个参数项 &lt;code&gt;--filter&lt;/code&gt;，允许您指定一个文件来进一步指定在 dump 过程中要包含或排除哪些对象。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;监控&#34;&gt;监控&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-explain.html&#34;&gt;&lt;code&gt;EXPLAIN&lt;/code&gt;&lt;/a&gt; 命令可以提供有关查询计划和执行详情的信息，现在它新增了两个选项：&lt;code&gt;SERIALIZE&lt;/code&gt; 会显示将数据序列化为网络传输形式时的耗时；&lt;code&gt;MEMORY&lt;/code&gt; 会报告优化器内存使用情况。此外，&lt;code&gt;EXPLAIN&lt;/code&gt; 现在还可以显示花费在 I/O 块读写上的时间。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 标准化了 &lt;a href=&#34;https://www.postgresql.org/docs/17/pgstatstatements.html&#34;&gt;&lt;code&gt;pg_stat_statements&lt;/code&gt;&lt;/a&gt; 中 &lt;code&gt;CALL&lt;/code&gt; 的参数，减少了频繁调用的存储过程所产生的记录数量。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/devel/progress-reporting.html#VACUUM-PROGRESS-REPORTING&#34;&gt;&lt;code&gt;VACUUM&lt;/code&gt; 进度报告&lt;/a&gt; 现在会显示索引垃圾回收的进度。
+PostgreSQL 17 还引入了一个新视图，&lt;a href=&#34;https://www.postgresql.org/docs/17/view-pg-wait-events.html&#34;&gt;&lt;code&gt;pg_wait_events&lt;/code&gt;&lt;/a&gt;，提供关于等待事件的描述，可以与 &lt;code&gt;pg_stat_activity&lt;/code&gt; 共同使用，以便深入了解活动会话出现等待的原因。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/17/monitoring-stats.html#MONITORING-PG-STAT-BGWRITER-VIEW&#34;&gt;&lt;code&gt;pg_stat_bgwriter&lt;/code&gt;&lt;/a&gt; 视图中的一些信息，现在被拆分到新的 &lt;a href=&#34;https://www.postgresql.org/docs/17/monitoring-stats.html#MONITORING-PG-STAT-CHECKPOINTER-VIEW&#34;&gt;&lt;code&gt;pg_stat_checkpointer&lt;/code&gt;&lt;/a&gt; 视图中了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;其他功能&#34;&gt;其他功能&lt;/h2&gt;
+&lt;p&gt;PostgreSQL 17 还有许多其他新功能与改进，很多改进都可能会对您的用例有所帮助。请参阅&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;发布说明&lt;/a&gt;以获取完整的新功能和变更列表：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;https://www.postgresql.org/docs/17/release-17.html&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;错误和兼容性测试&#34;&gt;错误和兼容性测试&lt;/h2&gt;
+&lt;p&gt;每个 PostgreSQL 版本的稳定性，在很大程度上依赖于诸位 PG社区用户，您可以用你们的工作负载和测试工具来测试即将发布的版本，以便在 PostgreSQL 17 正式发布前发现错误并完成回归。由于这是一个 Beta 版本，针对数据库行为、功能细节和 API 的小改动仍然可能会发生。您的反馈和测试将有助于调整并敲定这些新功能，因此请在近期进行测试。用户测试的质量有助于我们确定何时可以进行最终发布。&lt;/p&gt;
+&lt;p&gt;PostgreSQL wiki 中公开提供了&lt;a href=&#34;https://wiki.postgresql.org/wiki/PostgreSQL_17_Open_Items&#34;&gt;开放问题&lt;/a&gt;列表。您可以使用 PostgreSQL 网站上的此表单&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;报告错误&lt;/a&gt;：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;https://www.postgresql.org/account/submitbug/&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;beta-时间表&#34;&gt;Beta 时间表&lt;/h2&gt;
+&lt;p&gt;这是 PostgreSQL 17 的第一个 Beta 版本。PostgreSQL 项目将根据测试需要发布更多的 Beta 版本，随后是一或多个 RC 版本，最终版本大约会在 2024 年 9 月或 10 月发布。详细信息请参阅 &lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试&lt;/a&gt; 页面。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;链接&#34;&gt;链接&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/download/&#34;&gt;下载&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试信息&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;PostgreSQL 17 Beta 发布说明&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://wiki.postgresql.org/wiki/PostgreSQL_17_Open_Items&#34;&gt;PostgreSQL 17 开放问题&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/about/featurematrix/&#34;&gt;功能矩阵&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;提交错误&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://twitter.com/postgresql&#34;&gt;在 X/Twitter 上关注 @postgresql&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/about/donate/&#34;&gt;捐赠&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: 为什么PostgreSQL是未来数据库的事实标准？</title>
       <link>/zh/blog/pg/pg-for-everything/</link>
       <pubDate>Thu, 16 May 2024 00:00:00 +0000</pubDate>

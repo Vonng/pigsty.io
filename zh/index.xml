@@ -672,6 +672,102 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: PostgreSQL 17 beta1 发布！</title>
+      <link>/zh/blog/pg/pg-17-beta1/</link>
+      <pubDate>Fri, 24 May 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/pg/pg-17-beta1/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/pg/pg-17-beta1/featured_hua7b9787f044c9b20266c80ef6a5bf4e6_487810_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
+        
+        &lt;p&gt;PostgreSQL 全球开发组宣布，PostgreSQL 17 的首个 Beta 版本现已开放&lt;a href=&#34;https://www.postgresql.org/download/&#34;&gt;下载&lt;/a&gt;。
+这一版本包含了 PostgreSQL 17 正式发布时所有功能的预览，但在 Beta 测试期间，某些细节可能会有所调整。&lt;/p&gt;
+&lt;p&gt;您可以在&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;发布说明&lt;/a&gt;中找到关于 PostgreSQL 17 的所有功能和变更的信息：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;https://www.postgresql.org/docs/17/release-17.html&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;秉承 PostgreSQL 开源社区的精神，我们强烈支持您在您的系统上测试 PostgreSQL 17 的新功能，帮助我们发现和修复潜在的错误或其他问题。
+虽然我们不建议在生产环境中运行 PostgreSQL 17 Beta 1，但我们希望您能在测试环境中运行此 Beta 版本，并尽可能模拟您的实际工作负载。&lt;/p&gt;
+&lt;p&gt;社区将持续确保 PostgreSQL 17 作为世界上最先进的开源关系型数据库的稳定性和可靠性，但这离不开您的测试与反馈。
+详情请参阅我们的 &lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试流程&lt;/a&gt;，以及您可以如何作出贡献：https://www.postgresql.org/developer/beta/&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;postgresql-17-亮点功能&#34;&gt;PostgreSQL 17 亮点功能&lt;/h2&gt;
+&lt;h3 id=&#34;查询和写入性能改善&#34;&gt;查询和写入性能改善&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 最近的版本与构建，持续致力于整体的系统性能优化。负责回收存储空间的 PostgreSQL &lt;a href=&#34;https://www.postgresql.org/docs/17/routine-vacuuming.html&#34;&gt;Vacuum&lt;/a&gt; 进程使用了新的内部数据结构，使得垃圾回收过程的内存使用减少，最高可以减少 20 倍，同时减少了执行所需的时间。
+此外 Vacuum 进程不再受到 &lt;code&gt;1GB&lt;/code&gt; 内存的使用限制，而由 &lt;a href=&#34;https://www.postgresql.org/docs/17/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM&#34;&gt;&lt;code&gt;maintenance_work_mem&lt;/code&gt;&lt;/a&gt; 来控制，这意味着您可以为 Vacuum 进程分配更多资源。&lt;/p&gt;
+&lt;p&gt;这个版本引入了流式 I/O 接口，使得执行顺序扫描和运行 &lt;a href=&#34;https://www.postgresql.org/docs/17/sql-analyze.html&#34;&gt;&lt;code&gt;ANALYZE&lt;/code&gt;&lt;/a&gt; 的性能有所提高。
+PostgreSQL 17 还新增了配置参数，可控制 &lt;a href=&#34;https://www.postgresql.org/docs/17/runtime-config-resource.html#GUC-MULTIXACT-MEMBER-BUFFERS&#34;&gt;事务、子事务和 multixact 缓冲区&lt;/a&gt; 的大小。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 现在可以同时利用 Planner 的统计信息与 &lt;a href=&#34;https://www.postgresql.org/docs/17/queries-with.html&#34;&gt;公共表表达式 CTE&lt;/a&gt;（即 &lt;a href=&#34;https://www.postgresql.org/docs/17/queries-with.html&#34;&gt;&lt;code&gt;WITH&lt;/code&gt; 查询&lt;/a&gt;）结果中的排序顺序，进一步优化这些查询的速度。
+此外，这个版本显著提高了带有 &lt;code&gt;IN&lt;/code&gt; 子句的查询，在使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/indexes-types.html#INDEXES-TYPES-BTREE&#34;&gt;B-tree 索引&lt;/a&gt; 时的查询执行时间。
+从这个版本开始，对于那些带有 &lt;code&gt;NOT NULL&lt;/code&gt; 约束的列，如果查询中带有冗余的 &lt;code&gt;IS NOT NULL&lt;/code&gt; 语句，PostgreSQL 会直接把它优化掉，同理，那些带有 &lt;code&gt;IS NULL&lt;/code&gt; 的查询也会直接优化掉，PostgreSQL 17 还支持并行构建 &lt;a href=&#34;https://www.postgresql.org/docs/17/brin.html&#34;&gt;BRIN&lt;/a&gt; 索引。&lt;/p&gt;
+&lt;p&gt;高并发写入类的工作负载，可以显著受益于 PostgreSQL 17 的预写日志（&lt;a href=&#34;https://www.postgresql.org/docs/17/wal-intro.html&#34;&gt;WAL&lt;/a&gt;）锁管理改进，测试显示，性能提升 &lt;strong&gt;最多高达两倍&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;最后，PostgreSQL 17 添加了更多显式的 SIMD 指令，比如为 &lt;a href=&#34;https://www.postgresql.org/docs/17/functions-bitstring.html&#34;&gt;&lt;code&gt;bit_count&lt;/code&gt;&lt;/a&gt; 函数启用 AVX-512 指令支持。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;分区和分布式工作负载增强&#34;&gt;分区和分布式工作负载增强&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17  的分区管理更为灵活，新增了&lt;strong&gt;拆分&lt;/strong&gt;与&lt;strong&gt;合并&lt;/strong&gt;分区的能力，并允许分区表使用 &lt;strong&gt;身份列（Identity Column）&lt;/strong&gt; 和&lt;strong&gt;排它约束&lt;/strong&gt;（Exclude Constraints）。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/17/postgres-fdw.html&#34;&gt;PostgreSQL 外部数据包装器&lt;/a&gt;（&lt;a href=&#34;https://www.postgresql.org/docs/17/postgres-fdw.html&#34;&gt;&lt;code&gt;postgres_fdw&lt;/code&gt;&lt;/a&gt;）现在可以将 &lt;code&gt;EXISTS&lt;/code&gt; 和 &lt;code&gt;IN&lt;/code&gt; 子查询下推到远端服务器，从而提升性能。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 为逻辑复制添加了新功能，使其在高可用架构和大版本升级中更加易用。
+从 PostgreSQL 17 使用  &lt;a href=&#34;https://www.postgresql.org/docs/17/pgupgrade.html&#34;&gt;&lt;code&gt;pg_upgrade&lt;/code&gt;&lt;/a&gt; 升级到更高版本时，不再需要删除 &lt;a href=&#34;https://www.postgresql.org/docs/17/logical-replication-subscription.html#LOGICAL-REPLICATION-SUBSCRIPTION-SLOT&#34;&gt;逻辑复制槽&lt;/a&gt; 了，从而避免了升级后需要重新同步数据的麻烦。
+此外，你还可以控制逻辑复制的 Failover 过程，为高可用性架构中管理 PostgreSQL 提供了更好的可控制性。PostgreSQL 17 还允许逻辑复制的订阅者使用 &lt;code&gt;hash&lt;/code&gt; 索引进行查找，并引入了 &lt;code&gt;pg_createsubscriber&lt;/code&gt; 命令行工具，用于在使用物理复制的副本从库上创建逻辑复制。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;开发者体验&#34;&gt;开发者体验&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 继续深化了对 SQL/JSON 标准的支持，新增了 &lt;code&gt;JSON_TABLE&lt;/code&gt; 功能，可以将 JSON 转换为标准的 PostgreSQL 表，以及 SQL/JSON 构造函数（&lt;code&gt;JSON&lt;/code&gt;、&lt;code&gt;JSON_SCALAR&lt;/code&gt;、&lt;code&gt;JSON_SERIALIZE&lt;/code&gt;）和查询函数（&lt;code&gt;JSON_EXISTS&lt;/code&gt;、&lt;code&gt;JSON_QUERY&lt;/code&gt;、&lt;code&gt;JSON_VALUE&lt;/code&gt;）。
+值得注意的是，这些功能最初计划在 PostgreSQL 15 中发布，但出于设计权衡考虑，在 Beta 期间被撤回 —— 这也是我们希望请您在 Beta 期间帮忙测试新功能的原因之一！此外，PostgreSQL 17 为 &lt;code&gt;jsonpath&lt;/code&gt; 的实现增添了更多功能，包括将 JSON 类型的值转换为各种不同特定数据类型的能力。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-merge.html&#34;&gt;&lt;code&gt;MERGE&lt;/code&gt;&lt;/a&gt; 命令现在支持 &lt;code&gt;RETURNING&lt;/code&gt; 子句了，让您可以在同一条命令中进一步处理修改过的行。
+您还可以使用新的 &lt;code&gt;merge_action&lt;/code&gt; 函数查看 &lt;code&gt;MERGE&lt;/code&gt; 命令修改了哪一部分。
+PostgreSQL 17 还允许使用 &lt;code&gt;MERGE&lt;/code&gt; 命令更新视图，并新增了 &lt;code&gt;WHEN NOT MATCHED BY SOURCE&lt;/code&gt; 子句，允许用户指定当源中的行没有任何匹配时，应该执行什么操作。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-copy.html&#34;&gt;&lt;code&gt;COPY&lt;/code&gt;&lt;/a&gt; 命令用于高效地从 PostgreSQL 批量加载与导出数据。在 PostgreSQL 17 中，&lt;strong&gt;导出大行时的性能最多有两倍的提升&lt;/strong&gt;。
+此外，当源编码与目标编码相匹配时，&lt;code&gt;COPY&lt;/code&gt; 的性能也有所提升。COPY 新增了一个 &lt;code&gt;ON_ERROR&lt;/code&gt; 选项，即使插入行时出现错误也可继续进行。
+此外在 PostgreSQL 17 中，驱动程序可以利用 libpq API 使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/libpq-cancel.html&#34;&gt;异步和更为安全的查询取消方法&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 引入了内置的排序规则提供程序，该提供程序提供与 &lt;code&gt;C&lt;/code&gt; 排序规则类似的排序语义，但编码为 &lt;code&gt;UTF-8&lt;/code&gt; 而非 &lt;code&gt;SQL_ASCII&lt;/code&gt;。这种新的排序规则提供了不变性保证，确保您的排序结果在不同系统上都不会改变。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;安全功能&#34;&gt;安全功能&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 新增了一个新的连接参数 &lt;code&gt;sslnegotation&lt;/code&gt;，允许 PostgreSQL 在使用 &lt;a href=&#34;https://en.wikipedia.org/wiki/Application-Layer_Protocol_Negotiation&#34;&gt;ALPN&lt;/a&gt; 时直接进行 TLS 握手，减少一次网络往返。PostgreSQL 会在 ALPN 目录中注册为 &lt;code&gt;postgresql&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这个版本引入了新的 EventTrigger 事件 —— 当用户认证时触发。并且在 libpq 中提供了一个新的名为 &lt;code&gt;PQchangePassword&lt;/code&gt; 的 API，可以在客户端侧自动对密码取哈希，以防止在服务器中意外记录下明文密码。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 增加了一个新的 &lt;a href=&#34;https://www.postgresql.org/docs/17/predefined-roles.html&#34;&gt;预定义角色&lt;/a&gt;，名为 &lt;code&gt;pg_maintain&lt;/code&gt;，赋予用户执行 &lt;code&gt;VACUUM&lt;/code&gt;、&lt;code&gt;ANALYZE&lt;/code&gt;、&lt;code&gt;CLUSTER&lt;/code&gt;、&lt;code&gt;REFRESH MATERIALIZED VIEW&lt;/code&gt;、&lt;code&gt;REINDEX&lt;/code&gt; 和 &lt;code&gt;LOCK TABLE&lt;/code&gt; 的权限，
+并确保  &lt;code&gt;search_path&lt;/code&gt; 对于 &lt;code&gt;VACUUM&lt;/code&gt;、&lt;code&gt;ANALYZE&lt;/code&gt;、&lt;code&gt;CLUSTER&lt;/code&gt;、&lt;code&gt;REFRESH MATERIALIZED VIEW&lt;/code&gt; 和 &lt;code&gt;INDEX&lt;/code&gt; 等维护操作是安全的。
+最后，用户现在可以使用 &lt;code&gt;ALTER SYSTEM&lt;/code&gt; 来设置系统无法识别的未定义配置参数了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;备份与导出管理&#34;&gt;备份与导出管理&lt;/h3&gt;
+&lt;p&gt;PostgreSQL 17 可以使用 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgbasebackup.html&#34;&gt;&lt;code&gt;pg_basebackup&lt;/code&gt;&lt;/a&gt; 进行增量备份，并增加了一个新的实用工具 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgcombinebackup.html&#34;&gt;&lt;code&gt;pg_combinebackup&lt;/code&gt;&lt;/a&gt;，用于备份恢复过程中将备份合并。
+该版本为 &lt;a href=&#34;https://www.postgresql.org/docs/17/app-pgdump.html&#34;&gt;&lt;code&gt;pg_dump&lt;/code&gt;&lt;/a&gt; 新增了一个参数项 &lt;code&gt;--filter&lt;/code&gt;，允许您指定一个文件来进一步指定在 dump 过程中要包含或排除哪些对象。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;监控&#34;&gt;监控&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/sql-explain.html&#34;&gt;&lt;code&gt;EXPLAIN&lt;/code&gt;&lt;/a&gt; 命令可以提供有关查询计划和执行详情的信息，现在它新增了两个选项：&lt;code&gt;SERIALIZE&lt;/code&gt; 会显示将数据序列化为网络传输形式时的耗时；&lt;code&gt;MEMORY&lt;/code&gt; 会报告优化器内存使用情况。此外，&lt;code&gt;EXPLAIN&lt;/code&gt; 现在还可以显示花费在 I/O 块读写上的时间。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 17 标准化了 &lt;a href=&#34;https://www.postgresql.org/docs/17/pgstatstatements.html&#34;&gt;&lt;code&gt;pg_stat_statements&lt;/code&gt;&lt;/a&gt; 中 &lt;code&gt;CALL&lt;/code&gt; 的参数，减少了频繁调用的存储过程所产生的记录数量。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/devel/progress-reporting.html#VACUUM-PROGRESS-REPORTING&#34;&gt;&lt;code&gt;VACUUM&lt;/code&gt; 进度报告&lt;/a&gt; 现在会显示索引垃圾回收的进度。
+PostgreSQL 17 还引入了一个新视图，&lt;a href=&#34;https://www.postgresql.org/docs/17/view-pg-wait-events.html&#34;&gt;&lt;code&gt;pg_wait_events&lt;/code&gt;&lt;/a&gt;，提供关于等待事件的描述，可以与 &lt;code&gt;pg_stat_activity&lt;/code&gt; 共同使用，以便深入了解活动会话出现等待的原因。
+此外，&lt;a href=&#34;https://www.postgresql.org/docs/17/monitoring-stats.html#MONITORING-PG-STAT-BGWRITER-VIEW&#34;&gt;&lt;code&gt;pg_stat_bgwriter&lt;/code&gt;&lt;/a&gt; 视图中的一些信息，现在被拆分到新的 &lt;a href=&#34;https://www.postgresql.org/docs/17/monitoring-stats.html#MONITORING-PG-STAT-CHECKPOINTER-VIEW&#34;&gt;&lt;code&gt;pg_stat_checkpointer&lt;/code&gt;&lt;/a&gt; 视图中了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;其他功能&#34;&gt;其他功能&lt;/h2&gt;
+&lt;p&gt;PostgreSQL 17 还有许多其他新功能与改进，很多改进都可能会对您的用例有所帮助。请参阅&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;发布说明&lt;/a&gt;以获取完整的新功能和变更列表：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;https://www.postgresql.org/docs/17/release-17.html&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;错误和兼容性测试&#34;&gt;错误和兼容性测试&lt;/h2&gt;
+&lt;p&gt;每个 PostgreSQL 版本的稳定性，在很大程度上依赖于诸位 PG社区用户，您可以用你们的工作负载和测试工具来测试即将发布的版本，以便在 PostgreSQL 17 正式发布前发现错误并完成回归。由于这是一个 Beta 版本，针对数据库行为、功能细节和 API 的小改动仍然可能会发生。您的反馈和测试将有助于调整并敲定这些新功能，因此请在近期进行测试。用户测试的质量有助于我们确定何时可以进行最终发布。&lt;/p&gt;
+&lt;p&gt;PostgreSQL wiki 中公开提供了&lt;a href=&#34;https://wiki.postgresql.org/wiki/PostgreSQL_17_Open_Items&#34;&gt;开放问题&lt;/a&gt;列表。您可以使用 PostgreSQL 网站上的此表单&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;报告错误&lt;/a&gt;：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;https://www.postgresql.org/account/submitbug/&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;beta-时间表&#34;&gt;Beta 时间表&lt;/h2&gt;
+&lt;p&gt;这是 PostgreSQL 17 的第一个 Beta 版本。PostgreSQL 项目将根据测试需要发布更多的 Beta 版本，随后是一或多个 RC 版本，最终版本大约会在 2024 年 9 月或 10 月发布。详细信息请参阅 &lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试&lt;/a&gt; 页面。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;链接&#34;&gt;链接&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/download/&#34;&gt;下载&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/developer/beta/&#34;&gt;Beta 测试信息&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/docs/17/release-17.html&#34;&gt;PostgreSQL 17 Beta 发布说明&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://wiki.postgresql.org/wiki/PostgreSQL_17_Open_Items&#34;&gt;PostgreSQL 17 开放问题&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/about/featurematrix/&#34;&gt;功能矩阵&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/account/submitbug/&#34;&gt;提交错误&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://twitter.com/postgresql&#34;&gt;在 X/Twitter 上关注 @postgresql&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/about/donate/&#34;&gt;捐赠&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: Ahrefs不上云，省下四亿美元</title>
       <link>/zh/blog/cloud/ahrefs-saving/</link>
       <pubDate>Wed, 22 May 2024 00:00:00 +0000</pubDate>
@@ -9484,222 +9580,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;p&gt;[10] &lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;分布式数据库是伪需求吗？&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;[11] &lt;a href=&#34;https://mp.weixin.qq.com/s/mEmz8pviahEAWy1-SA8vcg&#34;&gt;微服务是不是个蠢主意？&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;[12] &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect&#34;&gt;更好的开源RDS替代：Pigsty&lt;/a&gt;&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: PostgreSQL：最成功的数据库</title>
-      <link>/zh/blog/pg/pg-is-no1/</link>
-      <pubDate>Wed, 28 Jun 2023 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/pg/pg-is-no1/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/pg/pg-is-no1/featured_hu61630db9067ef32c4b68bcee93d941e9_349036_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
-        
-        &lt;p&gt;2023 年 StackOverflow 调研结果已经新鲜出炉，来自185个国家与地区的9万名开发者给出了高质量的反馈。
-在今年的调研中，PostgreSQL 在数据库全部三项调研指标（流行度，喜爱度，需求度）上获得无可争议的全能冠军，成为真正意义上“最成功”的数据库 —— &lt;strong&gt;&amp;ldquo;PostgreSQL is the Linux of Database!&amp;rdquo;&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-1.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/sf-db-survey&#34;&gt;https://demo.pigsty.cc/d/sf-db-survey&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;当我们说一个数据库“成功”时，究竟在说什么？评价一个数据库有许多标准：功能、质量、安全、性能、成本，但没有哪种可以普世泛用。不过
-&lt;strong&gt;Succeed&lt;/strong&gt; 既代表成功，又代表继承，所以成功与“后继有人”相通。对一项技术而言，用户的&lt;strong&gt;规模&lt;/strong&gt; 、喜好、需求决定了生态的繁荣程度，唯有这种最终存在意义上的神意裁决 —— 才能让所有人心服口服。
-而连续进行七年的 StackOverflow 年度开发者调研为我们窥见技术发展流行趋势打开了一扇窗户。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;PostgreSQL现在是全世界最流行的数据库&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;PostgreSQL是开发者最喜爱欣赏的数据库！&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;PostgreSQL是用户需求最为强烈的数据库！&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;流行度代表过去，喜爱度代表现在，需求度代表将来，这三个指标很好地反映了一项技术的生命力。存量与增量，时与势都站在 PostgreSQL 一侧，恐怕在几年内恐怕都不会有任何能挑战 PostgreSQL 地位的竞争对手。
-作为 PostgreSQL 忠实的用户，社区成员，专家，布道师与贡献者，从拥抱 PostgreSQL的那一刻起，我就相信会有这一天，然而亲自见证这一刻，仍然让我感慨良多。遂撰此文，聊一聊这件事背后的 &lt;strong&gt;Why&lt;/strong&gt; 与 &lt;strong&gt;What&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;推荐阅读：StackOverflow 2022 往期调研结果回顾：《&lt;a href=&#34;/zh/blog//db/pg-is-no1/&#34;&gt;为什么PostgreSQL将成为最成功的数据库？&lt;/a&gt;》&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;数据的来源社区调研&#34;&gt;数据的来源：社区调研&lt;/h2&gt;
-&lt;p&gt;数据库的用户是开发者，而没有比直接问开发者们更有代表性的调研方式了。StackOverflow 调研结果中提供了 流行，欣赏，渴望三个结果指标，但这三项数据都来自同一个巧妙设计的问卷题目：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“在过去一年中，您在哪些数据库环境中进行了密集的开发工作，您又希望在接下来一年在哪些数据库上工作？如果你过去一年用了这个数据库，来年还希望接着用，那么就在两个复选框上都打勾”。&lt;/p&gt;
-&lt;p&gt;“Which &lt;strong&gt;database environments&lt;/strong&gt; have you done extensive development work in over the past year, and which do you want to work in over the next year? If you both worked with the database and want to continue to do so, please check both boxes in that row.”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;每个数据库后都有两个复选框，如果开发者在第一个框上打勾，即去年我在用此数据库，那么就会被标记为“使用者”（Used）；
-如果开发者在第二个框上打勾，即来年我想用这个数据库，那么会被标记为“需求者”（Wanted）；而两个框都打勾的开发者，会被标记为“赞赏者”（Loved / Admired）。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-2.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://survey.stackoverflow.co/2023&#34;&gt;https://survey.stackoverflow.co/2023&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;使用者占总体的比例，就是&lt;strong&gt;流行度&lt;/strong&gt;，或使用率，在上图左边用&lt;strong&gt;柱状图&lt;/strong&gt;表示。需求者占总体的比例，就是&lt;strong&gt;需求度&lt;/strong&gt;，或渴望度，在上图右边以&lt;strong&gt;蓝点&lt;/strong&gt;表示。
-赞赏者占现有使用者的比例，就是&lt;strong&gt;欣赏度&lt;/strong&gt;，或喜爱度/口碑，在上图右边以&lt;strong&gt;红点&lt;/strong&gt;表示。不难看出，2023年，PostgreSQL 在流行度上甩开 MySQL，成为世界上最流行的数据库。在需求度和口碑上更是远远甩开其他数据库独树一帜。&lt;/p&gt;
-&lt;p&gt;同样的问题连续问了七年，如果我们结合这过去七年的变迁，把排名前10的主流数据库流行度 - 净喜爱度画在一张二维散点图上，那么就能更容易地获得一些关于数据库领域的发展变迁的洞察，对形成正确的&lt;strong&gt;比例感&lt;/strong&gt;很有帮助。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-3.gif&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;X轴为流行度，Y轴为净喜爱程度（2*喜爱度% - 100），图元大小与流行度与喜爱度的几何平均数成正比。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;在 2023年的当下切面中，四个角落被四种数据库占据：右上角是最为流行且最受欢迎的 &lt;strong&gt;PostgreSQL&lt;/strong&gt;，右下角是流行但不受待见的 &lt;strong&gt;MySQL&lt;/strong&gt;；
-左上角是流行程度一般但备受喜爱的 &lt;strong&gt;Redis&lt;/strong&gt;，左下角是过气且不受待见的 &lt;strong&gt;Oracle&lt;/strong&gt;。在四者中间，坐落着相对中庸的 &lt;strong&gt;SQLite&lt;/strong&gt;，&lt;strong&gt;MongoDB&lt;/strong&gt; 与 &lt;strong&gt;SQL Server&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;结合时间轴不难看出，PostgreSQL 的流行程度与受欢迎程度在持续增长；MySQL 的受欢迎程度变化不大但流行度暴跌；
-Redis 与 SQLite 整体上在进步，而 MongoDB 开始见顶回落，SQL Server 和 Oracle 这两种商业关系型数据库最近几年都在持续走下坡路。&lt;/p&gt;
-&lt;p&gt;从图中我们可以得出一个基本的判断：&lt;strong&gt;在未来几年中，数据库领域都不会出现足以挑战 PostgreSQL 的对手。PostgreSQL 在数据库领域的地位，已经如同 Linux 在服务器操作系统上的地位一样难以撼动&lt;/strong&gt;。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;过去的积累流行度&#34;&gt;过去的积累：流行度&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL —— 世界上最流行的数据库&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;一项技术使用者占总体的比例，就是&lt;strong&gt;流行度&lt;/strong&gt;。它的含义是：过去一年有多少比例的用户使用了这项技术。流行度代表过去一年的积累使用，是存量指标，也是最核心的事实指标。&lt;/p&gt;
-&lt;p&gt;在 2023 年， “&lt;strong&gt;最先进&lt;/strong&gt;” PostgreSQL 在所有开发者中以 45.6% 的使用率，首次超过“&lt;strong&gt;最流行&lt;/strong&gt;”数据库 MySQL 41.1%，领先 4.5%，使用率是第二名 MySQL 的1.1倍。
-对于专业开发者（约占总样本的3/4）来说，PostgreSQL 的使用率在去年（2022）就已经超过 MySQL 了，以 46.5% vs 45.7% 领先0.8个百分点；
-在 2023 年，这一差距进一步拉大到 49.1% vs 40.6，领先 8.5% —— 换句话说，专业开发者中，PostgreSQL 的使用率已经是 MySQL 的 1.2 倍了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-4.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;过去几年，MySQL 一直霸占着数据库流行榜的榜首，洋洋得意地打起了“世界上&lt;strong&gt;最流行&lt;/strong&gt;的开源关系型数据库” 这一旗号。
-不过这次，“最流行” 的桂冠真的要让给 PostgreSQL 了。在流行度上，其他数据库和 PostgreSQL / MySQL 比根本就不是一个重量级，自然就更不用说了。&lt;/p&gt;
-&lt;p&gt;更重要的的是变化趋势：在长期列入排名的十几款头部数据库中，&lt;strong&gt;只有&lt;/strong&gt; PostgreSQL 的流行度是持续上升的，保持着高歌猛进的增长势头，而其他所有的数据库使用率都在下行。
-此消彼长，随着时间的推移，PostgreSQL 与其他数据库的流行度差距只会进一步拉大 —— 因此在相当长的一段时间内，恐怕是看不到有任何挑战者能撼动 PostgreSQL 现在的位置了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-5.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;值得一提的是，“国产数据库”的标杆 ”TiDB“ 这次也加入到 StackOverflow 排行榜中，并以 0.2% 的使用率，拿到了末位第 32 名的名次。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;strong&gt;流行度&lt;/strong&gt;反映的是当下数据库的规模势能，而&lt;strong&gt;喜爱度&lt;/strong&gt;反映的是未来数据库的增长潜能。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;现在的动能喜爱度&#34;&gt;现在的动能：喜爱度&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL —— 最受开发者喜爱的数据库&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;所谓“&lt;strong&gt;口碑&lt;/strong&gt;”，喜爱度（Loved）或欣赏度（Admired），指的是有多少比例的用户愿意继续使用此项技术，这是一个年度的“留存率”指标，可以反映用户对一项技术的看法与评价。&lt;/p&gt;
-&lt;p&gt;2023 年， PostgreSQL 蝉联最受开发者喜爱的数据库。过去几年 Redis 一直是用户最喜欢的数据库。直到 2022 年，PostgreSQL 第一次超过 Redis，成为最受开发者喜爱的数据库。
-PostgreSQL 和 Redis 的口碑一直在伯仲之间（70%），并与其他后来者拉开了非常显著的差距。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-6.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;作为一个交叉印证，在 2022 PostgreSQL 社区年度调研中，对于 PostgreSQL 的存量用户来说，使用程度加深，用量加大的比例（蓝/粉）对于用量萎缩的比例（黄绿）占据了压倒性多数，足以说明基本盘留存的稳定程度。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-7.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Redis是简单易用的数据结构缓存服务器，经常会与关系型数据库 PostgreSQL 搭配使用，广受开发者喜爱（但流行度一般，只有20%，位列第六）。
-在后面的交叉分析环节我们也可以看到这两者之间有着所有数据库间最为强烈的羁绊 —— 86% 的 Redis 用户想要使用 PostgreSQL，而 30% 的 PostgreSQL 用户想要使用 Redis。
-其他评价正面的数据库包括：SQLite，MongoDB，SQL Server 等。MySQL 和 ElasticSearch 的口碑在 50% 中线算毁誉参半。榜上最不受用户待见的数据库为 Access、 IBM DB2 、CouchDB，Couchbase，以及 Oracle。&lt;/p&gt;
-&lt;p&gt;并不是所有&lt;strong&gt;潜能&lt;/strong&gt;，都可以转换为实打实的&lt;strong&gt;动能&lt;/strong&gt;。用户的喜爱并不一定会付诸行动，而这就是第三项指标所要回答的问题 —— 需求度。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;未来的趋势需求度&#34;&gt;未来的趋势：需求度&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL —— 需求量最大的数据库&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;需求者占总体的比例，就是需求率（Wanted），或渴望度（Desired）。它的含义是，接下来一年有多少比例的用户会实际选择使用此项技术。
-在需求度 / 渴望度 这一项中，PostgreSQL 一骑绝尘，远远甩开其他数据库。以 42.3% 的比例连续第二年获得第一，且保持着一往无前的增长态势。不断与后来者拉开距离。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-8.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;在 2023 年，一些数据库的需求量出现了显著增长。大概率是因为由 OpenAI ChatGPT 所引领的大语言模型AI浪潮所致：对智能的需求拉动了对数据基础设施的需求。
-10年前，对 JSONB/GIN 等 NoSQL 特性的支持奠定了 PostgreSQL 在互联网黄金时代的蓬勃发展，而今天，第一个构建在成熟数据库上的向量扩展 pgvector ，更是让 PostgreSQL 有了进入 AI 时代的船票，为下个十年的增长准备好了敲门砖。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;但是为什么呢&#34;&gt;但是，为什么呢？&lt;/h2&gt;
-&lt;p&gt;PostgreSQL 在需求率， 使用率，喜爱率上都拔得头筹，天时地利人和齐备，动能势能潜能都有，足以称得上是最成功的数据库，而且在肉眼可见的几年里也不会有任何挑战者。
-但令人好奇的是，&lt;strong&gt;为什么&lt;/strong&gt; &lt;strong&gt;PostgreSQL 会如此成功 ？&lt;/strong&gt; 其实，秘密就藏在它的 &lt;strong&gt;Slogan&lt;/strong&gt; 里：“&lt;strong&gt;世界上最先进的开源关系型数据库&lt;/strong&gt;”&lt;/p&gt;
-&lt;p&gt;关系型数据库是如此的普及与重要，也许其他的数据库品类如键值，文档，搜索引擎，时序，图，向量加起来也比不上它的一个零头。以至于当大家谈起数据库时，如果没有特殊说明，默认隐指的就是”关系型数据库“。在它面前，没有其他数据库品类敢称自己为”主流“。
-在去年的《&lt;a href=&#34;/zh/blog//db/pg-is-best/&#34;&gt;为什么PostgreSQL将成为最成功的数据库？&lt;/a&gt;》中，我们详细介绍了关系型数据库的竞争格局 —— &lt;strong&gt;三足鼎立&lt;/strong&gt;：关系型数据库的生态位高度重叠，其关系可以视作零和博弈。抛开微软生态关门自嗨相对独立的商业数据库
-SQL Server 不提，在当下分久必合的收敛阶段中，以 WireProtocol 计能作为“根”的数据库只有三种：Oracle，MySQL，以及PostgreSQL。关系型数据库世界里上演的是一场 &lt;strong&gt;三国演义&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-9.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;今天下三分，然 Oracle/MySQL 疲敝 ，日薄西山， PostgreSQL 高歌猛进，如日中天。此消彼长，前途无量。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;“&lt;strong&gt;Oracle&lt;/strong&gt; 有才无德，&lt;strong&gt;MySQL&lt;/strong&gt; 才浅德薄，&lt;strong&gt;PGSQL&lt;/strong&gt; 德才兼备”&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;strong&gt;Oracle&lt;/strong&gt; 是老牌商业数据库，有着深厚的历史技术积淀，功能丰富，支持完善。广受不差钱且需要背锅侠的企业，特别是金融行业喜爱。但其费用高昂，且以讼棍行径成为知名的业界毒瘤。
-Microsoft SQL Server 性质与Oracle类似，都属于商业数据库。商业数据库整体受开源数据库冲击，处于缓慢衰退的状态。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;MySQL&lt;/strong&gt; 号称“最流行”，然而树大招风：前有狼后有虎，上有野爹下有逆子，处于四面楚歌的境地中：
-在严谨的事务处理和数据分析上，MySQL 被同为开源生态位的 PostgreSQL 甩开几条街；而在糙猛快的敏捷方法论上，MySQL 又不如新兴 NoSQL 好用；
-上有养父 Oracle 压制，中有兄弟 MariaDB 分家，下有逆子 TiDB/OB 等兼容 NewSQL 分羹，因此也在走下坡路。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Oracle&lt;/strong&gt; 作为老牌商业数据库，才毋庸质疑；但其作为业界毒瘤，“德” ，亦不必多说，故曰：“&lt;strong&gt;有才无德&lt;/strong&gt;”。
-&lt;strong&gt;MySQL&lt;/strong&gt; 虽有开源之功德，奈何认贼作父；且才疏学浅，功能简陋，只能干干CRUD，故曰：“&lt;strong&gt;才浅德薄&lt;/strong&gt;”。
-唯 &lt;strong&gt;PostgreSQL&lt;/strong&gt;，&lt;strong&gt;德才兼备&lt;/strong&gt;：既占据了&lt;strong&gt;开源崛起&lt;/strong&gt;之天时，又把握了&lt;strong&gt;最为流行&lt;/strong&gt;之地利，还有着&lt;strong&gt;先进稳定&lt;/strong&gt;之人和。
-正所谓：君子藏器于身，因时而动。不鸣则已，一鸣惊人！&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;开源与先进&#34;&gt;开源与先进&lt;/h2&gt;
-&lt;p&gt;来自 TimescaleDB 的PostgreSQL 社区年度调研也反映出，用户选择 PostgreSQL 的首要因素便是 &lt;strong&gt;开源&lt;/strong&gt; 与 &lt;strong&gt;稳定&lt;/strong&gt;。
-&lt;strong&gt;开源&lt;/strong&gt; —— 意味着软件本身可以免费使用，可以二次开发，没有供应商锁定，不存在“卡脖子问题”。 &lt;strong&gt;可靠&lt;/strong&gt; ——
-意味它能正确稳定工作，行为表现能够符合预期，而且有着长时间大规模生产环境的优异战绩。越是资深的开发者，便越是看重这两个属性。&lt;/p&gt;
-&lt;p&gt;宽泛地讲，扩展，生态，社区，协议可以归并入 “&lt;strong&gt;开源&lt;/strong&gt;” 。而稳定可靠，ACID，SQL，扩展，可用性，可以总结为 “&lt;strong&gt;先进&lt;/strong&gt;” 。这便正好与
-PostgreSQL 的 Slogan 相呼应 —— &lt;strong&gt;世界上最先进的开源关系型数据库&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-10.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.timescale.com/state-of-postgres/2022&#34;&gt;https://www.timescale.com/state-of-postgres/2022&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;开源之德&#34;&gt;开源之德&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;strong&gt;PG的“德”在于开源&lt;/strong&gt;。祖师爷级的开源项目，全世界开发者群策群力的伟大成果。协议友善BSD，生态繁荣扩展多。开枝散叶，子孙满堂，Oracle替代扛旗者.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;什么叫“德”，合乎于“道”的表现就是德。而这条“道”就是&lt;strong&gt;开源&lt;/strong&gt;。PostgreSQL是历史悠久的祖师爷级开源项目，更是全世界开发者群策群力的典范成果。&lt;/p&gt;
-&lt;p&gt;很久很久以前，开发软件/信息服务需要使用非常昂贵的&lt;strong&gt;商业数据库&lt;/strong&gt;软件。单花在软件授权上的费用可能就有六七位数，加之相近的硬件成本与服务订阅成本。Oracle一个
-CPU 核一年的软件授权费用便高达十几万，壕如阿里也吃不消要“&lt;strong&gt;去IOE&lt;/strong&gt;”。以 &lt;strong&gt;PostgreSQL&lt;/strong&gt; / &lt;strong&gt;MySQL&lt;/strong&gt; 为代表的的&lt;strong&gt;开源数据库&lt;/strong&gt;崛起，让世界多了一个新的选择。&lt;/p&gt;
-&lt;p&gt;“不要钱” 的开源数据库可以让我们自由随意地使用数据库软件，而这一点引发了行业变革：从上万元每核·每月的商业数据库软件授权，到20块钱/核·月的纯硬件成本。数据库走入了寻常企业中，让免费提供信息服务成为可能。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-11.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;开源是有大功德的：互联网的历史就是开源软件的历史，IT行业之所以有今天的繁荣，人们能享受到如此多的免费信息服务，核心原因之一就是开源软件。
-&lt;strong&gt;开源是一种真正成功的，以软件自由为目的，由开发者构成的 Communism（&lt;strong&gt;社区主义&lt;/strong&gt;）&lt;/strong&gt;：&lt;strong&gt;软件这种IT业的核心生产资料变为全世界开发者公有，按需分配。开发者各尽所能，人人为我，我为人人。&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;一个开源程序员工作时，其劳动背后可能蕴含的是数以万计顶尖开发者的智慧结晶。程序员薪资高从原理上来说是因为，开发者本质上不是一个简单的工人，而是一个指挥软件和硬件干活的
-&lt;strong&gt;包工头&lt;/strong&gt;。程序员自己就是核心生产资料；软件来自公有社区；服务器硬件更是唾手可得；因此一个或几个高级的软件工程师，就可以很轻松地利用 &lt;strong&gt;开源生态&lt;/strong&gt;快速解决领域问题。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;通过开源，所有社区开发者形成合力，极大降低了重复造轮子的内耗。使得整个行业的技术水平以匪夷所思的速度向前迈进。开源的势头就像滚雪球，时至今日已经势不可挡&lt;/strong&gt;。
-越是底层基础的软件，开源便越占据主导优势。基本上除了一些特殊场景和路径依赖，软件特别是基础软件中，闭门造车/所谓“自力更生”已经成了业内超级大笑话。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-12.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;开源，是 PostgreSQL 对阵 Oracle 的最大底气所在。&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Oracle 先进，但 PostgreSQL 也不差。PostgreSQL 是 Oracle 兼容性最好的开源数据库，原生即支持 Oracle &lt;strong&gt;85%&lt;/strong&gt; 的功能，更有 &lt;strong&gt;96%&lt;/strong&gt; 功能兼容的专业发行版。
-但更重要的是，Oracle 价格高昂，而 PG 开源免费。压倒性的成本优势让 PG 拥有了巨大的生态位基础：它不一定要在功能先进性上超过Oracle 才能成功 ，&lt;strong&gt;廉价9成正确&lt;/strong&gt; 已经足以干翻 Oracle 。&lt;/p&gt;
-&lt;p&gt;PostgreSQL 可以视作一个开源版的“Oracle”，是唯一能真正威胁到 Oracle 的数据库。作为 ”去O“ 抗旗者，PG 可谓子孙满堂，养活了一大批&lt;strong&gt;自主可控&lt;/strong&gt; 的国产数据库公司。
-根据信通院统计，36% 的 “国产数据库” 直接基于PG “二开/魔改/套壳/换皮”，华为的openGauss 与 GaussDB 就是最典型的例子。
-重要的是，PostgreSQL 使用 BSD-Like 的 PostgreSQL 协议，是允许这种行为的 —— 你只要不打着PG的名号招摇撞骗，改个名字直接卖起来都行。这样开放的胸襟，是被Oracle收购的，使用GPL协议的 MySQL 所难以比拟的。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;先进之才&#34;&gt;先进之才&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;strong&gt;PG的“才”在于先进&lt;/strong&gt;。一专多长，全栈多模：“自主可控自动驾驶时序地理空间AI向量分布式文档图谱全文检索可编程超融合联邦流批一体
-HTAP Serverless 全栈式平台数据库”，单一组件即可覆盖几乎所有数据库需求。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;PostgreSQL 不仅仅是传统意义上只能做 OLTP 的单纯 “关系型数据库”，而是一个&lt;strong&gt;多模态数据库&lt;/strong&gt;。
-对于中小企业来说，基本单一组件便足以覆盖中小型企业绝大多数场景的数据需求：OLTP，OLAP，时序，地理空间GIS，分词与全文检索，JSON/XML文档，NoSQL特性，图，向量，全都能用上。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-13.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;皇帝数据库 —— 自主可控自动驾驶时序地理空间AI向量分布式文档图谱全文检索可编程超融合联邦流批一体 HTAP Serverless 全栈式平台数据库&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;PostgreSQL 的先进，除了体现在其备受赞誉的&lt;strong&gt;内核稳定性&lt;/strong&gt;上，更是体现在它强大的&lt;strong&gt;可扩展性&lt;/strong&gt;里。
-插件系统让 PostgreSQL 不再仅仅是一个单线程演化的数据库内核，而是可以有无数并行演进的扩展插件，如同量子计算一般同时探索所有方向上的可能性。每一个数据处理的细分垂直领域，PostgreSQL 绝不会缺席。&lt;/p&gt;
-&lt;p&gt;正如：PostGIS 之于地理时空数据库，TimescaleDB 之于时序数据库，Citus 之于分布式/列存储/HTAP数据库，PGVector 之于AI向量数据库，AGE之于图数据库，PipelineDB 之于流处理；
-以及终极杀招 —— 使用外部数据源包装器（FDW），使用统一的 SQL 访问所有异构的外部数据库。可以说PG是真正的全栈数据库平台，比起 MySQL 这样单纯的 OLTP 数据库，它的功能要先进太多了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-14.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;在一个很可观的规模内，PostgreSQL 都可以独立扮演多面手的角色，一个组件当多种组件使。&lt;strong&gt;而单一数据组件选型可以极大地削减项目额外复杂度，这意味着能节省很多成本。它让十个人才能搞定的事，变成一个人就能搞定的事。&lt;/strong&gt;
-在使用“专用数据库”前切莫忘记：&lt;strong&gt;为了不需要的规模而设计是白费功夫&lt;/strong&gt;，这属于&lt;strong&gt;过早优化&lt;/strong&gt;的一种形式。如果真有那么一样技术可以满足你所有的需求，那么使用该技术就是最佳选择，而不是试图用多个组件来重新实现它。&lt;/p&gt;
-&lt;p&gt;以探探为例，在 &lt;strong&gt;250w TPS&lt;/strong&gt; 与 &lt;strong&gt;200 TB&lt;/strong&gt; 不重复TP数据的量级下，&lt;strong&gt;单一PostgreSQL选型&lt;/strong&gt;依然能稳定可靠地撑起业务，并能在很可观的规模内做到一专多长。
-除了本职的 OLTP，PG 还在相当长的时间里兼任了缓存，OLAP，批处理，甚至消息队列的角色。当然神龟虽寿，犹有竟时。最终这些兼职功能还是要逐渐&lt;strong&gt;分拆&lt;/strong&gt;出去由专用组件负责，但那已经是近&lt;strong&gt;千万日活&lt;/strong&gt;时候的事了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-15.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;PostgreSQL 的先进，更是体现在其繁荣的生态里。以数据库内核为中心，向上，有着衍生特化的变体与构建于其上的“上层数据库” —— Greenplum数据仓库，Firebase的开源替代 Supabase，专用图数据库 edgedb 等等等等。
-向下，有着各种开源/商业/云发行版来整合各种工具形成合力 —— 各家的RDS ，开箱即用的 Pigsty ；水平方向上，甚至还有着一些强大的拟态组件/版本，可以通过兼容 Wire Protocol 的方式来仿真其他数据库，无需修改客户端驱动就能完成数据库迁移
-—— 模拟 SQL Server 的 babelfish，模拟 MongoDB 的 FerretDB，兼容 Oracle 的 EnterpriseDB / IvorySQL 都是样例。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-16.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;PostgreSQL 的先进性有目共睹，这也是其对阵同为开源关系型数据库的老对手 —— MySQL 时，真正的核心竞争力。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;先进，是 PostgreSQL 压倒 MySQL 的核心竞争力。&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;MySQL的口号是“&lt;strong&gt;世界上最流行的开源关系型数据库&lt;/strong&gt;”，它的核心特点是糙猛快，基本盘是互联网公司。互联网公司的典型特点是什么？追逐潮流&lt;strong&gt;糙猛快&lt;/strong&gt;。
-&lt;strong&gt;糙&lt;/strong&gt; 说的是互联网公司业务场景简单（CRUD居多）；数据重要性不高，不像传统行业（例如银行）那样在意数据的一致性与正确性；可用性优先，相比停服务更能容忍数据丢乱错，而一些传统行业宁可停止服务也不能让账目出错。
-&lt;strong&gt;猛&lt;/strong&gt;说的则是互联网行业数据量大，它们需要的就是水泥槽罐车做海量 CRUD，而不是高铁和载人飞船。
-&lt;strong&gt;快&lt;/strong&gt; 说的则是互联网行业需求变化多端，出活周期短，要求响应时间快，大量需求的就是开箱即用的软件全家桶（如LAMP）和简单培训就能上手干活的 CRUD Boy。
-于是，糙猛快的互联网公司和糙猛快的 MySQL 一拍即合，MySQL吃到了互联网崛起的一波大红利。&lt;/p&gt;
-&lt;p&gt;然而时来天地皆同力，运去英雄不自由。时过境迁，PostgreSQL 进步神速，在”快“与”猛“上 MySQL 已经不占优，现在只剩下”&lt;strong&gt;糙&lt;/strong&gt;“了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-17.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;MySQL竟然默认允许部分成功的事务提交&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;先进的因会反映为流行的果，流行的东西因为落后而过气，而先进的东西会因为先进变得流行。在这个变革的时代中，没有先进的功能打底，“流行”也也难以长久。时代所赋予的红利，也会随时代过去而退潮。
-调查的结果也用事实证明，MySQL 唯一能引以为豪的 “&lt;strong&gt;流行&lt;/strong&gt;” 在 PostgreSQL 压倒性的 “&lt;strong&gt;先进&lt;/strong&gt;” 优势前，根本维持不住。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;先进&lt;/strong&gt;与&lt;strong&gt;开源&lt;/strong&gt;，就是 PostgreSQL 成功的最大法宝。&lt;strong&gt;Oracle 先进， MySQL 开源，PostgreSQL 先进又开源&lt;/strong&gt;。天时地利人和齐备，何愁大业不成？&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;展望未来&#34;&gt;展望未来&lt;/h2&gt;
-&lt;p&gt;PostgreSQL 数据库内核在数据库领域的生态位，类似于 Linux 操作系统内核在操作系统领域的生态位。
-对于数据库，至少是 OLTP 数据库来说，数据库内核之争已经尘埃落定 —— PostgreSQL 已经是一台足够完美的内核发动机。&lt;/p&gt;
-&lt;p&gt;然而，用户最终需要的不单单是一台发动机，而是整车、驾驶能力与交通服务。数据库领域竞争的焦点，已经从 Software 本身，转移到了 &lt;strong&gt;Software enabled Service —— 完整的数据库发行版与数据库服务&lt;/strong&gt;。
-对于基于 PostgreSQL 内核的数据库发行版而言，竞争才刚刚开始。谁会成为PG的Debian，RedHat 与 Ubuntu ？
-这便是我们做 &lt;strong&gt;&lt;a href=&#34;https://pigsty.cc&#34;&gt;Pigsty&lt;/a&gt;&lt;/strong&gt; 的初衷 —— 制作一个开箱即用的、开源免费、本地优先的 PostgreSQL 数据库发行版，让所有人都能用&lt;strong&gt;好数据库&lt;/strong&gt;， &lt;strong&gt;用好&lt;/strong&gt;数据库。
-当然，限于篇幅，那就是&lt;a href=&#34;/zh/blog//db/pgsql-x-pigsty/&#34;&gt;另一篇&lt;/a&gt;要介绍的故事了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/pg-is-no1/pg-is-no1-18.png&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
-&lt;p&gt;2022-08 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485240&amp;idx=1&amp;sn=9052f03ae2ef21d9e21037fd7a1fa7fe&amp;chksm=fe4b32e3c93cbbf522616346c1afd49e1e6edbb0898694df224fe2134a69c0c4562aab35587a&amp;scene=21#wechat_redirect&#34;&gt;PostgreSQL 到底有多强？&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2022-07 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485216&amp;idx=1&amp;sn=1b59c7dda5f347145c2f39d2679a274d&amp;chksm=fe4b32fbc93cbbed574358a3bcf127dd2e4f458638b46efaee1a885a5702a66a5d9ca18e3f90&amp;scene=21#wechat_redirect&#34;&gt;为什么PostgreSQL是最成功的数据库？&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2022-06 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485170&amp;idx=1&amp;sn=657c75be06557df26e4521ce64178f14&amp;chksm=fe4b3329c93cba3f840283c9df0e836e96a410f540e34ac9b1b68ca4d6247d5f31c94e2a41f4&amp;scene=21#wechat_redirect&#34;&gt;StackOverflow 2022数据库年度调查&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2021-05 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484604&amp;idx=1&amp;sn=357b3381e7636709fa9e5e06894b7273&amp;chksm=fe4b3167c93cb8719b7c6b048fd300a7773c73319ba0c119359f4f8a6684cd969434c5abbdfd&amp;scene=21#wechat_redirect&#34;&gt;Why PostgreSQL Rocks!&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2021-05 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484591&amp;idx=1&amp;sn=a6ab13d93bfa26fca969ba163b01e1d5&amp;chksm=fe4b3174c93cb862899cbce4b9063ed009bfe735df16bce6b246042e897d494648473eea3cea&amp;scene=21#wechat_redirect&#34;&gt;为什么说PostgreSQL前途无量？&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2018 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247483706&amp;idx=1&amp;sn=b842684b41ac6dde8310448ae0a81a76&amp;chksm=fe4b34e1c93cbdf7dcfcdae5f3ddc38bc422989421266dcda957fa2b596e361815624c92b3ec&amp;scene=21#wechat_redirect&#34;&gt;PostgreSQL 好处都有啥？&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2023 《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect&#34;&gt;更好的开源RDS替代：Pigsty&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2023 《&lt;a href=&#34;http://demo.pigsty.cc/d/sf-db-survey&#34;&gt;StackOverflow 7年调研数据跟踪&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;2022 《&lt;a href=&#34;https://www.timescale.com/state-of-postgres/2022&#34;&gt;PostgreSQL 社区状态调查报告 2022&lt;/a&gt;》&lt;/p&gt;
 
       </description>
     </item>
