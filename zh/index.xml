@@ -672,6 +672,157 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: 使用Pigsty,PG,PGVector自建Dify -- AI工作流平台</title>
+      <link>/zh/blog/pg/dify-setup/</link>
+      <pubDate>Sat, 22 Jun 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/pg/dify-setup/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/pg/dify-setup/featured_hu80851c5fc238a2ecfc4f1e548d26dda7_2214933_640x0_resize_catmullrom_3.png" width="640" height="592"/>]]>
+        
+        &lt;p&gt;&lt;a href=&#34;https://dify.ai/zh&#34;&gt;&lt;strong&gt;Dify&lt;/strong&gt;&lt;/a&gt; 是一个生成式 AI 应用创新引擎，开源的 LLM 应用开发平台。提供从 Agent 构建到 AI workflow 编排、RAG 检索、模型管理等能力，帮助用户轻松构建和运营生成式 AI 原生应用。&lt;/p&gt;
+&lt;p&gt;当然，像这样的一个 AI 工作流编排软件，在底下也少不得用到数据库 —— Dify 便是用 PostgreSQL 存储数据的，当然还有 Redis 缓存，与一个专用的向量数据库。Docker 镜像拉起来本地玩玩可以，生产环境部署的话，数据库肯定不能这么搞，高可用，备份，监控啥都没有。
+好在 Pigsty 就提供了开箱即用的生产级高可用 PostgreSQL 集群，也正好提供了 Dify 需要用到的 Redis 与 S3 （MinIO） 服务，也提供了 Nginx 可以对外暴露 Web 服务，堪称 Dify 最佳拍档。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/langgenius/dify/blob/main/docker/docker-compose.yaml&#34;&gt;&lt;img alt=&#34;docker-compose.png&#34; src=&#34;/zh/blog/pg/dify-setup/docker-compose.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;有了 Pigsty，你只需要用 &lt;code&gt;docker compose&lt;/code&gt; 拉起无状态的蓝圈部分就好了，状态放在由外部服务由 Pigsty 管理。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这里我不得不吐槽一下 Dify 模板的设计，元数据都已经用 PostgreSQL 存储了，你直接加个 &lt;code&gt;pgvector&lt;/code&gt; 不就能拿来当向量数据库了？更让人想吐槽的是 &lt;code&gt;pgvector&lt;/code&gt; 竟然还是一个单独的镜像与容器，你直接用一个带 pgvector 的 PG 镜像不就行了？
+Dify “支持” 了一堆花里胡哨的向量数据库，但你既然已经选定了 PostgreSQL 了，向量数据库默认也用 &lt;code&gt;pgvector&lt;/code&gt; 就是自然而然地选择了。同理，我觉得 Dify 官方应该考虑一下把 Redis 去掉，Celery 任务队列又不是不能用 PostgreSQL 作为后端存储，弄那么多数据库纯属吃饱了撑着。如无必要，勿增实体。&lt;/p&gt;
+&lt;p&gt;所以 Pigsty 提供的 &lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/app/dify&#34;&gt;Dify Docker Compose 模板&lt;/a&gt; 也对官方的样例做了一些修改，把 &lt;code&gt;db&lt;/code&gt; 和 &lt;code&gt;redis&lt;/code&gt; 两个数据库镜像给去掉了，使用由 Pigsty 管理的实例，向量数据库固定使用 &lt;code&gt;pgvector&lt;/code&gt;，复用同一个 PostgreSQL 实例。&lt;/p&gt;
+&lt;p&gt;最后上面那个架构就被简化为无状态的：&lt;code&gt;dify-api&lt;/code&gt;，&lt;code&gt;dify-web&lt;/code&gt;，&lt;code&gt;dify-worker&lt;/code&gt; 三个无状态容器，可以随意创建销毁。当然还有两个可选的 &lt;code&gt;ssrf_proxy&lt;/code&gt; 与 &lt;code&gt;nginx&lt;/code&gt;，用于提供代理与些许安全特性。
+还有一点状态尾巴是 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/app/dify/docker-compose.yml#L128&#34;&gt;文件系统卷&lt;/a&gt;，存放私钥之类的东西，定期备份一下就好了，也可以使用 MinIO 替代。&lt;/p&gt;
+&lt;p&gt;参考资料：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/langgenius/dify/&#34;&gt;GitHub: langgenius/Dify&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/app/dify&#34;&gt;Pigsty: Dify Docker Compose Template&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pigsty的准备工作&#34;&gt;Pigsty的准备工作&lt;/h2&gt;
+&lt;p&gt;我们用 &lt;a href=&#34;/zh/docs/concept/arch/#%E5%8D%95%E6%9C%BA%E5%AE%89%E8%A3%85&#34;&gt;单机安装&lt;/a&gt; 的 Pigsty 为例，假设你有一台 IP 地址为 &lt;code&gt;10.10.10.10&lt;/code&gt; 的机器，已经 &lt;a href=&#34;/zh/docs/setup/install&#34;&gt;安装好了单机 Pigsty&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;当然，我们需要在 Pigsty 配置文件 &lt;code&gt;pigsty.yml&lt;/code&gt; 中定义一下我们所需的数据库集群。
+这里定义了一个名为 &lt;code&gt;pg-meta&lt;/code&gt; 的集群，其中有一个名为 &lt;code&gt;dbuser_dify&lt;/code&gt; 的超级业务用户（它这个实现的有点挫，在 Migration 脚本里面执行了 &lt;code&gt;CREATE EXTENSION&lt;/code&gt; ），一个安装了 &lt;code&gt;pgvector&lt;/code&gt; 扩展插件的数据库 &lt;code&gt;dify&lt;/code&gt;，以及一条特定的防火墙规则，允许用户通过密码从任何地方访问数据库（你也可以将其限制为docker的网段 &lt;code&gt;172.0.0.0/8&lt;/code&gt; 之类更精确的范围）。&lt;/p&gt;
+&lt;p&gt;同时，上面还定义了一个单实例的标准 Redis 集群 &lt;code&gt;redis-dify&lt;/code&gt;，设置了密码 &lt;code&gt;redis.dify&lt;/code&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_users&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: dbuser_dify ,password: DBUser.Dify  ,superuser: true ,pgbouncer: true ,roles&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;dbrole_admin ] } ]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_databases&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: dify, owner: dbuser_dify, extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgvector } ] } ]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_hba_rules&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;user: dbuser_dify , db: all ,addr: world ,auth: pwd ,title&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;allow dify user world pwd access&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis-dify&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_node: 1 , redis_instances&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6379&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_cluster: redis-dify ,redis_password: &amp;#39;redis.dify&amp;#39; ,redis_max_memory&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;64MB }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里出于演示目的，我们全部使用单实例配置，你可以参考 Pigsty 文档部署 &lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;高可用&lt;/a&gt; 的 PG 集群与 Redis 集群。总之，在定义完成后，使用以下命令创建 PG 和 Redis 。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/pgsql-add  pg-meta                &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create the dify database cluster&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add  redis-dify             &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create redis cluster&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当然，您也可以在现有的 PostgreSQL 集群，例如 &lt;code&gt;pg-meta&lt;/code&gt; 上新定义业务用户与业务数据库，并通过以下命令创建：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/pgsql-user pg-meta dbuser_dify    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create dify biz user&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/pgsql-db   pg-meta dify           &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create dify biz database&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;您应该可以通过以下的连接串，访问到 PostgreSQL 与 Redis，当然连接信息请根据实际情况进行修改。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;psql postgres://dbuser_dify:DBUser.Dify@10.10.10.10:5432/dify -c &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;SELECT 1&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;redis-cli -u redis://redis.dify@10.10.10.10:6379/0 ping
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当你确认这两个连接串可用后，大功告成，你可以开始部署 Dify 了。&lt;/p&gt;
+&lt;p&gt;这里出于演示方便的原因，使用IP直连的土办法，如果是多节点的高可用 PG 集群，请参考 &lt;a href=&#34;/zh/docs/concept/svc/&#34;&gt;接入&lt;/a&gt; 一节。&lt;/p&gt;
+&lt;p&gt;当然，上面的部分是假设你已经是 Pigsty 用户，了解如何部署 PostgreSQL 与 Redis 集群。你可以直接跳过下一节，查看 &lt;a href=&#34;/zh/blog/pg/dify-setup/#dify的配置工作&#34;&gt;Dify 如何配置&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;从零开始的一些说明&#34;&gt;从零开始的一些说明&lt;/h2&gt;
+&lt;p&gt;如果您已经了解如何配置使用 Pigsty，可以略过本节。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/setup/install&#34;&gt;从零安装&lt;/a&gt; Pigsty 需要 &lt;a href=&#34;/zh/docs/setup/prepare/&#34;&gt;准备&lt;/a&gt; 一台符合要求的机器节点： Linux / x86_64，静态 IP，使用带有免密 &lt;code&gt;sudo&lt;/code&gt; 权限的用户，执行以下命令：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -L https://get.pigsty.cc/install &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; bash
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;然后依次完成以下步骤：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; ~/pigsty      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下载源码包解压后进入 Pigsty 源码目录，完成后续 准备、配置、安装 三个步骤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./bootstrap      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 【可选项】用于确保 Ansible 正常安装，如果 /tmp/pkg.tgz 离线包则使用它&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./configure      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 【可选项】执行环境检测，并生成相应的推荐配置文件，如果知道如何配置可以跳过&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# …… 这里请修改自动生成的配置 pigsty.yml ，将上面的集群定义填入 all.children 部分内&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./install.yml    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据生成的配置文件开始在当前节点上执行安装，使用离线安装包大概需要10分钟完成&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;您应当将上面的 PostgreSQL 集群与 Redis 集群定义填入 &lt;code&gt;pigsty.yml&lt;/code&gt; 文件中，然后执行 &lt;a href=&#34;/zh/docs/infra#infrayml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt; 完成安装。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Redis安装问题&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Pigsty 默认不会安装 Redis，所以您需要使用 &lt;a href=&#34;/zh/docs/redis#redisyml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt; 剧本显式完成 Redis 安装：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Docker安装问题&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Pigsty 默认不会在当前节点安装 Docker，所以您需要使用 &lt;a href=&#34;/zh/docs/docker#dockeryml&#34;&gt;&lt;code&gt;docker.yml&lt;/code&gt;&lt;/a&gt; 剧本安装 Docker。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./docker.yml
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Docker Hub 被墙问题&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;请注意，对于中国大陆用户来说，Docker Hub 与各镜像站点目前出于封锁状态，需要 “科学上网” 才能拉取 Dify 所需的镜像，您可以考虑 &lt;code&gt;docker save|load&lt;/code&gt;，或者为 Docker Daemon 配置代理。&lt;/p&gt;
+&lt;p&gt;要为 Docker Daemon 配置代理，您需要在 &lt;a href=&#34;/zh/docs/reference/param#proxy_env&#34;&gt;&lt;code&gt;proxy_env&lt;/code&gt;&lt;/a&gt; 中指定 &lt;code&gt;http_proxy&lt;/code&gt; 与 &lt;code&gt;https_proxy&lt;/code&gt; 环境变量，该参数会在 &lt;code&gt;docker_config&lt;/code&gt; 任务中被写入 &lt;code&gt;/etc/docker/daemon.json&lt;/code&gt; 中：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;proxies&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;http-proxy&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;http://192.168.x.x:8118&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;https-proxy&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;http://192.168.x.x:8118&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;no-proxy&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,*.pigsty,*.aliyun.com,mirrors.*,*.myqcloud.com,*.tsinghua.edu.cn&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当然您也可以直接在配置文件中填入您的 HTTP/HTTPS 代理地址，并使用 &lt;code&gt;systemctl restart docker&lt;/code&gt; 重启生效。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ docker compose pull
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; Pulling 5/5
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;✔ worker Skipped - Image is already being pulled by api
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;✔ web Pulled
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;✔ api Pulled
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;✔ ssrf_proxy Pulled
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;✔ nginx Pulled
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;配置代理后，镜像都可以成功拉取了。当然您也可以使用其他可用的镜像站点，例如 quay.io 等。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;dify的配置工作&#34;&gt;Dify的配置工作&lt;/h2&gt;
+&lt;p&gt;Dify 的配置参数一如往常地放在 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/app/dify/.env&#34;&gt;&lt;code&gt;.env&lt;/code&gt;&lt;/a&gt; 文件中，内容如下所示：&lt;/p&gt;
+&lt;p&gt;所有参数都顾名思义，已经填入了在 &lt;a href=&#34;/zh/docs/setup/provision/&#34;&gt;Pigsty默认沙箱环境&lt;/a&gt; 中可以直接工作的默认值，数据库连接信息请根据您的真实配置，与上面 PG / Redis 集群配置保持一致即可。
+我们建议你随便改一下这个 &lt;code&gt;SECRET_KEY&lt;/code&gt; 字段，可以使用 &lt;code&gt;openssl rand -base64 42&lt;/code&gt; 生成一个强密钥。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# meta parameter&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;DIFY_PORT&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;8001&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# expose dify nginx service with port 8001 by default&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;LOG_LEVEL&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;INFO &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;SECRET_KEY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# A secret key for signing and encryption, gen with `openssl rand -base64 42`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# postgres credential&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;PG_USERNAME&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;dbuser_dify
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;PG_PASSWORD&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;DBUser.Dify
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;PG_HOST&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;10.10.10.10
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;PG_PORT&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;5432&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;PG_DATABASE&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;dify
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# redis credential&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;REDIS_HOST&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;10.10.10.10
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;REDIS_PORT&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;REDIS_USERNAME&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;REDIS_PASSWORD&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;redis.dify
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio/s3 [OPTIONAL] when STORAGE_TYPE=s3&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;STORAGE_TYPE&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;local&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3_ENDPOINT&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;https://sss.pigsty&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3_BUCKET_NAME&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;infra&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3_ACCESS_KEY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;dba&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3_SECRET_KEY&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;S3User.DBA&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3_REGION&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;us-east-1&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;填好连接信息后，我们就可以使用 Docker Compose 拉起 Dify 服务了：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; pigsty/app/dify &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; make up
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;使用nginx暴露web服务&#34;&gt;使用Nginx暴露Web服务&lt;/h2&gt;
+&lt;p&gt;Dify 的 Docker Compose 模板里面已经包含了一个 Nginx Server，占据了宿主机的 80 端口。如果你的这台机器就是拿来专门跑 Dify 的那没问题。如果你用的是 Pigsty 单机安装，那么这台宿主机上的 80 端口已经被 Pigsty 部署的 Nginx Web Portal 占据了。&lt;/p&gt;
+&lt;p&gt;所以，Pigsty 提供的模板中，&lt;code&gt;DIFY_PORT&lt;/code&gt; 默认使用了 &lt;code&gt;8001&lt;/code&gt;，并通过宿主机上 Pigsty 部署的 Nginx 转发至此端口。当然我们也提供选项B，你也可以直接在 &lt;code&gt;/etc/nginx/conf.d/dify.conf&lt;/code&gt; 里使用样例配置，直接指向 Dify 的 &lt;code&gt;web&lt;/code&gt; 与 &lt;code&gt;api&lt;/code&gt; 端口。&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;pigsty.yml&lt;/code&gt; 配置文件中的 &lt;code&gt;infra_portal&lt;/code&gt; 参数中新增一行 Dify 的配置&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;infra_portal&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                     &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# domain names and upstream servers&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;home         &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;h.pigsty }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;grafana      &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: g.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:3000&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;, websocket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;prometheus   &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: p.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9090&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alertmanager &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: a.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9093&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;blackbox     &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9115&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;loki         &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:3100&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;dify         &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: dify.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.10:8001&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;, websocket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;执行以下剧本，重新生成 Nginx 配置、证书并应用：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./infra.yml -t nginx
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;当然如果要通过域名访问，你要把自己的域名 &lt;code&gt;dify.pigsty&lt;/code&gt; 添加到域名服务器，或者简单地写入：&lt;code&gt;/etc/hosts&lt;/code&gt; 或 &lt;code&gt;C:\Windows\System32\drivers\etc\hosts&lt;/code&gt; 之类的静态域名解析文件。&lt;/p&gt;
+&lt;p&gt;然后，你就可以从浏览器中，通过 &lt;a href=&#34;http://dify.pigsty&#34;&gt;http://dify.pigsty&lt;/a&gt; 访问 Dify IDE 了。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: Oracle 还能挽救 MySQL 吗？</title>
       <link>/zh/blog/db/can-oracle-save-mysql/</link>
       <pubDate>Fri, 21 Jun 2024 00:00:00 +0000</pubDate>
@@ -9115,134 +9266,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;495aba9d6d18ce1ebed6271e6c96b63a  pigsty-pkg-v2.3.1.el8.x86_64.tgz
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;38b45582cbc337ff363144980d0d7b64  pigsty-pkg-v2.3.1.el9.x86_64.tgz
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: 向量是新的 JSON</title>
-      <link>/zh/blog/pg/vector-json-pg/</link>
-      <pubDate>Sun, 06 Aug 2023 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/pg/vector-json-pg/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/pg/vector-json-pg/featured_huce730e9630068787d1bd07a58d4aebf3_428852_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
-        
-        &lt;p&gt;“&lt;strong&gt;向量是新的JSON&lt;/strong&gt;”，这本身就是一种很有趣的说法。因为&lt;strong&gt;向量&lt;/strong&gt;（Vector）是一种已经被深入研究过的&lt;strong&gt;数学结构&lt;/strong&gt;，而 &lt;strong&gt;JSON&lt;/strong&gt; 是一种&lt;strong&gt;数据交换格式&lt;/strong&gt;。然而，在数据存储和检索的世界中，这两种数据表示方式都已经成为了各自领域的通用语言，成为（或即将成为）现代应用开发中必不可少的要素。如果按当下的趋势发展，&lt;strong&gt;向量将会像 JSON 一样，成为构建应用时的关键要素&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;生成型AI 引发的热潮促使开发者寻找一种简便的方法来存储与查询这些系统的&lt;strong&gt;输出&lt;/strong&gt;。出于很多因素，PostgreSQL 成为了最自然的选择。但即使是生成型AI 炒翻天也无法改变这一事实：向量并不是一种新的数据模式，它作为一种数学概念已经存在数百年了，而机器学习领域也对其已有半个世纪多的研究。向量的基础数据结构 —— &lt;strong&gt;数组&lt;/strong&gt;，几乎在所有初级导论性质的计算机科学课程中都会讲授。连 PostgreSQL 对向量运算的支持也已经有20多年的历史了！&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-1.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;高中数学知识：向量的余弦距离与相似度&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;那有什么东西是新的呢？其实是 AI/ML 算法的 &lt;strong&gt;易用性（Accessibility）&lt;/strong&gt;，以及如何将一些“真实世界”的结构（文本、图像、音频、视频）用向量的形式表示，并将其存储起来，以供应用实现一些有用的功能。有些人可能会说，把这些AI系统的输出（也就是所谓的“&lt;strong&gt;嵌入 Embedding&lt;/strong&gt;”）放进数据存储系统中并不是什么新把戏。所以这里我们得再次强调，真正的新模式是 &lt;strong&gt;易用性&lt;/strong&gt;：几乎所有应用都可以用这种近乎实时的方式查询并返回这些数据（文字图片音视频的向量表示）。&lt;/p&gt;
-&lt;p&gt;不过，这些与 PostgreSQL 有什么关系？那关系可大了！&lt;strong&gt;高效存储检索向量 —— 这种普适泛用数据类型，可以极大地简化应用程序开发，让相关联的数据都存放在同一个地方，并让人们继续使用现有的工具链&lt;/strong&gt;。我们在十多年前的 JSON 上看到了这一点，现在我们在向量上也看到了这一点。&lt;/p&gt;
-&lt;p&gt;要理解为什么向量是新的 JSON，让我们回顾一下 JSON —— 互联网通信的事实标准，当 JSON 崭露头角时发生了什么？&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;json-简史postgresql-实现&#34;&gt;JSON 简史：PostgreSQL 实现&lt;/h2&gt;
-&lt;p&gt;在 “JSON崛起” 期间，我主要还是一名应用开发者。我正在构建的系统，要么是将 JSON 数据发送到前端，使其可以完成某种操作（例如渲染一个可更新的组件），要么是与返回 JSON 格式数据的“现代”API交互。JSON 的好处在于其简单性（很容易阅读和操作），作为一种数据交换格式具有很强的表达力。JSON 确实简化了系统间的通信，无论是从开发还是运维的角度。但我是希望在JSON中看到一些我喜欢的东西 —— 在数据库这一侧，我是使用&lt;strong&gt;模式&lt;/strong&gt;（Schemas）的坚定支持者。&lt;/p&gt;
-&lt;p&gt;虽然 JSON 最初是作为一种&lt;strong&gt;交换格式&lt;/strong&gt;而存在的，但人们确实会问 “为什么我不能直接存储和查询这玩意？” 这个问题引出了一种专门的数据存储系统 —— 可以用来存储和查询 JSON 文档。我确实试过好几种不同的 &lt;strong&gt;专用 JSON 存储系统&lt;/strong&gt;，来解决一个特定场景下的问题，但我并不确定我是否想把他们引入到自己的应用技术栈中 —— 出于性能与可维护性的原因 （我不会说具体是哪些，因为十多年过去，时过境迁了）。这就引出了一个问题 —— 能否在PostgreSQL中存储 JSON 数据？&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-2.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL JSON 特性矩阵&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;我记得当年去参加 PostgreSQL 活动时的急切心情 —— 等待 PostgreSQL 对原生 JSON 存储检索支持的更新。我记得当 PostgreSQL 9.2 增加了基于文本的 JSON 类型支持时自己是多么的激动开心。PostgreSQL 对 JSON 最开始的支持是对所存储 JSON 内容的合法性校验，以及一些用于提取 JSON 文档数据的函数与运算符。那时候并没有原生的索引支持，但如果你需要根据文档中的某个 Key 进行频繁查询，还是可以使用 &lt;strong&gt;表达式索引&lt;/strong&gt; 功能来为你感兴趣的 Key 添加索引。&lt;/p&gt;
-&lt;p&gt;PostgreSQL 对 JSON 的初步支持帮助我解决了一些问题，具体来说有：对数据库中几个表的状态做快照，以及记录我与之交互的 API 的输出。最初的基于文本的 JSON 数据类型在检索能力上乏善可陈：你确实可以构建表达式索引来根据 JSON 文档中的特定 Key 来走索引，但实践上我还是会把那个 Key 单独抽取出来放在与 JSON 相邻的单独列中。&lt;/p&gt;
-&lt;p&gt;这里的关键在于：PG 对 JSON 的初步支持以 “JSON数据库”的标准来看还是很有限的。没错，我们现在可以存储 JSON，也拥有了一些有限的查询能力，但要和专用 JSON 数据库拼功能，显然还需要更多的工作。不过对于许多这样的用例，PostgreSQL仍然已经是&lt;strong&gt;足够好&lt;/strong&gt;了：&lt;strong&gt;只要能和现有的应用基础设施一起使用，开发者还是愿意在某种程度上接受这些局限性的&lt;/strong&gt;。PostgreSQL 也是&lt;strong&gt;第一个&lt;/strong&gt;提供 JSON 支持的关系型数据库，带了一波节奏，最终直接导致 JSON 进入到 SQL 标准中。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-3.jpeg&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;俄罗斯的 PostgreSQL 与 Oleg 对 PG JSON 特性居功至伟&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;紧接着 PostgreSQL 作为 “JSON数据库” 的可行性，在 PostgreSQL 9.4 发布后出现质变：这个版本新增了 &lt;strong&gt;JSONB&lt;/strong&gt; 类型，这是 JSON 数据类型的二进制表示，而且可以使用 GIN 索引来索引 JSON 文档中的任意数据。这让 PostgreSQL 能在性能上与专用 JSON数据库旗鼓相当，同时还能保留有关系数据库的所有好处 —— 尽管适应并支持这类应用负载花费了 PostgreSQL 好几年的时间。&lt;/p&gt;
-&lt;p&gt;PostgreSQL 对 JSON 的支持在过去的几年中持续发展演进，随着PostgreSQL不断实现和采纳 SQL/JSON 标准，未来也一定会继续保持这种发展势头。我曾与一些 PostgreSQL 用户聊过，他们在 PostgreSQL 数据库中存了几十TB的 JSON 文档 —— 用户表示体验甚好！&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-4.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;这个故事的关键是，开发者愿意押注 PostgreSQL 会拥有一个具有竞争力的 JSON存储系统，并愿意接受其最初实现的局限性，直到更为强大稳健的支持出现。这就引出了我们要讨论的 &lt;strong&gt;向量&lt;/strong&gt;。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;向量崛起一种新-json&#34;&gt;向量崛起：一种新 JSON&lt;/h2&gt;
-&lt;p&gt;向量并不是新东西，但近来它们的流行度飙升。如前所述，这归功于AI/ML系统新涌现出的&lt;strong&gt;易用性&lt;/strong&gt;，而这些系统的输出结果是&lt;strong&gt;向量&lt;/strong&gt;。典型用例是在存储的数据（文本、声音、视频）上建立模型，并用模型将其转换为向量格式，然后用于“&lt;strong&gt;语义搜索&lt;/strong&gt;”。&lt;/p&gt;
-&lt;p&gt;语义搜索工作原理如下：你把输入用模型转换为对应的向量，并在数据库中查找与此向量最为相似的结果。&lt;strong&gt;相似度&lt;/strong&gt;使用&lt;strong&gt;距离函数&lt;/strong&gt;进行衡量：比如欧式距离，或余弦距离，结果通常会按距离排序取 TOP K，即 K 个最为相似的对象（K-NN, k nearest neighbors）。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-5.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;向量的余弦距离被广泛用于衡量两者的相似度&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;用模型将“训练集”编码为向量需要耗费很长的时间，所以把这些编码结果 “缓存” 在持久化数据存储 —— 比如说数据库中是有意义的，然后你就可以在数据库中运行 K-NN 查询了。事先在数据库里准备好一组备查的向量，通常会为语义搜索带来更好的用户体验，需要“向量数据库”的想法就是这么来的。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-6.jpeg&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;AI模型将各种对象统一编码为向量（浮点数组）&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;在PostgreSQL中存储向量不是一件新鲜事儿。1996 年 PostgreSQL 首次开源时就已经带有&lt;strong&gt;数组类型&lt;/strong&gt;（Array）了！而且多年来又进行了无数的改进。实际上，PostgreSQL 中 &lt;strong&gt;数组&lt;/strong&gt; 类型名称可能有些用词不当，因为它其实可以存储&lt;strong&gt;多维&lt;/strong&gt;数据（例如矩阵/张量）。PostgreSQL 原生支持了一些数组函数，不过有一些常见的向量运算不在其中，比如计算两个数组间的距离。你确实可以写个存储过程来干这个事，但这就是把活儿推给开发者了。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-7.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL特性矩阵：数组与Cube&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;幸运的是，&lt;code&gt;cube&lt;/code&gt; 数据类型克服了这些局限。cube 在PostgreSQL代码库中也已经有20多年了，并且是为在高维向量上执行运算而设计的。cube 包含了在向量相似性搜索中使用的大多数常见距离函数，包括欧几里得距离，而且可以使用 GiST索引来执行高效的 K-NN 查询！但是 cube 最多只能存储100维的向量，而许多现代AI/ML系统的维度远超这个数。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-8.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;ChatGPT Embedding API 使用 1536 维向量&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;那么，如果 &lt;strong&gt;array&lt;/strong&gt; 可以搞定向量&lt;strong&gt;维度&lt;/strong&gt;的问题但没有解决向量&lt;strong&gt;运算&lt;/strong&gt;的问题；而 &lt;strong&gt;cube&lt;/strong&gt; 可以搞定运算但搞不定维度，我们该怎么办？&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;pgvector-开源pg向量扩展&#34;&gt;PGVECTOR: 开源PG向量扩展&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;可扩展性&lt;/strong&gt; 是 PostgreSQL 的基石特性之一：PostgreSQL 提供创建新数据类型和新索引方法的接口。这让 &lt;strong&gt;pgvector&lt;/strong&gt; 成为可能：一个开源 PostgreSQL 扩展，提供了一种可索引的 &lt;code&gt;vector&lt;/code&gt; 数据类型。简而言之，pgvector 允许您在 PostgreSQL 中存储向量，并使用各种距离度量执行K-NN查询：欧式距离、余弦和内积。到目前为止，pgvector 带有一种新索引类型 &lt;code&gt;ivfflat&lt;/code&gt;，实现了 IVF FLAT 向量索引。&lt;/p&gt;
-&lt;p&gt;当您使用索引来查询向量数据时，事情可能和您所习惯的 PostgreSQL 数据查询略有不同。由于在高维向量上执行最近邻搜索的计算成本很高，许多向量索引方法选择寻找与正确结果 “足够接近” 的 “&lt;strong&gt;近似&lt;/strong&gt;” 答案，这将我们带入 “近似最近邻搜索”（ANN）的领域。ANN 查询的关注焦点是，&lt;strong&gt;性能与召回率两个维度上的利弊权衡&lt;/strong&gt;，这里“&lt;strong&gt;召回率（Recall）&lt;/strong&gt;”指的是返回相关的结果所占百分比。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-9.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;pgvector 在 ANN Benchmark 各测试集下的召回率/性能曲线&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;让我们以 ivfflat 方法为例。构建 ivfflat 索引时，您需要决定有多少个 &lt;strong&gt;list&lt;/strong&gt; 。每个 &lt;strong&gt;list&lt;/strong&gt; 代表一个“中心”，这些中心会使用 k-means 聚类算法确定。确定所有中心后，ivfflat 会计算每一个向量最接近哪个中心点，并将其添加到索引中。当查询向量数据时，你还需要决定需要检查多少个中心，这由 &lt;code&gt;ivfflat.probes&lt;/code&gt; 参数确定。这就是您所看到的 ANN性能/召回率权衡：你检查的中心越多，结果就会越精确，但性能开销就越大。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-10.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;IVF FLAT 索引算法的的召回率取决于检查的中心数量&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;把 AI/ML 的输出存入 “向量数据库” 已经很流行了，至于 pgvector 也已经有大把的使用样例。所以这里我们将关注重点放在未来的发展方向上。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;迈向明天更好的向量支持&#34;&gt;迈向明天：更好的向量支持&lt;/h2&gt;
-&lt;p&gt;与 PostgreSQL 9.2 版本中的 JSON 情况类似，我们正处于如何在 PostgreSQL 中存储向量数据的初级阶段 —— 虽然我们在PostgreSQL和 pgvector 中看到的大部分内容都很不错，但它即将要好得多！&lt;/p&gt;
-&lt;p&gt;pgvector 已经可以处理许多常见的 AI/ML 数据用例 —— 我已经看到许多用户成功地使用它开发部署应用！—— 因此下一步是帮助它打江山。这与 PostgreSQL 中的 JSON 和 JSONB 的情况没有太大区别，但 pgvector 作为一个扩展，将有助于它更快地迭代。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-11.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;pgvector 的 Github Star 增长在2023年4月出现加速&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;在 2023 年的 PGCon 上，这是一个聚集了许多内部开发者的 PostgreSQL 会议，我做了一个名为《向量是新的JSON[1]》的快速演讲，其中分享了使用案例，以及改进 PostgreSQL 和 pgvector 向量数据检索性能所面临的挑战。这是一些需要解决的问题（有些已经在做了！）：包括给 pgvector 添加更多并行机制，对超过 2000 维向量的索引支持，以及尽可能使用硬件来加速计算。好消息是添加这些功能并不难，只需要开源贡献！&lt;/p&gt;
-&lt;p&gt;许多人对于把 PostgreSQL 当成向量数据库这件事充满兴趣（重点是 PG 还是一个全能数据库！）。我预计正如历史上的 JSON 一样，PostgreSQL 社区会找到一种支持这种新兴工作负载的方法，更为安全，更容易伸缩扩展。&lt;/p&gt;
-&lt;p&gt;我期待您能提供各种反馈 —— 无论是关于PostgreSQL 本身还是 pgvector ，还是关于您如何在 PostgreSQL 中处理向量数据，或者您希望如何在 PostgreSQL 中处理数据，因为这将帮助社区为向量查询提供最佳的支持。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;本文译自《VECTORS ARE THE NEW JSON IN POSTGRESQL[2]》一文。&lt;/p&gt;
-&lt;p&gt;作者 JONATHAN KATZ ，译者 冯若航&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;译者评论&#34;&gt;译者评论&lt;/h2&gt;
-&lt;p&gt;PostgreSQL 在过去十年间有着持续稳定的高速增长，从一个&amp;quot;相对来说小众&amp;quot;的数据库，成为如今全世界开发者中最流行，最受喜爱，需求量最大的数据库，不可谓不成功。PG 成功的因素有很多，开源，稳定，可扩展，等等等等。但我认为这里的&lt;strong&gt;关键一招&lt;/strong&gt;还是 &lt;strong&gt;JSON&lt;/strong&gt; 支持。笔者本人就是在 PostgreSQL 9.4 为其强大 JSON 功能折服，果断从 MySQL 跳车弃暗投明。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-12.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL 获得数据库三项大满贯冠军，且势头一往无前&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;拥有了 JSON 特性的 PostgreSQL 等于 &lt;strong&gt;MongoDB&lt;/strong&gt; 与 &lt;strong&gt;MySQL&lt;/strong&gt; 合二为一，恰到好处地赶上了互联网下半场的风口。从 DB-Engine 热度趋势上也能看出，PostgreSQL 开始起飞的时间正是在 2014 年 发布 PostgreSQL 9.4 之后。2013 ～ 2023 这十年可以说是 PG 的黄金十年，无数强大的新功能与各式扩展插件喷涌而出，奠定了 PG 现今不可撼动的地位。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-13.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;DB-Engine 热度走势，来自搜索引擎与网站的综合指数&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;而放眼未来十年，数据库的下一站会是哪里？本文给出了答案 —— &lt;strong&gt;向量&lt;/strong&gt;。正如同 JSON 一样，PostgreSQL 永远站在时代浪潮的巅峰引领潮流 —— 成为&lt;strong&gt;第一个&lt;/strong&gt;提供全方位向量支持的关系型数据库。我有充足的把握断言：以向量为代表的功能将在接下来的十年中继续驱动 PostgreSQL 的高速增长。&lt;/p&gt;
-&lt;p&gt;pgvector 一定不会是 PostgreSQL 处理向量数据的终点，但它为 SQL 向量处理设定了一个标杆。PGVector 项目由 Andrew Kane 于 2021年4月创建，慢热了两年，而从今年三四月开始半年不到暴涨 4K star。而我也可以骄傲的说，作为 PG 社区的一员，我也在这里推波助澜，做了一些工作。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-14.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;我们将 pgvector 提入 PostgreSQL PGDG 官方源，正式成为 PG向量扩展的事实标准；我们进行性能评测，引发了推上关于 PGVector 的大讨论；而我们所维护的开箱即用的开源 RDS PG 替代 Pigsty，则是第一波将 pgvector 集成整合提供服务的 &lt;strong&gt;PostgreSQL 发行版&lt;/strong&gt;。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Pigsty 凝聚 PG 生态合力，为用户提供开源免费开箱即用的本地 PostgreSQL RDS 服务&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;目前我们也在着力于改进 pgvector 的实现，实现了另一种主流向量索引算法 &lt;strong&gt;hnsw&lt;/strong&gt;，在一些 ANN 场景下相比 IVFFLAT 有20倍的性能提升，而且完全兼容 pgvector 接口，并将于近期 Pigsty Release 提供预览。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/pg/vector-json-pg/vector-new-json-15.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;pgvector 改进实现在 ANN-Benchmark 下的初步表现&lt;/p&gt;
-&lt;p&gt;最重要的是，我们相信 PostgreSQL 社区的力量，我们愿意凝聚合力，劲往一处使，共同让 PostgreSQL 走得更快、更远，让 PostgreSQL 在 AI 时代再创辉煌！&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
-&lt;p&gt;[1] 向量是新的JSON&lt;/p&gt;
-&lt;p&gt;[2] VECTORS ARE THE NEW JSON IN POSTGRESQL&lt;/p&gt;
-&lt;p&gt;[3] AI大模型与向量数据库 PGVECTOR&lt;/p&gt;
-&lt;p&gt;[4] PostgreSQL：世界上最成功的数据库&lt;/p&gt;
-&lt;p&gt;[5] 更好的开源RDS替代：Pigsty&lt;/p&gt;
-&lt;p&gt;[6] Pigsty v2.1 发布：向量扩展 / PG12-16 支持&lt;/p&gt;
-
       </description>
     </item>
     

@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.e16e1fe39a5fca32e06cec1adc9a0461.json"
+    data-offline-search-index-json-src="/offline-search-index.5222375129963cfd41950cd82153874b.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -288,6 +288,16 @@ This is the multi-page printable view of this section.
   
   
 
+  
+    
+    
+	
+
+    <li><a href="#pg-635f4dbe52424af419b468e194e22c72">Self-Hosting Dify with PG, PGVector, and Pigsty</a></li>
+
+
+
+    
   
     
     
@@ -2357,6 +2367,153 @@ But when compared to the <strong>hundredfold markup of public cloud block storag
   
 
 <div class="td-content" style="">
+    <h1 id="pg-635f4dbe52424af419b468e194e22c72">Self-Hosting Dify with PG, PGVector, and Pigsty</h1>
+	
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com">微信公众号</a></b> |
+        
+		<time datetime="2024-06-22" class="text-muted">2024-06-22</time>
+        
+	</div>
+	<p><a href="https://dify.ai/"><strong>Dify</strong></a> &ndash; The Innovation Engine for GenAI Applications</p>
+<p>Dify is an open-source LLM app development platform. Orchestrate LLM apps from agents to complex AI workflows, with an RAG engine.
+Which claims to be more production-ready than LangChain.</p>
+<p>Of course, a workflow orchestration software like this needs a database underneath — Dify uses <strong>PostgreSQL</strong> for meta data storage, as well as Redis for caching and a dedicated vector database.
+You can pull the Docker images and play locally, but for production deployment, this setup won&rsquo;t suffice — there&rsquo;s no HA, backup, PITR, monitoring, and many other things.</p>
+<p>Fortunately, Pigsty provides a battery-include production-grade highly available PostgreSQL cluster, along with the Redis and S3 (MinIO) capabilities that Dify needs, as well as Nginx to expose the Web service, making it the perfect companion for Dify.</p>
+<p><a href="https://github.com/langgenius/dify/blob/main/docker/docker-compose.yaml"><img alt="docker-compose.png" src="/zh/blog/pg/dify-setup/docker-compose.png"></a></p>
+<blockquote>
+<p>Off-load the stateful part to Pigsty, you only need to pull up the stateless blue circle part with a simple <code>docker compose up</code>.</p>
+</blockquote>
+<p>BTW, I have to criticize the design of the Dify template. Since the metadata is already stored in PostgreSQL, why not add <code>pgvector</code> to use it as a vector database? What&rsquo;s even more baffling is that <code>pgvector</code> is a separate image and container. Why not just use a PG image with <code>pgvector</code> included?</p>
+<p>Dify &ldquo;supports&rdquo; a bunch of flashy vector databases, but since PostgreSQL is already chosen, using <code>pgvector</code> as the default vector database is the natural choice. Similarly, I think the Dify team should consider removing Redis. Celery task queues can use PostgreSQL as backend storage, so having multiple databases is unnecessary. Entities should not be multiplied without necessity.</p>
+<p>Therefore, the Pigsty-provided <a href="https://github.com/Vonng/pigsty/tree/master/app/dify">Dify Docker Compose template</a> has made some adjustments to the official example. It removes the <code>db</code> and <code>redis</code> database images, using instances managed by Pigsty. The vector database is fixed to use <code>pgvector</code>, reusing the same PostgreSQL instance.</p>
+<p>In the end, the architecture is simplified to three stateless containers: <code>dify-api</code>, <code>dify-web</code>, and <code>dify-worker</code>, which can be created and destroyed at will. There are also two optional containers, <code>ssrf_proxy</code> and <code>nginx</code>, for providing proxy and some security features.</p>
+<p>There’s a bit of state management left with <a href="https://github.com/Vonng/pigsty/blob/master/app/dify/docker-compose.yml#L128">file system volumes</a>, storing things like private keys. Regular backups are sufficient.</p>
+<p>Reference:</p>
+<ul>
+<li><a href="https://github.com/langgenius/dify/">GitHub: langgenius/Dify</a></li>
+<li><a href="https://github.com/Vonng/pigsty/tree/master/app/dify">Pigsty: Dify Docker Compose Template</a></li>
+</ul>
+<hr>
+<h2 id="pigsty-preparation">Pigsty Preparation</h2>
+<p>Let&rsquo;s take the <a href="/docs/concept/arch/#singleton-meta">single-node installation</a> of Pigsty as an example. Suppose you have a machine with the IP address <code>10.10.10.10</code> and already pigsty <a href="/docs/setup/install/">installed</a>.</p>
+<p>We need to define the database clusters required in the Pigsty configuration file <code>pigsty.yml</code>.</p>
+<p>Here, we define a cluster named <code>pg-meta</code>, which includes a superuser named <code>dbuser_dify</code> (the implementation is a bit rough as the Migration script executes <code>CREATE EXTENSION</code> which require dbsu privilege for now),</p>
+<p>And there&rsquo;s a database named <code>dify</code> with the <code>pgvector</code> extension installed, and a specific firewall rule allowing users to access the database from anywhere using a password (you can also restrict it to a more precise range, such as the Docker subnet <code>172.0.0.0/8</code>).</p>
+<p>Additionally, a standard single-instance Redis cluster <code>redis-dify</code> with the password <code>redis.dify</code> is defined.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg-meta</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary } }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_users</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dify ,password: DBUser.Dify  ,superuser: true ,pgbouncer: true ,roles</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbrole_admin ] } ]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_databases</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dify, owner: dbuser_dify, extensions</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgvector } ] } ]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_hba_rules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">user: dbuser_dify , db: all ,addr: world ,auth: pwd ,title</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;allow dify user world pwd access&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis-dify</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 , redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-dify ,redis_password: &#39;redis.dify&#39; ,redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">64MB }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>For demonstration purposes, we use single-instance configurations. You can refer to the Pigsty documentation to deploy <a href="/docs/concept/ha/">high availability</a> PG and Redis clusters. After defining the clusters, use the following commands to create the PG and Redis clusters:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-add  pg-meta                <span style="color:#8f5902;font-style:italic"># create the dify database cluster</span>
+</span></span><span style="display:flex;"><span>bin/redis-add  redis-dify             <span style="color:#8f5902;font-style:italic"># create redis cluster</span>
+</span></span></code></pre></div><p>Alternatively, you can define a new <a href="/docs/pgsql/user/">business user</a> and <a href="/docs/pgsql/db/">business database</a> on an existing PostgreSQL cluster, such as <code>pg-meta</code>, and create them with the following commands:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-user pg-meta dbuser_dify    <span style="color:#8f5902;font-style:italic"># create dify biz user</span>
+</span></span><span style="display:flex;"><span>bin/pgsql-db   pg-meta dify           <span style="color:#8f5902;font-style:italic"># create dify biz database</span>
+</span></span></code></pre></div><p>You should be able to access PostgreSQL and Redis with the following connection strings, adjusting the connection information as needed:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>psql postgres://dbuser_dify:DBUser.Dify@10.10.10.10:5432/dify -c <span style="color:#4e9a06">&#39;SELECT 1&#39;</span>
+</span></span><span style="display:flex;"><span>redis-cli -u redis://redis.dify@10.10.10.10:6379/0 ping
+</span></span></code></pre></div><p>Once you confirm these connection strings are working, you&rsquo;re all set to start deploying Dify.</p>
+<p>For demonstration purposes, we&rsquo;re using direct IP connections. For a multi-node high availability PG cluster, please refer to the <a href="/docs/concept/svc/">service access</a> section.</p>
+<p>The above assumes you are already a Pigsty user familiar with deploying PostgreSQL and Redis clusters. You can skip the next section and proceed to see <a href="/blog/pg/dify-setup/#dify-configuration">how to configure Dify</a>.</p>
+<hr>
+<h2 id="starting-from-scratch">Starting from Scratch</h2>
+<p>If you&rsquo;re already familiar with setting up Pigsty, feel free to skip this section.</p>
+<p><a href="/docs/setup/prepare/">Prepare</a> a fresh Linux x86_64 node that runs <a href="/docs/reference/compatibility/">compatible</a> OS, then run as a <strong>sudo-able</strong> user:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -L https://get.pigsty.cc/install <span style="color:#000;font-weight:bold">|</span> bash
+</span></span></code></pre></div><p>It will <a href="/blog/pg/dify-setup/#download">download</a> Pigsty source to your home, then perform <a href="/blog/pg/dify-setup/#configure">configure</a> and <a href="/blog/pg/dify-setup/#install">install</a> to finish the installation.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pigsty   <span style="color:#8f5902;font-style:italic"># get pigsty source and entering dir</span>
+</span></span><span style="display:flex;"><span>./bootstrap   <span style="color:#8f5902;font-style:italic"># download bootstrap pkgs &amp; ansible [optional]</span>
+</span></span><span style="display:flex;"><span>./configure   <span style="color:#8f5902;font-style:italic"># pre-check and config templating   [optional]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># change pigsty.yml, adding those cluster definitions above into all.children </span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>./install.yml <span style="color:#8f5902;font-style:italic"># install pigsty according to pigsty.yml</span>
+</span></span></code></pre></div><p>You should insert the above PostgreSQL cluster and Redis cluster definitions into the <code>pigsty.yml</code> file, then run <a href="/docs/infra/#infrayml"><code>install.yml</code></a> to complete the installation.</p>
+<p><strong>Redis Deploy</strong></p>
+<p>Pigsty will not deploy redis in <code>install.yml</code>, so you have to run <a href="/zh/docs/redis#redisyml"><code>redis.yml</code></a> playbook to install Redis explicitly:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./redis.yml
+</span></span></code></pre></div><p><strong>Docker Deploy</strong></p>
+<p>Pigsty will not deploy Docker by default, so you need to install Docker with the <a href="/zh/docs/docker#dockeryml"><code>docker.yml</code></a> playbook.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./docker.yml
+</span></span></code></pre></div><hr>
+<h2 id="dify-confiugration">Dify Confiugration</h2>
+<p>You can configure dify in the <a href="https://github.com/Vonng/pigsty/blob/master/app/dify/.env"><code>.env</code></a> file:</p>
+<p>All parameters are self-explanatory and filled in with default values that work directly in the <a href="/docs/setup/provision/">Pigsty sandbox env</a>.
+Fill in the database connection information according to your actual conf, consistent with the PG/Redis cluster configuration above.</p>
+<p>Changing the <code>SECRET_KEY</code> field is recommended. You can generate a strong key with <code>openssl rand -base64 42</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># meta parameter</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">DIFY_PORT</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">8001</span> <span style="color:#8f5902;font-style:italic"># expose dify nginx service with port 8001 by default</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">LOG_LEVEL</span><span style="color:#ce5c00;font-weight:bold">=</span>INFO <span style="color:#8f5902;font-style:italic"># The log level for the application. Supported values are `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">SECRET_KEY</span><span style="color:#ce5c00;font-weight:bold">=</span>sk-9f73s3ljTXVcMT3Blb3ljTqtsKiGHXVcMT3BlbkFJLK7U <span style="color:#8f5902;font-style:italic"># A secret key for signing and encryption, gen with `openssl rand -base64 42`</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># postgres credential</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">PG_USERNAME</span><span style="color:#ce5c00;font-weight:bold">=</span>dbuser_dify
+</span></span><span style="display:flex;"><span><span style="color:#000">PG_PASSWORD</span><span style="color:#ce5c00;font-weight:bold">=</span>DBUser.Dify
+</span></span><span style="display:flex;"><span><span style="color:#000">PG_HOST</span><span style="color:#ce5c00;font-weight:bold">=</span>10.10.10.10
+</span></span><span style="display:flex;"><span><span style="color:#000">PG_PORT</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">5432</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">PG_DATABASE</span><span style="color:#ce5c00;font-weight:bold">=</span>dify
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># redis credential</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">REDIS_HOST</span><span style="color:#ce5c00;font-weight:bold">=</span>10.10.10.10
+</span></span><span style="display:flex;"><span><span style="color:#000">REDIS_PORT</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">6379</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">REDIS_USERNAME</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">REDIS_PASSWORD</span><span style="color:#ce5c00;font-weight:bold">=</span>redis.dify
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># minio/s3 [OPTIONAL] when STORAGE_TYPE=s3</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">STORAGE_TYPE</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">local</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">S3_ENDPOINT</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;https://sss.pigsty&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">S3_BUCKET_NAME</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;infra&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">S3_ACCESS_KEY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;dba&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">S3_SECRET_KEY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;S3User.DBA&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">S3_REGION</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;us-east-1&#39;</span>
+</span></span></code></pre></div><p>Now we can pull up dify with docker compose:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> pigsty/app/dify <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make up
+</span></span></code></pre></div><hr>
+<h2 id="expose-dify-service-via-nginx">Expose Dify Service via Nginx</h2>
+<p>Dify expose web/api via its own nginx through port 80 by default, while pigsty uses port 80 for its own Nginx. T</p>
+<p>herefore, we expose Dify via port <code>8001</code> by default, and use Pigsty&rsquo;s Nginx to forward to this port.</p>
+<p>Change <code>infra_portal</code> in <code>pigsty.yml</code>, with the new <code>dify</code> line:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">infra_portal</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                     </span><span style="color:#8f5902;font-style:italic"># domain names and upstream servers</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">home         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">h.pigsty }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">grafana      </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: g.pigsty ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3000&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">, websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">prometheus   </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: p.pigsty ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9090&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">alertmanager </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: a.pigsty ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9093&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">blackbox     </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:9115&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">loki         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;${admin_ip}:3100&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">dify         </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">domain: dify.pigsty ,endpoint</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;10.10.10.10:8001&#34;</span><span style="color:#204a87;font-weight:bold">, websocket</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>Then expose dify web service via Pigsty&rsquo;s Nginx server:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./infra.yml -t nginx
+</span></span></code></pre></div><p>Don&rsquo;t forget to add <code>dify.pigsty</code> to your DNS or local <code>/etc/hosts</code> / <code>C:\Windows\System32\drivers\etc\hosts</code> to access via domain name.</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
     <h1 id="pg-7b7e2fed3610aaf3b302a1fa64530049">PGCon.Dev 2024, The conf that shutdown PG for a week</h1>
 	
 	<div class="td-byline mb-4">
