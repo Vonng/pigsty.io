@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.c82173949d56d3a2e07aa71bf2571b04.json"
+    data-offline-search-index-json-src="/offline-search-index.044d0fa6dba68671f28e71da2d8cd4bc.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -139,6 +139,26 @@ This is the multi-page printable view of this section.
   
   
 
+  
+    
+    
+	
+
+    <li><a href="#pg-3dfa64ea713ea97c18eab6c9f84ffc21">MySQL安魂九霄，PG驶向云外</a></li>
+
+
+
+    
+  
+    
+    
+	
+
+    <li><a href="#pg-19aac8151de78b5c4f2662fefbc486ab">CVE-2024-6387 OpenSSH 漏洞修复指南</a></li>
+
+
+
+    
   
     
     
@@ -398,6 +418,257 @@ This is the multi-page printable view of this section.
   
 
 <div class="td-content" style="">
+    <h1 id="pg-3dfa64ea713ea97c18eab6c9f84ffc21">MySQL安魂九霄，PG驶向云外</h1>
+	
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）</b> |
+        
+		<time datetime="2024-07-08" class="text-muted">2024年07月08日</time>
+        
+	</div>
+	<p>最近， MySQL 9.0 终于发布了，距离上一次大版本更新 8.0 (<a href="https://dev.mysql.com/doc/relnotes/mysql/8.0/en/news-8-0-0.html">@2016-09</a>) 已经过去整整八年。然而这个空洞无物的所谓“创新版本”却犹如一个恶劣的玩笑，高声宣告着 MySQL <strong>正在死去</strong> 的残酷现实。</p>
+<p>PostgreSQL 正在高歌猛进，而 MySQL 却日薄西山，作为 MySQL 生态扛把子之一的 Percona 也不得不悲痛地承认这一现实，并且连发了三篇文章：《<a href="https://mp.weixin.qq.com/s/nKD00j84R-EcOU1VPL1ibA">MySQL将何去何从</a>》，《<a href="https://mp.weixin.qq.com/s/1zlDPie_bVvP7eO6_uTkSw">Oracle最终还是杀死了MySQL</a>》，《<a href="https://pigsty.io/zh/blog/db/can-oracle-save-mysql/">Oracle还能挽救MySQL吗</a>》，公开表达了对 MySQL 的失望与沮丧；Percona 的 CEO Peter Zaitsev 也表示：</p>
+<blockquote>
+<p><strong>有了 PostgreSQL，谁还需要 MySQL 呢？</strong> —— 但如果 MySQL 死了，PostgreSQL 就真的垄断数据库世界了，所以 MySQL 至少还可以作为 PostgreSQL 的磨刀石，让 PG 进入全盛状态。</p>
+</blockquote>
+<p>有的数据库正在<a href="/zh/blog/pg/pg-eat-db-world">吞噬数据库世界</a>，而有的数据库正在<a href="/zh/blog/db/mysql-is-dead">黯然地凋零死去</a>。</p>
+<p><strong>MySQL is dead，Long live PostgreSQL！</strong></p>
+<ul>
+<li><a href="/zh/blog/db/mysql-is-dead/#空洞无物的创新版本">空洞无物的创新版本</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#糊弄了事的向量类型">糊弄了事的向量类型</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#姗姗来迟的js函数">姗姗来迟的JS函数</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#日渐落后的功能特性">日渐落后的功能特性</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#越新越差的性能表现">越新越差的性能表现</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#无可救药的隔离等级">无可救药的隔离等级</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#枯萎收缩的生态规模">枯萎收缩的生态规模</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#究竟是谁杀死了mysql">究竟是谁杀死了MySQL</a></li>
+<li><a href="/zh/blog/db/mysql-is-dead/#pg驶向云外mysql安魂九霄">PG驶向云外，MySQL安魂九霄</a></li>
+</ul>
+<hr>
+<h2 id="空洞无物的创新版本">空洞无物的创新版本</h2>
+<p>MySQL 官网发布的 <a href="https://dev.mysql.com/doc/refman/9.0/en/mysql-nutshell.html">&ldquo;What&rsquo;s New in MySQL 9.0&rdquo;</a> 介绍了 9.0 版本引入的几个新特性，而 <a href="https://mp.weixin.qq.com/s/puDWYINtIs-pfM_F5s3jaw">MySQL 9.0 新功能概览</a> 一文对此做了扼要的总结：</p>
+<p><img alt="mysql9-feature.png" src="/zh/blog/db/mysql-is-dead/mysql9-feature.png"></p>
+<p><strong>然后呢？就这些吗？这就没了！？</strong></p>
+<p>这确实是让人惊诧不已，因为 PostgreSQL 每年的大版本发布都有无数的新功能特性，例如计划今秋发布的 <a href="https://mp.weixin.qq.com/s/3EBoAHWEI6zZ-T0nNQsk4Q">PostgreSQL 17</a> 还只是 beta1，就已然有着蔚为壮观的新增特性列表：</p>
+<p><img alt="pg17-feature.png" src="/zh/blog/db/mysql-is-dead/pg17-feature.png"></p>
+<p>而最近几年的 PostgreSQL 新增特性甚至足够专门编成一本书了。比如《<a href="https://mp.weixin.qq.com/s/2bjblo9t7KNQh1isRwbs2w">快速掌握PostgreSQL版本新特性</a>》便收录了 PostgreSQL 最近七年的重要新特性 —— 将目录塞的满满当当：</p>
+<p><img alt="pg-features.png" src="/zh/blog/db/mysql-is-dead/pg-features.png"></p>
+<p>回头再来看看 MySQL 9 更新的六个特性，后四个都属于无关痛痒，一笔带过的小修补，拿出来讲都嫌丢人。而前两个 <strong>向量数据类型</strong> 和 <strong>JS存储过程</strong> 才算是重磅亮点。</p>
+<p><strong>BUT ——</strong></p>
+<p>MySQL 9.0 的向量数据类型只是 <code>BLOB</code> 类型换皮 —— 只加了个数组长度函数，这种程度的功能，<strong>28年前</strong> PostgreSQL 诞生的时候就支持了。</p>
+<p>至于 Javascript 存储过程竟然还是一个 <strong>企业版独占特性</strong>，开源版不提供 —— 而同样的功能，<strong>13年前</strong> 的 PostgreSQL 9.1 就已经有了。</p>
+<p>时隔八年的 “创新大版本” 更新就带来了俩 “老特性”，其中一个还是企业版特供。“<strong>创新</strong>”这俩字，在这里显得如此辣眼与讽刺。</p>
+<hr>
+<h2 id="糊弄了事的向量类型">糊弄了事的向量类型</h2>
+<p>2023年，AI爆火，带动了向量数据库赛道。当下几乎所有主流 DBMS 都已经提供向量数据类型支持 —— <strong>MySQL 除外</strong>。</p>
+<p>用户可能原本期待着在 9.0 创新版，向量支持能弥补一些缺憾，结果发布后等到的只有震撼 —— <strong>竟然还可以这么糊弄？</strong></p>
+<p>在 MySQL 9.0 的 <a href="https://dev.mysql.com/doc/refman/9.0/en/vector-functions.html">官方文档</a> 上，只有三个关于向量类型的函数。抛开与字符串互转的两个，真正的功能函数就一个 <code>VECTOR_DIM</code>：返回向量的维度！（计算数组长度）</p>
+<p><img alt="mysql-vector-func.png" src="/zh/blog/db/mysql-is-dead/mysql-vector-func.png"></p>
+<p>向量数据库的门槛不是一般的低 —— 有个向量距离函数就行（内积，10行C代码，小学生水平编程任务），这样至少可以通过全表扫描求距离 + <code>ORDER BY d LIMIT n</code> 实现向量检索，是个可用的状态。
+但 MySQL 9 甚至连这样一个最基本的向量距离函数都懒得去实现，这绝对不是能力问题，而是 Oracle 根本就不想好好做 MySQL 了。
+老司机一眼就能看出这里的所谓 “向量类型” 不过是 <code>BLOB</code> 的别名 —— 它只管你写入二进制数据，压根不管用户怎么查找使用，最后拿个十分钟就能写完的东西糊弄交差了事。</p>
+<p>不糊弄的例子可以参考 MySQL 的老对手 PostgreSQL。在过去一年中，PG 生态里就涌现出了至少六款向量数据库扩展（ <code>pgvector</code>，<code>pgvector.rs</code>，<code>pg_embedding</code>，<code>latern</code>，<code>pase</code>，<code>pgvectorscale</code>），并在你追我赶的赛马中卷出了新高度。
+最后的胜出者是 2021 年就出来的 <a href="/zh/blog/dev/llm-and-pgvector"><code>pgvector</code></a> ，它在无数开发者、厂商、用户的共同努力下，站在 PostgreSQL 的肩膀上，很快便达到了许多专业向量数据库都无法企及的高度，甚至可以说凭借一己之力，干死了这个数据库细分领域 —— 《<a href="/zh/blog/db/svdb-is-dead">专用向量数据库凉了吗？</a>》。</p>
+<p>在这一年内，<code>pgvector</code> <a href="https://jkatz05.com/post/postgres/pgvector-performance-150x-speedup/">性能翻了 150 倍</a>，功能上更是有了翻天覆地的变化 —— <code>pgvector</code> 提供了 float向量，半精度向量，bit向量，稀疏向量几种数据类型；提供了L1距离，L2距离，内积距离，汉明距离，Jaccard距离度量函数；提供了各种向量、标量计算函数与运算符；支持 IVFFLAT，HNSW 两种专用向量索引算法（扩展的扩展 pgvectorscale 还提供了 DiskANN 索引）；支持了并行索引构建，向量量化处理，稀疏向量处理，子向量索引，混合检索，可以使用 SIMD 指令加速。这些丰富的功能，加上开源免费的协议，以及整个 PG 生态的合力与协同效应 —— 让 <code>pgvector</code> 大获成功，并与 PostgreSQL 一起，成为无数 AI 项目使用的默认（向量）数据库。</p>
+<p>拿 <code>pgvector</code> 与来比似乎不太合适，因为 MySQL 9 所谓的“向量”，甚至都远远不如 1996 年 PG 诞生时自带的“多维数组类型” —— “至少它还有一大把数组函数，而不是只能求个数组长度”。</p>
+<p><a href="/zh/blog/pg/vector-json-pg/"><strong>向量是新的JSON</strong></a>，然而向量数据库的宴席都已经散场了，MySQL 都还没来得及上桌 —— 它完美错过了下一个十年 AI 时代的增长动能，正如它在上一个十年里错过互联网时代的JSON文档数据库一样。</p>
+<hr>
+<h2 id="姗姗来迟的js函数">姗姗来迟的JS函数</h2>
+<p>另一个 MySQL 9.0 带来的 “重磅” 特性是 —— <strong>Javascript 存储过程</strong>。</p>
+<p>然而用 Javascript 写存储过程并不是什么新鲜事 —— 早在 2011 年，PostgreSQL 9.1 就已经可以通过 <a href="https://github.com/plv8/plv8/tree/v0.1.0"><code>plv8</code></a> 扩展编写 Javascript 存储过程了，MongoDB 也差不多在同一时期提供了对 Javascript 存储过程的支持。</p>
+<p>如果我们查看 DB-Engine 近十二年的 “<a href="https://demo.pigsty.cc/d/db-analysis/db-engine-analysis?orgId=1&var-year=2012&viewPanel=24">数据库热度趋势</a>” ，不难发现只有 PostgreSQL 与 Mongo 两款 DBMS 在独领风骚 —— MongoDB (2009) 与 PostgreSQL 9.2 (2012) 都极为敏锐地把握住了互联网开发者的需求 —— 在 “JSON崛起” 的第一时间就添加 <a href="/zh/blog/pg/vector-json-pg/">JSON 特性支持</a>（文档数据库），从而在过去十年间吃下了数据库领域最大的增长红利。</p>
+<p><img alt="db-engine.png" src="/zh/blog/db/mysql-is-dead/db-engine.png"></p>
+<p>当然，MySQL 的干爹 —— Oracle 也在2014年底的12.1中添加了 JSON 特性与 Javascript 存储过程的支持 —— 而 MySQL 自己则不幸地等到了 2024 年才补上这一课 —— <strong>但已经太迟了！</strong></p>
+<p>Oracle 支持用 C，SQL，PL/SQL，Pyhton，Java，Javascript 编写存储过程。但在 PostgreSQL 支持的二十多种存储过程语言面前，只能说也是小巫见大巫，只能甘拜下风了：</p>
+<p><img alt="pg-pl.jpg" src="/zh/blog/db/mysql-is-dead/pg-pl.jpg"></p>
+<p>不同于 PostgreSQL 与 Oracle 的开发理念，MySQL 的各种最佳实践里都不推荐使用存储过程 —— 所以 Javascript 函数对于 MySQL 来说是个鸡肋特性。
+然而即便如此，Oracle 还是把 Javascript 存储过程支持做成了一个 <strong>MySQL企业版专属</strong> 的特性 —— 考虑到绝大多数 MySQL 用户使用的都是开源社区版本，这个特性属实是发布了个寂寞。</p>
+<hr>
+<h2 id="日渐落后的功能特性">日渐落后的功能特性</h2>
+<p>MySQL 在功能上缺失的绝不仅仅是是编程语言/存储过程支持，在各个功能维度上，MySQL 都落后它的竞争对手 PostgreSQL 太多了 —— 功能落后不仅仅是在数据库内核功能上，更发生在扩展生态维度。</p>
+<p>来自 CMU 的 Abigale Kim 对<a href="https://abigalekim.github.io/assets/pdf/Anarchy_in_the_Database_PGConfDev2024.pdf">主流数据库的可扩展性</a>进行了研究：PostgreSQL 有着所有 DBMS 中最好的 <strong>可扩展性</strong>（Extensibility），以及其他数据库生态难望其项背的扩展插件数量 —— <strong>375+</strong>，这还只是 PGXN 注册在案的实用插件，<a href="https://gist.github.com/joelonsql/e5aa27f8cc9bd22b8999b7de8aee9d47">实际生态扩展总数已经破千</a>。</p>
+<p><img alt="dbms-extensibility.png" src="/zh/blog/db/mysql-is-dead/dbms-extensibility.png"></p>
+<p>这些扩展插件为 PostgreSQL 提供了各种各样的功能 —— 地理空间，时间序列，向量检索，机器学习，OLAP分析，全文检索，图数据库，让 PostgreSQL 真正成为一专多长的全栈数据库 —— 单一数据库选型便可替代各式各样的专用组件： MySQL，MongoDB，Kafka，Redis，ElasticSearch，Neo4j，甚至是专用分析数仓与数据湖。</p>
+<p><img alt="pg-extensions.jpg" src="/zh/blog/db/mysql-is-dead/pg-extensions.jpg"></p>
+<p>当 MySQL 还局限在 “<strong>关系型 OLTP 数据库</strong>” 的定位时， PostgreSQL 早已经放飞自我，从一个关系型数据库发展成了一个多模态的数据库，成为了一个数据管理的抽象框架与开发平台。</p>
+<p><a href="/zh/blog/pg/pg-eat-db-world">PostgreSQL正在吞噬数据库世界</a> —— 它正在通过插件的方式，将整个数据库世界内化其中。“<a href="/zh/blog/pg/just-use-pg/">一切皆用 Postgres</a>” 也已经不再是少数精英团队的前沿探索，而是成为了一种进入主流视野的最佳实践。</p>
+<p>而在新功能支持上，MySQL 却显得十分消极 —— 一个应该有大量 Breaking Change 的“创新大版本更新”，不是糊弄人的摆烂特性，就是企业级的特供鸡肋，一个大版本就连鸡零狗碎的小修小补都凑不够数。</p>
+<hr>
+<h2 id="越新越差的性能表现">越新越差的性能表现</h2>
+<p>缺少功能也许并不是一个无法克服的问题 —— 对于一个数据库来说，只要它能将自己的本职工作做得足够出彩，那么架构师总是可以多费些神，用各种其他的数据积木一起拼凑出所需的功能。</p>
+<p>MySQL 曾引以为傲的核心特点便是 <strong>性能</strong> —— 至少对于互联网场景下的简单 OLTP CURD 来说，它的性能是非常不错的。然而不幸地是，这一点也正在遭受挑战：Percona 的博文《<a href="/zh/blog/db/sakila-where-are-you-going/">Sakila：你将何去何从</a>》中提出了一个令人震惊的结论：</p>
+<p><strong>MySQL 的版本越新，性能反而越差。</strong></p>
+<p><img alt="mysql-perf-bench.jpg" src="/zh/blog/db/mysql-is-dead/mysql-perf-bench.jpg"></p>
+<p>根据 Percona 的测试，在 sysbench 与 TPC-C 测试下，最新 MySQL 8.4 版本的性能相比 MySQL 5.7 出现了平均高达 <strong>20%</strong> 的下降。而 MySQL 专家 Mark Callaghan 进一步进行了 <a href="https://smalldatum.blogspot.com/2024/02/perf-regressions-in-mysql-from-5621-to.html">详细的性能回归测试</a>，确认了这一现象：</p>
+<p><img alt="mysql-perf.png" src="/zh/blog/db/mysql-is-dead/mysql-perf.png"></p>
+<blockquote>
+<p>MySQL 8.0.36 相比 5.6 ，QPS 吞吐量性能下降了 25% ～ 40% ！</p>
+</blockquote>
+<p>尽管 MySQL 的优化器在 8.x 有一些改进，一些复杂查询场景下的性能有所改善，但分析与复杂查询本来就不是 MySQL 的长处与适用场景，只能说聊胜于无。相反，如果作为基本盘的 OLTP CRUD 性能出了这么大的折损，那确实是完全说不过去的。</p>
+<p><img alt="clickbench.png" src="/zh/blog/db/mysql-is-dead/clickbench.png"></p>
+<blockquote>
+<p>ClickBench：MySQL 打这个榜图什么呢？</p>
+</blockquote>
+<p>Peter Zaitsev 在博文《<a href="/zh/blog/db/mysql-performance-decline">Oracle最终还是杀死了MySQL</a>》中评论：“与 MySQL 5.6 相比，MySQL 8.x 单线程简单工作负载上的性能出现了大幅下滑。你可能会说增加功能难免会以牺牲性能为代价，但 MariaDB 的性能退化要轻微得多，而 PostgreSQL 甚至能在 <a href="https://smalldatum.blogspot.com/2024/06/postgres-17beta1-vs-sysbench-on-large.html">新增功能的同时显著提升性能</a>”。</p>
+<p><img alt="pgsql-perf.jpg" src="/zh/blog/db/mysql-is-dead/pgsql-perf.jpg"></p>
+<p>MySQL的性能随版本更新而逐步衰减，但在同样的性能回归测试中，PostgreSQL 性能却可以随版本更新有着稳步提升。
+特别是在最关键的写入吞吐性能上，最新的 PostgreSQL 17beta1 相比六年前的 PG 10 甚至有了 30% ～ 70% 的提升。</p>
+<p>在 Mark Callaghan 的 <a href="https://smalldatum.blogspot.com/2023/10/postgres-vs-mysql-impact-of-cpu.html">性能横向对比</a> （sysbench 吞吐场景） 中，我们可以看到五年前 PG 11 与 MySQL 5.6 的性能比值（蓝），与当下 PG 16 与 MySQL 8.0.34 的性能比值（红）。PostgreSQL 和 MySQL 的性能差距在这五年间拉的越来越大。</p>
+<p><img alt="pgsql-vs-mysql.jpg" src="/zh/blog/db/mysql-is-dead/pgsql-vs-mysql.jpg"></p>
+<p>几年前的业界共识是 PostgreSQL 与 MySQL 在 <strong>简单 OLTP CRUD 场景</strong> 下的性能基本相同。
+然而此消彼长之下，现在 PostgreSQL 的性能已经远远甩开 MySQL 了。
+PostgreSQL 的各种读吞吐量相比 MySQL 高 25% ～ 100% 不等，在一些写场景下的吞吐量更是达到了 200% 甚至 500% 的恐怖水平。</p>
+<p>MySQL 赖以安身立命的性能优势，已经不复存在了。</p>
+<hr>
+<h2 id="无可救药的隔离等级">无可救药的隔离等级</h2>
+<p>如果只是性能不好，总归还有办法来优化修补。但如果是正确性出了问题，那真就是无可救药了。</p>
+<p>《<a href="/zh/blog/db/bad-mysql">MySQL正确性竟有如此大的问题？</a>》一文指出，在<strong>正确性</strong>这个体面数据库产品必须的基本属性上，MySQL 的表现一塌糊涂。</p>
+<p>权威的分布式事务测试组织 <a href="https://jepsen.io/analyses/mysql-8.0.34">JEPSEN</a> 研究发现，MySQL 文档声称实现的 <strong>可重复读/RR</strong> 隔离等级，实际提供的正确性保证要弱得多 —— MySQL 8.0.34 默认使用的 RR 隔离等级实际上并不可重复读，甚至既不<strong>原子</strong>也不<strong>单调</strong>，连 <strong>单调原子视图/MAV</strong> 的基本水平都不满足。</p>
+<p><img alt="isolation-level.jpg" src="/zh/blog/db/mysql-is-dead/isolation-level.jpg"></p>
+<p><strong>MySQL 的 ACID 存在缺陷，且与文档承诺不符</strong> —— 而轻信这一虚假承诺可能会导致严重的正确性问题，例如数据错漏与对账不平。对于一些数据完整性很关键的场景 —— 例如金融，这一点是无法容忍的。</p>
+<p>此外，能“避免”这些异常的 MySQL <strong>可串行化/SR</strong> 隔离等级难以生产实用，也非官方文档与社区认可的最佳实践；尽管专家开发者可以通过在查询中显式加锁来规避此类问题，但这样的行为极其影响性能，而且容易出现死锁。</p>
+<p>与此同时，PostgreSQL 在 9.1 引入的 可串行化快照隔离（SSI） 算法可以用极小的性能代价提供完整可串行化隔离等级 —— 而且 PostgreSQL 的 SR 在正确性实现上毫无瑕疵 —— 这一点即使是 Oracle 也难以企及。</p>
+<p><img alt="consistency.png" src="/zh/blog/db/mysql-is-dead/consistency.png"></p>
+<p>李海翔教授在《<a href="https://mp.weixin.qq.com/s/_BhAjcMkmthTf8Zw3RWKDw">一致性八仙图</a>》论文中，系统性地评估了主流 DBMS 隔离等级的正确性，图中蓝/绿色代表正确用规则/回滚避免异常；黄A代表异常，越多则正确性问题就越多；红“D”指使用了影响性能的死锁检测来处理异常，红D越多性能问题就越严重；</p>
+<p>不难看出，这里正确性最好（无黄A）的实现是 PostgreSQL SR，与基于PG的 CockroachDB SR，其次是略有缺陷 Oracle SR；主要都是通过机制与规则避免并发异常；而 MySQL 出现了大面积的黄A与红D，正确性水平与实现手法糙地不忍直视。</p>
+<p><strong>做正确的事很重要，而正确性是不应该拿来做利弊权衡的</strong>。在这一点上，开源关系型数据库两巨头 MySQL 和 PostgreSQL 在早期实现上就选择了两条截然相反的道路： MySQL 追求性能而牺牲正确性；而学院派的 PostgreSQL 追求正确性而牺牲了性能。</p>
+<p>在互联网风口上半场中，MySQL 因为性能优势占据先机乘风而起。但当性能不再是核心考量时，正确性就成为了 MySQL 的<strong>致命出血点</strong>。
+更为可悲的是，MySQL 连牺牲正确性换来的性能，都已经不再占优了，这着实让人唏嘘不已。</p>
+<hr>
+<h2 id="枯萎收缩的生态规模">枯萎收缩的生态规模</h2>
+<p>对一项技术而言，用户的<strong>规模</strong>直接决定了生态的繁荣程度。瘦死的骆驼比马大，烂船也有三斤钉。
+MySQL 曾经搭乘互联网东风扶摇而起，攒下了丰厚的家底，它的 Slogan 就很能说明问题 —— “<strong>世界上最流行的开源关系型数据库</strong>”。</p>
+<p><img alt="so-rank.jpg" src="/zh/blog/db/mysql-is-dead/so-rank.jpg"></p>
+<p>不幸地是在 2023 年，至少根据全世界最权威的开发者调研之一的 <a href="/zh/blog/pg/pg-is-no1">StackOverflow Annual Developer Survey</a> 结果来看，MySQL 的使用率已经被 PostgreSQL 反超了 —— <strong>最流行数据库的桂冠已经被 PostgreSQL 摘取</strong>。</p>
+<p>特别是，如果将过去七年的调研数据放在一起，就可以得到这幅 PostgreSQL / MySQL 在专业开发者中使用率的变化趋势图（左上） —— 在横向科比的同一标准下，PostgreSQL 流行与 MySQL 过气的趋势显得一目了然。</p>
+<p><img alt="so-trend.jpg" src="/zh/blog/db/mysql-is-dead/so-trend.jpg"></p>
+<p>对于中国来说，此消彼长的变化趋势也同样成立。但如果对中国开发者说 PostgreSQL 比 MySQL 更流行，那确实是违反直觉与事实的。</p>
+<p>将 StackOverflow 专业开发者按照国家细分，不难看出在主要国家中（样本数 &gt; 600 的 31 个国家），中国的 MySQL 使用率是最高的 —— 58.2% ，而 PG 的使用率则是最低的 —— 仅为 27.6%，MySQL 用户几乎是 PG 用户的一倍。</p>
+<p>与之恰好反过来的另一个极端是真正遭受国际制裁的俄联邦：由开源社区运营，不受单一主体公司控制的 PostgreSQL 成为了俄罗斯的数据库大救星 —— 其 PG 使用率以 60.5% 高居榜首，是其 MySQL 使用率 27% 的两倍。</p>
+<p>中国因为同样的自主可控信创逻辑，最近几年 PostgreSQL 的使用率也出现了显著跃升 ——  PG 的使用率翻了三倍，而 PG 与 MySQL 用户比例已经从六七年前的 5:1 ，到三年前的3:1，再迅速发展到现在的 2:1，相信会在未来几年内会很快追平并反超世界平均水平。
+毕竟，有这么多的国产数据库，都是基于 PostgreSQL 打造而成 —— 如果你做政企信创生意，那么大概率已经在用 PostgreSQL 了。</p>
+<p>但抛开政治因素，用户选择使用一款数据库与否，核心考量还是质量、安全、效率、成本等各个方面是否“先进”。
+先进的因会反映为流行的果，流行的东西因为落后而过气，而先进的东西会因为先进变得流行，没有“先进”打底，再“流行”也难以长久。
+因此，在最公正的裁判 —— 时间面前，号称“最流行”的 MySQL，终究还是落了下乘。按照现在这个趋势继续发展下去，最终也逃不开惨淡退场的命运。</p>
+<hr>
+<h2 id="究竟是谁杀死了mysql">究竟是谁杀死了MySQL？</h2>
+<p>MySQL 曾经也辉煌过，但再精彩的演出也会落幕。MySQL 正在死去 —— 更新疲软，功能落后，性能劣化，质量出血，生态萎缩，此乃天命，实非人力所能救也。</p>
+<p>但究竟是谁杀死了 MySQL，难道是 PostgreSQL 吗？Peter Zaitsev 在《<a href="/zh/blog/db/mysql-performance-decline">Oracle最终还是杀死了MySQL</a>》一文中控诉，<strong>Oracle 的不作为与瞎指挥最终害死了 MySQL</strong>；并在后续《<a href="https://pigsty.io/zh/blog/db/can-oracle-save-mysql/">Oracle还能挽救MySQL吗</a>》一文中指出了真正的根因：</p>
+<p>MySQL 的知识产权被 Oracle 所拥有，它不是像 PostgreSQL 那种 “由社区拥有和管理” 的数据库，也没有 PostgreSQL 那样广泛的独立公司贡献者。不论是 MySQL 还是其分叉 MariaDB，它们都不是真正意义上像 Linux，PostgreSQL，Kubernetes 这样由社区驱动的的原教旨纯血开源项目，而是由单一商业公司主导。</p>
+<p>比起向一个商业竞争对手贡献代码，白嫖竞争对手的代码也许是更为明智的选择 —— AWS 和其他云厂商利用 MySQL 内核参与数据库领域的竞争，却不回馈任何贡献。于是作为竞争对手的 Oracle 也不愿意再去管理好 MySQL，而干脆自己也参与进来搞云 —— 仅仅只关注它自己的 MySQL heatwave 云版本，就像 AWS 仅仅专注于其 RDS 管控和 Aurora 服务一样。在 MySQL 之死上，云厂商也难辞其咎。</p>
+<p><img alt="dbms-market.png" src="/zh/blog/db/mysql-is-dead/dbms-market.png"></p>
+<p>逝者不可追，来者犹可待。PostgreSQL 应该从 MySQL 的衰亡中吸取教训 —— 尽管 PostgreSQL 社区非常小心地避免出现一家独大的情况出现，但生态确实在朝着一家/几家巨头云厂商独大的不利方向在发展。<a href="/zh/blog/cloud/paradigm"><strong>云正在吞噬开源</strong></a> —— 云厂商编写了开源软件的管控软件，组建了专家池，通过提供维护攫取了软件生命周期中的绝大部分价值，但却通过搭便车的行为将最大的成本 —— <strong>产研</strong>交由整个开源社区承担。而 <a href="/zh/blog/cloud/dba-vs-rds#%E4%BA%91%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%A8%A1%E5%BC%8F%E4%B8%8E%E6%96%B0%E6%8C%91%E6%88%98"><strong>真正有价值的管控/监控代码却从来不回馈开源社区</strong></a> —— 在数据库领域，我们已经在 MongoDB，ElasticSearch，Redis，以及 MySQL 上看到了这一现象，而 PostgreSQL 社区确实应当引以为鉴。</p>
+<p>好在 PG 生态总是不缺足够头铁的人和公司，愿意站出来维护生态的平衡，反抗公有云厂商的霸权。例如，我自己开发的 PostgreSQL 发行版 <a href="https://pigsty.io">Pigsty</a>，旨在提供一个开箱即用、本地优先的开源云数据库 RDS 替代，将社区自建 PostgreSQL 数据库服务的底线，拔高到云厂商 RDS PG 的水平线。而我的《<a href="/zh/blog/cloud">云计算泥石流</a>》系列专栏则旨在扒开云服务背后的信息不对称，从而帮助公有云厂商更加体面，亦称得上是成效斐然。</p>
+<p>尽管我是 PostgreSQL 的坚定支持者，但我也赞同 Peter Zaitsev 的观点：“如果 MySQL 彻底死掉了，开源关系型数据库实际上就被 PostgreSQL 一家垄断了，而垄断并不是一件好事，因为它会导致发展停滞与创新减缓。PostgreSQL 要想进入全盛状态，有一个 MySQL 作为竞争对手并不是坏事”。 —— 至少，MySQL 可以作为一个反面教材与鞭策激励，让 PostgreSQL 社区保持凝聚力与危机感，不断提高自身的技术水平，保持开放、透明、公正的社区治理模式，从而继续推动数据库技术的发展。</p>
+<p>PostgreSQL 带着开源软件的初心与愿景继续坚定前进 —— 它将走 MySQL 未走完的长路，写 MySQL 未写完的诗篇，见 MySQL 未见的世界，活成 MySQL 未曾活过的愿。在这，谨以一首《PG驶向云外，MySQL安魂九霄》，送给曾经的老对手 —— MySQL。</p>
+<hr>
+<h2 id="pg驶向云外mysql安魂九霄">PG驶向云外，MySQL安魂九霄</h2>
+<p>我那些残梦，灵异九霄</p>
+<p>徒忙漫奋斗，满目沧愁</p>
+<p>在滑翔之后，完美坠落</p>
+<p>在四维宇宙，眩目遨游</p>
+<p>我那些烂曲，流窜九州</p>
+<p>云游魂飞奏，音愤符吼</p>
+<p>在宿命身后，不停挥手</p>
+<p>视死如归仇，毫无保留</p>
+<p>黑色的不是夜晚，是漫长的孤单</p>
+<p>看脚下一片黑暗，望头顶星光璀璨</p>
+<p>叹世万物皆可盼，唯真爱最短暂</p>
+<p>失去的永不复返，世守恒而今倍还</p>
+<p>摇旗呐喊的热情，携光阴渐远去</p>
+<p>人世间悲喜烂剧，昼夜轮播不停</p>
+<p>纷飞的滥情男女，情仇爱恨别离</p>
+<p>一代人终将老去，但总有人正年轻</p>
+<p><img alt="train.jpg" src="/zh/blog/db/mysql-is-dead/train.jpg"></p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
+    <h1 id="pg-19aac8151de78b5c4f2662fefbc486ab">CVE-2024-6387 OpenSSH 漏洞修复指南</h1>
+	
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>）| <a href="https://mp.weixin.qq.com/s/AqcYpOgVj91JnkB1B3s4sA">微信公众号</a></b> |
+        
+		<time datetime="2024-07-04" class="text-muted">2024年07月04日</time>
+        
+	</div>
+	<p>漏洞描述，CVE-2024-6387: <a href="https://nvd.nist.gov/vuln/detail/CVE-2024-6387">https://nvd.nist.gov/vuln/detail/CVE-2024-6387</a></p>
+<p>基本上影响的都是比较新版本的操作系统，老的系统，比如 CentOS 7.9，RockyLinux 8.9 ，Ubuntu 20.04，Debian 11 因为 OpenSSH 版本老逃过一劫。</p>
+<p>在 Pigsty 支持的操作系统发行版中，RockyLinux 9.3，Ubuntu 22.04，Debian 12 受到影响：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -V
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>OpenSSH_8.7p1, OpenSSL 3.0.7 <span style="color:#0000cf;font-weight:bold">1</span> Nov <span style="color:#0000cf;font-weight:bold">2022</span>                       <span style="color:#8f5902;font-style:italic"># rockylinux 9.3</span>
+</span></span><span style="display:flex;"><span>OpenSSH_8.9p1 Ubuntu-3ubuntu0.6, OpenSSL 3.0.2 <span style="color:#0000cf;font-weight:bold">15</span> Mar <span style="color:#0000cf;font-weight:bold">2022</span>    <span style="color:#8f5902;font-style:italic"># ubuntu 22.04</span>
+</span></span><span style="display:flex;"><span>OpenSSH_9.2p1 Debian-2+deb12u2, OpenSSL 3.0.11 <span style="color:#0000cf;font-weight:bold">19</span> Sep <span style="color:#0000cf;font-weight:bold">2023</span>    <span style="color:#8f5902;font-style:italic"># debian 12</span>
+</span></span></code></pre></div><hr>
+<h2 id="诊断方法">诊断方法</h2>
+<p><img alt="treatment.png" src="treatment.png"></p>
+<p>漏洞公告：</p>
+<p>RockyLinux 9+: <a href="https://rockylinux.org/news/2024-07-01-openssh-sigalrm-regression">https://rockylinux.org/news/2024-07-01-openssh-sigalrm-regression</a></p>
+<p>Debian 12+: <a href="https://security-tracker.debian.org/tracker/CVE-2024-6387">https://security-tracker.debian.org/tracker/CVE-2024-6387</a></p>
+<p>Ubuntu 22.04+: <a href="https://ubuntu.com/security/CVE-2024-6387">https://ubuntu.com/security/CVE-2024-6387</a></p>
+<hr>
+<h2 id="处理方法">处理方法</h2>
+<p>使用系统的默认包管理器升级 <code>openssh-server</code> 即可。</p>
+<p>升级后的版本参考：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># rockylinux 9.3  : 8.7p1-34.el9      -------&gt; 8.7p1-38.el9_4.1    </span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># ubuntu 22.04    :                   -------&gt; 8.9p1-3ubuntu0.6    </span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># debian 12       :                   -------&gt; 1:9.2p1-2+deb12u2   </span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>systemctl restart sshd
+</span></span></code></pre></div><h3 id="rocky93">rocky9.3</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ rpm -q openssh-server
+</span></span><span style="display:flex;"><span>openssh-server-8.7p1-34.el9.x86_64      <span style="color:#8f5902;font-style:italic"># vulnerable</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ yum install openssh-server
+</span></span><span style="display:flex;"><span>openssh-server-8.7p1-38.el9_4.1.x86_64  <span style="color:#8f5902;font-style:italic"># fixed</span>
+</span></span></code></pre></div><h3 id="debian12">debian12</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ dpkg -s openssh-server
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ apt install openssh-server
+</span></span><span style="display:flex;"><span>Version: 1:9.2p1-2+deb12u2              <span style="color:#8f5902;font-style:italic"># fixed</span>
+</span></span></code></pre></div><h3 id="ubuntu2204">ubuntu22.04</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ dpkg -s openssh-server
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ apt install openssh-server
+</span></span><span style="display:flex;"><span>Version: 1:8.9p1-3ubuntu0.6
+</span></span></code></pre></div><hr>
+<h2 id="后续改进">后续改进</h2>
+<p>在 Pigsty 的下个版本 v2.8 中，默认会下载并安装当前最新版本的 <code>openssh-server</code>，从而修复此漏洞。</p>
+
+</div>
+
+
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+
+  
+
+<div class="td-content" style="page-break-before: always">
     <h1 id="pg-88bb4b962308bb754c593a0466ee09e4">Oracle 还能挽救 MySQL 吗？</h1>
 	
 	<div class="td-byline mb-4">
@@ -1063,7 +1334,7 @@ MySQL 社区的最好结果应该是 Oracle 与达成协议，共同努力，尽
 <p>尽管这一异常行为可以通过启用该参数进行规避，但使用 Serializable 本身也并非 MySQL 官方/社区鼓励的行为。MySQL 社区中普遍的观点是：除非绝对必要，否则应避免使用 <strong>可串行化/SR</strong> 隔离等级；MySQL 文档声称：<em>“<code>SERIALIZABLE</code> 执行比 <code>REPEATABLE READ</code> 更严格的规则，主要用于<strong>特殊情况</strong>，例如 XA 事务以及解决并发和死锁问题。”</em></p>
 <p>无独有偶，专门研究数据库一致性的李海翔教授（前鹅厂T14）在其《第三代分布式数据库》系列文章中，也对包括 MySQL （InnoDB/8.0.20）在内的多种数据库的实际隔离等级进行了测评，并从另一个视角给出了下面这幅更为细化的 “《<a href="https://mp.weixin.qq.com/s/_BhAjcMkmthTf8Zw3RWKDw">一致性八仙图</a>》”。</p>
 <p><img alt="mysql-baxiantu.png" src="/zh/blog/db/bad-mysql/mysql-baxiantu.png"></p>
-<p>在图中蓝/绿色代表正确用规则/回滚避免一场；<strong>黄色的A代表出现异常，黄色“A”越多，正确性问题就越多</strong>；红色的“D”指使用了影响性能的死锁检测来处理异常，<strong>红色D越多，性能问题就越严重</strong>；</p>
+<p>在图中蓝/绿色代表正确用规则/回滚避免异常；<strong>黄色的A代表出现异常，黄色“A”越多，正确性问题就越多</strong>；红色的“D”指使用了影响性能的死锁检测来处理异常，<strong>红色D越多，性能问题就越严重</strong>；</p>
 <p>不难看出，正确性最好的是 PostgreSQL SR 与基于其构建的 CockroachDB SR，其次是 Oracle SR；都主要是通过机制与规则避免并发异常；而 MySQL 的正确性水平令人不忍直视。</p>
 <p>李海翔教授在专文《<a href="https://mp.weixin.qq.com/s/__mnrLBN88RPgpET0kq3vg">一无是处的MySQL</a>》对此有过详细分析：尽管MySQL的 <strong>可串行化/SR</strong> 可以通过大面积使用死锁检测算法保证正确性，但这样处理并发异常，会严重影响数据库的<strong>性能与实用价值</strong>。</p>
 <hr>
