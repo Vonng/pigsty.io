@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.40e564ccd1960b90513ef2a6b27b4b81.json"
+    data-offline-search-index-json-src="/offline-search-index.4b660213c249e15f28137dd3ff651454.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -879,12 +879,20 @@ This is the multi-page printable view of this section.
 <td>patroni restapi 密码，默认为 <code>Patroni.API</code></td>
 </tr>
 <tr>
-<td><a href="/zh/docs/pgsql/#patroni_citus_db"><code>patroni_citus_db</code></a></td>
+<td><a href="/zh/docs/pgsql/#pg_primary_db"><code>pg_primary_db</code></a></td>
 <td><a href="/zh/docs/reference/param#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
 <td style="text-align:center">string</td>
 <td style="text-align:center">C</td>
-<td>citus database managed by patroni, postgres by default</td>
-<td>由 Patroni 所管理的 Citus 数据库名称，默认为 <code>postgres</code></td>
+<td>指定集群中首要使用的数据库名，Citus等模式会用到，默认为 <code>postgres</code></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="/zh/docs/pgsql/#pg_parameters"><code>pg_parameters</code></a></td>
+<td><a href="/zh/docs/reference/param#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
+<td style="text-align:center">dict</td>
+<td style="text-align:center">C</td>
+<td>覆盖 postgresql.auto.conf 中的 PostgreSQL 参数</td>
+<td></td>
 </tr>
 <tr>
 <td><a href="/zh/docs/reference/param#pg_conf"><code>pg_conf</code></a></td>
@@ -2661,7 +2669,7 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;                 <span style="color:#8f5902;font-style:italic"># 重新加载集群 `&lt;cls&gt;` 的 hba 规则</span>
 </span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; ip1 ip2...      <span style="color:#8f5902;font-style:italic"># 重新加载特定实例的 hba 规则</span>
 </span></span></code></pre></div><p>底层实际执行的 Ansible 剧本命令为：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pg_hba
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pg_hba,pg_reload
 </span></span><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pgbouncer_hba,pgbouncer_reload
 </span></span></code></pre></div><hr>
 <h2 id="默认hba">默认HBA</h2>
@@ -3563,8 +3571,8 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 <p>当您的 Postgres/Pgbouncer HBA 规则发生更改时，您 <em>可能</em> 需要重载 HBA 以应用更改。</p>
 <p>如果您有任何特定于角色的 HBA 规则，或者在IP地址段中引用了集群成员的别名，那么当主从切换/集群扩缩容后也可能需要重载HBA。</p>
 <p>要在整个集群或特定实例上重新加载 postgres 和 pgbouncer 的 HBA 规则：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;               <span style="color:#8f5902;font-style:italic"># pgsql.yml -l &lt;cls&gt; -t pg_hba,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
-</span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; <span style="color:#ce5c00;font-weight:bold">[</span>ip...<span style="color:#ce5c00;font-weight:bold">]</span>       <span style="color:#8f5902;font-style:italic"># pgsql.yml -l ip... -t pg_hba,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;               <span style="color:#8f5902;font-style:italic"># pgsql.yml -l &lt;cls&gt; -t pg_hba,pg_reload,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
+</span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; <span style="color:#ce5c00;font-weight:bold">[</span>ip...<span style="color:#ce5c00;font-weight:bold">]</span>       <span style="color:#8f5902;font-style:italic"># pgsql.yml -l ip... -t pg_hba,pg_reload,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
 </span></span></code></pre></div><details><summary>示例：重载集群 HBA 规则</summary>
 <p><a href="https://asciinema.org/a/568794"><img alt="asciicast" src="https://asciinema.org/a/568794.svg"></a></p>
 </details>
@@ -9218,7 +9226,7 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 <p><strong>过了一会儿失败</strong>：这可能是由于源实例数据损坏。查看 PGSQL FAQ：如何在数据损坏时创建副本？</p>
 <p><strong>过了很长时间再超时</strong>：如果 <code>wait for postgres replica</code> 任务耗时 30 分钟或更长时间并由于超时而失败，这对于大型集群（例如，1TB+，可能需要几小时创建一个副本）是很常见的。</p>
 <p>在这种情况下，底层创建副本的过程仍在进行。你可以使用 <code>pg list &lt;cls&gt;</code> 检查集群状态并等待副本赶上主节点。然后使用以下命令继续以下任务，完成完整的从库初始化：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_reload,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
 </span></span></code></pre></div><hr>
 <h2 id="如何安装其他的postgresql大版本12---14以及-16beta">如何安装其他的PostgreSQL大版本：12 - 14，以及 16beta</h2>
 <p>要安装 PostgreSQL 12 - 15，你必须在配置清单中设置 <code>pg_version</code> 为 <code>12</code>、<code>13</code>、<code>14</code> 或 <code>15</code>，通常在集群级别配置这个参数。</p>

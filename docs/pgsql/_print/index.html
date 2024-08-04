@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.40e564ccd1960b90513ef2a6b27b4b81.json"
+    data-offline-search-index-json-src="/offline-search-index.4b660213c249e15f28137dd3ff651454.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -808,11 +808,18 @@ This is the multi-page printable view of this section.
 <td>patroni restapi password, <code>Patroni.API</code> by default</td>
 </tr>
 <tr>
-<td><a href="/docs/pgsql/#patroni_citus_db"><code>patroni_citus_db</code></a></td>
+<td><a href="/docs/pgsql/#pg_primary_db"><code>pg_primary_db</code></a></td>
 <td><a href="/docs/reference/param/#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
 <td style="text-align:center">string</td>
 <td style="text-align:center">C</td>
-<td>citus database managed by patroni, postgres by default</td>
+<td>primary database name, used by citus,etc&hellip; ,postgres by default</td>
+</tr>
+<tr>
+<td><a href="/docs/pgsql/#pg_parameters"><code>pg_parameters</code></a></td>
+<td><a href="/docs/reference/param/#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
+<td style="text-align:center">dict</td>
+<td style="text-align:center">C</td>
+<td>extra parameters in postgresql.auto.conf</td>
 </tr>
 <tr>
 <td><a href="/docs/reference/param/#pg_conf"><code>pg_conf</code></a></td>
@@ -1867,7 +1874,7 @@ Therefore, the default configuration will install these extensions:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;                 <span style="color:#8f5902;font-style:italic"># reload hba rules of cluster `&lt;cls&gt;`</span>
 </span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; ip1 ip2...      <span style="color:#8f5902;font-style:italic"># reload hba rules of specific instances</span>
 </span></span></code></pre></div><p>The underlying command: are:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pg_hba
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pg_hba,pg_reload
 </span></span><span style="display:flex;"><span>./pgsql.yml -l &lt;cls&gt; -e <span style="color:#000">pg_reload</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#204a87">true</span> -t pgbouncer_hba,pgbouncer_reload
 </span></span></code></pre></div><hr>
 <h2 id="default-hba">Default HBA</h2>
@@ -2770,8 +2777,8 @@ Beware of adjust <code>synchronous_node_count</code> accordingly when you <a hre
 <p>This task is used when your Postgres/Pgbouncer HBA rules have changed, you <em>may</em> have to reload hba to apply changes.</p>
 <p>If you have any role-specific HBA rules, you may have to reload hba after a switchover/failover, too.</p>
 <p>To reload postgres &amp; pgbouncer HBA rules on entire cluster or specific instances:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;               <span style="color:#8f5902;font-style:italic"># pgsql.yml -l &lt;cls&gt; -t pg_hba,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
-</span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; <span style="color:#ce5c00;font-weight:bold">[</span>ip...<span style="color:#ce5c00;font-weight:bold">]</span>       <span style="color:#8f5902;font-style:italic"># pgsql.yml -l ip... -t pg_hba,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt;               <span style="color:#8f5902;font-style:italic"># pgsql.yml -l &lt;cls&gt; -t pg_hba,pg_reload,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
+</span></span><span style="display:flex;"><span>bin/pgsql-hba &lt;cls&gt; <span style="color:#ce5c00;font-weight:bold">[</span>ip...<span style="color:#ce5c00;font-weight:bold">]</span>       <span style="color:#8f5902;font-style:italic"># pgsql.yml -l ip... -t pg_hba,pg_reload,pgbouncer_hba,pgbouncer_reload -e pg_reload=true</span>
 </span></span></code></pre></div><details><summary>Example: Reload Cluster HBA Rules</summary>
 <p><a href="https://asciinema.org/a/568794"><img alt="asciicast" src="https://asciinema.org/a/568794.svg"></a></p>
 </details>
@@ -8406,7 +8413,7 @@ You can do that by changing HBA rules &amp; reload (recommended), or just shutti
 <p><strong>Failed Immediately</strong>: Usually, this happens because of misconfiguration, network issues, broken DCS metadata, etc&hellip;, you have to inspect <code>/pg/log</code> to find out the actual reason.</p>
 <p><strong>Failed After a While</strong>: This may be due to source instance data corruption. Check PGSQL FAQ: How to create replicas when data is corrupted?</p>
 <p><strong>Timeout</strong>: If the <code>wait for postgres replica</code> task takes 30min or more and fails due to timeout, This is common for a huge cluster (e.g., 1TB+, which may take hours to create a replica). In this case, the underlying creating replica procedure is still proceeding. You can check cluster status with <code>pg list &lt;cls&gt;</code> and wait until the replica catches up with the primary. Then continue the following tasks:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_hba,pg_param,pg_backup,pgbouncer,pg_vip,pg_dns,pg_service,pg_exporter,pg_register -l &lt;problematic_replica&gt;
 </span></span></code></pre></div><hr>
 <h2 id="install-postgresql-12---15">Install PostgreSQL 12 - 15</h2>
 <p>To install PostgreSQL 12 - 15, you have to set <code>pg_version</code> to <code>12</code>, <code>13</code>, <code>14</code>, or <code>15</code> in the inventory. (usually at cluster level)</p>
