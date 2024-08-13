@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.18e7e944745e575dd2e3765cc14bf367.json"
+    data-offline-search-index-json-src="/offline-search-index.51424053746fb8d152e0492a1a5b2763.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -221,47 +221,48 @@ This is the multi-page printable view of this section.
 	<h1 id="pg-398aac129de6e3ae40e7dd0d7c794b48">1 - Building Environment</h1>
     <div class="lead">How to prepare VM env for building PostgreSQL RPM/DEB extensions, EL 8/9，Debian12，Ubuntu22。</div>
 	<hr>
-<h2 id="准备虚拟机">准备虚拟机</h2>
-<p>想要在 EL / Debian 环境下构建 PGML RPM 包，需要准备虚拟机环境，Pigsty 提供了 <a href="https://github.com/Vonng/pigsty/blob/master/files/pigsty/build-ext.yml"><code>build-ext.yml</code></a> 模板，可用于准备构建所需的虚拟机环境</p>
+<h2 id="vm">VM</h2>
+<p>To build PGML RPM packages in EL / Debian environment, you need to prepare a virtual machine environment. Pigsty provides a <a href="https://github.com/Vonng/pigsty/blob/main/conf/build/ext.yml"><code>ext.yml</code></a> template that can be used to prepare the virtual machine environment required for building.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> pigsty
 </span></span><span style="display:flex;"><span>make build
 </span></span><span style="display:flex;"><span>./node.yml -i files/pigsty/build-ext.yml -t node_repo,node_pkg
-</span></span></code></pre></div><p>在该配置下，Pigsty 默认提供 EL8，EL9，Debian12，Ubuntu22 四台虚拟机，并安装构建所需的依赖软件包。</p>
+</span></span></code></pre></div><p>It will launch four virtual machines with EL8, EL9, Debian12, and Ubuntu22 respectively, and install the necessary dependencies for building.</p>
 <hr>
-<h2 id="代理服务器">代理服务器</h2>
-<p>如果您的网络条件不佳，最好配置一个 HTTP 代理，例如，假设你的本地环境中，有一台可用的代理服务器： <code>http://192.168.0.104:8118</code>（需要换成你自己的地址）。那么 EL 环境下的环境变量配置如下：</p>
+<h2 id="proxy">Proxy</h2>
+<p>If you are in a network environment that requires a proxy, you need to configure the proxy environment variables.</p>
+<p>Here we assume that you have a proxy server available in your local environment: <code>http://192.168.0.104:8118</code> (replace with your OWN proxy server).</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span>http://192.168.0.104:8118
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">HTTP_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">HTTPS_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">ALL_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">NO_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,*.pigsty,*.aliyun.com,mirrors.*,*.myqcloud.com,*.tsinghua.edu.cn&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">build</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;HTTPS_PROXY=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span><span style="color:#4e9a06"> cargo pgrx package -v&#34;</span>
-</span></span></code></pre></div><p>编辑 <code>~/.ssh/config</code> 文件，添加代理配置，让 Github git 克隆走 HTTPS 代理（可选）：</p>
+</span></span></code></pre></div><p>Adding the following lines to <code>~/.ssh/config</code> will make <code>git</code> clone via HTTPS proxy (optional):</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Host github.com
 </span></span><span style="display:flex;"><span>    Hostname ssh.github.com
 </span></span><span style="display:flex;"><span>    Port <span style="color:#0000cf;font-weight:bold">443</span>
 </span></span><span style="display:flex;"><span>    User git
-</span></span></code></pre></div><p>如果以下命令可以成功执行，说明 <code>github</code> 代理配置成功：</p>
+</span></span></code></pre></div><p>If the following command can connect to GitHub, then the proxy is correctly configured:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -T git@github.com
 </span></span></code></pre></div><hr>
-<h2 id="快捷别名">快捷别名</h2>
-<p>EL 环境下，可以使用以下 Alias 便捷地切换 PG 环境：</p>
+<h2 id="alias">Alias</h2>
+<p>You can use the following Alias to switch between different PG versions environment in the EL environment:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg16</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-16/bin:/root/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg15</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-15/bin:/root/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg14</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-14/bin:/root/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg13</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-13/bin:/root/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg12</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-12/bin:/root/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
-</span></span></code></pre></div><p>而 Debian / Ubuntu 环境下则使用以下的 Alias：</p>
+</span></span></code></pre></div><p>And the following Alias for Debian environment:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg16</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/16/bin:/home/vagrant/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg15</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/15/bin:/home/vagrant/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg14</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/14/bin:/home/vagrant/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg13</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/13/bin:/home/vagrant/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg12</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/12/bin:/home/vagrant/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
 </span></span></code></pre></div><hr>
-<h2 id="安装构建工具链">安装构建工具链</h2>
-<p>在 EL 8 / EL 9 环境中，还需要额外安装 <code>'Development Tools'</code> 组件。其中，EL8 因为依赖错漏问题，需要添加 <code>--nobest</code> 选项才能完成安装。</p>
+<h2 id="tools">Tools</h2>
+<p>You&rsquo;ll have to group install additional <code>'Development Tools'</code> components in EL 8 / EL 9 environment. In EL8, you need to add the <code>--nobest</code> option to complete the installation due to dependency errors.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo yum groupinstall --nobest -y <span style="color:#4e9a06">&#39;Development Tools&#39;</span><span style="color:#000;font-weight:bold">;</span>
-</span></span><span style="display:flex;"><span>rpmdev-setuptree  <span style="color:#8f5902;font-style:italic"># 在当前用户家目录下创建 rpmbuild 目录</span>
+</span></span><span style="display:flex;"><span>rpmdev-setuptree  <span style="color:#8f5902;font-style:italic"># setup rpmbuild environment</span>
 </span></span></code></pre></div>
 </div>
 
@@ -537,33 +538,34 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-edc8fb61560b6266d83b2b253813869b">4 - Build PostgresML</h1>
     <div class="lead">There are some extra settings to build PostgresML on EL8 and EL9.</div>
-	<hr>
-<h2 id="构建-pgml">构建 PGML</h2>
-<p>构建 PostgresML 是相当麻烦的工作，下面是在 EL8 与 EL9 上构建 PGML 的教程。</p>
-<p>首先，根据 <a href="/zh/docs/extension/rpmbuild">RPM 构建环境</a> 的说明，配置好 <a href="/zh/docs/extension/rpmbuild#%E7%8E%AF%E5%A2%83%E4%B8%8E%E4%BB%A3%E7%90%86">环境与代理</a>，安装 <a href="/zh/docs/extension/rpmbuild#%E5%AE%89%E8%A3%85rust"><code>rust</code></a> 与 <a href="/zh/docs/extension/rpmbuild#%E5%AE%89%E8%A3%85pgrx"><code>pgrx</code></a>，特别注意 <code>pgml</code> 使用的 <code>pgrx</code> <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml#L42"><strong>版本号</strong></a>。</p>
-<h3 id="准备python3">准备Python3</h3>
-<p>安装 Python，并设置为默认版本：</p>
+	<p>It&rsquo;s quite tricky to build PostgresML on EL8 and EL9, here is the tutorial.</p>
+<p>First of all, configure the <a href="/docs/pgext/build/env/">RPM build environment</a>, install <a href="/docs/pgext/build/rust/"><code>rust</code></a> and <code>pgrx</code> according to the instructions.</p>
+<hr>
+<h3 id="python3">Python3</h3>
+<p>Install Python and setup alternatives:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo yum install python3.11 python3.11-devel python3-virtualenv openssl openssl-devel cmake pkg-config libomp libomp-devel openblas* llvm llvm-devel lld openblas*
 </span></span><span style="display:flex;"><span>sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 <span style="color:#0000cf;font-weight:bold">1</span>
 </span></span><span style="display:flex;"><span>sudo alternatives --set python3 /usr/bin/python3.11
 </span></span><span style="display:flex;"><span>sudo alternatives --set python /usr/bin/python3.11
-</span></span></code></pre></div><h3 id="准备代码仓库">准备代码仓库</h3>
-<p>克隆 <code>pgml</code>，并 <strong>检出指定版本</strong>：</p>
+</span></span></code></pre></div><hr>
+<h3 id="clone-repo">Clone Repo</h3>
+<p>Clone <code>pgml</code> with <code>git</code> then checkout to the latest release:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recursive git@github.com:postgresml/postgresml.git<span style="color:#000;font-weight:bold">;</span> 
 </span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v2.9.3
 </span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml/pgml-extension
-</span></span></code></pre></div><h3 id="el8专用编译说明">EL8专用编译说明</h3>
-<p>本节修改在 EL8 上进行，EL9 无需执行此操作。</p>
+</span></span></code></pre></div><hr>
+<h3 id="el8-ad-hoc">EL8 Ad hoc</h3>
+<p>This part is only for EL8, EL9 is not affected.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo dnf install gcc-toolset-13
 </span></span><span style="display:flex;"><span><span style="color:#204a87">source</span> /opt/rh/gcc-toolset-13/enable
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">source</span> /opt/rh/gcc-toolset-13/enable
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">CC</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/bin/gcc
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">CXX</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/bin/g++
 </span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">LD_LIBRARY_PATH</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/lib64:<span style="color:#000">$LD_LIBRARY_PATH</span>
-</span></span></code></pre></div><p>在 EL8 上构建时，需要修改 <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/build.rs"><code>build.rs</code></a> 文件，在合适的位置添加两行编译选项：</p>
+</span></span></code></pre></div><p>You have to change <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/build.rs"><code>build.rs</code></a>, add <code>stdc++fs</code> and <code>gcc-toolset-13</code>:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-lib=static=stdc++fs&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-search=native=/opt/rh/gcc-toolset-13/root/usr/lib/gcc/x86_64-redhat-linux/13&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>整个文件应该是这样的：</p>
+</span></span></span></code></pre></div><p>The whole file should be like this:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">fn</span> <span style="color:#000">main</span><span style="color:#000;font-weight:bold">()</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">{</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">#[cfg(target_os = </span><span style="color:#4e9a06">&#34;macos&#34;</span><span style="color:#8f5902;font-style:italic">)]</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">{</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -588,19 +590,19 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">vergen</span>::<span style="color:#000">EmitBuilder</span>::<span style="color:#000">builder</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">all_git</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">emit</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">unwrap</span><span style="color:#000;font-weight:bold">();</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">}</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>接着修改 <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml"><code>Cargo.toml</code></a></p>
-<p>在 <code>[build-dependencies]</code> 一节中添加：<code>cc = &quot;1.0&quot;</code>：</p>
+</span></span></span></code></pre></div><p>Then change the <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml"><code>Cargo.toml</code></a></p>
+<p>Add <code>cc = &quot;1.0&quot;</code> to the <code>[build-dependencies]</code> section:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">[</span>build-dependencies<span style="color:#ce5c00;font-weight:bold">]</span>
 </span></span><span style="display:flex;"><span>+++ <span style="color:#000">cc</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">&#34;1.0&#34;</span>
-</span></span></code></pre></div><h3 id="开始构建">开始构建</h3>
-<p>针对 PostgreSQL 16, 15, 14 构建 PGML：</p>
+</span></span></code></pre></div><hr>
+<h3 id="building">Building</h3>
+<p>To build PostgresML against PostgreSQL 16, 15, 14:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml/pgml-extension<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span>
-</span></span></code></pre></div><p>将构建产物放置于 <code>~/rpmbuild/SOURCES</code> 目录备用</p>
+</span></span></code></pre></div><p>The rpm package will be placed in <code>~/rpmbuild/RPMS/x86_64/</code> directory.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_16<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg16 ~/rpmbuild/SOURCES/pgml_16<span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_15<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg15 ~/rpmbuild/SOURCES/pgml_15<span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_14<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg14 ~/rpmbuild/SOURCES/pgml_14<span style="color:#000;font-weight:bold">;</span>
-</span></span></code></pre></div><p>使用 <code>pgml.spec</code> 执行 RPM 打包：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make pgml
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make pgml
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 或手工进行构建：</span>
 </span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/RPMS/x86_64/pgml*.rpm<span style="color:#000;font-weight:bold">;</span>
@@ -725,32 +727,30 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-bb010574fb7ac74e04d5db2a29799401">7 - Build Parquet S3 FDW</h1>
     <div class="lead">Build Parquet S3 FDW extension alone with its deps: libarrow, libparquet, 以及 libaws-cpp</div>
-	<hr>
-<h2 id="构建parquet_s3_fdw">构建parquet_s3_fdw</h2>
-<p>扩展 <code>parquet_s3_fdw</code> 有两个主要依赖：<code>arrow</code> 与 <code>awssdk</code>。</p>
+	<p>There are two major deps for <code>parquet_s3_fdw</code>: <code>arrow</code> 与 <code>awssdk</code>。</p>
 <hr>
-<h3 id="构建arrow">构建arrow</h3>
-<p>克隆 arrow 仓库并使用 cmake 构建：</p>
+<h3 id="build-arrow">Build arrow</h3>
+<p>Clone arrow repo and build it with cmake:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~ <span style="color:#000;font-weight:bold">;</span> git clone git@github.com:apache/arrow.git<span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>mkdir -p ~/arrow/cpp/release<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/arrow/cpp/release<span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>cmake .. -DARROW_PARQUET<span style="color:#ce5c00;font-weight:bold">=</span>ON -DARROW_S3<span style="color:#ce5c00;font-weight:bold">=</span>ON<span style="color:#000;font-weight:bold">;</span> make -j8
 </span></span><span style="display:flex;"><span>sudo make install
 </span></span></code></pre></div><hr>
-<h3 id="构建libaws">构建libaws</h3>
-<p><code>libaws-cpp</code> 里有许多服务的驱动，但我们只需要两个：<code>core</code> 和 <code>s3</code>：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 安装依赖</span>
+<h3 id="build-libaws">Build libaws</h3>
+<p>There are many drivers in <code>libaws-cpp</code>, but we only need two: <code>core</code> and <code>s3</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># install building deps</span>
 </span></span><span style="display:flex;"><span>sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># sudo apt-get install libcurl4-openssl-dev libssl-dev uuid-dev libpulse-dev # debian/ubuntu</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 克隆 libaws 仓库 (很大！)</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># clone libaws repo (very big!)</span>
 </span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recurse-submodules git@github.com:aws/aws-sdk-cpp.git
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>mkdir -p ~/aws-sdk-cpp/release<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/aws-sdk-cpp/release<span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>cmake .. -DBUILD_ONLY<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;s3&#34;</span><span style="color:#000;font-weight:bold">;</span> make -j20
 </span></span><span style="display:flex;"><span>sudo make install
 </span></span></code></pre></div><hr>
-<h3 id="构建libarrow-s3">构建libarrow-s3</h3>
-<p>收集生成的 <code>.so</code> 文件，然后将其打包为一个 RPM / DEB 包：</p>
+<h3 id="build-libarrow-s3">build libarrow-s3</h3>
+<p>Collect the generated <code>.so</code> files, then package them into an RPM / DEB package:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -p ~/libarrow-s3
 </span></span><span style="display:flex;"><span>cp -d ~/arrow/cpp/release/release/libarrow.so*                                     ~/libarrow-s3/
 </span></span><span style="display:flex;"><span>cp -d ~/arrow/cpp/release/release/libparquet.so*                                   ~/libarrow-s3/
@@ -771,13 +771,13 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-sdkutils/libaws-c-sdkutils.so* ~/libarrow-s3/
 </span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-auth/libaws-c-auth.so*         ~/libarrow-s3/
 </span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-compression/libaws-c-compression.so* ~/libarrow-s3/
-</span></span></code></pre></div><p>构建生成的 <code>so</code> 文件包含空 RPATH，使用 <code>patchelf</code> 去除 (EL系统)：</p>
+</span></span></code></pre></div><p>Remove empty RPATH from generated <code>so</code> files (EL system), using <code>patchelf</code> binary:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/libarrow-s3/
 </span></span><span style="display:flex;"><span>patchelf --remove-rpath libarrow.so.1800.0.0
 </span></span><span style="display:flex;"><span>patchelf --remove-rpath libparquet.so.1800.0.0
 </span></span><span style="display:flex;"><span>patchelf --remove-rpath libaws-cpp-sdk-core.so
 </span></span><span style="display:flex;"><span>patchelf --remove-rpath libaws-cpp-sdk-s3.so
-</span></span></code></pre></div><p>将这些 <code>so</code> 文件整体打包为一个 <code>libarrow-s3</code> 软件包：</p>
+</span></span></code></pre></div><p>And finally package these <code>so</code> files into a <code>libarrow-s3</code> package:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS
 </span></span><span style="display:flex;"><span>rpmbuild -ba ~/rpmbuild/SPECS/libarrow-s3.spec
 </span></span><span style="display:flex;"><span>sudo rpm -ivh ~/rpmbuild/RPMS/x86_64/libarrow-s3-17.0.0-1PIGSTY.*
