@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.034a21e97dbd5b4e4f38ec78c738edee.json"
+    data-offline-search-index-json-src="/offline-search-index.ce0fd78013273f363399a7a14084bbdf.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -231,23 +231,31 @@ This is the multi-page printable view of this section.
 	<p>Pigsty allows you to manage <a href="/docs/pgsql/"><strong>PostgreSQL</strong></a> extension in a declarative way</p>
 <hr>
 <h2 id="overview">Overview</h2>
-<p>To use an extension in Pigsty managed PostgreSQL cluster, you need to deal with 4 issues: <a href="/docs/pgext/usage/download/"><strong>download</strong></a>, <a href="/docs/pgext/usage/install/"><strong>install</strong></a>, <a href="/docs/pgext/usage/load/"><strong>load</strong></a>, and <a href="/docs/pgext/usage/create/"><strong>create</strong></a>:</p>
+<p>To use an extension in Pigsty managed PostgreSQL cluster, you need to deal with four issues: <a href="/docs/pgext/usage/download/"><strong>download</strong></a>, <a href="/docs/pgext/usage/install/"><strong>install</strong></a>, <a href="/docs/pgext/usage/load/"><strong>load</strong></a>, and <a href="/docs/pgext/usage/create/"><strong>create</strong></a>:</p>
 <ul>
 <li>
 <p><a href="/docs/pgext/usage/download/"><strong>How to Download?</strong></a>: <a href="/docs/reference/param/#repo_upstream"><strong><code>repo_upstream</code></strong></a> &amp; <a href="/docs/reference/param/#repo_pacakges"><strong><code>repo_packages</code></strong></a></p>
-<p>When performing the default online installation in Pigsty, all available extensions for the current primary PostgreSQL version (16) are automatically downloaded. If you do not need additional or niche extensions, you generally don&rsquo;t need to worry about <code>repo_upstream</code>, <code>repo_packages</code>, or any issues related to extension downloads.</p>
+<p>When performing the default online installation in Pigsty, all available extensions for the current primary PostgreSQL version (16) are automatically downloaded.
+If you do not need additional or niche extensions, you don&rsquo;t need to worry about <code>repo_upstream</code>, <code>repo_packages</code>, or any issues related to extension downloads.</p>
 </li>
 <li>
 <p><a href="/docs/pgext/usage/install/"><strong>How to Install?</strong></a>: <a href="/docs/reference/param/#pg_extensions"><strong><code>pg_extensions</code></strong></a> &amp; <a href="/docs/reference/param/#pg_packages"><strong><code>pg_packages</code></strong></a></p>
-<p>In the sample cluster provided in the Pigsty configuration template, a complete list of available extensions is already included. To <strong>install</strong> additional extensions, simply add them to <code>pg_packages</code> and <code>pg_extensions</code>.</p>
+<p>In the config template, a complete list of available extension alias is already included.
+To <strong>install</strong> additional extensions, simply add/uncomment them to <code>pg_packages</code> and <code>pg_extensions</code>.</p>
 </li>
 <li>
-<p><a href="/docs/pgext/usage/load/"><strong>How to Load?</strong></a>: <a href="/docs/reference/param/#pg_libs"><strong><code>pg_libs</code></strong></a></p>
-<p>A small number of extensions that utilize PostgreSQL HOOKs need to be dynamically loaded and will only take effect after restarting the database. You should add these extensions to <code>pg_libs</code> and ensure they are loaded upon restart.</p>
+<p><a href="/docs/pgext/usage/load/"><strong>How to Load?</strong></a>: <a href="/docs/reference/param/#pg_libs"><strong><code>pg_libs</code></strong></a> &amp; <a href="/docs/reference/param/#pg_parameters"><code>pg_parameters</code></a></p>
+<p>A small number of extensions that utilize PostgreSQL HOOKs need to be dynamically loaded and will only take effect after restarting the database server.</p>
+</li>
+<li>
+<p>You should add these extensions to <code>pg_libs</code>, or manually overwrite <code>shared_preload_libraries</code> in <code>pg_parameters</code> or DCS, and ensure they are loaded upon restart.</p>
 </li>
 <li>
 <p><a href="/docs/pgext/usage/create/"><strong>How to Create</strong></a>: <a href="/docs/pgsql/db/"><strong><code>pg_databases.extensions</code></strong></a></p>
-<p>Most extensions require the execution of the <code>CREATE EXTENSION</code> DDL statement after installation to actually create and enable them in a specific database. You can manually execute this DDL, or explicitly specify the extensions in <code>pg_databases.extensions</code>, and the database will automatically enable these extensions during initialization.</p>
+<p>Most extensions require the execution of the <code>CREATE EXTENSION</code> DDL statement after installation to actually create and enable them in a specific database.</p>
+</li>
+<li>
+<p>You can manually execute this DDL, or explicitly specify the extensions in <code>pg_databases.extensions</code>, and the database will automatically enable these extensions during initialization.</p>
 </li>
 </ul>
 <hr>
@@ -290,10 +298,10 @@ dynamically <a href="/docs/pgext/usage/load/"><strong>loads</strong></a> three e
 <p>Pigsty translates these standardized aliases into the corresponding RPM/DEB package names for the specific PostgreSQL major version on different operating system distributions.
 This way, you don&rsquo;t have to worry about the differences in extension package names across various OS distributions.</p>
 <ul>
-<li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/rpm.yml#L126"><strong>RPM Extension Mapping Table</strong></a></li>
+<li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/rpm.yml#L135"><strong>RPM Extension Mapping Table</strong></a></li>
 <li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/deb.yml#L123"><strong>DEB Extension Mapping Table</strong></a></li>
 </ul>
-<p>During the Pigsty <a href="/docs/setup/install/#configure"><code>configure</code></a> process, the default configuration generated for your specific OS distribution will already include the above list.
+<p>During the Pigsty <a href="/docs/setup/install/#configure"><code>configure</code></a> process, the default configuration generated for your specific OS distro will already include the above list.
 To install these extensions, you only need to uncomment the ones you need in the configuration file.</p>
 <p>Please note that you can still directly use OS-specific RPM/DEB package names here if you prefer.</p>
 <hr>
@@ -421,15 +429,16 @@ Below is a sample configuration file for creating a PostgreSQL cluster required 
     <div class="lead">How to</div>
 	<hr>
 <h2 id="yum-repo">YUM Repo</h2>
-<p>Pigsty currently offers a supplementary plugin repository for EL systems, providing <strong>65</strong> additional RPM plugins on top of the official PGDG YUM repository.</p>
+<p>Pigsty currently offers a supplementary PG extension repository for EL systems, providing <strong>121</strong> additional RPM plugins in addition to the official PGDG YUM repository (135).</p>
 <ul>
 <li>Pigsty YUM Repository: <a href="https://repo.pigsty.io/yum/">https://repo.pigsty.io/yum/</a></li>
 <li>PGDG YUM Repository: <a href="https://download.postgresql.org/pub/repos/yum/">https://download.postgresql.org/pub/repos/yum/</a></li>
 </ul>
-<p>The Pigsty YUM repository only includes extensions <strong>not present in the PGDG YUM repository</strong>. Once an extension is added to the PGDG YUM repository, Pigsty YUM repository will either remove it or align with the PGDG repository.</p>
-<p>For EL 7/8/9 and compatible systems, use the following commands to sequentially add the GPG public key and the upstream repository file of the Pigsty repository:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/key      <span style="color:#000;font-weight:bold">|</span> sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty &gt;/dev/null  <span style="color:#8f5902;font-style:italic"># 添加公钥</span>
-</span></span><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/yum/repo <span style="color:#000;font-weight:bold">|</span> sudo tee /etc/yum.repos.d/pigsty.repo        &gt;/dev/null  <span style="color:#8f5902;font-style:italic"># 添加仓库</span>
+<p>The Pigsty YUM repository only includes extensions <strong>not present in the PGDG YUM repository</strong>.
+Once an extension is added to the PGDG YUM repository, Pigsty YUM repository will either remove it or align with the PGDG repository.</p>
+<p>For EL 7/8/9 and compatible systems, use the following commands to add the GPG public key and the upstream repository file of the Pigsty repository:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/key      <span style="color:#000;font-weight:bold">|</span> sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty &gt;/dev/null  <span style="color:#8f5902;font-style:italic"># add gpg key</span>
+</span></span><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/yum/repo <span style="color:#000;font-weight:bold">|</span> sudo tee /etc/yum.repos.d/pigsty.repo        &gt;/dev/null  <span style="color:#8f5902;font-style:italic"># add repo file</span>
 </span></span></code></pre></div><p>All RPMs are signed with the GPG key fingerprint <code>9592A7BC7A682E7333376E09E7935D8DB9BD8B20</code> (<code>B9BD8B20</code>).</p>
 <details><summary>Write Repo File Manually</summary><br>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo tee /etc/yum.repos.d/pigsty-io.repo &gt; /dev/null <span style="color:#4e9a06">&lt;&lt;-&#39;EOF&#39;
@@ -457,12 +466,13 @@ Below is a sample configuration file for creating a PostgreSQL cluster required 
 </span></span></code></pre></div></details>
 <hr>
 <h2 id="apt-repo">APT Repo</h2>
-<p>Pigsty currently offers a supplementary plugin repository for Debian/Ubuntu systems, providing <strong>77</strong> additional DEB packages on top of the official PGDG APT repository.</p>
+<p>Pigsty currently offers a supplementary PG extension repository for Debian/Ubuntu systems, providing <strong>133</strong> additional DEB packages in addition to the official PGDG APT repository (109).</p>
 <ul>
 <li>Pigsty APT Repository: <a href="https://repo.pigsty.io/apt/">https://repo.pigsty.io/apt/</a></li>
 <li>PGDG APT Repository: <a href="http://apt.postgresql.org/pub/repos/apt/">http://apt.postgresql.org/pub/repos/apt/</a></li>
 </ul>
-<p>The Pigsty APT repository only includes extensions <strong>not present in the PGDG APT repository</strong>. Once an extension is added to the PGDG APT repository, Pigsty APT repository will either remove it or align with the PGDG repository.</p>
+<p>The Pigsty APT repository only includes extensions <strong>not present in the PGDG APT repository</strong>.
+Once an extension is added to the PGDG APT repository, Pigsty APT repository will either remove it or align with the PGDG repository.</p>
 <p>For Debian/Ubuntu and compatible systems, use the following commands to sequentially add the GPG public key and the upstream repository file of the Pigsty repository:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># add GPG key to keyring</span>
 </span></span><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/key <span style="color:#000;font-weight:bold">|</span> sudo gpg --dearmor -o /etc/apt/keyrings/pigsty.gpg
@@ -477,6 +487,15 @@ Below is a sample configuration file for creating a PostgreSQL cluster required 
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># refresh APT repo cache</span>
 </span></span><span style="display:flex;"><span>sudo apt update
 </span></span></code></pre></div><p>All DEBs are signed with the GPG key fingerprint <code>9592A7BC7A682E7333376E09E7935D8DB9BD8B20</code> (<code>B9BD8B20</code>).</p>
+<hr>
+<h2 id="repo-of-repo">Repo of Repo</h2>
+<p>The building recipes and specs, metadata are all open-sourced,  related GitHub repos:</p>
+<ul>
+<li><a href="https://github.com/pgsty/pkg"><code>pkg</code></a>: The repository of RPM/DEB packages for PostgreSQL extensions</li>
+<li><a href="https://github.com/pgsty/infra-pkg"><code>infra_pkg</code></a>: Building observability stack &amp; modules from tarball</li>
+<li><a href="https://github.com/pgsty/pgsql-rpm"><code>pgsql-rpm</code></a>: Building PostgreSQL RPM packages from source code</li>
+<li><a href="https://github.com/pgsty/pgsql-deb"><code>pgsql-deb</code></a>: Building PostgreSQL DEB packages from source code</li>
+</ul>
 
 </div>
 
@@ -529,11 +548,12 @@ Below is a sample configuration file for creating a PostgreSQL cluster required 
 </span></span><span style="display:flex;"><span>postgresql-14-postgis-3*   <span style="color:#8f5902;font-style:italic"># Installs the PostGIS DEB package for PG 14</span>
 </span></span></code></pre></div><p>We recommend using the standardized extension names (aliases) provided by Pigsty. Pigsty will translate these aliases into the appropriate RPM/DEB package names corresponding to the PG major version for different OS distributions. This way, users don&rsquo;t need to worry about the differences in extension package names across various OS distributions:</p>
 <ul>
-<li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/rpm.yml#L126"><strong>RPM Extension Mapping</strong></a></li>
+<li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/rpm.yml#L135"><strong>RPM Extension Mapping</strong></a></li>
 <li><a href="https://github.com/Vonng/pigsty/blob/master/roles/node_id/vars/deb.yml#L123"><strong>DEB Extension Mapping</strong></a></li>
 </ul>
 <p>Pigsty strives to align the PostgreSQL extensions available for EL and Debian-based systems.
-However, a few extensions may be difficult to migrate or have not yet been ported due to various reasons. For more information, please refer to the <a href="/docs/pgext/list/rpm/">RPM Extension List</a> and <a href="/docs/pgext/list/deb/">DEB Extension List</a>.</p>
+However, a few extensions may be difficult to migrate or have not yet been ported due to various reasons.
+For more information, please refer to the <a href="/docs/pgext/list/rpm/">RPM Extension List</a> and <a href="/docs/pgext/list/deb/">DEB Extension List</a>.</p>
 
 </div>
 
@@ -569,107 +589,107 @@ However, a few extensions may be difficult to migrate or have not yet been porte
 <tbody>
 <tr>
 <td style="text-align:left"><a href="https://github.com/timescale/timescaledb"><code>timescaledb</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/time/timescaledb">timescaledb</a></td>
+<td style="text-align:left"><a href="/docs/pgext/time/timescaledb/">timescaledb</a></td>
 <td style="text-align:left">Enables scalable inserts and complex queries for time-series data (Apache 2 Edition)</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/postgresml/postgresml"><code>pgml</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/rag/pgml">pgml</a></td>
+<td style="text-align:left"><a href="/docs/pgext/rag/pgml/">pgml</a></td>
 <td style="text-align:left">PostgresML: Run AL/ML workloads with SQL interface</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/citusdata/citus"><code>citus</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/olap/citus">citus</a></td>
+<td style="text-align:left"><a href="/docs/pgext/olap/citus/">citus</a></td>
 <td style="text-align:left">Distributed PostgreSQL as an extension</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/cybertec-postgresql/pg_squeeze"><code>pg_squeeze</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/admin/pg_squeeze">pg_squeeze</a></td>
+<td style="text-align:left"><a href="/docs/pgext/admin/pg_squeeze/">pg_squeeze</a></td>
 <td style="text-align:left">A tool to remove unused space from a relation.</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/hapostgres/pg_auto_failover"><code>pgautofailover</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/admin/pgautofailover">pgautofailover</a></td>
+<td style="text-align:left"><a href="/docs/pgext/admin/pgautofailover/">pgautofailover</a></td>
 <td style="text-align:left">auto failover for PostgreSQL</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/pgprewarm.html"><code>pg_prewarm</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/admin/pg_prewarm">pg_prewarm</a></td>
+<td style="text-align:left"><a href="/docs/pgext/admin/pg_prewarm/">pg_prewarm</a></td>
 <td style="text-align:left">prewarm relation data</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/powa-team/pg_stat_kcache"><code>pg_stat_kcache</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/stat/pg_stat_kcache">pg_stat_kcache</a></td>
+<td style="text-align:left"><a href="/docs/pgext/stat/pg_stat_kcache/">pg_stat_kcache</a></td>
 <td style="text-align:left">Kernel statistics gathering</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/mhagander/bgw_replstatus"><code>bgw_replstatus</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/stat/bgw_replstatus">bgw_replstatus</a></td>
+<td style="text-align:left"><a href="/docs/pgext/stat/bgw_replstatus/">bgw_replstatus</a></td>
 <td style="text-align:left">Small PostgreSQL background worker to report whether a node is a replication master or standby</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/auto-explain.html"><code>auto_explain</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/stat/auto_explain">auto_explain</a></td>
+<td style="text-align:left"><a href="/docs/pgext/stat/auto_explain/">auto_explain</a></td>
 <td style="text-align:left">Provides a means for logging execution plans of slow statements automatically</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/pgstatstatements.html"><code>pg_stat_statements</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/stat/pg_stat_statements">pg_stat_statements</a></td>
+<td style="text-align:left"><a href="/docs/pgext/stat/pg_stat_statements/">pg_stat_statements</a></td>
 <td style="text-align:left">track planning and execution statistics of all SQL statements executed</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/devrimgunduz/passwordcheck_cracklib"><code>passwordcheck_cracklib</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/passwordcheck">passwordcheck</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/passwordcheck/">passwordcheck</a></td>
 <td style="text-align:left">Strengthen PostgreSQL user password checks with cracklib</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/supabase/supautils"><code>supautils</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/supautils">supautils</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/supautils/">supautils</a></td>
 <td style="text-align:left">Extension that secures a cluster on a cloud environment</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/Percona-Lab/pg_tde"><code>pg_tde</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/pg_tde">pg_tde</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/pg_tde/">pg_tde</a></td>
 <td style="text-align:left">pg_tde access method</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/pgaudit/pgaudit"><code>pgaudit</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/pgaudit">pgaudit</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/pgaudit/">pgaudit</a></td>
 <td style="text-align:left">provides auditing functionality</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/credativ/pg_snakeoil"><code>pg_snakeoil</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/pg_snakeoil">pg_snakeoil</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/pg_snakeoil/">pg_snakeoil</a></td>
 <td style="text-align:left">The PostgreSQL Antivirus</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/dimitri/pgextwlist"><code>pgextwlist</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/pgextwlist">pgextwlist</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/pgextwlist/">pgextwlist</a></td>
 <td style="text-align:left">PostgreSQL Extension Whitelisting</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/sepgsql.html"><code>sepgsql</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/sepgsql">sepgsql</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/sepgsql/">sepgsql</a></td>
 <td style="text-align:left">label-based mandatory access control (MAC) based on SELinux security policy.</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/auth-delay.html"><code>auth_delay</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/auth_delay">auth_delay</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/auth_delay/">auth_delay</a></td>
 <td style="text-align:left">pause briefly before reporting authentication failure</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://www.postgresql.org/docs/current/passwordcheck.html"><code>passwordcheck</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sec/passwordcheck">passwordcheck</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sec/passwordcheck/">passwordcheck</a></td>
 <td style="text-align:left">Server side rollback at statement level for PostgreSQL like Oracle or DB2</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://github.com/lzlabs/pg_statement_rollback"><code>pg_statement_rollback</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sim/pg_statement_rollback">pg_statement_rollback</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sim/pg_statement_rollback/">pg_statement_rollback</a></td>
 <td style="text-align:left">SQL Server Transact SQL compatibility</td>
 </tr>
 <tr>
 <td style="text-align:left"><a href="https://babelfishpg.org/"><code>babelfishpg_tsql</code></a></td>
-<td style="text-align:left"><a href="/zh/docs/pgext/sim/babelfishpg_tsql">babelfishpg_tsql</a></td>
+<td style="text-align:left"><a href="/docs/pgext/sim/babelfishpg_tsql/">babelfishpg_tsql</a></td>
 <td></td>
 </tr>
 </tbody>
@@ -739,7 +759,51 @@ However, a few extensions may be difficult to migrate or have not yet been porte
     
 	<h1 id="pg-78965704f6925349ce2731a811ea1f57">7 - Update Extension</h1>
     <div class="lead">How to update an existing extension?</div>
-	
+	<p>To update an existing extension, you can use the OS package manager</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>yum upgrade pg_lakehouse_16*
+</span></span></code></pre></div><p>And then perform the <code>ALTER EXTENSION ... UPDATE</code> command in the database to update the extension to the new version:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXTENSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">UPDATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TO</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_version</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXTENSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SET</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SCHEMA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">new_schema</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXTENSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ADD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">member_object</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">ALTER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXTENSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DROP</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">member_object</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">where</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">member_object</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">is</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">ACCESS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">METHOD</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">AGGREGATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">aggregate_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">aggregate_signature</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">CAST</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">source_type</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">AS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">target_type</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">COLLATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">CONVERSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">DOMAIN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">EVENT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TRIGGER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">FOREIGN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DATA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">WRAPPER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">FOREIGN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">FUNCTION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">function_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">MATERIALIZED</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">VIEW</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">OPERATOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">operator_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">left_type</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">right_type</span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">OPERATOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">CLASS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">index_method</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">OPERATOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">FAMILY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">USING</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">index_method</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">PROCEDURAL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LANGUAGE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">PROCEDURE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">procedure_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">ROUTINE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">routine_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">SCHEMA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">SEQUENCE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">SERVER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SEARCH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">CONFIGURATION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SEARCH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DICTIONARY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SEARCH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PARSER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87">TEXT</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">SEARCH</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TEMPLATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">TRANSFORM</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOR</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">type_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">LANGUAGE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lang_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">TYPE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">VIEW</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">object_name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">and</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">aggregate_signature</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">is</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#ce5c00;font-weight:bold">|</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">ORDER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">BY</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argmode</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argname</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">argtype</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
 </div>
 
 
