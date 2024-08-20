@@ -18,21 +18,21 @@
 <link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
 
 <title>草台班子唱大戏，阿里云PG翻车记 | Pigsty</title>
-<meta name="description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到临晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。">
+<meta name="description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到凌晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。">
 <meta property="og:title" content="草台班子唱大戏，阿里云PG翻车记" />
-<meta property="og:description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到临晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。" />
+<meta property="og:description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到凌晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/cloud/rds-failure/" /><meta property="og:image" content="/zh/blog/cloud/rds-failure/featured.jpg" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2024-08-19T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-08-20T11:16:48+08:00" />
+<meta property="article:modified_time" content="2024-08-20T11:40:05+08:00" />
 
 <meta itemprop="name" content="草台班子唱大戏，阿里云PG翻车记">
-<meta itemprop="description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到临晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。"><meta itemprop="datePublished" content="2024-08-19T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-08-20T11:16:48+08:00" />
+<meta itemprop="description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到凌晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。"><meta itemprop="datePublished" content="2024-08-19T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-08-20T11:40:05+08:00" />
 <meta itemprop="wordCount" content="495"><meta itemprop="image" content="/zh/blog/cloud/rds-failure/featured.jpg" />
 <meta itemprop="keywords" content="下云,RDS," /><meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="/zh/blog/cloud/rds-failure/featured.jpg" /><meta name="twitter:title" content="草台班子唱大戏，阿里云PG翻车记"/>
-<meta name="twitter:description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到临晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。"/>
+<meta name="twitter:description" content="一位客户上周在云数据库上经历了一次离谱的连环故障：一套高可用PG RDS集群，因为扩容内存，主库从库都挂了，折腾到凌晨。期间建议昏招迭出，复盘也很敷衍。在这里将这个案例分享出来，供大家借鉴参考品评。"/>
 
 
 
@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.d7a9dbccca7f14b1d19a1a7905eeb80a.json"
+    data-offline-search-index-json-src="/offline-search-index.909c882a3c5c991bf6549e9f8065d346.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -120,7 +120,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.d7a9dbccca7f14b1d19a1a7905eeb80a.json"
+    data-offline-search-index-json-src="/offline-search-index.909c882a3c5c991bf6549e9f8065d346.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1126,7 +1126,7 @@ if (!doNotTrack) {
 
   </header>
 	<p>在《<a href="/zh/blog/cloud/rds">云数据库是不是智商税</a>》中，我对云数据库 RDS 的评价是：“<strong>用五星酒店价格卖给用户天价预制菜</strong>”—— 但正规的预制菜大锅饭也是能吃的 也一般吃不死人，不过最近一次发生在阿里云上的的故障让我改变了看法。</p>
-<p>我有一位客户L，这两天跟我吐槽了一个在云数据库上遇到的离谱连环故障：一套高可用 PG RDS 集群，因为扩容个内存，主库从库都挂了，折腾给他们到临晨。期间建议昏招迭出，给出的复盘也相当敷衍。经过客户L同意后，我将这个案例分享出来，也供大家借鉴参考品评。</p>
+<p>我有一位客户L，这两天跟我吐槽了一个在云数据库上遇到的离谱连环故障：一套高可用 PG RDS 集群，因为扩容个内存，主库从库都挂了，给他们折腾到凌晨。期间建议昏招迭出，给出的复盘也相当敷衍。经过客户L同意后，我将这个案例分享出来，也供大家借鉴参考品评。</p>
 <ul>
 <li><a href="/zh/blog/cloud/rds-failure/#事故经过匪夷所思">事故经过：匪夷所思</a></li>
 <li><a href="/zh/blog/cloud/rds-failure/#内存扩容无事生非">内存扩容：无事生非</a></li>
@@ -1358,7 +1358,7 @@ if (!doNotTrack) {
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-08-20: <a href="https://github.com/Vonng/pigsty.cc/commit/8368a0bc498e7494ff5e3b34e12b6c297840e625">new blog post (8368a0b)</a>
+  Last modified 2024-08-20: <a href="https://github.com/Vonng/pigsty.cc/commit/44ce86fd59a4cad4f9e1ec82d813ba77e05d6028">fix typo (44ce86f)</a>
 </div>
 </div>
 
