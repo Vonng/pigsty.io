@@ -673,6 +673,319 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: 草台班子唱大戏，阿里云PG翻车记</title>
+      <link>/zh/blog/cloud/rds-failure/</link>
+      <pubDate>Mon, 19 Aug 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/rds-failure/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/rds-failure/featured_hu02aa61ae1d9de35cbe238d2676170cb9_583332_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;在《&lt;a href=&#34;/zh/blog/cloud/rds&#34;&gt;云数据库是不是智商税&lt;/a&gt;》中，我对云数据库 RDS 的评价是：“&lt;strong&gt;用五星酒店价格卖给用户天价预制菜&lt;/strong&gt;”—— 但正规的预制菜大锅饭也是能吃的 也一般吃不死人，不过最近一次发生在阿里云上的的故障让我改变了看法。&lt;/p&gt;
+&lt;p&gt;我有一位客户L，这两天跟我吐槽了一个在云数据库上遇到的离谱连环故障：一套高可用 PG RDS 集群，因为扩容个内存，主库从库都挂了，折腾给他们到临晨。期间建议昏招迭出，给出的复盘也相当敷衍。经过客户L同意后，我将这个案例分享出来，也供大家借鉴参考品评。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#事故经过匪夷所思&#34;&gt;事故经过：匪夷所思&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#内存扩容无事生非&#34;&gt;内存扩容：无事生非&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#从库宕机素养堪忧&#34;&gt;从库宕机：素养堪忧&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#主库宕机令人窒息&#34;&gt;主库宕机：令人窒息&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#wal堆积专家缺位&#34;&gt;WAL堆积：专家缺位&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#扩容磁盘创收有术&#34;&gt;扩容磁盘：创收有术&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#协议赔偿封口药丸&#34;&gt;协议赔偿：封口药丸&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#解决方案下云自建&#34;&gt;解决方案：下云自建&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#广告时间专家咨询&#34;&gt;广告时间：专家咨询&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事故经过匪夷所思&#34;&gt;事故经过：匪夷所思&lt;/h2&gt;
+&lt;p&gt;客户L的数据库场景比较扎实，大几TB的数据，TPS两万不到，写入吞吐8000行/每秒，读取吞吐7万行/s。用的是 ESSD PL1 ，16c 32g 的实例，一主一备高可用版本，独享型规格族，年消费六位数。&lt;/p&gt;
+&lt;p&gt;整个事故经过大致如下：客户L收到 &lt;strong&gt;内存告警&lt;/strong&gt;，提工单，接待的售后工程师诊断：数据量太大，大量行扫描导致内存不足，建议扩容内存。客户同意了，然后工程师扩容内存，扩内存花了三个小时，&lt;strong&gt;期间主库和从库挂了&lt;/strong&gt;，吭哧吭哧手工一顿修。&lt;/p&gt;
+&lt;p&gt;然后扩容完了之后又遇到 &lt;strong&gt;WAL日志堆积&lt;/strong&gt; 的问题，堆了 800 GB 的WAL日志要把磁盘打满了，又折腾了两个小时到十一点多。售后说是 WAL 日志归档上传失败导致的堆积，失败是因为磁盘IO吞吐被占满，建议扩容 ESSD PL2。&lt;/p&gt;
+&lt;p&gt;吃过了内存扩容翻车的教训，这次扩容磁盘的建议客户没立即买单，而是找我咨询了下，我看了一下这个故障现场，感觉到匪夷所思：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;你这负载也挺稳定的，没事扩容内存干啥？&lt;/li&gt;
+&lt;li&gt;RDS 不是号称弹性秒级扩容么，怎么升个内存花三个小时？&lt;/li&gt;
+&lt;li&gt;花三个小时就算了，扩个容怎么还把主库从库都搞挂了呢？&lt;/li&gt;
+&lt;li&gt;从库挂了据说是参数没配对，那就算了，那主库是怎么挂了的？&lt;/li&gt;
+&lt;li&gt;主库挂了高可用切换生效了吗？怎么 WAL 又怎么开始堆积了？&lt;/li&gt;
+&lt;li&gt;WAL 堆积是有地方卡住了，建议你升级云盘等级/IOPS有什么用？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;事后也有一些来自乙方的解释，听到后我感觉更加匪夷所思了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;从库挂是因为参数配错拉不起来了&lt;/li&gt;
+&lt;li&gt;主库挂是因为 “为了避免数据损坏做了特殊处理”&lt;/li&gt;
+&lt;li&gt;WAL堆积是因为卡BUG了，还是客户侧发现，推断并推动解决的&lt;/li&gt;
+&lt;li&gt;卡 BUG “据称” 是因为云盘吞吐打满了&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我的朋友瑞典马工一贯主张，“&lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;用云数据库可以替代DBA&lt;/a&gt;”。
+我认为在理论上有一定可行性 —— 由云厂商组建一个专家池，提供&lt;a href=&#34;/zh/blog/cloud/dba-vs-rds&#34;&gt;DBA时分共享服务&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;但现状很可能是：&lt;strong&gt;云厂商没有合格的 DBA，不专业的工程师甚至会给你出馊主意，把跑得好好的数据库搞坏，最后赖到资源不足上，再建议你扩容升配好多赚一笔。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在听闻这个案例之后，马工也只能无奈强辩：“&lt;strong&gt;辣鸡RDS不是真RDS&lt;/strong&gt;”。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wechat-magong.png&#34; src=&#34;/zh/blog/cloud/rds-failure/wechat-magong.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;内存扩容无事生非&#34;&gt;内存扩容：无事生非&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;资源不足是一种常见的故障原因，但也正因如此，有时会被滥用作为推卸责任，甩锅，或者要资源，卖硬件的万金油理由。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;内存告警 OOM 也许对其他数据库是一个问题，但对于 PostgreSQL 来说非常离谱。我从业这么多年来，见识过各种各样的故障：数据量大撑爆磁盘我见过，查询多打满CPU我见过，内存比特位反转腐坏数据我见过，但因为独占PG因为读查询多导致内存告警，我没见过。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 使用双缓冲，OLTP实例在使用内存时，页面都放在一个尺寸固定的 SharedBuffer 中。作为一个 &lt;strong&gt;众所周知的最佳实践&lt;/strong&gt;，PG SharedBuffer 配置通常为物理内存的 1/4 左右，剩下的内存由文件系统 Cache 使用。也就是说通常有六七成的内存是由操作系统来灵活调配的，不够用逐出一些 Cache 就好了。如果说因为读查询多导致内存告警，我个人认为是匪夷所思的。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;memory.png&#34; src=&#34;/zh/blog/cloud/rds-failure/memory.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;所以，因为一个本来不一定是问题的问题（假告警？），RDS 售后工程师给出的建议是：&lt;em&gt;内存不够啦，请扩容内存&lt;/em&gt;。客户相信了这个建议，选择将内存翻倍。&lt;/p&gt;
+&lt;p&gt;按道理，云数据库宣传自己的极致弹性，灵活伸缩，还是用 &lt;a href=&#34;/zh/blog/db/pg-in-docker/&#34;&gt;Docker&lt;/a&gt; 管理的。难道不应该是原地改一下 MemLimit 和 PG SharedBuffer 参数，重启一下就生效的吗？几秒还差不多。结果这次扩容却折腾了三个小时才完成，并引发了一系列次生故障。&lt;/p&gt;
+&lt;p&gt;内存不足，两台32G扩64G，按照《&lt;a href=&#34;/zh/blog/cloud/ecs/#%E5%AE%9E%E4%BE%8B%E6%97%8F%E5%AF%B9%E4%BB%B7%E6%A0%BC%E7%9A%84%E5%BD%B1%E5%93%8D&#34;&gt;剖析阿里云服务器算力成本&lt;/a&gt;》我们精算过的定价模型，一项内存扩容操作每年带来的额外收入就能有万把块。如果能解决问题那还好说，但事实上这次内存扩容不但没有解决问题，还引发了更大的问题。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;从库宕机素养堪忧&#34;&gt;从库宕机：素养堪忧&lt;/h2&gt;
+&lt;p&gt;第一个因为内存扩容而发生的次生故障是这样的，备库炸了，为什么炸了，因为PG参数没配置正确：&lt;code&gt;max_prepared_transaction&lt;/code&gt;，这个参数为什么会炸？因为在一套 PG 集群中，这个参数必须在主库和从库上保持一致，否则从库就会拒绝启动。&lt;/p&gt;
+&lt;p&gt;为什么这里出现了主从参数不一致的问题？&lt;strong&gt;我推测&lt;/strong&gt; 是因为 RDS 的设计中，该参数的值是与实例内存成正比设置的，所以内存扩容翻倍后这个参数也跟着翻倍。主从不一致，然后从库重启的时候就拉不起来了。&lt;/p&gt;
+&lt;p&gt;不管怎样，因为这个参数翻车是一个非常离谱的错误，属于 PG DBA 101 问题，PG文档明确强调了这一点。但凡做过滚动升降配这种基操的 DBA，要么已经在读文档的时候了解过这个问题，要么就在这里翻过车再去看文档。&lt;/p&gt;
+&lt;p&gt;如果你用 &lt;code&gt;pg_basebackup&lt;/code&gt; 手搓从库，你不会遇到这个问题，因为从库的参数默认和主库一致。如果你用成熟的高可用组件，也不会遇到这个问题：开源PG高可用组件 Patroni 就会强制控制这几个参数并在文档中&lt;a href=&#34;https://patroni.readthedocs.io/en/latest/patroni_configuration.html#important-rules&#34;&gt;显眼地告诉用户&lt;/a&gt;：这几个参数主从必须一致，我们来管理不要瞎改。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;patroni.png&#34; src=&#34;/zh/blog/cloud/rds-failure/patroni.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在一种情况下你会遇到这种问题：考虑不周的家酿高可用服务组件，或未经充分测试的自动化脚本，&lt;strong&gt;自以为是地替你“优化”了这个参数&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;主库宕机令人窒息&#34;&gt;主库宕机：令人窒息&lt;/h2&gt;
+&lt;p&gt;如果说从库挂了，影响一部分只读流量那也就算了。主库挂了，对于客户L这种全网实时数据上报的业务可就要血命了。关于主库宕机，工程师给出的说法是：在扩容过程中，因为事务繁忙，主从复制延迟一直追不上，“&lt;strong&gt;为了避免数据损坏做了特殊处理&lt;/strong&gt;”。&lt;/p&gt;
+&lt;p&gt;这里的说法语焉不详，但按字面与上下文理解的意思应当为：扩容时需要做主从切换，但因为有不小的主从复制延迟，直接切换会丢掉一部分尚未复制到从库上的数据，所以RDS替你把主库流量水龙头关掉了，追平复制延迟后再进行主从切换。&lt;/p&gt;
+&lt;p&gt;老实说，我觉得这个操作让人窒息。主库 Fencing 确实是高可用中的核心问题，但一套正规的生产 PG 高可用集群在处理这个问题时，标准SOP是首先将集群临时切换到同步提交模式，然后执行 Switchover，自然一条数据也不会丢，切换也只会影响在这一刻瞬间执行的查询，亚秒级闪断。&lt;/p&gt;
+&lt;p&gt;“&lt;strong&gt;为了避免数据损坏做了特殊处理&lt;/strong&gt;” 这句话确实很有艺术性 —— 没错，把主库直接关掉可以实现 Fencing ，也确实不会在高可用切换时因为复制延迟丢数据，&lt;strong&gt;但客户数据写不进去了啊&lt;/strong&gt;！这丢的数据可比那点延迟多多了。这种操作，很难不让人想起那个著名的《&lt;a href=&#34;https://www.gushiwen.cn/shiwenv_ddbe67aad03d.aspx&#34;&gt;善治伛者&lt;/a&gt;》笑话：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;tuobei.png&#34; src=&#34;/zh/blog/cloud/rds-failure/tuobei.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;wal堆积专家缺位&#34;&gt;WAL堆积：专家缺位&lt;/h2&gt;
+&lt;p&gt;主从宕机的问题修复后，又折腾一个半小时，总算是把主库内存扩容完成了。然而一波未平一波又起，WAL日志又开始堆积起来，在几个小时内就堆积到了近 800 GB，如果不及时发现并处理，撑爆磁盘导致整库不可用是早晚的事。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal-jam.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal-jam.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;也可以从监控上看到两个坑&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;RDS 工程师给出的诊断是，磁盘 IO 打满导致 WAL 堆积，建议升级磁盘，从 ESSD PL1 升级到 PL2。不过，这一次客户已经吃过一次内存扩容的教训了，没有立刻听信这一建议，而是找到了我咨询。&lt;/p&gt;
+&lt;p&gt;我看了情况后感觉非常离谱，负载没有显著变化，IO打满也不是这种卡死不动的情形。那么 WAL 堆积的原因不外乎那几个：复制延迟落后100多GB，复制槽保留了不到1GB，那剩下的大头就是 &lt;strong&gt;WAL归档失败&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;我让客户给 RDS 提工单处理找根因，最后 RDS 侧确实找到问题是WAL归档卡住了并手工解决了，但距离 WAL 堆积已经过去近六个小时了，并在整个过程中体现出非常业余的素养，给出了许多离谱的建议。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;另一个离谱建议：把流量打到复制延迟16分钟的从库上去&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;阿里云数据库团队并非没有 PostgreSQL DBA 专家，在阿里云任职的 德哥 Digoal 绝对是 PostgreSQL DBA 大师。然而看起来在 RDS 的产品设计中，并没有沉淀下多少 DBA 大师的领域知识与经验；而 RDS 售后工程师表现出来的专业素养，也与一个合格的 PG DBA ，哪怕是 GPT4 机器人都相差甚远。&lt;/p&gt;
+&lt;p&gt;我经常看到 RDS 的用户遇到了问题，通过官方工单没有得到解决，只能绕过工单，通过在 PG 社区中 &lt;a href=&#34;/zh/blog/cloud/drop-rds/&#34;&gt;直接求助德哥解决&lt;/a&gt; —— 而这确实是比较考验运气与关系的一件事。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩容磁盘创收有术&#34;&gt;扩容磁盘：创收有术&lt;/h2&gt;
+&lt;p&gt;在解决了“内存告警”， “从库宕机”， “主库宕机”， “WAL 堆积” 等连环问题后，已经接近凌晨了。但 WAL 堆积的根因是什么仍然不清楚，工程师的回复是 “&lt;strong&gt;与磁盘吞吐被打满有关&lt;/strong&gt;”，再次建议升级 ESSD 云盘。&lt;/p&gt;
+&lt;p&gt;在事后的复盘中，工程师提到了 WAL归档失败的原因是 “&lt;strong&gt;RDS上传组件BUG&lt;/strong&gt;”。所以回头看，如果客户真的听了建议升级云盘，也就就白花冤枉钱了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;BTW这还提出了一个坑爹建议：把流量打到复制延迟16分钟的从库上去&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在 《&lt;a href=&#34;/zh/blog/cloud/ebs&#34;&gt;云盘是不是杀猪盘&lt;/a&gt;》中我们分析过，云上溢价最狠的基础资源就是 ESSD 云盘。按照 《&lt;a href=&#34;/zh/blog/cloud/ecs#%E6%9D%80%E7%8C%AA%E7%9B%98%E7%9A%84%E4%BB%B7%E6%A0%BC&#34;&gt;阿里云存算成本剖析&lt;/a&gt;》中给出的数字：客户 5TB 的 ESSD PL1 云盘包月价格 &lt;strong&gt;1 ¥/GB&lt;/strong&gt;，那么每年光是云盘费用就要 &lt;strong&gt;12万&lt;/strong&gt;。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;单位价格：¥/GiB月&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;IOPS&lt;/th&gt;
+&lt;th&gt;带宽&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;容量&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;按需价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;包月价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;包年价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;预付三年+&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;10K&lt;/td&gt;
+&lt;td&gt;180 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;40G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.76&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.50&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.43&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.25&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;50K&lt;/td&gt;
+&lt;td&gt;350 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;20G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.51&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.85&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.50&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL2&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;100K&lt;/td&gt;
+&lt;td&gt;750 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;461G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.70&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1M&lt;/td&gt;
+&lt;td&gt;4 GB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.2T-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;6.05&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;4.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3.40&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;本地 NVMe SSD&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3M&lt;/td&gt;
+&lt;td&gt;7 GB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;最大单卡64T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;0.02&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;如果听从建议 “升级”到 ESSD PL2，没错 IOPS 吞吐能翻一倍，但单价也翻了一倍。单这一项“升级”操作，&lt;strong&gt;就能给云厂商带来额外 12 万的收入&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;即使是 ESSD PL1 乞丐盘，也带有 50K 的 IOPS，而客户L场景的 20K TPS，80K RowPS 换算成 随机4K 页面 IOPS ，就算退一万步讲不考虑 PG 与 OS 的缓冲区（比如 99% 缓存命中率对于这种业务场景是很正常的），想硬打满它也是一件相当不容易的事情。&lt;/p&gt;
+&lt;p&gt;我不好判断遇到问题就建议 扩容内存 / 扩容磁盘 这样的做法，到底是出于专业素养不足导致的误诊，还是渴望利用信息不对称创收的邪念，抑或两者兼而有之 —— 但这种趁病要价的做法，确实让我联想起了曾经声名狼藉的莆田医院。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;协议赔偿封口药丸&#34;&gt;协议赔偿：封口药丸&lt;/h2&gt;
+&lt;p&gt;在《&lt;a href=&#34;/zh/blog/cloud/sla&#34;&gt;云SLA是不是安慰剂&lt;/a&gt;》一文中，我已提醒过用户：云服务的 SLA 根本不是对服务质量的承诺，&lt;strong&gt;在最好的情况下它是提供情绪价值的安慰剂，而在最坏的情况下它是吃不了兜着走的哑巴亏&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;在这次故障中，客户L收到了 &lt;strong&gt;1000&lt;/strong&gt; 元代金券的补偿提议，对于他们的规模来说，这三瓜两枣差不多能让这套 RDS 多跑几天。在用户看来这基本上属于赤裸裸的羞辱了。&lt;/p&gt;
+&lt;p&gt;有人说云提供了“&lt;strong&gt;背锅&lt;/strong&gt;”的价值，但那只对不负责的决策者与大头兵才有意义，对于直接背结果的 CXO 来说，整体性的得失才是最重要的，把业务连续性中断的锅甩给云厂商，换来一千块代金券没有任何意义。&lt;/p&gt;
+&lt;p&gt;当然像这样的事情其实不止一次，两个月前客户L还遇到过另一次离谱的从库宕机故障 —— 从库宕机了，然后控制台上监控根本看不到，客户自己发现了这个问题，提了工单，发起申诉，还是 &lt;strong&gt;1000¥&lt;/strong&gt; SLA 安慰补偿。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;docker.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/docker.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;当然这还是因为客户L的技术团队水平在线，有能力自主发现问题并主动发出声索。如果是那种技术能力接近零的小白用户，也许就这么拖着瞒着 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;糊弄过去了&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;还有那种 “SLA” 根本不管的问题 —— 例如也是客户L再之前的一个案例（原话引用）：“&lt;em&gt;为了折扣要迁移到另一个新的阿里云账号，新账号起了个同配置的 RDS 逻辑复制，复制了近1个月数据都没同步完，让我们直接放弃新账号迁移，导致浪费几万块钱。&lt;/em&gt;” —— 属实是花钱买罪受了，而且根本没地方说理去。&lt;/p&gt;
+&lt;p&gt;经过几次故障带来的糟心体验，客户L终于在这次事故后难以忍受，拍板决定下云了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;解决方案下云自建&#34;&gt;解决方案：下云自建&lt;/h2&gt;
+&lt;p&gt;客户L在几年前就有下云的计划了，在 IDC 里弄了几台服务器，用 Pigsty 自建搭建了几套 PostgreSQL 集群，作为云上的副本双写，跑得非常不错。但要把云上 RDS 下掉，还是免不了要折腾一下，所以一直也就这样两套并行跑着。包括此次事故之前的多次糟心体验，最终让客户L做了下云的决断。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty.webp&#34; src=&#34;/zh/blog/cloud/rds-failure/pigsty.webp&#34;&gt;&lt;/p&gt;
+&lt;p&gt;客户L直接下单加购了四台新服务器，以及 8块 Gen4 15TB NVMe SSD。特别是这里的 NVMe 磁盘，IOPS 性能是云上 ESSD PL1 乞丐盘的整整 &lt;strong&gt;20倍&lt;/strong&gt;（1M vs 50K），而 TB·月 单位价格则是云上的 &lt;strong&gt;1/166&lt;/strong&gt;  （1000¥ vs 6¥）。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;procurement.png&#34; src=&#34;/zh/blog/cloud/rds-failure/procurement.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;题外话：6块钱TB月价，我只在黑五打折的 Amazon 上看到过。125 TB 才 44K ¥（全新总共再加 9.6K ¥），，果然是术业有专攻，经手了过亿采购的成本控制大师。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;如在《&lt;a href=&#34;/zh/blog/cloud/odyssey#02-22-%E6%8C%87%E5%AF%BC%E4%B8%8B%E4%BA%91%E7%9A%84%E4%BA%94%E6%9D%A1%E4%BB%B7%E5%80%BC%E8%A7%82&#34;&gt;下云奥德赛：是时候放弃云计算了吗&lt;/a&gt;》 中 DHH 所说的那样：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“我们明智地花钱：在几个关键例子上，云的成本都极其高昂 —— 无论是&lt;strong&gt;大型物理机数据库、大型 NVMe 存储，或者只是最新最快的算&lt;/strong&gt;力。租生产队的驴所花的钱是如此高昂，以至于几个月的租金就能与直接购买它的价格持平。在这种情况下，你应该直接直接把这头驴买下来！我们将把我们的钱，花在我们自己的硬件和我们自己的人身上，其他的一切都会被压缩。”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;对客户L来说，下云带来的好处是立竿见影的：只需要 RDS 几个月费用的&lt;strong&gt;一次性投资&lt;/strong&gt;，就足够超配几倍到十几倍的硬件资源，重新拿回&lt;a href=&#34;/zh/blog/cloud/bonus&#34;&gt;硬件发展的红利&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/finops&#34;&gt;实现惊人的降本增效水平&lt;/a&gt; —— &lt;strong&gt;你不再需要对着账单抠抠搜搜，也不用再发愁什么资源不够&lt;/strong&gt;。这确实是一个值得思考的问题：如果云下资源单价变为十分之一甚至百分之几，那么云上鼓吹的弹性还剩多大意义？而阻止云上用户下云自建的原因又会是什么呢？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;下云自建 RDS 服务最大的挑战其实是人与技能&lt;/strong&gt;，客户L已经有着一个技术扎实的团队，但确实缺少在 PostgreSQL 上的专业知识与经验。这也是客户L之所以愿意为 RDS 支付高溢价的一个核心原因。但 RDS 在几次事故中体现出来的专业素养，甚至还不如客户本身的技术团队强，这就让继续留在云上变得毫无意义。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;广告时间专家咨询&#34;&gt;广告时间：专家咨询&lt;/h2&gt;
+&lt;p&gt;在下云这件事上， 我很高兴能为客户L提供帮助与支持。 &lt;a href=&#34;https://pigsty.cc/zh/&#34;&gt;Pigsty&lt;/a&gt; 是沉淀了我作为顶级 PG DBA 领域知识与经验的开源 RDS &lt;a href=&#34;/zh/blog/cloud/dba-vs-rds#dba%E7%9A%84%E5%B7%A5%E4%BD%9C%E4%B8%8E%E8%87%AA%E5%8A%A8%E5%8C%96%E7%AE%A1%E6%8E%A7&#34;&gt;自建工具&lt;/a&gt;，已经帮助无数世界各地的用户自建了自己的企业级 PostgreSQL 数据库服务。尽管它已经将开箱即用，扩展整合，监控系统，备份恢复，安全合规，IaC 这些运维侧的问题解决的很好了。但想要充分发挥 PostgreSQL 与 Pigsty 的完整实力，总归还是需要专家的帮助来落地。&lt;/p&gt;
+&lt;p&gt;所以我提供了明码标价的 &lt;a href=&#34;/zh/docs/price/subscription&#34;&gt;&lt;strong&gt;专家咨询服务&lt;/strong&gt;&lt;/a&gt; —— 对于客户L这样有着成熟技术团队，只是缺乏领域知识的客户，我只收取固定的 &lt;strong&gt;5K ¥/月&lt;/strong&gt; 咨询费用，仅仅相当于半个初级运维的工资。但足以让客户放心使用比云上低一个数量级的硬件资源成本，自建更好的本地 PG RDS 服务 —— 而即使在云上继续运行 RDS，也不至于被“砖家”被嘎嘎割韭菜忽悠。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;subscription.png&#34; src=&#34;/zh/blog/cloud/rds-failure/subscription.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;我认为&lt;strong&gt;咨询&lt;/strong&gt;是一种站着挣钱的体面模式：我没有任何动机去推销内存与云盘，或者说胡话兜售自己的产品（因为产品是开源免费的！）。所以我完全可以站在甲方立场上，给出对甲方利益最优的建议。甲乙双方都不用去干苦哈哈的数据库运维，因为这些工作已经被 Pigsty 这个我编写的开源工具完全自动化掉了。我只需要在零星的关键时刻提供专家意见与决策支持，并不会消耗多少精力与时间，却能帮助甲方实现原本全职雇佣顶级DBA专家才能实现的效果，最终实现双方共赢。&lt;/p&gt;
+&lt;p&gt;但是我也必须强调，我提倡下云理念，从来都是针对那些&lt;strong&gt;有一定数据规模与技术实力&lt;/strong&gt;的客户，比如这里的客户L。如果您的场景落在云计算舒适光谱中（例如用 1C2G 折扣 MySQL 跑 OA ），也缺乏技术扎实或值得信赖的工程师，我会诚实地建议你不要折腾 —— 99 一年的 RDS 总比你自己的 yum install 强不少，还要啥自行车呢？当然针对这种用例，我确实建议你考虑一下 Neon，Supabase，Cloudflare 这些&lt;a href=&#34;/zh/blog/cloud/cloudflare&#34;&gt;赛博菩萨们&lt;/a&gt;的免费套餐，&lt;strong&gt;可能连一块钱都用不着&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;而对于那些有一定规模，绑死在云数据库上被不断抽血的客户，你确实可以考虑另外一个选项：自建数据库服务绝非什么高深的火箭科学 —— &lt;strong&gt;你需要做的只是找到正确的工具与正确的人而已&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩展阅读&#34;&gt;扩展阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=4&amp;sn=93746ecea381afd8e2f9820447b09ec7&amp;chksm=fe4b3ceac93cb5fc44f33ffff226747bc317854acbb3882aeb0d9a7e196eeb5df002d0e77275&amp;scene=21#wechat_redirect&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;云数据库是不是智商税httpmpweixinqqcoms__bizmzu5odayntm5ngmid2247485745idx5sna7d610ea37c3f3fa78ee4ba0ee705962chksmfe4b3ceac93cb5fc6f1975f94be04424e7b3690eedd1658951deb8d016f5f19ade8806d86417scene21wechat_redirect&#34;&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=5&amp;sn=a7d610ea37c3f3fa78ee4ba0ee705962&amp;chksm=fe4b3ceac93cb5fc6f1975f94be04424e7b3690eedd1658951deb8d016f5f19ade8806d86417&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云数据库是不是智商税&lt;/strong&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486688&amp;idx=1&amp;sn=bbdee063b65994cb5e15d3e3b7d87523&amp;chksm=fe4b393bc93cb02d76c48f0fbfe3d60c8821b8079b1cfc05f8ccc56c1351b4a7a76b5794019a&amp;scene=21#wechat_redirect&#34;&gt;扒皮云对象存储：从降本到杀猪&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487089&amp;idx=1&amp;sn=ca16c2e7e534380eadcb3a3870d8e3b4&amp;chksm=fe4b3baac93cb2bc8c4b68c468acf3e8ac5ee124080a3e738262fe99dd1765c3adf9c56ea650&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;从降本增笑到真的降本增效&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487926&amp;idx=1&amp;sn=2edbd59c845944dc9ba38021f42d1d63&amp;chksm=fe4b246dc93cad7b35b7517b489371eaa08244ec561359e0a610bc9f6f2aa11cf1e3c2b34fb3&amp;scene=21#wechat_redirect&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486590&amp;idx=1&amp;sn=d4d85de483fafb867487f024631a3e6c&amp;scene=21#wechat_redirect&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908&amp;scene=21#wechat_redirect&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487367&amp;idx=1&amp;sn=d6e4abd2b2249d27bd8b8146b591b026&amp;chksm=fe4b3a5cc93cb34a8e90e4b7f06803fa11ee8234014cd4f1aedff59e3bf3c846b3cb133090f2&amp;scene=21#wechat_redirect&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487339&amp;idx=1&amp;sn=fce4c0d415d87026013169c737faeacb&amp;chksm=fe4b3ab0c93cb3a61bd2831fcad6dfb36419540e690420b1229053b1de2e3d3533a66f44fb4c&amp;scene=21#wechat_redirect&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487279&amp;idx=1&amp;sn=95231614887e129f298644ddc194909f&amp;chksm=fe4b3af4c93cb3e29078b4716d3b633246db8e2081acff8b821181c9ae058a0daf91e45a40b9&amp;scene=21#wechat_redirect&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485363&amp;idx=1&amp;sn=8622b25fd2309d4fc969d22964a04129&amp;scene=21#wechat_redirect&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488183&amp;idx=1&amp;sn=955849e8698fadcea9211b2731456222&amp;chksm=fe4b276cc93cae7aeb43cc4128c9a18e7a5cb02721277cb61bba1e32b61a57ecdd18bd949277&amp;scene=21#wechat_redirect&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488151&amp;idx=1&amp;sn=556731d65228f07f443cfb27b5e7bd8b&amp;chksm=fe4b274cc93cae5ae1a32d423f2f7285eff3e184903d62182ad5f17c4772b4baf38b6a9c89c8&amp;scene=21#wechat_redirect&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488036&amp;idx=1&amp;sn=7bbcc3e8979a5f97a519a7a1684caa06&amp;chksm=fe4b27ffc93caee9701d4a94830417e281c5c08e345d12b007ebaca84dc79c3224b880d75f4c&amp;scene=21#wechat_redirect&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487552&amp;idx=1&amp;sn=799ae77dda3b80d2296070826142adea&amp;chksm=fe4b259bc93cac8da2cc20f864e5a8b62ecb6f5dd57e7435db1d3fb2f2864a5d991b3a016358&amp;scene=21#wechat_redirect&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487536&amp;idx=1&amp;sn=0cd598f426de0b617c7f3318aed9bd95&amp;chksm=fe4b25ebc93cacfd2d96a9704a0ae4dc2d330aee7cd4579641df513edce307ccdd3a9f94736e&amp;scene=21#wechat_redirect&#34;&gt;云上黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487617&amp;idx=1&amp;sn=090b10e96e7e64c0ab0c5deb0cbb46ed&amp;chksm=fe4b255ac93cac4cb270be6091ca6e1257afaa03d50c53316ce82a2be6150151f6077e07e9da&amp;scene=21#wechat_redirect&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487400&amp;idx=1&amp;sn=cf5b94165d2791030e0e874dca8383c7&amp;chksm=fe4b3a73c93cb3652df4d53316e554e5bd0a0d659c7cad7214e10c4a9892d8d1a679e2187583&amp;scene=21#wechat_redirect&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487184&amp;idx=1&amp;sn=afa93b16ae95dba95d99a87ef6ff7605&amp;chksm=fe4b3b0bc93cb21d07adb10713c1061a53b6438a5db0bd93a2e7a0f11ea365ba3d24ae02d13d&amp;scene=21#wechat_redirect&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487240&amp;idx=1&amp;sn=ba535fd0c1026bc2482ea6ad1e1fb8bf&amp;chksm=fe4b3ad3c93cb3c50bfeaed64963cce25c49bee80364d3a8ca78b87d7c9f19fd4d79d3c62ddc&amp;scene=21#wechat_redirect&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485760&amp;idx=1&amp;sn=97096da1077a4fbb4c43452a3c4983c7&amp;scene=21#wechat_redirect&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=1&amp;sn=6109bb1be67f9e7e02124c4fc3b47ea3&amp;scene=21#wechat_redirect&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485601&amp;idx=1&amp;sn=5521562d414b547a192b3dbc45ce720f&amp;scene=21#wechat_redirect&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485629&amp;idx=1&amp;sn=7ec768fac5905b0c7052e7b3a6825c4e&amp;scene=21#wechat_redirect&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486489&amp;idx=1&amp;sn=f2be1be496de46ac5ca816ac39cfdf24&amp;scene=21#wechat_redirect&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485301&amp;idx=1&amp;sn=2fb038f8b9f26c095d97eb0d87e8b262&amp;scene=21#wechat_redirect&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486366&amp;idx=1&amp;sn=c28407399af8b1ddeadf93e902ed23cc&amp;scene=21#wechat_redirect&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487111&amp;idx=1&amp;sn=f02c3a7fc8ba9cc0919518b3c5805675&amp;chksm=fe4b3b5cc93cb24a71d0847bcd7f1655f7466f7f7864457413d3ca80cd79df974b7b9279b9e9&amp;scene=21#wechat_redirect&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486903&amp;idx=1&amp;sn=01c57499f41e8f51045bb8dd52586595&amp;chksm=fe4b386cc93cb17a2d2fad903e809107162cc1e67e8ad7c8bfdd51de657c97f32f912cabe550&amp;scene=21#wechat_redirect&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 我们能从网易云音乐故障中学到什么？</title>
+      <link>/zh/blog/cloud/netease/</link>
+      <pubDate>Sun, 18 Aug 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/netease/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/netease/featured_huf0f94727527e7e470168c5bbabb04c03_683887_640x0_resize_q75_catmullrom.jpg" width="640" height="320"/>]]>
+        
+        &lt;p&gt;今天下午 14:44 左右，网易云音乐出现 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488162&amp;idx=1&amp;sn=5913eb51b437e365c685ed11917a3302&amp;chksm=fe4b2779c93cae6ff254f4568f3e7895e005ce249ab4e0e3111bf3665a54fed35b381ff55aa9&amp;scene=21#wechat_redirect&#34;&gt;不可用故障&lt;/a&gt;，至 17:11 分恢复。网传原因为&lt;strong&gt;基础设施/云盘存储&lt;/strong&gt;相关问题。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;故障经过&#34;&gt;故障经过&lt;/h2&gt;
+&lt;p&gt;故障期间，网易云音乐客户端可以正常播放离线下载的音乐，但访问在线资源会直接提示报错，网页版则直接出现 502 服务器报错无法访问。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;bad-gateway.png&#34; src=&#34;/zh/blog/cloud/netease/bad-gateway.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在此期间，网易 163门户也出现 502 服务器报错，并在一段时间后 302 重定向到移动版主站。期间也有用户反馈&lt;strong&gt;网易新闻&lt;/strong&gt;与其他服务也受到影响。&lt;/p&gt;
+&lt;p&gt;许多用户都反馈连不上网易云音乐后，以为是自己网断了，卸了APP重装，还有以为公司 IT 禁了听音乐站点的，各种评论很快将此次故障推上微博热搜：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;weibo.png&#34; src=&#34;/zh/blog/cloud/netease/weibo.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;期间截止到 17:11 分，网易云音乐已经恢复，163 主站门户也从移动版本切换回浏览器版本，整个故障时长约两个半小时，P0 事故。&lt;/p&gt;
+&lt;p&gt;17:16 分，网易云音乐知乎账号发布通知致歉，并表示明天搜“畅听音乐”可以领取 7 天黑胶 VIP 的&lt;strong&gt;朋友费&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;heijiao.png&#34; src=&#34;/zh/blog/cloud/netease/heijiao.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;原因推断&#34;&gt;原因推断&lt;/h2&gt;
+&lt;p&gt;在此期间，出现各种流言与小道消息。总部着火🔥 （老图），TiDB 翻车（网友瞎编），下载《黑神话悟空》打爆网络，以及程序员删库跑路等就属于一眼假的消息。&lt;/p&gt;
+&lt;p&gt;但也有先前网易云音乐公众号发布的一篇文章《&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzI1NTg3NzcwNQ==&amp;mid=2247491821&amp;idx=1&amp;sn=573dcc464a690a5b9a0a991c6f3c74e2&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云音乐贵州机房迁移总体方案回顾&lt;/strong&gt;&lt;/a&gt;》，以及两份有板有眼的网传聊天记录，可以作为一个参考。&lt;/p&gt;
+&lt;p&gt;网传此次故障与云存储有关，网传聊天记录就不贴了，可以参考《&lt;a href=&#34;https://mp.weixin.qq.com/s/rcmhu16eZdx1JXJadZ8d-Q&#34;&gt;网易云音乐宕机,原因曝光!7月份刚迁移完机房，传和降本增效有关。&lt;/a&gt;》一文截图，或者权威媒体的引用报道《&lt;a href=&#34;https://mp.weixin.qq.com/s/nApqdf0ow6iY97TDZMEdsg&#34;&gt;独家｜网易云音乐故障真相：技术降本增效，人手不足排查了半天&lt;/a&gt;》。&lt;/p&gt;
+&lt;p&gt;我们可以找到一些关于网易云存储团队的公开信息，例如，网易自研的云存储方案 Curve 项目被枪毙了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;author.png&#34; src=&#34;/zh/blog/cloud/netease/author.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;查阅 &lt;a href=&#34;https://github.com/opencurve/curve&#34;&gt;Github Curve 项目主页&lt;/a&gt;，发现项目在 2024 年初后就陷入停滞状态：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pulse.png&#34; src=&#34;/zh/blog/cloud/netease/pulse.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;最后一个 Release 一直停留在RC没有发布正式版，项目已经基本无人维护，进入静默状态。&lt;/p&gt;
+&lt;p&gt;Curve 团队负责人还发表过一篇《curve：遗憾告别 未竟之旅》的公众号文章，并随即遭到删除。我对这件事有些印象，因为 Curve 是 PolarDB 推荐的两个开源共享存储方案之一，所以特意调研过这个项目，现在看来……&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;经验教训&#34;&gt;经验教训&lt;/h2&gt;
+&lt;p&gt;关于裁员与降本增效的老生长谈已经说过很多了，我们又还能从这场事故中学习到什么教训呢？以下是我的观点：&lt;/p&gt;
+&lt;p&gt;第一个教训是，&lt;strong&gt;不要用云盘跑严肃数据库&lt;/strong&gt;！在这件事上，我确实可以说一句 “ &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486587&amp;idx=1&amp;sn=16521d6854711a4fe429464aeb2df6bd&amp;chksm=fe4b39a0c93cb0b6d57c1345b79a6c87972e58eeed65831bc6ba8cf73d2a99d6a11d48d2f706&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Told you so&lt;/strong&gt;&lt;/a&gt;” 。底层块存储基本都是提供给数据库用的。如果这里出现了故障，爆炸半径与 Debug 难度是远超出一般工程师的&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;智力带宽&lt;/strong&gt;&lt;/a&gt;的。如此显著的故障时长（两个半小时），显然不是在无状态服务上的问题。&lt;/p&gt;
+&lt;p&gt;第二个教训是 —— &lt;strong&gt;自研造轮子没有问题，但要留着人来兜底&lt;/strong&gt;。降本增效把存储团队一锅端了，遇到问题找不到人就只能干着急。&lt;/p&gt;
+&lt;p&gt;第三个教训是，&lt;strong&gt;警惕大厂开源&lt;/strong&gt;。作为一个底层存储项目，一旦启用那就不是简单说换就能换掉的。而网易毙掉 Curve 这个项目，所有这些用 Curve 的基建就成了没人维护的危楼。Stonebraker 老爷子在他的名著论文《What Goes Around Comes Around》中就提到过这一点：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;stonebraker.png&#34; src=&#34;/zh/blog/cloud/netease/stonebraker.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488162&amp;idx=1&amp;sn=5913eb51b437e365c685ed11917a3302&amp;chksm=fe4b2779c93cae6ff254f4568f3e7895e005ce249ab4e0e3111bf3665a54fed35b381ff55aa9&amp;scene=21#wechat_redirect&#34;&gt;网易云音乐崩了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488151&amp;idx=1&amp;sn=556731d65228f07f443cfb27b5e7bd8b&amp;chksm=fe4b274cc93cae5ae1a32d423f2f7285eff3e184903d62182ad5f17c4772b4baf38b6a9c89c8&amp;scene=21#wechat_redirect&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487926&amp;idx=1&amp;sn=2edbd59c845944dc9ba38021f42d1d63&amp;chksm=fe4b246dc93cad7b35b7517b489371eaa08244ec561359e0a610bc9f6f2aa11cf1e3c2b34fb3&amp;scene=21#wechat_redirect&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488036&amp;idx=1&amp;sn=7bbcc3e8979a5f97a519a7a1684caa06&amp;chksm=fe4b27ffc93caee9701d4a94830417e281c5c08e345d12b007ebaca84dc79c3224b880d75f4c&amp;scene=21#wechat_redirect&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487552&amp;idx=1&amp;sn=799ae77dda3b80d2296070826142adea&amp;chksm=fe4b259bc93cac8da2cc20f864e5a8b62ecb6f5dd57e7435db1d3fb2f2864a5d991b3a016358&amp;scene=21#wechat_redirect&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487536&amp;idx=1&amp;sn=0cd598f426de0b617c7f3318aed9bd95&amp;chksm=fe4b25ebc93cacfd2d96a9704a0ae4dc2d330aee7cd4579641df513edce307ccdd3a9f94736e&amp;scene=21#wechat_redirect&#34;&gt;云上黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486766&amp;idx=1&amp;sn=b17b224eb2a2faa401957886cf7ea832&amp;chksm=fe4b38f5c93cb1e3765c88f0cd4133090497527e50c747654f3e312c8db83f801b44bd562e74&amp;scene=21#wechat_redirect&#34;&gt;互联网技术大师速成班 &lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486747&amp;idx=1&amp;sn=29cce4b791b274c966e05d2ce81ae09d&amp;chksm=fe4b38c0c93cb1d6aa83c776f206791e79f172105c3f942a9a2e28da70889929ef3cb0c77839&amp;scene=21#wechat_redirect&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486691&amp;idx=1&amp;sn=6858441ede03a6e700155390cf0086f4&amp;chksm=fe4b3938c93cb02eb36992769204ec829f4a9fe55c37329546a1db6039301ddf47094dddf7e1&amp;scene=21#wechat_redirect&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486590&amp;idx=1&amp;sn=d4d85de483fafb867487f024631a3e6c&amp;scene=21#wechat_redirect&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487367&amp;idx=1&amp;sn=d6e4abd2b2249d27bd8b8146b591b026&amp;chksm=fe4b3a5cc93cb34a8e90e4b7f06803fa11ee8234014cd4f1aedff59e3bf3c846b3cb133090f2&amp;scene=21#wechat_redirect&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487339&amp;idx=1&amp;sn=fce4c0d415d87026013169c737faeacb&amp;chksm=fe4b3ab0c93cb3a61bd2831fcad6dfb36419540e690420b1229053b1de2e3d3533a66f44fb4c&amp;scene=21#wechat_redirect&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487223&amp;idx=1&amp;sn=da885170d5d65a3c646d8b3d9da3aed3&amp;chksm=fe4b3b2cc93cb23a5625e8c183860a9e1528eca0a1311439f1ec308a74d53f10cf5dbbb9a1d0&amp;scene=21#wechat_redirect&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487319&amp;idx=1&amp;sn=7e38023ce115046b5318ee670c90fd58&amp;chksm=fe4b3a8cc93cb39a961e396d1491b7bb77089c2d79b8f5e942c6a945cf0aa6dedbf5a8a42828&amp;scene=21#wechat_redirect&#34;&gt;故障不是腾讯云草台的原因，傲慢才是&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487184&amp;idx=1&amp;sn=afa93b16ae95dba95d99a87ef6ff7605&amp;chksm=fe4b3b0bc93cb21d07adb10713c1061a53b6438a5db0bd93a2e7a0f11ea365ba3d24ae02d13d&amp;scene=21#wechat_redirect&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487089&amp;idx=1&amp;sn=ca16c2e7e534380eadcb3a3870d8e3b4&amp;chksm=fe4b3baac93cb2bc8c4b68c468acf3e8ac5ee124080a3e738262fe99dd1765c3adf9c56ea650&amp;scene=21#wechat_redirect&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487279&amp;idx=1&amp;sn=95231614887e129f298644ddc194909f&amp;chksm=fe4b3af4c93cb3e29078b4716d3b633246db8e2081acff8b821181c9ae058a0daf91e45a40b9&amp;scene=21#wechat_redirect&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908&amp;scene=21#wechat_redirect&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: 谁整合好DuckDB，谁赢得OLAP世界</title>
       <link>/zh/blog/pg/pg-duckdb/</link>
       <pubDate>Tue, 13 Aug 2024 00:00:00 +0000</pubDate>
@@ -8378,548 +8691,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzI0MjU2NTA1Mg==&amp;mid=2247580340&amp;idx=3&amp;sn=5ada961106478ba5c3e447a82077f183&amp;scene=21#wechat_redirect&#34;&gt;“卡脖子”一说，为什么误导人&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485402&amp;idx=2&amp;sn=eaa19e09c22febd05adc6f71b3667333&amp;scene=21#wechat_redirect&#34;&gt;范式转移 — 从云到本地优先&lt;/a&gt;&lt;/p&gt;
 
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: PostgreSQL 宏观查询优化之 pg_stat_statements</title>
-      <link>/zh/blog/admin/pgss/</link>
-      <pubDate>Thu, 26 Oct 2023 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/admin/pgss/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/admin/pgss/featured_hu75d0d77f7fbfe2fbd386d7c04570e341_381888_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
-        
-        &lt;p&gt;在线业务数据库中，慢查询不仅影响终端用户体验，还会浪费系统资源、拉高资源饱和度、导致死锁和事务冲突，增加数据库连接压力，导致主从复制延迟等问题。因此，&lt;strong&gt;查询优化&lt;/strong&gt;是 DBA 的核心工作内容之一。&lt;/p&gt;
-&lt;p&gt;在查询优化这条路上，有两种不同的方法：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;宏观优化&lt;/strong&gt;：整体分析工作负载，对其进行剖分下钻，自上而下地识别并改进其中表现最糟糕的部分。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;微观优化&lt;/strong&gt;：分析并改进一条特定的查询，这便需要记录慢查询日志，掌握 EXPLAIN 的玄机，领悟执行计划的奥妙。&lt;/p&gt;
-&lt;p&gt;今天我们先来说说前者，&lt;strong&gt;宏观优化&lt;/strong&gt;有三个主要目标与动机：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;减少资源消耗&lt;/strong&gt;：降低资源饱和的风险，优化CPU/内存/IO，通常以查询&lt;strong&gt;总耗时/总IO&lt;/strong&gt;作为优化目标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;改善用户体验&lt;/strong&gt;：最常见的优化目标，在OLTP系统中通常以降低&lt;strong&gt;查询平均响应时间&lt;/strong&gt;作为优化目标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平衡工作负载&lt;/strong&gt;：确保不同查询组之间的资源使用/性能表现的比例关系得当。&lt;/p&gt;
-&lt;p&gt;实现这些目标的关键在于&lt;strong&gt;数据支撑&lt;/strong&gt;，但是数据从哪里来？&lt;/p&gt;
-&lt;p&gt;—— &lt;strong&gt;pg_stat_statements&lt;/strong&gt;！&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-1.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-1.png&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;扩展插件pgss&#34;&gt;扩展插件：PGSS&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;pg_stat_statements&lt;/strong&gt;，以下简称 &lt;strong&gt;PGSS&lt;/strong&gt; ，是践行观宏之道的核心工具。&lt;/p&gt;
-&lt;p&gt;PGSS 出自 PostgreSQL 全球开发组官方之手，以第一方扩展插件的形式，随数据库内核本体一并发行，提供了跟踪 SQL 查询语句级别指标的方法。&lt;/p&gt;
-&lt;p&gt;PostgreSQL 生态中有许许多多的扩展，但如果说有哪一个是“&lt;strong&gt;必选&lt;/strong&gt;”的，我必定会毫不犹豫的回答：&lt;strong&gt;PGSS&lt;/strong&gt;。这也是在 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486135&amp;idx=1&amp;sn=7d9c4920e94efba5d0e0b6af467f596c&amp;chksm=fe4b3f6cc93cb67ac570d5280b37328aed392598b13df88545ff0a06f99630801fc999db8de5&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Pigsty&lt;/strong&gt;&lt;/a&gt; 中，我们宁愿“自作主张”，也要默认启用并主动加载的两个扩展之一。（另一个是用于微观优化的 auto_explain）&lt;/p&gt;
-&lt;p&gt;PGSS 需要在 &lt;strong&gt;shared_preload_library&lt;/strong&gt; 中显式指定加载，并在数据库中通过 &lt;strong&gt;CREATE EXTENSION&lt;/strong&gt; 显式创建。创建扩展后即可通过视图 &lt;strong&gt;pg_stat_statements&lt;/strong&gt; 访问查询的统计信息。&lt;/p&gt;
-&lt;p&gt;在 &lt;strong&gt;PGSS&lt;/strong&gt; 中，系统中的每一类查询（即抽取变量后，执行计划相同的查询）都会被分配一个查询ID，紧接着是调用次数，执行总耗时，以及各种其他指标，其完整模式定义如下（PG15+）：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;TABLE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_stat_statements&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;userid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                 &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;OID&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （标签值）执行此语句的用户 OID（标签值）
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;dbid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                   &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;OID&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （标签值）此语句所在的数据库 OID（标签值）
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;toplevel&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;               &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;BOOL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （标签值）此语句是否是顶层 SQL 语句（标签值）
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;queryid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （标签值）查询ID：标准化查询的哈希值（标签值）
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                  &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;TEXT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （标签值）标准化查询语句的文本内容
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;plans&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                  &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）此语句被 PLAN 的次数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;total_plan_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）此语句花费在 PLAN 上的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;min_plan_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）PLAN 的最小时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;max_plan_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）PLAN 的最大时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;mean_plan_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）PLAN 的平均时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;stddev_plan_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）PLAN 时间的标准差
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;calls&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                  &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）此语句被调用执行的次数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;total_exec_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）此语句花费在执行上的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;min_exec_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）执行的最小时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;max_exec_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）执行的最大时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;mean_exec_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）执行的平均时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;stddev_exec_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （测量值）执行时间的标准差
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;rows&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                   &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）执行此语句返回的总行数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;shared_blks_hit&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）命中的共享缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;shared_blks_read&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）读取的共享缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;shared_blks_dirtied&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写脏的共享缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;shared_blks_written&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写入磁盘的共享缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;local_blks_hit&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）命中的本地缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;local_blks_read&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）读取的本地缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;local_blks_dirtied&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写脏的本地缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;local_blks_written&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写入磁盘的本地缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;temp_blks_read&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）读取的临时缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;temp_blks_written&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写入磁盘的临时缓冲区总块数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;blk_read_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）读取块花费的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;blk_write_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）写入块花费的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;wal_records&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;            &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）生成 WAL 的记录总数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;wal_fpi&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）生成的 WAL全页镜像总数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;wal_bytes&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;              &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;NUMERIC&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）生成的 WAL 字节总数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_functions&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）JIT 编译的函数数量
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_generation_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）生成 JIT 字节码的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_inlining_count&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）函数被内联的次数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_inlining_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）花费在内联函数上的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_optimization_count&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）查询被 JIT优化的次数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_optimization_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）花费在JIT优化上的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_emission_count&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;BIGINT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）代码被 JIT Emit的次数
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;jit_emission_time&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;FLOAT&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- （累积量）花费在 JIT Emit上的总时长
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;PRIMARY&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;KEY&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;userid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;dbid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;queryid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;toplevel&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;PGSS 视图的 SQL 定义（PG 15+版本）&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;PGSS&lt;/strong&gt; 也有一些局限性：首先，&lt;strong&gt;正在执行中&lt;/strong&gt;的查询语句并不会纳入这里的统计，而需要从 &lt;strong&gt;pg_stat_activity&lt;/strong&gt; 中查看获取。其次，执行失败的查询（例如，因为 statement_timeout 超时被取消的语句）也不会被计入这里的统计 —— 这是&lt;strong&gt;错误分析&lt;/strong&gt;要解决的问题，而不是&lt;strong&gt;查询优化&lt;/strong&gt;所关心的目标。&lt;/p&gt;
-&lt;p&gt;最后，查询标识符 &lt;strong&gt;queryid&lt;/strong&gt; 的稳定性需要特别注意：当数据库二进制版本和系统数据目录完全相同时，同一类查询会具有相同的 &lt;strong&gt;queryid&lt;/strong&gt; （即在物理复制的主从上，同类查询的 &lt;strong&gt;queryid&lt;/strong&gt; 默认是相同的），然而对于逻辑复制则不然。但用户不应当对这一性质抱有过度的依赖与假设。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;原始数据&#34;&gt;原始数据&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;PGSS&lt;/strong&gt; 视图中的列可以分为三类：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;描述性的标签列（Label）&lt;/strong&gt;：查询ID（queryid）、数据库 ID（dbid）、用户（userid），一个顶层查询标记，和标准化的查询文本（query）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;测量性的指标（Gauge）&lt;/strong&gt;：与最小、最大、均值标准差有关的八列统计量，以 min，max，mean，stddev 作为前缀，以 plan_time 与 exec_time 作为后缀。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;累积性的指标（Counter）&lt;/strong&gt;：除了上面八列与标签列的&lt;strong&gt;其他指标&lt;/strong&gt;，例如 calls、rows 等，最重要、最有用的指标都在这一类里。&lt;/p&gt;
-&lt;p&gt;首先解释一下 queryid：queryid 是查询语句被解析后，剥离常量后生成规范化查询的哈希值，因此可以用来标识&lt;strong&gt;同一类查询&lt;/strong&gt;。不同的查询语句可能有着同样的 queryid （规范化后结构一样），同样的查询语句也可能有着不同的 queryid （例如因为 search_path 不同，导致实际查询的表不懂）。&lt;/p&gt;
-&lt;p&gt;同样的查询可能会在不同的数据库中被不同的用户所执行。因此在 PGSS 视图中，queryid，dbid，userid，toplevel 四个标签列，共同组成了唯一标识一条记录的“主键”。&lt;/p&gt;
-&lt;p&gt;对于指标列而言，&lt;strong&gt;测量性质的指标（GAUGE）&lt;/strong&gt; 主要是执行时间与计划时间相关的八个统计量，然而用户没有办法很好地控制这些统计量的统计范围，所以实用价值并不大。&lt;/p&gt;
-&lt;p&gt;真正重要的指标是&lt;strong&gt;累积性的指标（Counter）&lt;/strong&gt;，例如：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;calls&lt;/strong&gt; ：此查询组发生了多少次调用。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;total_exec_time&lt;/strong&gt; + &lt;strong&gt;total_plan_time&lt;/strong&gt;：查询组累计耗费时间。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;rows&lt;/strong&gt;：查询组累计返回了多少行。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;shared_blks_hit&lt;/strong&gt; + &lt;strong&gt;shared_blks_read&lt;/strong&gt;：缓冲池累计命中和读取操作次数。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;wal_bytes&lt;/strong&gt;：此组中的查询累计生成的 WAL 字节数。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;blk_read_time&lt;/strong&gt; 和 &lt;strong&gt;blk_write_time&lt;/strong&gt;：累计花费在块读写IO上的时间&lt;/p&gt;
-&lt;p&gt;这里，最有意义的指标是 &lt;strong&gt;calls&lt;/strong&gt; 与 &lt;strong&gt;total_exec_time&lt;/strong&gt;，可以用于计算查询组的核心指标 &lt;strong&gt;QPS&lt;/strong&gt; （吞吐量）与 &lt;strong&gt;RT&lt;/strong&gt;（延迟/响应时间），但其他的指标也很有参考价值。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-2.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-2.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;可视化展现 PGSS 视图的某个查询组快照&lt;/p&gt;
-&lt;p&gt;要解读累积性指标数据，只有某一个时刻的数据是不够的。&lt;strong&gt;我们需要对比至少两个时刻的&lt;strong&gt;&lt;strong&gt;快照&lt;/strong&gt;&lt;/strong&gt;，才能得到有意义的结论&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;作为特例，如果您感兴趣的范围正好是从统计周期伊始（通常是启用此扩展时）至今，那么确实不需要对比“两个快照”。但用户感兴趣的时间粒度通常并不会这么粗放，而往往是以分钟、小时、天为单位。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-3.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-3.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;根据多个 PGSS 查询组快照计算历史时序指标&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;好在类似 &lt;a href=&#34;https://pigsty.cc&#34;&gt;Pigsty&lt;/a&gt; 监控系统这样的工具会定期（默认每隔10s）截取头部查询（耗时Top256）的快照。有了许多不同类型的累积指标 M（etrics）在不同时刻的快照之后，我们就能计算出某个累积性指标的三种重要派生指标：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;dM/dt&lt;/strong&gt; ：指标 M 基于时间的微分，即每秒的增量。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;dM/dc&lt;/strong&gt;：指标 M 基于调用次数的微分，即每次调用的平均增量。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;%M&lt;/strong&gt;：指标 M 在整个工作负载中所占的百分比。&lt;/p&gt;
-&lt;p&gt;这三类指标正好与宏观优化的三类目标相对应，对时间的微分 &lt;strong&gt;dM/dt&lt;/strong&gt; 揭示了&lt;strong&gt;每秒资源使用量&lt;/strong&gt;，通常用于减少资源消耗的优化目标。对调用次数的微分 &lt;strong&gt;dM/dc&lt;/strong&gt; 揭示了&lt;strong&gt;每次调用的资源使用量&lt;/strong&gt;，通常用于改善用户体验的优化目标。而百分比指标 &lt;strong&gt;%M&lt;/strong&gt; 展示了查询组在整个工作负载中所占的百分比，通常用于平衡工作负载的优化目标。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;对时间微分&#34;&gt;对时间微分&lt;/h2&gt;
-&lt;p&gt;让我们首先来看第一类指标：对时间的微分。在这里，我们可以使用的指标 M 包括：calls，total_exec_time，rows，wal_bytes，shared_blks_hit + shared_blks_read，以及 blk_read_time + blk_write_time。其他的指标也有参考意义，但让我们从最重要的开始。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-4.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-4.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;可视化展现对时间的微分指标 dM/dt&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;计算这些指标的方式其实很简单，我们只需要：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;首先计算两个快照之间的指标值 M 的差值：&lt;strong&gt;M2 - M1&lt;/strong&gt;&lt;/li&gt;
-&lt;li&gt;然后计算两个快照之间的时间差值：&lt;strong&gt;t2 - t1&lt;/strong&gt;&lt;/li&gt;
-&lt;li&gt;最终计算 &lt;strong&gt;(M2 - M1) / (t2 - t1)&lt;/strong&gt; 即可&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;生产环境通常会使用 5s，10s，15s，30s，60s 这样的数据采样间隔。对于负载分析通常会使用 1m， 5m，15m 作为常用的分析窗口大小。&lt;/p&gt;
-&lt;p&gt;例如，当我们计算 QPS 时，就会分别计算最近 1分钟，5分钟，15分钟的 QPS。窗口越长曲线就越平稳，更能反映长期变化趋势；但是会隐藏短期波动细节，不利于发现瞬时异常波动，所以不同粒度的指标需要结合来看。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-5.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-5.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;展示特定查询组 1/5/15 分钟窗口下的 QPS&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;如果您使用 Pigsty / Prometheus 来采集监控数据，那么可以使用 PromQL 简单地完成这些计算工作。例如，计算所有查询最近1分钟的 QPS 指标，使用以下语句就可以了： rate(pg_query_calls{}[1m])&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;QPS&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 calls 时，对时间求导的结果是 QPS，它的单位是每秒查询数（req/s），这是一个非常基础的指标。查询 QPS 属于吞吐量指标，直接反应了业务施加的负载状况，如果一个查询的吞吐量过高（例如，10000+）或者过低（例如，1-），有可能是值得关注的。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-6.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-6.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;QPS：1/5/15 分钟 µ/CV， ±1/3σ分布&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;如果我们把所有查询组的 QPS 指标累加起来（且没超过PGSS的收集范围），就会得到所谓的 “全局QPS”。另一种获得全局 QPS 的方式是在客户端打点，在类似 Pgbouncer 的连接池中间件上采集，或者使用 ebpf 探测。但都不如 PGSS 方便。&lt;/p&gt;
-&lt;p&gt;请注意，QPS 指标并不具备负载意义上的&lt;strong&gt;横向可比性&lt;/strong&gt;。不同查询组可能有着同样的 QPS，而单个查询的耗时却天差地别。甚至同一个查询组在不同时间点上产生的负载水平，也可能因为执行计划不同而发生巨大变化。每秒执行时长是一个更好的衡量负载的指标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;每秒执行时长&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 total_exec_time （+ total_plan_time，可选 ）时，我们就会得到宏观优化中最重要的指标之一：在查询组上耗费的的执行时间，有意思的是，这个导数的单位是 秒/每秒，所以分子分母相互约掉了，使得它实际上是一个无量纲的指标。&lt;/p&gt;
-&lt;p&gt;这个指标的涵义是：服务器每秒钟花费多少秒来处理这个查询组中的查询，例如 2 s/s 意味着服务器每秒花费两秒执行时间在这组查询上；对于多核CPU，这当然是有可能的：把两个CPU核的全部时间都拿来就行了。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-7.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-7.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;每秒执行时长：1/5/15 分钟均值&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;因此这里的值也可以理解为一个百分比：可以超过 100%，在这种视角下，它是一个类似于主机 load1, load5, load15 的指标，揭示了该查询组产生的&lt;strong&gt;负载水平&lt;/strong&gt;。如果除以 CPU 核数，甚至可以得到归一化的查询负载贡献度指标。&lt;/p&gt;
-&lt;p&gt;但是我们需要注意的是，执行时间中包括了等待锁，等待I/O的时间。所以确实可能出现这样的情况：查询执行时间很长，但却没有对 CPU 负载产生影响。所以如果要精细分析慢查询，我们还要参考&lt;strong&gt;等待事件&lt;/strong&gt;来进一步分析才行。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;每秒行数&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 rows 时，我们会得到每秒该查询组返回的行数，单位是行/每秒（rows/s）。例如 10000 rows/s 意味着该类查询每秒向客户端吐出1万行数据。返回的行需要耗费客户端的处理资源，当我们需要检视应用客户端的数据处理压力时，这是一个非常有参考意义的指标。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-8.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-8.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;每秒返回的行数：1/5/15 分钟均值&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;strong&gt;共享缓冲区访问带宽&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 shared_blks_hit + shared_blks_read 时，我们会得到每秒命中/读取的共享缓冲区块数，如果将其乘以默认块大小 8KiB（极少情况下有可能会是其他的大小，例如32KiB），我们就会得到一类查询“访问”内存磁盘的带宽：单位是字节/秒。&lt;/p&gt;
-&lt;p&gt;举个例子，如果某一类查询每秒访问50万次共享缓冲区，折合 3.8 GiB/s 的内部访问数据流：那么这就是一个显著负载，也许会是一个很好的优化候选项。也许你应该检查一下这个查询，看看它是否配得上这些“资源消耗”。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-9.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-9.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;共享缓冲区访问带宽与缓冲区命中率&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;另一个值得参考的衍生指标是缓冲区命中率：即 hit / (hit + read) ，它可以用于分析性能变化的可能原因 —— 缓存未命中。当然，重复访问同一个共享缓冲池里的块，并不会真的重新读取，即使真的去读取，也不一定是读取磁盘，有可能是读内存中的FS Cache。所以这里只是一个参考值，但它确实是一个非常重要的宏观查询优化参考指标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;WAL日志量&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 wal_bytes 时，我们得到了该查询生成 WAL 的速率，单位是字节/每秒（B/s）。这个指标是在 PostgreSQL 13 新引入的，可以用来定量揭示查询产生的 WAL 大小：写入的 WAL 越多越快，刷写磁盘、物理复制/逻辑复制、日志归档的压力就会越大。&lt;/p&gt;
-&lt;p&gt;一个典型的例子是：&lt;code&gt;BEGIN; DELETE FROM xxx; ROLLBACK;&lt;/code&gt; 。这样的事务删了很多数据，产生了大量 WAL 却没有执行任何有用的工作，通过这个指标可以将其揪出来。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-10.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-10.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;WAL字节率：1/5/15 分钟均值&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这里有两个注意事项：上面我们说过，PGSS 无法跟踪执行失败的语句，但这里事务虽然 &lt;strong&gt;ROLLBACK&lt;/strong&gt; 失败了，但是语句却是成功执行了的，所以会被 PGSS 跟踪记录。&lt;/p&gt;
-&lt;p&gt;第二件事是：在 PostgreSQL 中并非仅仅是 INSERT/UPDATE/DELETE 会产生 WAL 日志，SELECT 操作也有可能产生 WAL 日志，因为 SELECT 可能会修改元组上的标记（Hint Bit）让页面校验和出现变化，触发 WAL 日志写入。&lt;/p&gt;
-&lt;p&gt;甚至存在这种可能，如果读取负载非常大，它会有较大概率导致 FPI 镜像生成，产生可观的 WAL 日志量。你可以通过进一步检查 wal_fpi 指标。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-11.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-11.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;共享缓冲区写脏/写回带宽&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;对于 13 以下的版本，共享缓冲区写脏/写回带宽指标可以作为一个近似下位替代，用于分析查询组的写入负载特征。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;I/O耗时&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 blks_read_time + blks_write_time ，我们会得到查询组花费在块 I/O 上的耗时比例，单位是 “秒/每秒”，与每秒执行时长指标一样，它也反映出一样操作占用的时间比例。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;I/O 耗时对于分析查询毛刺原因很有帮助&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;因为 PostgreSQL 会使用操作系统提供的 FS Cache，所以即使这里执行了块读取/写入，可能在文件系统层面上仍然是发生在内存中的缓冲操作。所以它只能作为一个参考指标，使用时需要谨慎，需要与主机节点上的磁盘 I/O 监控相互对照。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;对时间微分的指标&lt;/strong&gt; &lt;strong&gt;dM/dt&lt;/strong&gt;，可以展现出一个数据库实例/集群内部工作负载的全貌，对于优化资源使用的场景来说尤其有用。但是如果您的优化目标是改善用户体验，那么可能另一组指标 —— &lt;strong&gt;对调用次数的微分 dM/dc&lt;/strong&gt;，会更有参考意义。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;对调用次数微分&#34;&gt;对调用次数微分&lt;/h2&gt;
-&lt;p&gt;上面我们已经计算了六类重要指标对于&lt;strong&gt;时间&lt;/strong&gt;的微分，另一类衍生指标计算方式是对 “&lt;strong&gt;调用次数&lt;/strong&gt;” 进行微分，也就是分母从时间差变成了 QPS。&lt;/p&gt;
-&lt;p&gt;这类指标重要性相比前者甚至更高，因为它提供了直接关乎用户体验的几个核心指标，比如最重要的 —— &lt;strong&gt;查询响应时间&lt;/strong&gt; &lt;strong&gt;（RT，Response Time）&lt;/strong&gt;，或曰 &lt;strong&gt;延迟（Latency）&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;计算这些指标的方式也很简单，我们只需要：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;计算两个快照之间的指标值 M 的差值：&lt;strong&gt;M2 - M1&lt;/strong&gt;&lt;/li&gt;
-&lt;li&gt;然后计算两个快照之间的 calls 差值：&lt;strong&gt;c2 - c1&lt;/strong&gt;&lt;/li&gt;
-&lt;li&gt;然后计算 &lt;strong&gt;(M2 - M1) / (c2 - c1)&lt;/strong&gt; 即可&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;对于 PromQL 实现来说，对于&lt;strong&gt;调用次数的微分指标 dM/dc&lt;/strong&gt;，可以用“&lt;strong&gt;对时间的微分指标 dM/dt&lt;/strong&gt;” 计算得到。例如要计算 RT，就可以使用 &lt;strong&gt;每秒执行时长&lt;/strong&gt; &lt;strong&gt;/&lt;/strong&gt; &lt;strong&gt;每秒查询数&lt;/strong&gt; ，两指标相除即可：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;rate(pg_query_exec_time{}[1m]) / rate(pg_query_calls{}[1m])
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img alt=&#34;pgss-12.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-12.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;dM/dt 可以用于计算 dM/dc&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;strong&gt;调用次数&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 calls 时，对自己微分没有任何意义（结果会恒为 1）。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平均延迟/响应时间/RT&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 total_exec_time 时，对调用次数求导的结果是 &lt;strong&gt;RT&lt;/strong&gt;，或响应时间/延迟。它的单位是秒（s）。&lt;strong&gt;RT 直接反映了用户体验，是宏观性能分析中最重要的指标&lt;/strong&gt;。这个指标的含义是：此查询组在服务器上的平均查询响应时间。如果条件允许启用 pg_stat_statements.track_planning，还可以加上 total_plan_time 一起计算，结果会更精确更具有代表性。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-13.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-13.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;RT：1/5/15 分钟 µ/CV， ±1/3σ分布&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这里要特别强调两种特殊情况：第一：PGSS不跟踪失败/执行中的语句；第二：PGSS的统计数据受（pg_stat_statements.max）参数限制，可能出现部分采样偏差。尽管有这些局限性，但想要获取至关重要的查询语句组延迟数据，PGSS 毫无疑问是最为稳妥可靠的来源。正如上面所述，在其他观测点位也有办法采集查询 RT 数据，但会麻烦得多。&lt;/p&gt;
-&lt;p&gt;你可以在客户端侧打点，采集语句执行时间，通过指标或者日志上报；你也可以尝试使用 ebpf 来探测语句 RT，这对基础设施和工程师要求会比较高。Pgbouncer 和 PostgreSQL （14+） 倒是也提供了 RT 指标，只可惜粒度都是数据库级别，没有一个能做到 PGSS 查询语句组级别的指标收集。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-14.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-14.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;RT：语句级/连接池级/数据库级&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;不同于 QPS 这样的吞吐量指标，&lt;strong&gt;RT 是具有横向可比性的&lt;/strong&gt;：例如某个查询组平时的 RT 都在1毫秒内，那么超过 10ms 的事件应当被视作严重的偏差进行分析。&lt;/p&gt;
-&lt;p&gt;当出现故障时， RT 视图对于定位原因也很有帮助：如果所有查询整体 RT 变慢，那么最有可能与资源不足有关。如果只是特定查询组的 RT 发生变化，那就更有可能是某些慢查询导致了问题，应当进一步调查分析。如果 RT 变化的时间点与应用发布部署吻合，则应当考虑是否要回滚这些部署。&lt;/p&gt;
-&lt;p&gt;此外，在性能分析，压力测试，基准测试时，&lt;strong&gt;RT 也是最重要的指标&lt;/strong&gt;。你可以通过对比典型查询在不同环境（例如不同PG大版本、不同硬件、不同配置参数）下的延迟表现来评估系统的性能，并以此为依据不断对系统性能进行调整与改进。&lt;/p&gt;
-&lt;p&gt;RT 是如此重要，以至于 RT 本身又会衍生出许多下游指标来：1分钟/5分钟/15分钟的均值µ与标准差σ自然必不可少；过去15分钟的 ±σ，±3σ 可以用来衡量 RT 的波动范围，过去1小时的 95，99 分位点也很有参考价值。&lt;/p&gt;
-&lt;p&gt;RT 是评估 OLTP工作负载的核心指标，怎么强调它的重要性都不为过。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平均返回行数&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 rows 时，我们会得到每次查询&lt;strong&gt;平均返回的行数&lt;/strong&gt;，单位是行/每查询。对于 OLTP 工作负载来说，典型查询模式为点查，即每次查询返回几条数据。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-15.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-15.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;按照主键查询单条记录，平均返回行数稳定为1&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;如果一个查询组每次查询向客户端吐出几百甚至成千上万行记录，那么应当对其进行审视。如果这是有意而为之的设计，比如批量加载任务/数据转储，那么不需要做什么。如果这是由应用/客户端发起的请求，那么可能存在错误，比如语句缺少 LIMIT 限制，查询缺少分页设计，这样的查询应该进行调整修复。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平均共享缓冲区读取/命中&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 shared_blks_hit + shared_blks_read 时，我们会得到每条查询“命中”与“读取”共享缓冲区的平均次数，如果将其乘以默认块大小 8KiB，我们就会得到这类查询每次执行的“带宽”，单位是 B/s：每次查询平均会访问/读取多少 MB 数据 ？&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-16.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-16.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;按照主键查询单条记录，平均返回行数稳定为1&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;查询平均访问的数据量通常与平均返回的行数相匹配，如果你的查询平均只返回了几行，却访问了成M上G的数据块，那你就需要特别注意了：这样的查询对于数据冷热状态非常敏感，如果所有的块都在缓冲区中，它的性能可能还说的过去，但如果从磁盘冷启动，执行时间可能会出现戏剧性的变化。&lt;/p&gt;
-&lt;p&gt;当然，不要忘记 PostgreSQL 双缓存问题，所谓“读取”的数据可能已经在操作系统文件系统层面被缓存过一次了。所以你需要与操作系统监控指标，或者 pg_stat_kcache ，pg_stat_io 这些系统视图相互参照进行分析。&lt;/p&gt;
-&lt;p&gt;另一种值得关注的模式是此指标的突变，这通常意味着该查询组的&lt;strong&gt;执行计划可能出现了翻转/劣化&lt;/strong&gt;，非常值得关注与进一步研究。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平均WAL日志量&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;当 M 是 wal_bytes 时，我们得到了每条查询平均生成 WAL 的大小，这是 PostgreSQL 13 新引入的字段。这个指标可以衡量查询的变更足迹大小，并计算读写比例等重要评估参数。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-17.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-17.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;稳定的QPS却有着周期性WAL波动，可推断是 FPI 的影响&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;另一个用途是优化检查点/Checkpoint：如果你观察到此指标周期性的起伏（周期约等于 checkpoint_timeout），那么可以通过调整检查点间距，来优化查询产生 WAL 的数量。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;对调用次数进行微分的指标 dM/dc&lt;/strong&gt;，可以展现出一类查询的工作负载特性，对于优化用户体验来说非常有用。特别是 RT 乃是性能优化的黄金指标，怎样强调其重要性都不为过。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;dM/dc&lt;/strong&gt; 这样的指标为我们提供类似重要的绝对值指标，但如果想要找出哪些查询的优化潜在收益最大，还需要用到 &lt;strong&gt;%M 百分比指标&lt;/strong&gt;。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;百分比指标&#34;&gt;百分比指标&lt;/h2&gt;
-&lt;p&gt;现在我们来研究第三类指标，&lt;strong&gt;百分比指标&lt;/strong&gt;。即某个查询组相对于整体工作负载所占的比例。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;百分比指标 M%&lt;/strong&gt; 为我们提供了某个查询组相对于整体工作负载的比例，帮助我们在频次、时间、I/O时间/次数上时识别出“主要参与者”，找出潜在优化收益最大的候选查询组，作为优先级评定的重要依据。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-18.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-18.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;常用百分比指标 %M 一览&lt;/p&gt;
-&lt;p&gt;举个例子，如果某个查询组有 1000 QPS  的绝对值，看上去不少；但如果它只占整个工作负载的 3%，那么优化此查询的收益与优先级就没那么高了；反之，如果它占据了整个工作负载的 50% 还要多 —— 如果你有办法把它优化掉就可以砍掉整个实例吞吐量的半壁江山，优化它的优先级就会非常之高。&lt;/p&gt;
-&lt;p&gt;常见的优化策略是这样的：首先把所有查询组分别按照上面提到的重要指标：calls，total_exec_time，rows，wal_bytes，shared_blks_hit + shared_blks_read，以及 blk_read_time + blk_write_time 在一段时间内的 &lt;strong&gt;dM/dt&lt;/strong&gt; 值进行排序取 TopN （比如 N=10 或者更多），加入优化候选列表中。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-19.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-19.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;按照特定标准，选取待优化的 TopSQL&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;然后，对于优化候选列表中的每个查询组，依次分析其 &lt;strong&gt;dM/dc&lt;/strong&gt; 指标，结合具体的查询语句与慢查询日志/等待事件进行分析，决定这是不是一个值得优化的查询。对于决定（Plan）进行优化的查询，就可以使用后续篇 &lt;strong&gt;“微观优化”&lt;/strong&gt; 将要介绍的技巧进行调优（Do），并使用监控系统评估优化的效果（Check），总结分析后进入下一个 PDCA 戴明循环，持续进行管理优化。&lt;/p&gt;
-&lt;p&gt;除了对指标取 TopN 之外，还可以使用可视化的方式。可视化非常有助于从工作负载中识别 “主要贡献者”，复杂的判断算法可能还远比不上人类DBA对监控图形模式的直觉。想要形成比例感，我们可以借助饼图，树图或者堆叠的时序图。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-20.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-20.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;将所有查询组的 QPS 进行堆叠&lt;/p&gt;
-&lt;p&gt;例如，我们可以使用饼图来标识过去1小时内耗时/IO使用最大的查询，使用二维树图（大小代表总耗时，颜色代表平均RT）来展示一个额外的维度。并用堆叠时序图来展示比例随时间的变化关系。&lt;/p&gt;
-&lt;p&gt;我们也可以直接分析当下的 PGSS 快照，按照不同的关注点进行排序，按照您自己的标准选择有待优化的查询即可。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;pgss-21.png&#34; src=&#34;/zh/blog/admin/pgss/pgss-21.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;I/O 耗时对于分析查询毛刺原因很有帮助&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;总结&#34;&gt;总结&lt;/h2&gt;
-&lt;p&gt;最后，让我们对上面的内容做一个总结。&lt;/p&gt;
-&lt;p&gt;PGSS提供了丰富的指标，其中最重要的累积指标可以使用三种方式进行加工处理：&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;dM/dt&lt;/strong&gt; ：指标 M 基于时间的微分，揭示了&lt;strong&gt;每秒资源使用量&lt;/strong&gt;，通常用于减少资源消耗的优化目标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;dM/dc&lt;/strong&gt;：指标 M 基于调用次数的微分，揭示了&lt;strong&gt;每次调用的资源使用量&lt;/strong&gt;，通常用于改善用户体验的优化目标。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;%M&lt;/strong&gt; ：百分比指标展示了查询组在整个工作负载中所占的百分比，通常用于平衡工作负载的优化目标。&lt;/p&gt;
-&lt;p&gt;通常，我们会根据 &lt;strong&gt;%M&lt;/strong&gt; ：百分比指标 Top 查询选择高价值的备选优化查询，并使用 &lt;strong&gt;dM/dt *&lt;em&gt;dM/dc*&lt;/em&gt;&lt;/strong&gt; 指标进行进一步的评估，确认是否有优化空间和可行性，并评估优化后的效果。如此往复，不断循环。&lt;/p&gt;
-&lt;p&gt;理解了宏观优化的方法论后，我们就可以用这样的方法去定位优化慢查询了。这里给出了一个具体的 《 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484478&amp;idx=1&amp;sn=ea44675df79b60a12273e78b358bb557&amp;chksm=fe4b31e5c93cb8f325ba1e4389874112bd5441280492c87e259a32aa67e00c7e0028e7dc51eb&amp;scene=21#wechat_redirect&#34;&gt;利用监控系统诊断PG慢查询&lt;/a&gt;》的例子。在下一篇中，我们将介绍关于 PostgreSQL查询 &lt;strong&gt;微观优化&lt;/strong&gt; 的经验技巧。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;参考&#34;&gt;参考&lt;/h2&gt;
-&lt;p&gt;&lt;code&gt;[1]&lt;/code&gt; &lt;a href=&#34;https://gitlab.com/postgres-ai/postgresql-consulting/postgres-howtos/&#34;&gt;PostgreSQL HowTO: pg_stat_statements&lt;/a&gt; by Nikolay Samokhvalov&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;[2]&lt;/code&gt; &lt;a href=&#34;https://www.postgresql.org/docs/current/pgstatstatements.html&#34;&gt;pg_stat_statements&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;[3]&lt;/code&gt; &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484478&amp;idx=1&amp;sn=ea44675df79b60a12273e78b358bb557&amp;chksm=fe4b31e5c93cb8f325ba1e4389874112bd5441280492c87e259a32aa67e00c7e0028e7dc51eb&amp;scene=21#wechat_redirect&#34;&gt;利用监控系统诊断PG慢查询&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;[4]&lt;/code&gt; &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486169&amp;idx=1&amp;sn=697ab3c172fe6cc28e12cff7297bb343&amp;chksm=fe4b3f02c93cb614bbd1d5075120e074cebb5214d3a1a516363582bcee294e02bf5fd0e051ee&amp;scene=21#wechat_redirect&#34;&gt;如何用Pigsty监控现有PostgreSQL (RDS/PolarDB/自建)？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;[5]&lt;/code&gt; &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486283&amp;idx=1&amp;sn=4b63f438df33291a3deb1052bea31347&amp;chksm=fe4b3e90c93cb786a54407a4f7e552b2c8b28478b28df852e41f5d9e2c991761dddbc9a5a813&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.5 发布：Ubuntu/Debian支持与监控改版/新扩展&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;[6]&lt;/code&gt; &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484189&amp;idx=1&amp;sn=19d4381c7ec4bc4498bd56c5ee9f916b&amp;chksm=fe4b36c6c93cbfd06fba1c7a1ad3c5cba8d0060f82acb56e96f0e64694f79c2df9299f0b1115&amp;scene=21#wechat_redirect&#34;&gt;PostgreSQL监控系统Pigsty概述&lt;/a&gt;&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: v2.5：Ubuntu &amp; PG16</title>
-      <link>/zh/blog/releases/v2.5.0/</link>
-      <pubDate>Tue, 24 Oct 2023 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/releases/v2.5.0/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/releases/v2.5.0/featured_hu0f9f592e5b58e66acf3144f9ea451914_120086_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
-        
-        &lt;p&gt;时值 1024 程序员节，Pigsty v2.5.0 发布了 🎉，这个版本添加了对 &lt;strong&gt;Ubuntu&lt;/strong&gt; 与 &lt;strong&gt;Debian&lt;/strong&gt; 系操作系统的支持，加上原有的 &lt;strong&gt;EL7/8/9&lt;/strong&gt; 支持，可谓实现了主流 Linux 操作系统大满贯。&lt;/p&gt;
-&lt;p&gt;此外，Pigsty 正式支持了自托管的 Supabase 与 PostgresML，以及列式存储插件 &lt;code&gt;hydra&lt;/code&gt;，激光雷达点云支持插件 &lt;code&gt;pointcloud&lt;/code&gt;，图像相似度计算插件 &lt;code&gt;imgsmlr&lt;/code&gt;，扩展距离函数包 &lt;code&gt;pg_similarity&lt;/code&gt; 以及多语言模糊检索插件 &lt;code&gt;pg_bigm&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;在监控上，Pigsty 优化了 PostgreSQL 监控面板体验，新增了 Patroni &amp;amp; Exporter 监控面板，根据查询宏观优化方法论重新设计了 PGSQL Query 监控面板。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h3 id=&#34;关于pigsty&#34;&gt;关于Pigsty&lt;/h3&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486135&amp;idx=1&amp;sn=7d9c4920e94efba5d0e0b6af467f596c&amp;chksm=fe4b3f6cc93cb67ac570d5280b37328aed392598b13df88545ff0a06f99630801fc999db8de5&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Pigsty&lt;/strong&gt;&lt;/a&gt; 是一个开箱即用的 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485933&amp;idx=3&amp;sn=ea360aa7a59a4cd23ad5f9a9f415a0a0&amp;chksm=fe4b3c36c93cb520bda4596136e927d7cf92c597a76c04077c256588b2428202bdb7f004c08b&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;PostgreSQL&lt;/strong&gt;&lt;/a&gt; 发行版 、提供本地优先的 RDS PG 开源替代。让用户用云数据库 RDS 几分之一的纯硬件成本，自助运行更好的企业级 PostgreSQL 数据库服务。更多介绍，请访问 &lt;strong&gt;&lt;a href=&#34;https://pigsty.cc&#34;&gt;https://pigsty.cc&lt;/a&gt;&lt;/strong&gt; 。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdviaibXpFIgRxiaJsODiba63xbIfBaQ3DibSgq0kIcd7jeYvdd2UcMKKPVxCw/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;ubuntudebian支持&#34;&gt;Ubuntu/Debian支持&lt;/h2&gt;
-&lt;p&gt;在《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486263&amp;idx=1&amp;sn=4288450c04a6fdbaf5e4fae385d42bd9&amp;chksm=fe4b3eecc93cb7faf32a8c30ab78870f8ca607ad572e9d6725ac9f64c1549071c3d33a802019&amp;scene=21#wechat_redirect&#34;&gt;临水照花看Ubuntu与Debian：Pigsty v2.5&lt;/a&gt;》中，我们已经预告了对 Ubuntu / Debian 系操作系统的支持（以下简称 Deb 支持）。从两年前 0.x 版本的时代，就有用户提出想要 Ubuntu 和 Debian 操作系统支持了，所以我觉得这是一件非常正确且重要的事情。&lt;/p&gt;
-&lt;p&gt;作为一个选择构建于&lt;strong&gt;裸操作系统上&lt;/strong&gt;的数据库发行版，支持一种新操作系统并不像容器化数据库打个镜像那么简单。有许多的适配工作需要去做。首当其冲的就是包不齐的问题，好比 Prometheus 就没有官方提供的 DEB 源，不得不自己维护打包并提供一个软件仓库。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvO7Z7TjuaXzTqwDH6IGer65ibwCZuDI1ZHcXPL0fD9p3Eib51VTVYq8iag/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Pigsty 维护的 APT/YUM 源&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;包管理的巨大差别，要求你针对DEB系重写整个 bootstrap / 构建本地软件源的逻辑。发行版的 FHS ，习惯规约差异需要你一个一个去适配处理。你要解决的不仅是 PostgreSQL 内核和一百多个扩展的完整性兼容性问题，还有 etcd / minio / redis / grafana / prometheus / haproxy 等各种组件的问题。好在 Pigsty 克服了这些问题，让 Ubuntu / Debian 也有了和 EL 7-9 一样完整的丝滑体验。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvJPVNBLF2fZIXicqye4lHBBvQrfeiaNAcwbpgSyqtEiblphruCM5sDbFRg/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;一键安装 Pigsty&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;在使用体验上，Deb系 支持的功能集与EL系几乎完全相同，唯一的例外是 supabase 及其使用的几个专用扩展还没有完成移植。除此之外， Deb 系还有一些独有的扩展插件，例如化学分子式扩展 &lt;code&gt;RDKit&lt;/code&gt;，激光雷达点云数据扩展 &lt;code&gt;pointcloud&lt;/code&gt; / 扩展距离函数包 &lt;code&gt;pg_similarity&lt;/code&gt; （这两个给力扩展反向移植到 EL 了）。想要完整发挥 PostgresML + CUDA 的实力，更是非 Ubuntu 不可。&lt;/p&gt;
-&lt;p&gt;Pigsty 在自动配置过程中添加了 Debian / Ubuntu 系统的识别，单机安装时会自动使用对应的配置模板。Deb系的模板相比 EL系只有 8 个参数的默认值有区别 —— 因为两种发行版的包名是不一样的，所以像 &lt;code&gt;xx_packages&lt;/code&gt; 的参数肯定是需要调整的。除此之外需要就只有 上游源 &lt;code&gt;repo_upstream&lt;/code&gt; ，本地源 &lt;code&gt;node_repo_local_urls&lt;/code&gt; ，以及默认的 &lt;code&gt;pg_dbsu_uid&lt;/code&gt; 了（DEB包没有分配固定UID）。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdv9GsDQNLBSNicdicI3nWRPVZd1iamPibnPHOD9RyOUGN9T6QBialXEmms3pw/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Ubuntu 系统的声明式配置文件&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;这些参数通常都不需要用户来调整，所以在 Pigsty 使用流程上，Deb系可以说几乎没有任何区别了：实际上 Pigsty 的离线软件包构建模版就是这么工作的：一次性在七种不同的操作系统上完成完整的 Pigsty 安装，无需任何特殊处理。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;新的扩展插件&#34;&gt;新的扩展插件&lt;/h2&gt;
-&lt;p&gt;Pigsty v2.5 收纳了几款用户呼声比较高的扩展插件。首当其冲的便是 &lt;strong&gt;PostgresML&lt;/strong&gt;。尽管在上一个版本中，Pigsty 已经提供了在 EL8 / EL9 上使用 PostgresML 的能力，但搞 AI 的操作系统基本上都是清一色的 Ubuntu，最起码 CUDA 驱动装起来方便啊。&lt;/p&gt;
-&lt;p&gt;所以 Pigsty v2.5 中，您可以在 Ubuntu 上运行原生的 PostgresML 集群了。你不需要折腾什么 &lt;strong&gt;NVIDIA Docker&lt;/strong&gt; 之类的东西，pip 安装好 python 依赖，直接起飞就可以。使用 SQL 训练模型，调用模型，让你的整个 AI 工作流都在数据库中完成！&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvj4UxXiaWLuoxzNbSmO23dZoRTPPQ6prnRUgu3wjn9wVGviaAlxwEE0FA/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;第二个值得一提的扩展插件是 &lt;code&gt;pointcloud&lt;/code&gt;[1]。因为地理空间扩展 PostGIS 的存在，PostgreSQL 一直是自动驾驶/电车公司的心头好。而 PointCloud 则将 PostgreSQL 与 PostGIS 的力量推广到一个新的边界。激光雷达会不断扫描周围并生成所谓 “点云” 数据。&lt;code&gt;pointcloud&lt;/code&gt;插件提供了 PcPoint &amp;amp; PcPatch 两种数据类型与四十个功能函数，允许您对超高维度的点集进行高效存储、检索与运算。这个插件在 PGDG APT 源中原生提供，而 Pigsty 将其移植到了 EL 系统上，让所有系统的用户都可以用上。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvyDhZhlPib7XgeoAqpFGeBriaicGZS4plnibqACBD7xgVNic4ibeic6VHY3OiaA/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;imgsmlr&lt;/code&gt;[2] 则是一个以图搜图的插件。尽管现在已经有许多 AI 模型可以将图片编码成高维向量，使用 &lt;code&gt;pgvector&lt;/code&gt; 进行语义搜索以图搜图。但 &lt;code&gt;imgsmlr&lt;/code&gt; 最有趣的地方在于，它不需要任何外部依赖，可以直接在数据库内完成所有功能。用作者的说法是：我做这个插件的目的不是提供最先进的图像搜索方法，而是告诉你们如何编写一个 PostgreSQL 扩展，来干甚至是图像处理这种非典型的数据库任务。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvdSXQj1ibYEIFTXT0RsNlYH1BjNzJzHTv5awh5o2of6h1t0h0d1Ra4NA/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;首先将 PNG/JPG 图片使用 Haar小波变换的方式处理为 16K 大小的模式与64字节的摘要签名，然后利用 GiST 索引检索摘要的方式来高效实现以图搜图。使用 &lt;code&gt;imgsmlr&lt;/code&gt; 从4亿随机图片中召回最相似的10张大约耗时 600ms 。”&lt;/p&gt;
-&lt;p&gt;另一个有趣的扩展 &lt;code&gt;pg_similarity&lt;/code&gt;[3] 默认在 Ubuntu/Debian 的 APT 源中提供，Pigsty 将其移植到了 EL 上。它提供了 17 种文本距离度量函数的高效 C 语言实现，极大丰富了检索排序的能力。另一个相关的插件是 &lt;code&gt;pg_bigm&lt;/code&gt;，它类似 PG 自带的 &lt;code&gt;pg_trgm&lt;/code&gt;，唯一的区别是用二字组替代三字组实现模糊检索，对中日韩语言的全文检索支持效果更好。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvSdcZ1JLGEEFhOMuia2ib8gDmH8sM2v1bMazial7c4zuojNPwNopwkZkQw/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;除此之外，我们还将 Supabase 的支持更新到最新版本：&lt;code&gt;20231013070755&lt;/code&gt;。您可以在 EL8/EL9 系统上使用 Pigsty 提供的 PostgreSQL 数据库来自托管 Supabase。&lt;/p&gt;
-&lt;p&gt;算上 PostgreSQL 自带的扩展，Pigsty 2.5 支持的扩展插件已经达到了 150+。尽管有这么多的插件，但请注意，它们全都是&lt;strong&gt;选装项&lt;/strong&gt;。Pigsty 为所有 PostgreSQL 大版本都提供了 &lt;code&gt;pg_repack&lt;/code&gt;，&lt;code&gt;wal2json&lt;/code&gt;，&lt;code&gt;passwordcheck_cracklib&lt;/code&gt; （EL）这几个重要的扩展，默认安装的三方扩展只有在线治理膨胀的 &lt;code&gt;pg_repack&lt;/code&gt;。其他的扩展如果不安装，对现有系统不会产生任何额外的影响和负担。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;监控系统调整&#34;&gt;监控系统调整&lt;/h2&gt;
-&lt;p&gt;Pigsty v2.5 在监控系统上也进行了调整，将两年没升级的 &lt;code&gt;pg_exporter&lt;/code&gt; 更新至了 &lt;code&gt;v0.6.0&lt;/code&gt;，新增了TLS支持，修复了两个依赖组件的安全问题，打好了 ARM64 软件包并使用最新的指标定义文件。同时，在 &lt;code&gt;pg_query&lt;/code&gt; 指标收集器中添加了与共享缓冲区 I/O 有关的四个指标，进一步丰富了 PGSQL Query 中提供的信息。&lt;/p&gt;
-&lt;p&gt;首先是新增的监控面板：PGSQL Patroni  ，提供了一个集群高可用状态的完整视图。对于分析历史服务健康状态，主从切换原因都大有帮助。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvib2tHzQw0UQtx1szmuoIQficWoIzRJblxMKZU3vicJAUKJYvKavbg0m9g/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;然后是 PGSQL Exporter，提供了 PG Exporter 和 Pgbouncer Exporter 自我监控的详细指标与日志。可以用于优化调整监控系统本身的性能。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvE7bfNbKK4HvFwD5ViaGtCNctl7icibibBrvzibYSq9VJdZCMGhE3Bl5assw/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;在各种监控大盘的组件导航面板中，都可以点击 Patroni Exporter 的指示块直接跳转到这些组件的详情页中：&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvZgRb5FBTu8bn9JbSs5GzhoR8WmcCZdnqE7WuqTNYvQo88s5PyhovJw/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;PGSQL Query 监控面板现在分为五栏：Overview 概览， 核心指标 QPS/RT，对时间微分指标，对调用次数的微分指标，百分比指标。遵循了宏观查询优化的方法论进行优化。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;减少资源消耗&lt;/strong&gt;：降低资源饱和的风险，优化CPU/内存/IO，通常以查询总耗时/总IO作为优化目标。使用 &lt;code&gt;dM/dt&lt;/code&gt; ：指标 &lt;code&gt;M&lt;/code&gt; 基于时间的微分，即每秒的增量。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;改善用户体验&lt;/strong&gt;：最常见的优化目标，在OLTP系统中，通常以降低查询平均响应时间作为优化目标。使用&lt;code&gt;dM/dc&lt;/code&gt;：指标 &lt;code&gt;M&lt;/code&gt; 基于调用次数的微分，即每次调用的增量。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;平衡工作负载&lt;/strong&gt;：确保不同查询组之间的资源使用/性能表现的比例关系得当。使用 &lt;code&gt;M%&lt;/code&gt;，即某一类查询指标占总数的比例。&lt;/p&gt;
-&lt;p&gt;PGSQL 首屏是最核心的查询性能指标：QPS 与 RT —— 以及它们的 1分钟，5分钟，15分钟均值，抖动情况与分布范围。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvOulsibst8w1LBhOHcOqdfbibMUt305ChGjfXTktkcpDGeqXTlSFv3G5g/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;接下来，便是用于优化用户体验的 &lt;code&gt;dM/dc&lt;/code&gt;类指标，这里的M指标包括：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;每次查询平均返回的行数&lt;/li&gt;
-&lt;li&gt;每次查询的平均执行时长&lt;/li&gt;
-&lt;li&gt;每次查询平均产生的WAL大小&lt;/li&gt;
-&lt;li&gt;每次查询平均耗费的 I/O 时间&lt;/li&gt;
-&lt;li&gt;每次查询平均读写的缓冲区块大小&lt;/li&gt;
-&lt;li&gt;每次平均访问/写脏的缓冲区块大小&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdv4cewSr0K6gTqR6xOYAZDBmjKNZmDYonrR6RZ0FEO0rlaCjwibkRyHMg/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;随后是用于&lt;strong&gt;减少资源消耗&lt;/strong&gt;的 &lt;code&gt;dM/dt&lt;/code&gt;类指标，这里的M指标基本同上，不同之处在于它是针对时间的微分而不是针对调用次数的微分：&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvRzgRJPJrE4ooicfP6dFJAhSmhX8BMN1tBBUYCCgGQz6lrTQUsZloWGg/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;最后一栏中，我们展示了用于平衡工作负载的 %M 类指标。用于揭示这个特定查询组在整个工作负载中的比例与相对位置，标黑加粗显示，点击特定查询可以原地跳转查看另一组查询的性能表现，非常方便。&lt;/p&gt;
-&lt;p&gt;&lt;img alt=&#34;图片&#34; src=&#34;https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0AZ3Ya4iaICkElrFz0cWEdvRfhD49Eqz9XrEVkzCJEibfJfe3zVMdctrs4ylo3iajDvWkZV00bPVj0A/640?wx_fmt=png&amp;tp=webp&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1&#34;&gt;&lt;/p&gt;
-&lt;p&gt;除了上面三个 Dashboard 之外，Pigsty 也对许多其他面板进行了优化改进与问题修复。许多面板的信息栏现在会提供更详细的信息：这个面板展现了什么指标，用于解决什么问题，等等等。我们也引入了三个新的 Grafana 插件用于支持 CSV/JSON 数据源，以及变量面板。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;下个版本做点啥&#34;&gt;下个版本做点啥？&lt;/h2&gt;
-&lt;p&gt;Pigsty 的下一个版本是 v2.6.0 ，除了进一步巩固 Ubuntu/Debian 的支持成熟度，这个版本的关注焦点将会关注两件事：MySQL 支持与命令行工具。&lt;/p&gt;
-&lt;p&gt;Pigsty 将提供基本的（主从，但没有HA） MySQL 安装部署支持，并提供基于 Grafana / Prometheus / MysqldExporter 的监控。因为 MySQL 5.7 将于本月 EOL，相信这样的能力会让更多的 MySQL 用户接触 PostgreSQL 并方便地迁移上来。&lt;/p&gt;
-&lt;p&gt;此外，我们还会进一步探索 Infra 组件容器化，调研使用 VictoriaMetrics 默认替换 Prometheus，或者使用 Vector 与 VictoriaLogs 替代 Loki与Promtail 的可行性。并设计一个更加好用的管控命令行工具 pigsty-cli，对 Greenplum 7.0 的部署提供正式支持，当这些任务都完成后，Pigsty 就将迎来第三个大版本 v3 了。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;发布注记&#34;&gt;发布注记&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486215&amp;idx=1&amp;sn=52ce37a537336a6d07448f35c7bc4cfd&amp;chksm=fe4b3edcc93cb7ca2dc87602430c2beb09ae5e7dcb568158541a1bd026e305d69d94cea81da4&amp;scene=21#wechat_redirect&#34;&gt;PGSQL x Pigsty: 数据库全能王来了&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486169&amp;idx=1&amp;sn=697ab3c172fe6cc28e12cff7297bb343&amp;chksm=fe4b3f02c93cb614bbd1d5075120e074cebb5214d3a1a516363582bcee294e02bf5fd0e051ee&amp;scene=21#wechat_redirect&#34;&gt;如何用Pigsty监控现有PostgreSQL (RDS/PolarDB/自建)？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486135&amp;idx=1&amp;sn=7d9c4920e94efba5d0e0b6af467f596c&amp;chksm=fe4b3f6cc93cb67ac570d5280b37328aed392598b13df88545ff0a06f99630801fc999db8de5&amp;scene=21#wechat_redirect&#34;&gt;Pigsty 特性与快速上手&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486256&amp;idx=1&amp;sn=15dd3001e9890e11144b42a84636d2e9&amp;chksm=fe4b3eebc93cb7fd6f7710e84e8dc0daf7d0c05baf151aa1d24c6939915061ee1c58b0f54375&amp;scene=21#wechat_redirect&#34;&gt;EL系操作系统发行版哪家强？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486263&amp;idx=1&amp;sn=4288450c04a6fdbaf5e4fae385d42bd9&amp;chksm=fe4b3eecc93cb7faf32a8c30ab78870f8ca607ad572e9d6725ac9f64c1549071c3d33a802019&amp;scene=21#wechat_redirect&#34;&gt;临水照花看Ubuntu与Debian：Pigsty v2.5&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485933&amp;idx=3&amp;sn=ea360aa7a59a4cd23ad5f9a9f415a0a0&amp;chksm=fe4b3c36c93cb520bda4596136e927d7cf92c597a76c04077c256588b2428202bdb7f004c08b&amp;scene=21#wechat_redirect&#34;&gt;PostgreSQL：世界上最成功的数据库&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486118&amp;idx=1&amp;sn=5b67544e104fc4fbda1a18198252377b&amp;chksm=fe4b3f7dc93cb66b1e075585e0c40da03813222f24c6877bedde334647aabdbe28918014360f&amp;scene=21#wechat_redirect&#34;&gt;Pigsty 2.4：PG16支持，RDS监控与新扩展！&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486079&amp;idx=1&amp;sn=61e3010f6d717f042e91e06f3c8eeb4d&amp;chksm=fe4b3fa4c93cb6b2732e5caf3524d8c7ff8d53e34e9400800a06b1d655e39ec40f69fe82ea70&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.3.1：HNSW版PGVECTOR来了！&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486053&amp;idx=1&amp;sn=854966c3c4e2c96298173baaa2915535&amp;chksm=fe4b3fbec93cb6a88669c698f7299bd4d38e9a691122831e72b9204fd35f94f4d0ac304812a6&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.3 发布：应用生态丰富&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485827&amp;idx=1&amp;sn=9b13273b559fa63e96d4ac77268bd00a&amp;chksm=fe4b3c58c93cb54e87b062c6db4b3a712037e25dbfbe69aa50ad9b79abf2c97967b625fe1a7f&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.2 发布 —— 监控系统大升级&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485612&amp;idx=1&amp;sn=ce76d9439ed4f2ed10ee28c7aceb19cd&amp;chksm=fe4b3d77c93cb46196eb97f7e04cbab1b2f2dee51324050ffc17583c22415f41a3656834fdcb&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.1 发布：向量扩展 / PG12-16 支持&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485327&amp;idx=1&amp;sn=0d02f5e504266e5dd436c64d23844735&amp;chksm=fe4b3254c93cbb427598322952d654c3383bfe8858ec7ffaee2b9ca0c84bebe6f763748a356f&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.0.2 更好的开源RDS替代：Pigsty&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485349&amp;idx=1&amp;sn=96fde26dd9efd399ef7ae11e52e05843&amp;chksm=fe4b327ec93cbb688e2708ff4e709a7ba32eee2be9d8637e9b941f47e6600dc7fcd2710a42c4&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2.0 发布，炮打 RDS&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485327&amp;idx=1&amp;sn=0d02f5e504266e5dd436c64d23844735&amp;chksm=fe4b3254c93cbb427598322952d654c3383bfe8858ec7ffaee2b9ca0c84bebe6f763748a356f&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v2 正式发布：更好的RDS PG开源替代&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485155&amp;idx=1&amp;sn=9e8bfff6fab8967923a1603a0b55111f&amp;chksm=fe4b3338c93cba2e9ac96e048e272265aca81fa30ba792fe5ad5a57f59e127e6eb19ea4d1286&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.5.1发布&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485125&amp;idx=1&amp;sn=d06a14013aa02ecd1da307b4b3038054&amp;chksm=fe4b331ec93cba08624adb70e626e4b45ede9ea5d8ae01fad779e82687ff0064c56bf9b42187&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.5 发布与新特性&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484935&amp;idx=1&amp;sn=b904584f2df752e1cb603486f96d173f&amp;chksm=fe4b33dcc93cbacabc130669ae52edf547e0cdf684bdd9910267f6be541fe54488ce90853b83&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.4 正式发布！&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484904&amp;idx=1&amp;sn=5331785190ce704399295a7212e19989&amp;chksm=fe4b3033c93cb925513b6192312be01d2065493d112b58682dda242e9fd0466d3b9bd473b28c&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.4 前瞻&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484847&amp;idx=1&amp;sn=c37f3c402cc9133ea616c295aa5482cf&amp;chksm=fe4b3074c93cb9621876b7dc3a7906d2b217bcb1b0f44c09fb69fedc0a581a191465e9681bb1&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.3.1 安装教程&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484821&amp;idx=1&amp;sn=56e34b33f37b2555336591ad532ac7e7&amp;chksm=fe4b304ec93cb9589c2bca821e5aaa1034c7dd5b9c580dec4b09ebe3b1ed20bb48df9dfd29ce&amp;scene=21#wechat_redirect&#34;&gt;开箱即用的Redis发行版 —— Pigsty v1.3&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484799&amp;idx=1&amp;sn=bb4a87eba481c6851582899ae9955f10&amp;chksm=fe4b30a4c93cb9b2ad9d68d837763bb1dd547c81d6ec04684ef98072ead8271695b9abba78d1&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.2 发布&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484774&amp;idx=1&amp;sn=8b9e8f5bec8fb8492ebce3ebc6b60d88&amp;chksm=fe4b30bdc93cb9ab1dfcaed066a1a90919027f6c72d63003b3b839eb9ba2871ec663db7469f1&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1.1 发布/新功能介绍&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484729&amp;idx=1&amp;sn=179c470fe4a80b22a8c2e96a3e191e6e&amp;chksm=fe4b30e2c93cb9f4db6bb5e379b6fd5a489539e8e5db1e0080a1e7946d6f4eb83ad7647ce11d&amp;scene=21#wechat_redirect&#34;&gt;Pigsty v1正式发布：开箱即用的PostgreSQL开源发行版&lt;/a&gt;&lt;/p&gt;
-&lt;h3 id=&#34;references&#34;&gt;References&lt;/h3&gt;
-&lt;p&gt;&lt;code&gt;[1]&lt;/code&gt; &lt;code&gt;pointcloud&lt;/code&gt;: &lt;em&gt;&lt;a href=&#34;https://github.com/pgpointcloud/pointcloud&#34;&gt;https://github.com/pgpointcloud/pointcloud&lt;/a&gt;&lt;/em&gt;
-&lt;code&gt;[2]&lt;/code&gt; &lt;code&gt;imgsmlr&lt;/code&gt;: &lt;em&gt;&lt;a href=&#34;https://github.com/postgrespro/imgsmlr&#34;&gt;https://github.com/postgrespro/imgsmlr&lt;/a&gt;&lt;/em&gt;
-&lt;code&gt;[3]&lt;/code&gt; &lt;code&gt;pg_similarity&lt;/code&gt;: &lt;em&gt;&lt;a href=&#34;https://github.com/eulerto/pg_similarity&#34;&gt;https://github.com/eulerto/pg_similarity&lt;/a&gt;&lt;/em&gt;
-&lt;code&gt;[4]&lt;/code&gt; Ubuntu: &lt;em&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&#34;&gt;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&lt;/a&gt;&lt;/em&gt;
-&lt;code&gt;[5]&lt;/code&gt; Debian: &lt;em&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/debian.yml&#34;&gt;https://github.com/Vonng/pigsty/blob/master/files/pigsty/debian.yml&lt;/a&gt;&lt;/em&gt;
-&lt;code&gt;[6]&lt;/code&gt; &lt;code&gt;ubuntu.yml&lt;/code&gt;: &lt;em&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&#34;&gt;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;v250&#34;&gt;v2.5.0&lt;/h2&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl https://get.pigsty.cc/latest &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; bash
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;亮点特性&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&#34;&gt;Ubuntu&lt;/a&gt; / &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/debian.yml&#34;&gt;Debian&lt;/a&gt;  支持： bullseye, bookworm, jammy, focal&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;使用CDN &lt;code&gt;repo.pigsty.cc&lt;/code&gt; 软件源，提供 rpm/deb 软件包下载。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Anolis 操作系统支持（ 兼容 EL 8.8 ）。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;使用 PostgreSQL 16 替代 PostgreSQL 14 作为备选主要支持版本&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;新增了 PGSQL Exporter / PGSQL Patroni 监控面板，重做 PGSQL Query 面板&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;扩展更新：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;PostGIS 版本至 3.4（ EL8/EL9 ），EL7 仍使用 PostGIS 3.3&lt;/li&gt;
-&lt;li&gt;移除 &lt;code&gt;pg_embedding&lt;/code&gt;，因为开发者不再对其进行维护，建议使用 &lt;code&gt;pgvector&lt;/code&gt; 替换。&lt;/li&gt;
-&lt;li&gt;新扩展（EL）：点云插件 &lt;code&gt;pointcloud&lt;/code&gt; 支持，Ubuntu原生带有此扩展。&lt;/li&gt;
-&lt;li&gt;新扩展（EL）： &lt;code&gt;imgsmlr&lt;/code&gt;， &lt;code&gt;pg_similarity&lt;/code&gt;，&lt;code&gt;pg_bigm&lt;/code&gt; 用于搜索。&lt;/li&gt;
-&lt;li&gt;重新编译 &lt;code&gt;pg_filedump&lt;/code&gt; 为 PG 大版本无关的软件包。。&lt;/li&gt;
-&lt;li&gt;新收纳 &lt;code&gt;hydra&lt;/code&gt; 列存储扩展，不再默认安装 &lt;code&gt;citus&lt;/code&gt; 扩展。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;软件更新：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Grafana 更新至 v10.1.5&lt;/li&gt;
-&lt;li&gt;Prometheus 更新至 v2.47&lt;/li&gt;
-&lt;li&gt;Promtail/Loki 更新至 v2.9.1&lt;/li&gt;
-&lt;li&gt;Node Exporter 更新至 v1.6.1&lt;/li&gt;
-&lt;li&gt;Bytebase 更新至 v2.10.0&lt;/li&gt;
-&lt;li&gt;patroni 更新至 v3.1.2&lt;/li&gt;
-&lt;li&gt;pgbouncer 更新至 v1.21.0&lt;/li&gt;
-&lt;li&gt;pg_exporter 更新至 v0.6.0&lt;/li&gt;
-&lt;li&gt;pgbackrest 更新至 v2.48.0&lt;/li&gt;
-&lt;li&gt;pgbadger 更新至 v12.2&lt;/li&gt;
-&lt;li&gt;pg_graphql 更新至 v1.4.0&lt;/li&gt;
-&lt;li&gt;pg_net 更新至 v0.7.3&lt;/li&gt;
-&lt;li&gt;ferretdb 更新至 v0.12.1&lt;/li&gt;
-&lt;li&gt;sealos 更新至 4.3.5&lt;/li&gt;
-&lt;li&gt;Supabase 支持更新至 &lt;code&gt;20231013070755&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Ubuntu 支持说明&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Pigsty 支持了 Ubuntu 22.04 (jammy) 与 20.04 (focal) 两个 LTS 版本，并提供相应的离线软件安装包。&lt;/p&gt;
-&lt;p&gt;相比 EL 系操作系统，一些参数的默认值需要显式指定调整，详情请参考 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/master/files/pigsty/ubuntu.yml&#34;&gt;&lt;code&gt;ubuntu.yml&lt;/code&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;repo_upstream&lt;/code&gt;：按照 Ubuntu/Debian 的包名进行了调整&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;repo_packages&lt;/code&gt;：按照 Ubuntu/Debian 的包名进行了调整&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;node_repo_local_urls&lt;/code&gt;：默认值为 &lt;code&gt;[&#39;deb [trusted=yes] http://${admin_ip}/pigsty ./&#39;]&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;node_default_packages&lt;/code&gt; ：
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;zlib&lt;/code&gt; -&amp;gt; &lt;code&gt;zlib1g&lt;/code&gt;, &lt;code&gt;readline&lt;/code&gt; -&amp;gt; &lt;code&gt;libreadline-dev&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;vim-minimal&lt;/code&gt; -&amp;gt; &lt;code&gt;vim-tiny&lt;/code&gt;, &lt;code&gt;bind-utils&lt;/code&gt; -&amp;gt; &lt;code&gt;dnsutils&lt;/code&gt;, &lt;code&gt;perf&lt;/code&gt; -&amp;gt; &lt;code&gt;linux-tools-generic&lt;/code&gt;,&lt;/li&gt;
-&lt;li&gt;新增软件包 &lt;code&gt;acl&lt;/code&gt;，确保 Ansible 权限设置正常工作&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;infra_packages&lt;/code&gt;：所有含 &lt;code&gt;_&lt;/code&gt; 的包要替换为 &lt;code&gt;-&lt;/code&gt; 版本，此外 &lt;code&gt;postgresql-client-16&lt;/code&gt; 用于替换 &lt;code&gt;postgresql16&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;pg_packages&lt;/code&gt;：Ubuntu 下惯用 &lt;code&gt;-&lt;/code&gt; 替代 &lt;code&gt;_&lt;/code&gt;，不需要手工安装 &lt;code&gt;patroni-etcd&lt;/code&gt; 包。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;pg_extensions&lt;/code&gt;：扩展名称与EL系不太一样，Ubuntu下缺少 &lt;code&gt;passwordcheck_cracklib&lt;/code&gt; 扩展。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;pg_dbsu_uid&lt;/code&gt;： Ubuntu 下 Deb 包不显式指定uid，需要手动指定，Pigsty 默认分配为 &lt;code&gt;543&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;API变更&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;默认值变化：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;repo_modules&lt;/code&gt; 现在的默认值为 &lt;code&gt;infra,node,pgsql,redis,minio&lt;/code&gt;，启用所有上游源&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;repo_upstream&lt;/code&gt; 发生变化，现在添加了 Pigsty Infra/MinIO/Redis/PGSQL 模块化软件源&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;repo_packages&lt;/code&gt; 发生变化，移除未使用的 &lt;code&gt;karma,mtail,dellhw_exporter&lt;/code&gt;，移除了 PG14 主要扩展，新增了 PG16 主要扩展，添加了 virtualenv 包。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;node_default_packages&lt;/code&gt; 发生变化，默认安装 &lt;code&gt;python3-pip&lt;/code&gt; 组件。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;pg_libs&lt;/code&gt;: &lt;code&gt;timescaledb&lt;/code&gt; 从 shared_preload_libraries 中移除，现在默认不自动启用。&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;code&gt;pg_extensions&lt;/code&gt; 发生变化，不再默认安装 Citus 扩展，默认安装 &lt;code&gt;passwordcheck_cracklib&lt;/code&gt; 扩展，EL8,9 PostGIS 默认版本升级至 3.4&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_repack_${pg_version}* wal2json_${pg_version}* passwordcheck_cracklib_${pg_version}*&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;postgis34_${pg_version}* timescaledb-2-postgresql-${pg_version}* pgvector_${pg_version}*&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Patroni 所有模板默认移除 &lt;code&gt;wal_keep_size&lt;/code&gt; 参数，避免触发 Patroni 3.1.1 的错误，其功能由 &lt;code&gt;min_wal_size&lt;/code&gt; 覆盖。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;87e0be2edc35b18709d7722976e305b0  pigsty-pkg-v2.5.0.el7.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;e71304d6f53ea6c0f8e2231f238e8204  pigsty-pkg-v2.5.0.el8.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;39728496c134e4352436d69b02226ee8  pigsty-pkg-v2.5.0.el9.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;e3f548a6c7961af6107ffeee3eabc9a7  pigsty-pkg-v2.5.0.debian11.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;1e469cc86a19702e48d7c1a37e2f14f9  pigsty-pkg-v2.5.0.debian12.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cc3af3b7c12f98969d3c6962f7c4bd8f  pigsty-pkg-v2.5.0.ubuntu20.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;c5b2b1a4867eee624e57aed58ac65a80  pigsty-pkg-v2.5.0.ubuntu22.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
-&lt;h2 id=&#34;v251&#34;&gt;v2.5.1&lt;/h2&gt;
-&lt;p&gt;跟进 PostgreSQL v16.1, v15.5, 14.10, 13.13, 12.17, 11.22 小版本例行更新。&lt;/p&gt;
-&lt;p&gt;现在 PostgreSQL 16 的所有重要扩展已经就位（新增 &lt;code&gt;pg_repack&lt;/code&gt; 与 &lt;code&gt;timescaledb&lt;/code&gt; 支持）&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;软件更新：
-&lt;ul&gt;
-&lt;li&gt;PostgreSQL to v16.1, v15.5, 14.10, 13.13, 12.17, 11.22&lt;/li&gt;
-&lt;li&gt;Patroni v3.2.0&lt;/li&gt;
-&lt;li&gt;PgBackrest v2.49&lt;/li&gt;
-&lt;li&gt;Citus 12.1&lt;/li&gt;
-&lt;li&gt;TimescaleDB 2.13&lt;/li&gt;
-&lt;li&gt;Grafana v10.2.0&lt;/li&gt;
-&lt;li&gt;FerretDB 1.15&lt;/li&gt;
-&lt;li&gt;SealOS 4.3.7&lt;/li&gt;
-&lt;li&gt;Bytebase 2.11.1&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;ul&gt;
-&lt;li&gt;移除  PGCAT 监控面板中查询对 &lt;code&gt;monitor&lt;/code&gt; 模式前缀（允许用户将 &lt;code&gt;pg_stat_statements&lt;/code&gt; 扩展装到别的地方）&lt;/li&gt;
-&lt;li&gt;新的配置模板 &lt;code&gt;wool.yml&lt;/code&gt;，为阿里云免费99 ECS 单机针对设计。&lt;/li&gt;
-&lt;li&gt;为 EL9 新增 &lt;code&gt;python3-jmespath&lt;/code&gt; 软件包，解决 Ansible 依赖更新后 bootstrap 缺少 jmespath 的问题&lt;/li&gt;
-&lt;/ul&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;31ee48df1007151009c060e0edbd74de  pigsty-pkg-v2.5.1.el7.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;a40f1b864ae8a19d9431bcd8e74fa116  pigsty-pkg-v2.5.1.el8.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;c976cd4431fc70367124fda4e2eac0a7  pigsty-pkg-v2.5.1.el9.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;7fc1b5bdd3afa267a5fc1d7cb1f3c9a7  pigsty-pkg-v2.5.1.debian11.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;add0731dc7ed37f134d3cb5b6646624e  pigsty-pkg-v2.5.1.debian12.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;99048d09fa75ccb8db8e22e2a3b41f28  pigsty-pkg-v2.5.1.ubuntu20.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;431668425f8ce19388d38e5bfa3a948c  pigsty-pkg-v2.5.1.ubuntu22.x86_64.tgz
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
       </description>
     </item>
     

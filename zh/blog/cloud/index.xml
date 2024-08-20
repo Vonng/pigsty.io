@@ -15,6 +15,319 @@
     
     
     <item>
+      <title>Blog: 草台班子唱大戏，阿里云PG翻车记</title>
+      <link>/zh/blog/cloud/rds-failure/</link>
+      <pubDate>Mon, 19 Aug 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/rds-failure/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/rds-failure/featured_hu02aa61ae1d9de35cbe238d2676170cb9_583332_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;在《&lt;a href=&#34;/zh/blog/cloud/rds&#34;&gt;云数据库是不是智商税&lt;/a&gt;》中，我对云数据库 RDS 的评价是：“&lt;strong&gt;用五星酒店价格卖给用户天价预制菜&lt;/strong&gt;”—— 但正规的预制菜大锅饭也是能吃的 也一般吃不死人，不过最近一次发生在阿里云上的的故障让我改变了看法。&lt;/p&gt;
+&lt;p&gt;我有一位客户L，这两天跟我吐槽了一个在云数据库上遇到的离谱连环故障：一套高可用 PG RDS 集群，因为扩容个内存，主库从库都挂了，折腾给他们到临晨。期间建议昏招迭出，给出的复盘也相当敷衍。经过客户L同意后，我将这个案例分享出来，也供大家借鉴参考品评。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#事故经过匪夷所思&#34;&gt;事故经过：匪夷所思&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#内存扩容无事生非&#34;&gt;内存扩容：无事生非&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#从库宕机素养堪忧&#34;&gt;从库宕机：素养堪忧&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#主库宕机令人窒息&#34;&gt;主库宕机：令人窒息&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#wal堆积专家缺位&#34;&gt;WAL堆积：专家缺位&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#扩容磁盘创收有术&#34;&gt;扩容磁盘：创收有术&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#协议赔偿封口药丸&#34;&gt;协议赔偿：封口药丸&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#解决方案下云自建&#34;&gt;解决方案：下云自建&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/rds-failure/#广告时间专家咨询&#34;&gt;广告时间：专家咨询&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事故经过匪夷所思&#34;&gt;事故经过：匪夷所思&lt;/h2&gt;
+&lt;p&gt;客户L的数据库场景比较扎实，大几TB的数据，TPS两万不到，写入吞吐8000行/每秒，读取吞吐7万行/s。用的是 ESSD PL1 ，16c 32g 的实例，一主一备高可用版本，独享型规格族，年消费六位数。&lt;/p&gt;
+&lt;p&gt;整个事故经过大致如下：客户L收到 &lt;strong&gt;内存告警&lt;/strong&gt;，提工单，接待的售后工程师诊断：数据量太大，大量行扫描导致内存不足，建议扩容内存。客户同意了，然后工程师扩容内存，扩内存花了三个小时，&lt;strong&gt;期间主库和从库挂了&lt;/strong&gt;，吭哧吭哧手工一顿修。&lt;/p&gt;
+&lt;p&gt;然后扩容完了之后又遇到 &lt;strong&gt;WAL日志堆积&lt;/strong&gt; 的问题，堆了 800 GB 的WAL日志要把磁盘打满了，又折腾了两个小时到十一点多。售后说是 WAL 日志归档上传失败导致的堆积，失败是因为磁盘IO吞吐被占满，建议扩容 ESSD PL2。&lt;/p&gt;
+&lt;p&gt;吃过了内存扩容翻车的教训，这次扩容磁盘的建议客户没立即买单，而是找我咨询了下，我看了一下这个故障现场，感觉到匪夷所思：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;你这负载也挺稳定的，没事扩容内存干啥？&lt;/li&gt;
+&lt;li&gt;RDS 不是号称弹性秒级扩容么，怎么升个内存花三个小时？&lt;/li&gt;
+&lt;li&gt;花三个小时就算了，扩个容怎么还把主库从库都搞挂了呢？&lt;/li&gt;
+&lt;li&gt;从库挂了据说是参数没配对，那就算了，那主库是怎么挂了的？&lt;/li&gt;
+&lt;li&gt;主库挂了高可用切换生效了吗？怎么 WAL 又怎么开始堆积了？&lt;/li&gt;
+&lt;li&gt;WAL 堆积是有地方卡住了，建议你升级云盘等级/IOPS有什么用？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;事后也有一些来自乙方的解释，听到后我感觉更加匪夷所思了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;从库挂是因为参数配错拉不起来了&lt;/li&gt;
+&lt;li&gt;主库挂是因为 “为了避免数据损坏做了特殊处理”&lt;/li&gt;
+&lt;li&gt;WAL堆积是因为卡BUG了，还是客户侧发现，推断并推动解决的&lt;/li&gt;
+&lt;li&gt;卡 BUG “据称” 是因为云盘吞吐打满了&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我的朋友瑞典马工一贯主张，“&lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;用云数据库可以替代DBA&lt;/a&gt;”。
+我认为在理论上有一定可行性 —— 由云厂商组建一个专家池，提供&lt;a href=&#34;/zh/blog/cloud/dba-vs-rds&#34;&gt;DBA时分共享服务&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;但现状很可能是：&lt;strong&gt;云厂商没有合格的 DBA，不专业的工程师甚至会给你出馊主意，把跑得好好的数据库搞坏，最后赖到资源不足上，再建议你扩容升配好多赚一笔。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在听闻这个案例之后，马工也只能无奈强辩：“&lt;strong&gt;辣鸡RDS不是真RDS&lt;/strong&gt;”。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wechat-magong.png&#34; src=&#34;/zh/blog/cloud/rds-failure/wechat-magong.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;内存扩容无事生非&#34;&gt;内存扩容：无事生非&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;资源不足是一种常见的故障原因，但也正因如此，有时会被滥用作为推卸责任，甩锅，或者要资源，卖硬件的万金油理由。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;内存告警 OOM 也许对其他数据库是一个问题，但对于 PostgreSQL 来说非常离谱。我从业这么多年来，见识过各种各样的故障：数据量大撑爆磁盘我见过，查询多打满CPU我见过，内存比特位反转腐坏数据我见过，但因为独占PG因为读查询多导致内存告警，我没见过。&lt;/p&gt;
+&lt;p&gt;PostgreSQL 使用双缓冲，OLTP实例在使用内存时，页面都放在一个尺寸固定的 SharedBuffer 中。作为一个 &lt;strong&gt;众所周知的最佳实践&lt;/strong&gt;，PG SharedBuffer 配置通常为物理内存的 1/4 左右，剩下的内存由文件系统 Cache 使用。也就是说通常有六七成的内存是由操作系统来灵活调配的，不够用逐出一些 Cache 就好了。如果说因为读查询多导致内存告警，我个人认为是匪夷所思的。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;memory.png&#34; src=&#34;/zh/blog/cloud/rds-failure/memory.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;所以，因为一个本来不一定是问题的问题（假告警？），RDS 售后工程师给出的建议是：&lt;em&gt;内存不够啦，请扩容内存&lt;/em&gt;。客户相信了这个建议，选择将内存翻倍。&lt;/p&gt;
+&lt;p&gt;按道理，云数据库宣传自己的极致弹性，灵活伸缩，还是用 &lt;a href=&#34;/zh/blog/db/pg-in-docker/&#34;&gt;Docker&lt;/a&gt; 管理的。难道不应该是原地改一下 MemLimit 和 PG SharedBuffer 参数，重启一下就生效的吗？几秒还差不多。结果这次扩容却折腾了三个小时才完成，并引发了一系列次生故障。&lt;/p&gt;
+&lt;p&gt;内存不足，两台32G扩64G，按照《&lt;a href=&#34;/zh/blog/cloud/ecs/#%E5%AE%9E%E4%BE%8B%E6%97%8F%E5%AF%B9%E4%BB%B7%E6%A0%BC%E7%9A%84%E5%BD%B1%E5%93%8D&#34;&gt;剖析阿里云服务器算力成本&lt;/a&gt;》我们精算过的定价模型，一项内存扩容操作每年带来的额外收入就能有万把块。如果能解决问题那还好说，但事实上这次内存扩容不但没有解决问题，还引发了更大的问题。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;从库宕机素养堪忧&#34;&gt;从库宕机：素养堪忧&lt;/h2&gt;
+&lt;p&gt;第一个因为内存扩容而发生的次生故障是这样的，备库炸了，为什么炸了，因为PG参数没配置正确：&lt;code&gt;max_prepared_transaction&lt;/code&gt;，这个参数为什么会炸？因为在一套 PG 集群中，这个参数必须在主库和从库上保持一致，否则从库就会拒绝启动。&lt;/p&gt;
+&lt;p&gt;为什么这里出现了主从参数不一致的问题？&lt;strong&gt;我推测&lt;/strong&gt; 是因为 RDS 的设计中，该参数的值是与实例内存成正比设置的，所以内存扩容翻倍后这个参数也跟着翻倍。主从不一致，然后从库重启的时候就拉不起来了。&lt;/p&gt;
+&lt;p&gt;不管怎样，因为这个参数翻车是一个非常离谱的错误，属于 PG DBA 101 问题，PG文档明确强调了这一点。但凡做过滚动升降配这种基操的 DBA，要么已经在读文档的时候了解过这个问题，要么就在这里翻过车再去看文档。&lt;/p&gt;
+&lt;p&gt;如果你用 &lt;code&gt;pg_basebackup&lt;/code&gt; 手搓从库，你不会遇到这个问题，因为从库的参数默认和主库一致。如果你用成熟的高可用组件，也不会遇到这个问题：开源PG高可用组件 Patroni 就会强制控制这几个参数并在文档中&lt;a href=&#34;https://patroni.readthedocs.io/en/latest/patroni_configuration.html#important-rules&#34;&gt;显眼地告诉用户&lt;/a&gt;：这几个参数主从必须一致，我们来管理不要瞎改。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;patroni.png&#34; src=&#34;/zh/blog/cloud/rds-failure/patroni.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在一种情况下你会遇到这种问题：考虑不周的家酿高可用服务组件，或未经充分测试的自动化脚本，&lt;strong&gt;自以为是地替你“优化”了这个参数&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;主库宕机令人窒息&#34;&gt;主库宕机：令人窒息&lt;/h2&gt;
+&lt;p&gt;如果说从库挂了，影响一部分只读流量那也就算了。主库挂了，对于客户L这种全网实时数据上报的业务可就要血命了。关于主库宕机，工程师给出的说法是：在扩容过程中，因为事务繁忙，主从复制延迟一直追不上，“&lt;strong&gt;为了避免数据损坏做了特殊处理&lt;/strong&gt;”。&lt;/p&gt;
+&lt;p&gt;这里的说法语焉不详，但按字面与上下文理解的意思应当为：扩容时需要做主从切换，但因为有不小的主从复制延迟，直接切换会丢掉一部分尚未复制到从库上的数据，所以RDS替你把主库流量水龙头关掉了，追平复制延迟后再进行主从切换。&lt;/p&gt;
+&lt;p&gt;老实说，我觉得这个操作让人窒息。主库 Fencing 确实是高可用中的核心问题，但一套正规的生产 PG 高可用集群在处理这个问题时，标准SOP是首先将集群临时切换到同步提交模式，然后执行 Switchover，自然一条数据也不会丢，切换也只会影响在这一刻瞬间执行的查询，亚秒级闪断。&lt;/p&gt;
+&lt;p&gt;“&lt;strong&gt;为了避免数据损坏做了特殊处理&lt;/strong&gt;” 这句话确实很有艺术性 —— 没错，把主库直接关掉可以实现 Fencing ，也确实不会在高可用切换时因为复制延迟丢数据，&lt;strong&gt;但客户数据写不进去了啊&lt;/strong&gt;！这丢的数据可比那点延迟多多了。这种操作，很难不让人想起那个著名的《&lt;a href=&#34;https://www.gushiwen.cn/shiwenv_ddbe67aad03d.aspx&#34;&gt;善治伛者&lt;/a&gt;》笑话：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;tuobei.png&#34; src=&#34;/zh/blog/cloud/rds-failure/tuobei.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;wal堆积专家缺位&#34;&gt;WAL堆积：专家缺位&lt;/h2&gt;
+&lt;p&gt;主从宕机的问题修复后，又折腾一个半小时，总算是把主库内存扩容完成了。然而一波未平一波又起，WAL日志又开始堆积起来，在几个小时内就堆积到了近 800 GB，如果不及时发现并处理，撑爆磁盘导致整库不可用是早晚的事。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal-jam.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal-jam.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;也可以从监控上看到两个坑&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;RDS 工程师给出的诊断是，磁盘 IO 打满导致 WAL 堆积，建议升级磁盘，从 ESSD PL1 升级到 PL2。不过，这一次客户已经吃过一次内存扩容的教训了，没有立刻听信这一建议，而是找到了我咨询。&lt;/p&gt;
+&lt;p&gt;我看了情况后感觉非常离谱，负载没有显著变化，IO打满也不是这种卡死不动的情形。那么 WAL 堆积的原因不外乎那几个：复制延迟落后100多GB，复制槽保留了不到1GB，那剩下的大头就是 &lt;strong&gt;WAL归档失败&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;我让客户给 RDS 提工单处理找根因，最后 RDS 侧确实找到问题是WAL归档卡住了并手工解决了，但距离 WAL 堆积已经过去近六个小时了，并在整个过程中体现出非常业余的素养，给出了许多离谱的建议。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;另一个离谱建议：把流量打到复制延迟16分钟的从库上去&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;阿里云数据库团队并非没有 PostgreSQL DBA 专家，在阿里云任职的 德哥 Digoal 绝对是 PostgreSQL DBA 大师。然而看起来在 RDS 的产品设计中，并没有沉淀下多少 DBA 大师的领域知识与经验；而 RDS 售后工程师表现出来的专业素养，也与一个合格的 PG DBA ，哪怕是 GPT4 机器人都相差甚远。&lt;/p&gt;
+&lt;p&gt;我经常看到 RDS 的用户遇到了问题，通过官方工单没有得到解决，只能绕过工单，通过在 PG 社区中 &lt;a href=&#34;/zh/blog/cloud/drop-rds/&#34;&gt;直接求助德哥解决&lt;/a&gt; —— 而这确实是比较考验运气与关系的一件事。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩容磁盘创收有术&#34;&gt;扩容磁盘：创收有术&lt;/h2&gt;
+&lt;p&gt;在解决了“内存告警”， “从库宕机”， “主库宕机”， “WAL 堆积” 等连环问题后，已经接近凌晨了。但 WAL 堆积的根因是什么仍然不清楚，工程师的回复是 “&lt;strong&gt;与磁盘吞吐被打满有关&lt;/strong&gt;”，再次建议升级 ESSD 云盘。&lt;/p&gt;
+&lt;p&gt;在事后的复盘中，工程师提到了 WAL归档失败的原因是 “&lt;strong&gt;RDS上传组件BUG&lt;/strong&gt;”。所以回头看，如果客户真的听了建议升级云盘，也就就白花冤枉钱了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;wal.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/wal.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;BTW这还提出了一个坑爹建议：把流量打到复制延迟16分钟的从库上去&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在 《&lt;a href=&#34;/zh/blog/cloud/ebs&#34;&gt;云盘是不是杀猪盘&lt;/a&gt;》中我们分析过，云上溢价最狠的基础资源就是 ESSD 云盘。按照 《&lt;a href=&#34;/zh/blog/cloud/ecs#%E6%9D%80%E7%8C%AA%E7%9B%98%E7%9A%84%E4%BB%B7%E6%A0%BC&#34;&gt;阿里云存算成本剖析&lt;/a&gt;》中给出的数字：客户 5TB 的 ESSD PL1 云盘包月价格 &lt;strong&gt;1 ¥/GB&lt;/strong&gt;，那么每年光是云盘费用就要 &lt;strong&gt;12万&lt;/strong&gt;。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;单位价格：¥/GiB月&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;IOPS&lt;/th&gt;
+&lt;th&gt;带宽&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;容量&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;按需价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;包月价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;包年价格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;预付三年+&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL0&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;10K&lt;/td&gt;
+&lt;td&gt;180 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;40G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.76&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.50&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.43&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.25&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;50K&lt;/td&gt;
+&lt;td&gt;350 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;20G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.51&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.85&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.50&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL2&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;100K&lt;/td&gt;
+&lt;td&gt;750 MB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;461G-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.70&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ESSD 云盘 PL3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1M&lt;/td&gt;
+&lt;td&gt;4 GB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1.2T-32T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;6.05&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;4.00&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3.40&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2.00&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;本地 NVMe SSD&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3M&lt;/td&gt;
+&lt;td&gt;7 GB/s&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;最大单卡64T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;0.02&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.02&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;如果听从建议 “升级”到 ESSD PL2，没错 IOPS 吞吐能翻一倍，但单价也翻了一倍。单这一项“升级”操作，&lt;strong&gt;就能给云厂商带来额外 12 万的收入&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;即使是 ESSD PL1 乞丐盘，也带有 50K 的 IOPS，而客户L场景的 20K TPS，80K RowPS 换算成 随机4K 页面 IOPS ，就算退一万步讲不考虑 PG 与 OS 的缓冲区（比如 99% 缓存命中率对于这种业务场景是很正常的），想硬打满它也是一件相当不容易的事情。&lt;/p&gt;
+&lt;p&gt;我不好判断遇到问题就建议 扩容内存 / 扩容磁盘 这样的做法，到底是出于专业素养不足导致的误诊，还是渴望利用信息不对称创收的邪念，抑或两者兼而有之 —— 但这种趁病要价的做法，确实让我联想起了曾经声名狼藉的莆田医院。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;协议赔偿封口药丸&#34;&gt;协议赔偿：封口药丸&lt;/h2&gt;
+&lt;p&gt;在《&lt;a href=&#34;/zh/blog/cloud/sla&#34;&gt;云SLA是不是安慰剂&lt;/a&gt;》一文中，我已提醒过用户：云服务的 SLA 根本不是对服务质量的承诺，&lt;strong&gt;在最好的情况下它是提供情绪价值的安慰剂，而在最坏的情况下它是吃不了兜着走的哑巴亏&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;在这次故障中，客户L收到了 &lt;strong&gt;1000&lt;/strong&gt; 元代金券的补偿提议，对于他们的规模来说，这三瓜两枣差不多能让这套 RDS 多跑几天。在用户看来这基本上属于赤裸裸的羞辱了。&lt;/p&gt;
+&lt;p&gt;有人说云提供了“&lt;strong&gt;背锅&lt;/strong&gt;”的价值，但那只对不负责的决策者与大头兵才有意义，对于直接背结果的 CXO 来说，整体性的得失才是最重要的，把业务连续性中断的锅甩给云厂商，换来一千块代金券没有任何意义。&lt;/p&gt;
+&lt;p&gt;当然像这样的事情其实不止一次，两个月前客户L还遇到过另一次离谱的从库宕机故障 —— 从库宕机了，然后控制台上监控根本看不到，客户自己发现了这个问题，提了工单，发起申诉，还是 &lt;strong&gt;1000¥&lt;/strong&gt; SLA 安慰补偿。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;docker.jpg&#34; src=&#34;/zh/blog/cloud/rds-failure/docker.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;当然这还是因为客户L的技术团队水平在线，有能力自主发现问题并主动发出声索。如果是那种技术能力接近零的小白用户，也许就这么拖着瞒着 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;糊弄过去了&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;还有那种 “SLA” 根本不管的问题 —— 例如也是客户L再之前的一个案例（原话引用）：“&lt;em&gt;为了折扣要迁移到另一个新的阿里云账号，新账号起了个同配置的 RDS 逻辑复制，复制了近1个月数据都没同步完，让我们直接放弃新账号迁移，导致浪费几万块钱。&lt;/em&gt;” —— 属实是花钱买罪受了，而且根本没地方说理去。&lt;/p&gt;
+&lt;p&gt;经过几次故障带来的糟心体验，客户L终于在这次事故后难以忍受，拍板决定下云了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;解决方案下云自建&#34;&gt;解决方案：下云自建&lt;/h2&gt;
+&lt;p&gt;客户L在几年前就有下云的计划了，在 IDC 里弄了几台服务器，用 Pigsty 自建搭建了几套 PostgreSQL 集群，作为云上的副本双写，跑得非常不错。但要把云上 RDS 下掉，还是免不了要折腾一下，所以一直也就这样两套并行跑着。包括此次事故之前的多次糟心体验，最终让客户L做了下云的决断。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty.webp&#34; src=&#34;/zh/blog/cloud/rds-failure/pigsty.webp&#34;&gt;&lt;/p&gt;
+&lt;p&gt;客户L直接下单加购了四台新服务器，以及 8块 Gen4 15TB NVMe SSD。特别是这里的 NVMe 磁盘，IOPS 性能是云上 ESSD PL1 乞丐盘的整整 &lt;strong&gt;20倍&lt;/strong&gt;（1M vs 50K），而 TB·月 单位价格则是云上的 &lt;strong&gt;1/166&lt;/strong&gt;  （1000¥ vs 6¥）。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;procurement.png&#34; src=&#34;/zh/blog/cloud/rds-failure/procurement.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;题外话：6块钱TB月价，我只在黑五打折的 Amazon 上看到过。125 TB 才 44K ¥（全新总共再加 9.6K ¥），，果然是术业有专攻，经手了过亿采购的成本控制大师。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;如在《&lt;a href=&#34;/zh/blog/cloud/odyssey#02-22-%E6%8C%87%E5%AF%BC%E4%B8%8B%E4%BA%91%E7%9A%84%E4%BA%94%E6%9D%A1%E4%BB%B7%E5%80%BC%E8%A7%82&#34;&gt;下云奥德赛：是时候放弃云计算了吗&lt;/a&gt;》 中 DHH 所说的那样：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“我们明智地花钱：在几个关键例子上，云的成本都极其高昂 —— 无论是&lt;strong&gt;大型物理机数据库、大型 NVMe 存储，或者只是最新最快的算&lt;/strong&gt;力。租生产队的驴所花的钱是如此高昂，以至于几个月的租金就能与直接购买它的价格持平。在这种情况下，你应该直接直接把这头驴买下来！我们将把我们的钱，花在我们自己的硬件和我们自己的人身上，其他的一切都会被压缩。”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;对客户L来说，下云带来的好处是立竿见影的：只需要 RDS 几个月费用的&lt;strong&gt;一次性投资&lt;/strong&gt;，就足够超配几倍到十几倍的硬件资源，重新拿回&lt;a href=&#34;/zh/blog/cloud/bonus&#34;&gt;硬件发展的红利&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/finops&#34;&gt;实现惊人的降本增效水平&lt;/a&gt; —— &lt;strong&gt;你不再需要对着账单抠抠搜搜，也不用再发愁什么资源不够&lt;/strong&gt;。这确实是一个值得思考的问题：如果云下资源单价变为十分之一甚至百分之几，那么云上鼓吹的弹性还剩多大意义？而阻止云上用户下云自建的原因又会是什么呢？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;下云自建 RDS 服务最大的挑战其实是人与技能&lt;/strong&gt;，客户L已经有着一个技术扎实的团队，但确实缺少在 PostgreSQL 上的专业知识与经验。这也是客户L之所以愿意为 RDS 支付高溢价的一个核心原因。但 RDS 在几次事故中体现出来的专业素养，甚至还不如客户本身的技术团队强，这就让继续留在云上变得毫无意义。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;广告时间专家咨询&#34;&gt;广告时间：专家咨询&lt;/h2&gt;
+&lt;p&gt;在下云这件事上， 我很高兴能为客户L提供帮助与支持。 &lt;a href=&#34;https://pigsty.cc/zh/&#34;&gt;Pigsty&lt;/a&gt; 是沉淀了我作为顶级 PG DBA 领域知识与经验的开源 RDS &lt;a href=&#34;/zh/blog/cloud/dba-vs-rds#dba%E7%9A%84%E5%B7%A5%E4%BD%9C%E4%B8%8E%E8%87%AA%E5%8A%A8%E5%8C%96%E7%AE%A1%E6%8E%A7&#34;&gt;自建工具&lt;/a&gt;，已经帮助无数世界各地的用户自建了自己的企业级 PostgreSQL 数据库服务。尽管它已经将开箱即用，扩展整合，监控系统，备份恢复，安全合规，IaC 这些运维侧的问题解决的很好了。但想要充分发挥 PostgreSQL 与 Pigsty 的完整实力，总归还是需要专家的帮助来落地。&lt;/p&gt;
+&lt;p&gt;所以我提供了明码标价的 &lt;a href=&#34;/zh/docs/price/subscription&#34;&gt;&lt;strong&gt;专家咨询服务&lt;/strong&gt;&lt;/a&gt; —— 对于客户L这样有着成熟技术团队，只是缺乏领域知识的客户，我只收取固定的 &lt;strong&gt;5K ¥/月&lt;/strong&gt; 咨询费用，仅仅相当于半个初级运维的工资。但足以让客户放心使用比云上低一个数量级的硬件资源成本，自建更好的本地 PG RDS 服务 —— 而即使在云上继续运行 RDS，也不至于被“砖家”被嘎嘎割韭菜忽悠。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;subscription.png&#34; src=&#34;/zh/blog/cloud/rds-failure/subscription.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;我认为&lt;strong&gt;咨询&lt;/strong&gt;是一种站着挣钱的体面模式：我没有任何动机去推销内存与云盘，或者说胡话兜售自己的产品（因为产品是开源免费的！）。所以我完全可以站在甲方立场上，给出对甲方利益最优的建议。甲乙双方都不用去干苦哈哈的数据库运维，因为这些工作已经被 Pigsty 这个我编写的开源工具完全自动化掉了。我只需要在零星的关键时刻提供专家意见与决策支持，并不会消耗多少精力与时间，却能帮助甲方实现原本全职雇佣顶级DBA专家才能实现的效果，最终实现双方共赢。&lt;/p&gt;
+&lt;p&gt;但是我也必须强调，我提倡下云理念，从来都是针对那些&lt;strong&gt;有一定数据规模与技术实力&lt;/strong&gt;的客户，比如这里的客户L。如果您的场景落在云计算舒适光谱中（例如用 1C2G 折扣 MySQL 跑 OA ），也缺乏技术扎实或值得信赖的工程师，我会诚实地建议你不要折腾 —— 99 一年的 RDS 总比你自己的 yum install 强不少，还要啥自行车呢？当然针对这种用例，我确实建议你考虑一下 Neon，Supabase，Cloudflare 这些&lt;a href=&#34;/zh/blog/cloud/cloudflare&#34;&gt;赛博菩萨们&lt;/a&gt;的免费套餐，&lt;strong&gt;可能连一块钱都用不着&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;而对于那些有一定规模，绑死在云数据库上被不断抽血的客户，你确实可以考虑另外一个选项：自建数据库服务绝非什么高深的火箭科学 —— &lt;strong&gt;你需要做的只是找到正确的工具与正确的人而已&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩展阅读&#34;&gt;扩展阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=4&amp;sn=93746ecea381afd8e2f9820447b09ec7&amp;chksm=fe4b3ceac93cb5fc44f33ffff226747bc317854acbb3882aeb0d9a7e196eeb5df002d0e77275&amp;scene=21#wechat_redirect&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;云数据库是不是智商税httpmpweixinqqcoms__bizmzu5odayntm5ngmid2247485745idx5sna7d610ea37c3f3fa78ee4ba0ee705962chksmfe4b3ceac93cb5fc6f1975f94be04424e7b3690eedd1658951deb8d016f5f19ade8806d86417scene21wechat_redirect&#34;&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=5&amp;sn=a7d610ea37c3f3fa78ee4ba0ee705962&amp;chksm=fe4b3ceac93cb5fc6f1975f94be04424e7b3690eedd1658951deb8d016f5f19ade8806d86417&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云数据库是不是智商税&lt;/strong&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486688&amp;idx=1&amp;sn=bbdee063b65994cb5e15d3e3b7d87523&amp;chksm=fe4b393bc93cb02d76c48f0fbfe3d60c8821b8079b1cfc05f8ccc56c1351b4a7a76b5794019a&amp;scene=21#wechat_redirect&#34;&gt;扒皮云对象存储：从降本到杀猪&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487089&amp;idx=1&amp;sn=ca16c2e7e534380eadcb3a3870d8e3b4&amp;chksm=fe4b3baac93cb2bc8c4b68c468acf3e8ac5ee124080a3e738262fe99dd1765c3adf9c56ea650&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;从降本增笑到真的降本增效&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487926&amp;idx=1&amp;sn=2edbd59c845944dc9ba38021f42d1d63&amp;chksm=fe4b246dc93cad7b35b7517b489371eaa08244ec561359e0a610bc9f6f2aa11cf1e3c2b34fb3&amp;scene=21#wechat_redirect&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486590&amp;idx=1&amp;sn=d4d85de483fafb867487f024631a3e6c&amp;scene=21#wechat_redirect&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908&amp;scene=21#wechat_redirect&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487367&amp;idx=1&amp;sn=d6e4abd2b2249d27bd8b8146b591b026&amp;chksm=fe4b3a5cc93cb34a8e90e4b7f06803fa11ee8234014cd4f1aedff59e3bf3c846b3cb133090f2&amp;scene=21#wechat_redirect&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487339&amp;idx=1&amp;sn=fce4c0d415d87026013169c737faeacb&amp;chksm=fe4b3ab0c93cb3a61bd2831fcad6dfb36419540e690420b1229053b1de2e3d3533a66f44fb4c&amp;scene=21#wechat_redirect&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487279&amp;idx=1&amp;sn=95231614887e129f298644ddc194909f&amp;chksm=fe4b3af4c93cb3e29078b4716d3b633246db8e2081acff8b821181c9ae058a0daf91e45a40b9&amp;scene=21#wechat_redirect&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485363&amp;idx=1&amp;sn=8622b25fd2309d4fc969d22964a04129&amp;scene=21#wechat_redirect&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488183&amp;idx=1&amp;sn=955849e8698fadcea9211b2731456222&amp;chksm=fe4b276cc93cae7aeb43cc4128c9a18e7a5cb02721277cb61bba1e32b61a57ecdd18bd949277&amp;scene=21#wechat_redirect&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488151&amp;idx=1&amp;sn=556731d65228f07f443cfb27b5e7bd8b&amp;chksm=fe4b274cc93cae5ae1a32d423f2f7285eff3e184903d62182ad5f17c4772b4baf38b6a9c89c8&amp;scene=21#wechat_redirect&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488036&amp;idx=1&amp;sn=7bbcc3e8979a5f97a519a7a1684caa06&amp;chksm=fe4b27ffc93caee9701d4a94830417e281c5c08e345d12b007ebaca84dc79c3224b880d75f4c&amp;scene=21#wechat_redirect&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487552&amp;idx=1&amp;sn=799ae77dda3b80d2296070826142adea&amp;chksm=fe4b259bc93cac8da2cc20f864e5a8b62ecb6f5dd57e7435db1d3fb2f2864a5d991b3a016358&amp;scene=21#wechat_redirect&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487536&amp;idx=1&amp;sn=0cd598f426de0b617c7f3318aed9bd95&amp;chksm=fe4b25ebc93cacfd2d96a9704a0ae4dc2d330aee7cd4579641df513edce307ccdd3a9f94736e&amp;scene=21#wechat_redirect&#34;&gt;云上黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487617&amp;idx=1&amp;sn=090b10e96e7e64c0ab0c5deb0cbb46ed&amp;chksm=fe4b255ac93cac4cb270be6091ca6e1257afaa03d50c53316ce82a2be6150151f6077e07e9da&amp;scene=21#wechat_redirect&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487400&amp;idx=1&amp;sn=cf5b94165d2791030e0e874dca8383c7&amp;chksm=fe4b3a73c93cb3652df4d53316e554e5bd0a0d659c7cad7214e10c4a9892d8d1a679e2187583&amp;scene=21#wechat_redirect&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487184&amp;idx=1&amp;sn=afa93b16ae95dba95d99a87ef6ff7605&amp;chksm=fe4b3b0bc93cb21d07adb10713c1061a53b6438a5db0bd93a2e7a0f11ea365ba3d24ae02d13d&amp;scene=21#wechat_redirect&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487240&amp;idx=1&amp;sn=ba535fd0c1026bc2482ea6ad1e1fb8bf&amp;chksm=fe4b3ad3c93cb3c50bfeaed64963cce25c49bee80364d3a8ca78b87d7c9f19fd4d79d3c62ddc&amp;scene=21#wechat_redirect&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485760&amp;idx=1&amp;sn=97096da1077a4fbb4c43452a3c4983c7&amp;scene=21#wechat_redirect&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=1&amp;sn=6109bb1be67f9e7e02124c4fc3b47ea3&amp;scene=21#wechat_redirect&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485601&amp;idx=1&amp;sn=5521562d414b547a192b3dbc45ce720f&amp;scene=21#wechat_redirect&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485629&amp;idx=1&amp;sn=7ec768fac5905b0c7052e7b3a6825c4e&amp;scene=21#wechat_redirect&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486489&amp;idx=1&amp;sn=f2be1be496de46ac5ca816ac39cfdf24&amp;scene=21#wechat_redirect&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485301&amp;idx=1&amp;sn=2fb038f8b9f26c095d97eb0d87e8b262&amp;scene=21#wechat_redirect&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486366&amp;idx=1&amp;sn=c28407399af8b1ddeadf93e902ed23cc&amp;scene=21#wechat_redirect&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487111&amp;idx=1&amp;sn=f02c3a7fc8ba9cc0919518b3c5805675&amp;chksm=fe4b3b5cc93cb24a71d0847bcd7f1655f7466f7f7864457413d3ca80cd79df974b7b9279b9e9&amp;scene=21#wechat_redirect&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486903&amp;idx=1&amp;sn=01c57499f41e8f51045bb8dd52586595&amp;chksm=fe4b386cc93cb17a2d2fad903e809107162cc1e67e8ad7c8bfdd51de657c97f32f912cabe550&amp;scene=21#wechat_redirect&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 我们能从网易云音乐故障中学到什么？</title>
+      <link>/zh/blog/cloud/netease/</link>
+      <pubDate>Sun, 18 Aug 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/netease/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/netease/featured_huf0f94727527e7e470168c5bbabb04c03_683887_640x0_resize_q75_catmullrom.jpg" width="640" height="320"/>]]>
+        
+        &lt;p&gt;今天下午 14:44 左右，网易云音乐出现 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488162&amp;idx=1&amp;sn=5913eb51b437e365c685ed11917a3302&amp;chksm=fe4b2779c93cae6ff254f4568f3e7895e005ce249ab4e0e3111bf3665a54fed35b381ff55aa9&amp;scene=21#wechat_redirect&#34;&gt;不可用故障&lt;/a&gt;，至 17:11 分恢复。网传原因为&lt;strong&gt;基础设施/云盘存储&lt;/strong&gt;相关问题。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;故障经过&#34;&gt;故障经过&lt;/h2&gt;
+&lt;p&gt;故障期间，网易云音乐客户端可以正常播放离线下载的音乐，但访问在线资源会直接提示报错，网页版则直接出现 502 服务器报错无法访问。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;bad-gateway.png&#34; src=&#34;/zh/blog/cloud/netease/bad-gateway.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在此期间，网易 163门户也出现 502 服务器报错，并在一段时间后 302 重定向到移动版主站。期间也有用户反馈&lt;strong&gt;网易新闻&lt;/strong&gt;与其他服务也受到影响。&lt;/p&gt;
+&lt;p&gt;许多用户都反馈连不上网易云音乐后，以为是自己网断了，卸了APP重装，还有以为公司 IT 禁了听音乐站点的，各种评论很快将此次故障推上微博热搜：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;weibo.png&#34; src=&#34;/zh/blog/cloud/netease/weibo.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;期间截止到 17:11 分，网易云音乐已经恢复，163 主站门户也从移动版本切换回浏览器版本，整个故障时长约两个半小时，P0 事故。&lt;/p&gt;
+&lt;p&gt;17:16 分，网易云音乐知乎账号发布通知致歉，并表示明天搜“畅听音乐”可以领取 7 天黑胶 VIP 的&lt;strong&gt;朋友费&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;heijiao.png&#34; src=&#34;/zh/blog/cloud/netease/heijiao.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;原因推断&#34;&gt;原因推断&lt;/h2&gt;
+&lt;p&gt;在此期间，出现各种流言与小道消息。总部着火🔥 （老图），TiDB 翻车（网友瞎编），下载《黑神话悟空》打爆网络，以及程序员删库跑路等就属于一眼假的消息。&lt;/p&gt;
+&lt;p&gt;但也有先前网易云音乐公众号发布的一篇文章《&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzI1NTg3NzcwNQ==&amp;mid=2247491821&amp;idx=1&amp;sn=573dcc464a690a5b9a0a991c6f3c74e2&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云音乐贵州机房迁移总体方案回顾&lt;/strong&gt;&lt;/a&gt;》，以及两份有板有眼的网传聊天记录，可以作为一个参考。&lt;/p&gt;
+&lt;p&gt;网传此次故障与云存储有关，网传聊天记录就不贴了，可以参考《&lt;a href=&#34;https://mp.weixin.qq.com/s/rcmhu16eZdx1JXJadZ8d-Q&#34;&gt;网易云音乐宕机,原因曝光!7月份刚迁移完机房，传和降本增效有关。&lt;/a&gt;》一文截图，或者权威媒体的引用报道《&lt;a href=&#34;https://mp.weixin.qq.com/s/nApqdf0ow6iY97TDZMEdsg&#34;&gt;独家｜网易云音乐故障真相：技术降本增效，人手不足排查了半天&lt;/a&gt;》。&lt;/p&gt;
+&lt;p&gt;我们可以找到一些关于网易云存储团队的公开信息，例如，网易自研的云存储方案 Curve 项目被枪毙了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;author.png&#34; src=&#34;/zh/blog/cloud/netease/author.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;查阅 &lt;a href=&#34;https://github.com/opencurve/curve&#34;&gt;Github Curve 项目主页&lt;/a&gt;，发现项目在 2024 年初后就陷入停滞状态：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pulse.png&#34; src=&#34;/zh/blog/cloud/netease/pulse.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;最后一个 Release 一直停留在RC没有发布正式版，项目已经基本无人维护，进入静默状态。&lt;/p&gt;
+&lt;p&gt;Curve 团队负责人还发表过一篇《curve：遗憾告别 未竟之旅》的公众号文章，并随即遭到删除。我对这件事有些印象，因为 Curve 是 PolarDB 推荐的两个开源共享存储方案之一，所以特意调研过这个项目，现在看来……&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;经验教训&#34;&gt;经验教训&lt;/h2&gt;
+&lt;p&gt;关于裁员与降本增效的老生长谈已经说过很多了，我们又还能从这场事故中学习到什么教训呢？以下是我的观点：&lt;/p&gt;
+&lt;p&gt;第一个教训是，&lt;strong&gt;不要用云盘跑严肃数据库&lt;/strong&gt;！在这件事上，我确实可以说一句 “ &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486587&amp;idx=1&amp;sn=16521d6854711a4fe429464aeb2df6bd&amp;chksm=fe4b39a0c93cb0b6d57c1345b79a6c87972e58eeed65831bc6ba8cf73d2a99d6a11d48d2f706&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Told you so&lt;/strong&gt;&lt;/a&gt;” 。底层块存储基本都是提供给数据库用的。如果这里出现了故障，爆炸半径与 Debug 难度是远超出一般工程师的&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;智力带宽&lt;/strong&gt;&lt;/a&gt;的。如此显著的故障时长（两个半小时），显然不是在无状态服务上的问题。&lt;/p&gt;
+&lt;p&gt;第二个教训是 —— &lt;strong&gt;自研造轮子没有问题，但要留着人来兜底&lt;/strong&gt;。降本增效把存储团队一锅端了，遇到问题找不到人就只能干着急。&lt;/p&gt;
+&lt;p&gt;第三个教训是，&lt;strong&gt;警惕大厂开源&lt;/strong&gt;。作为一个底层存储项目，一旦启用那就不是简单说换就能换掉的。而网易毙掉 Curve 这个项目，所有这些用 Curve 的基建就成了没人维护的危楼。Stonebraker 老爷子在他的名著论文《What Goes Around Comes Around》中就提到过这一点：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;stonebraker.png&#34; src=&#34;/zh/blog/cloud/netease/stonebraker.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488162&amp;idx=1&amp;sn=5913eb51b437e365c685ed11917a3302&amp;chksm=fe4b2779c93cae6ff254f4568f3e7895e005ce249ab4e0e3111bf3665a54fed35b381ff55aa9&amp;scene=21#wechat_redirect&#34;&gt;网易云音乐崩了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488151&amp;idx=1&amp;sn=556731d65228f07f443cfb27b5e7bd8b&amp;chksm=fe4b274cc93cae5ae1a32d423f2f7285eff3e184903d62182ad5f17c4772b4baf38b6a9c89c8&amp;scene=21#wechat_redirect&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487926&amp;idx=1&amp;sn=2edbd59c845944dc9ba38021f42d1d63&amp;chksm=fe4b246dc93cad7b35b7517b489371eaa08244ec561359e0a610bc9f6f2aa11cf1e3c2b34fb3&amp;scene=21#wechat_redirect&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247488036&amp;idx=1&amp;sn=7bbcc3e8979a5f97a519a7a1684caa06&amp;chksm=fe4b27ffc93caee9701d4a94830417e281c5c08e345d12b007ebaca84dc79c3224b880d75f4c&amp;scene=21#wechat_redirect&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487552&amp;idx=1&amp;sn=799ae77dda3b80d2296070826142adea&amp;chksm=fe4b259bc93cac8da2cc20f864e5a8b62ecb6f5dd57e7435db1d3fb2f2864a5d991b3a016358&amp;scene=21#wechat_redirect&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487536&amp;idx=1&amp;sn=0cd598f426de0b617c7f3318aed9bd95&amp;chksm=fe4b25ebc93cacfd2d96a9704a0ae4dc2d330aee7cd4579641df513edce307ccdd3a9f94736e&amp;scene=21#wechat_redirect&#34;&gt;云上黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486766&amp;idx=1&amp;sn=b17b224eb2a2faa401957886cf7ea832&amp;chksm=fe4b38f5c93cb1e3765c88f0cd4133090497527e50c747654f3e312c8db83f801b44bd562e74&amp;scene=21#wechat_redirect&#34;&gt;互联网技术大师速成班 &lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486747&amp;idx=1&amp;sn=29cce4b791b274c966e05d2ce81ae09d&amp;chksm=fe4b38c0c93cb1d6aa83c776f206791e79f172105c3f942a9a2e28da70889929ef3cb0c77839&amp;scene=21#wechat_redirect&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486691&amp;idx=1&amp;sn=6858441ede03a6e700155390cf0086f4&amp;chksm=fe4b3938c93cb02eb36992769204ec829f4a9fe55c37329546a1db6039301ddf47094dddf7e1&amp;scene=21#wechat_redirect&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486590&amp;idx=1&amp;sn=d4d85de483fafb867487f024631a3e6c&amp;scene=21#wechat_redirect&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487367&amp;idx=1&amp;sn=d6e4abd2b2249d27bd8b8146b591b026&amp;chksm=fe4b3a5cc93cb34a8e90e4b7f06803fa11ee8234014cd4f1aedff59e3bf3c846b3cb133090f2&amp;scene=21#wechat_redirect&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487339&amp;idx=1&amp;sn=fce4c0d415d87026013169c737faeacb&amp;chksm=fe4b3ab0c93cb3a61bd2831fcad6dfb36419540e690420b1229053b1de2e3d3533a66f44fb4c&amp;scene=21#wechat_redirect&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487223&amp;idx=1&amp;sn=da885170d5d65a3c646d8b3d9da3aed3&amp;chksm=fe4b3b2cc93cb23a5625e8c183860a9e1528eca0a1311439f1ec308a74d53f10cf5dbbb9a1d0&amp;scene=21#wechat_redirect&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487319&amp;idx=1&amp;sn=7e38023ce115046b5318ee670c90fd58&amp;chksm=fe4b3a8cc93cb39a961e396d1491b7bb77089c2d79b8f5e942c6a945cf0aa6dedbf5a8a42828&amp;scene=21#wechat_redirect&#34;&gt;故障不是腾讯云草台的原因，傲慢才是&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487184&amp;idx=1&amp;sn=afa93b16ae95dba95d99a87ef6ff7605&amp;chksm=fe4b3b0bc93cb21d07adb10713c1061a53b6438a5db0bd93a2e7a0f11ea365ba3d24ae02d13d&amp;scene=21#wechat_redirect&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487089&amp;idx=1&amp;sn=ca16c2e7e534380eadcb3a3870d8e3b4&amp;chksm=fe4b3baac93cb2bc8c4b68c468acf3e8ac5ee124080a3e738262fe99dd1765c3adf9c56ea650&amp;scene=21#wechat_redirect&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487279&amp;idx=1&amp;sn=95231614887e129f298644ddc194909f&amp;chksm=fe4b3af4c93cb3e29078b4716d3b633246db8e2081acff8b821181c9ae058a0daf91e45a40b9&amp;scene=21#wechat_redirect&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486527&amp;idx=1&amp;sn=8e26f644f2b908fd21c83b81d329155d&amp;chksm=fe4b39e4c93cb0f22271127a154a6ac5c45947b2051b06b7667ee5c203d136b5d2e8f6577b10&amp;scene=21#wechat_redirect&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908&amp;scene=21#wechat_redirect&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: 蓝屏星期五：甲乙双方都是草台班子</title>
       <link>/zh/blog/cloud/bsod-friday/</link>
       <pubDate>Tue, 23 Jul 2024 00:00:00 +0000</pubDate>
