@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.64fc9a513bc115777792276cf2ba4bc0.json"
+    data-offline-search-index-json-src="/offline-search-index.a84a4bc0e312ced60e3614c3e4430faf.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -2492,7 +2492,7 @@ If your environment does not have internet access, and you need to use the PostG
 <td>patroni restapi password, <code>Patroni.API</code> by default</td>
 </tr>
 <tr>
-<td>870</td>
+<td>869</td>
 <td><a href="/docs/reference/param/#pg_primary_db"><code>pg_primary_db</code></a></td>
 <td><a href="/docs/reference/param/#pgsql"><code>PGSQL</code></a></td>
 <td><a href="/docs/reference/param/#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
@@ -2501,13 +2501,22 @@ If your environment does not have internet access, and you need to use the PostG
 <td>primary database name, used by citus,etc&hellip; ,postgres by default</td>
 </tr>
 <tr>
-<td>871</td>
+<td>870</td>
 <td><a href="/docs/reference/param/#pg_parameters"><code>pg_parameters</code></a></td>
 <td><a href="/docs/reference/param/#pgsql"><code>PGSQL</code></a></td>
 <td><a href="/docs/reference/param/#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
 <td>dict</td>
 <td>C</td>
 <td>extra parameters in postgresql.auto.conf</td>
+</tr>
+<tr>
+<td>871</td>
+<td><a href="/docs/reference/param/#pg_files"><code>pg_files</code></a></td>
+<td><a href="/docs/reference/param/#pgsql"><code>PGSQL</code></a></td>
+<td><a href="/docs/reference/param/#pg_bootstrap"><code>PG_BOOTSTRAP</code></a></td>
+<td>path[]</td>
+<td>C</td>
+<td>extra files to be copied to postgres data directory (e.g. license)</td>
 </tr>
 <tr>
 <td>872</td>
@@ -4961,7 +4970,7 @@ This is usually not a problem since you can use cheap &amp; large HDD for that.<
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 2, pg_role: replica , pg_parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">shared_buffers</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;4GB&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 3, pg_role: replica , pg_parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">shared_buffers</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;3GB&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>Please note that some important cluster parameters (which have requirements for primary and replica parameter values) are managed directly by Patroni through command-line parameters and have the highest priority. These cannot be overridden by this method. For these parameters, you must use Patroni <code>edit-config</code> for management and configuration.</p>
-<p>PostgreSQL parameters that must remain consistent across primary and replicas (inconsistency will prevent the replica from starting!):</p>
+<p>PostgreSQL parameters that <a href="https://patroni.readthedocs.io/en/latest/patroni_configuration.html#important-rules">must remain consistent</a> across primary and replicas (inconsistency will prevent the replica from starting!):</p>
 <ul>
 <li><code>wal_level</code></li>
 <li><code>max_connections</code></li>
@@ -4983,7 +4992,13 @@ This is usually not a problem since you can use cheap &amp; large HDD for that.<
 <li><code>wal_keep_size</code></li>
 </ul>
 <p>You can set non-existent parameters (such as GUCs from extensions), but changing existing configurations to illegal values may prevent PostgreSQL from starting. Please configure with caution!</p>
-<h3 id="pg_conf"><code>pg_conf</code></h3>
+<h3 id="pg_files"><code>pg_files</code></h3>
+<p>Parameter Name: <code>pg_files</code>, Type: <code>path[]</code>, Level: <code>C</code></p>
+<p>Designates a list of files to be copied to the <code>{{ pg_data }}</code> directory. The default value is an empty array: <code>[]</code>.</p>
+<p>Files specified in this parameter will be copied to the <code>{{ pg_data }}</code> directory. This is mainly used to distribute license files required by special commercial versions of the PostgreSQL kernel.</p>
+<p>Currently, only the PolarDB (Oracle-compatible) kernel requires a license file. For example, you can place the <code>license.lic</code> file in the <code>files/</code> directory and specify it in <code>pg_files</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">pg_files</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">license.lic ]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><h3 id="pg_conf"><code>pg_conf</code></h3>
 <p>name: <code>pg_conf</code>, type: <code>enum</code>, level: <code>C</code></p>
 <p>config template: <code>{oltp,olap,crit,tiny}.yml</code>, <code>oltp.yml</code> by default</p>
 <ul>
