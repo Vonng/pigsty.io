@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.6d72db42fed49c34cc2c791df8d08c18.json"
+    data-offline-search-index-json-src="/offline-search-index.aa8a9eff648da5fe5465fa14a2cc52fe.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -141,9 +141,27 @@ This is the multi-page printable view of this section.
 
 
 <div class="content">
-      <p><a href="https://kafka.apache.org/">Kafka</a> 是一个开源的分布式流处理平台。</p>
-<p>Kafka 模块目前仅在 Pigsty 专业版中提供 Beta 试用预览。</p>
+      <blockquote>
+<p><a href="https://kafka.apache.org/">Kafka</a> 是一个开源的分布式流处理平台：<a href="/zh/docs/pro/kafka/#安装">安装</a> | <a href="/zh/docs/pro/kafka/#配置">配置</a> | <a href="/zh/docs/pro/kafka/#管理">管理</a> | <a href="/zh/docs/pro/kafka/#剧本">剧本</a> | <a href="/zh/docs/pro/kafka/#监控">监控</a> | <a href="/zh/docs/pro/kafka/#参数">参数</a> | <a href="/zh/docs/pro/kafka/#资源">资源</a></p>
+</blockquote>
 <hr>
+<h2 id="概览">概览</h2>
+<p>Kafka 模块本身目前仅在 Pigsty 专业版中提供 Beta 试用预览。</p>
+<hr>
+<h2 id="安装">安装</h2>
+<p>如果您使用开源版 Pigsty，可以使用以下命令，在指定节点上安装 Kafka 及其 Java 依赖。</p>
+<p>但 Pigsty 在官方 Infra 仓库中提供了 Kafka 3.8.0 的 RPM 与 DEB 安装包，如果需要使用，可以直接下载安装。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;kafka&#34;]}&#39;</span>
+</span></span></code></pre></div><p>Kafka 依赖 Java 运行环境，因此在安装 Kafka 时，需要安装可用的 JDK （默认使用 OpenJDK 17，但其他 JDK 与版本，例如 8，11 都可以使用）</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL7 (没有 JDK 17 支持)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;java-11-openjdk-headless&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL8 / EL9 (使用 OpenJDK 17 )</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;java-17-openjdk-headless&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># Debian / Ubuntu (使用 OpenJDK 17)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;openjdk-17-jdk&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
 <h2 id="配置">配置</h2>
 <p>单节点 Kafka 配置样例，请注意，在 Pigsty 单机部署模式下，管理节点上的 9093 端口默认已经被 AlertManager 占用。</p>
 <p>建议在管理节点上安装 Kafka 时，Peer Poort 使用其他端口，例如（9095）。</p>
@@ -163,14 +181,12 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">kafka_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">kf-test</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><hr>
-<h2 id="部署">部署</h2>
-<p>使用 <code>kafka.yml</code> 创建 Kafka 集群：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka.yml -l kf-main
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka.yml -l kf-test
-</span></span></code></pre></div><hr>
 <h2 id="管理">管理</h2>
 <p>以下是基本的 Kafka 集群基本管理操作：</p>
-<p>创建一个名为 <code>test</code> 的 Topic：</p>
+<p>使用 <code>kafka.yml</code> 创建 Kafka 集群：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka.yml -l kf-main
+</span></span><span style="display:flex;"><span>./kafka.yml -l kf-test
+</span></span></code></pre></div><p>创建一个名为 <code>test</code> 的 Topic：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kafka-topics.sh --create --topic <span style="color:#204a87">test</span> --partitions <span style="color:#0000cf;font-weight:bold">1</span> --replication-factor <span style="color:#0000cf;font-weight:bold">1</span> --bootstrap-server localhost:9092
 </span></span></code></pre></div><p>这里 <code>--replication-factor 1</code> 表示每个数据只会复制一次，<code>--partitions 1</code> 表示只创建一个分区。</p>
 <p>使用以下命令，查看 Kafka 中的 Topic 列表：</p>
@@ -244,7 +260,19 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">#log.retention.bytes: 1073741824</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">#log.flush.interval.ms: 1000</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic">#log.flush.interval.messages: 10000</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div>
+</span></span></span></code></pre></div><hr>
+<h2 id="资源">资源</h2>
+<p>Pigsty 为 PostgreSQL 提供了一些 Kafka 相关的扩展插件：</p>
+<ul>
+<li><a href="/zh/docs/pgext/fdw/kafka_fdw"><strong><code>kafka_fdw</code></strong></a>，一个有趣的 FDW，允许用户直接从 PostgreSQL 中读写 Kafka Topic 数据</li>
+<li><a href="/zh/docs/pgext/etl/wal2json"><strong><code>wal2json</code></strong></a>，用于从 PostgreSQL 中逻辑解码 WAL 日志，生成 JSON 格式的变更数据</li>
+<li><a href="/zh/docs/pgext/etl/wal2mongo"><strong><code>wal2mongo</code></strong></a>，用于从 PostgreSQL 中逻辑解码 WAL 日志，生成 BSON 格式的变更数据</li>
+<li><a href="/zh/docs/pgext/etl/decoder_raw"><strong><code>decoder_raw</code></strong></a>，用于从 PostgreSQL 中逻辑解码 WAL 日志，生成 SQL 格式的变更数据</li>
+<li><a href="/zh/docs/pgext/etl/test_decoding"><strong><code>test_decoding</code></strong></a>，用于从 PostgreSQL 中逻辑解码 WAL 日志，生成 RAW 格式的变更数据</li>
+</ul>
+<br>
+<hr>
+<br>
 </div>
 </div>
 
