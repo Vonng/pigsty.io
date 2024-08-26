@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.aa8a9eff648da5fe5465fa14a2cc52fe.json"
+    data-offline-search-index-json-src="/offline-search-index.f171027c4e50bbf6c4ecc4ea99c573af.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -147,7 +147,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>2: <a href="#pg-c07c8fe46183ed562301b41033998686">WiltonDB (MSSQL)</a></li>
+<li>2: <a href="#pg-c07c8fe46183ed562301b41033998686">Babelfish (MSSQL)</a></li>
 
 
     
@@ -229,7 +229,13 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-1a7a34e956a00ba21a0bda7a65a13269">1 - Citus (Distributive)</h1>
     <div class="lead">使用 Pigsty 部署原生高可用的 Citus 水平分片集群，将 PostgreSQL 无缝伸缩到多套分片并加速 OLTP/OLAP 查询。</div>
-	<p>Pigsty 原生支持 Citus。可以参考 <a href="https://github.com/Vonng/pigsty/blob/master/conf/dbms/citus.yml"><code>files/pigsty/citus.yml</code></a> 与 <a href="https://github.com/Vonng/pigsty/blob/master/conf/sandbox/prod.yml#L298"><code>prod.yml</code></a> 作为样例。</p>
+	<p>Pigsty 原生支持 Citus。可以参考 <a href="https://github.com/Vonng/pigsty/blob/main/conf/dbms/citus.yml"><code>conf/dbms/citus.yml</code></a> 与 <a href="https://github.com/Vonng/pigsty/blob/main/conf/sandbox/prod.yml#L298"><code>prod.yml</code></a> 作为样例。</p>
+<hr>
+<h2 id="安装">安装</h2>
+<p>Citus 是一个 PostgreSQL <a href="/zh/docs/pgext/olap/citus">扩展插件</a>，可以按照标准插件安装的流程，在原生 PostgreSQL 集群上加装启用。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql.yml -t pg_extension -e <span style="color:#4e9a06">&#39;{&#34;pg_extensions&#34;:[&#34;citus&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="配置">配置</h2>
 <p>要定义一个 citus 集群，您需要指定以下参数：</p>
 <ul>
 <li><a href="/zh/docs/reference/param#pg_mode"><code>pg_mode</code></a> 必须设置为 <code>citus</code>，而不是默认的 <code>pgsql</code></li>
@@ -264,7 +270,9 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_hba_rules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">user: &#39;all&#39; ,db: all  ,addr: 127.0.0.1/32 ,auth: ssl ,title</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;all user ssl access from localhost&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">user: &#39;all&#39; ,db: all  ,addr: intra        ,auth: ssl ,title</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;all user ssl access from intranet&#39;</span><span style="color:#f8f8f8;text-decoration:underline">  </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>在协调者节点上，您可以创建分布式表和引用表，并从任何数据节点查询它们。从 11.2 开始，任何 Citus 数据库节点都可以扮演协调者的角色了。</p>
+</span></span></span></code></pre></div><hr>
+<h2 id="初始化">初始化</h2>
+<p>在协调者节点上，您可以创建分布式表和引用表，并从任何数据节点查询它们。从 11.2 开始，任何 Citus 数据库节点都可以扮演协调者的角色了。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>SELECT create_distributed_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pgbench_accounts&#39;</span>, <span style="color:#4e9a06">&#39;aid&#39;</span><span style="color:#ce5c00;font-weight:bold">)</span><span style="color:#000;font-weight:bold">;</span> SELECT truncate_local_data_after_distributing_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#000">$$</span>public.pgbench_accounts<span style="color:#000">$$</span><span style="color:#ce5c00;font-weight:bold">)</span><span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>SELECT create_reference_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pgbench_branches&#39;</span><span style="color:#ce5c00;font-weight:bold">)</span>         <span style="color:#000;font-weight:bold">;</span> SELECT truncate_local_data_after_distributing_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#000">$$</span>public.pgbench_branches<span style="color:#000">$$</span><span style="color:#ce5c00;font-weight:bold">)</span><span style="color:#000;font-weight:bold">;</span>
 </span></span><span style="display:flex;"><span>SELECT create_reference_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#4e9a06">&#39;pgbench_history&#39;</span><span style="color:#ce5c00;font-weight:bold">)</span>          <span style="color:#000;font-weight:bold">;</span> SELECT truncate_local_data_after_distributing_table<span style="color:#ce5c00;font-weight:bold">(</span><span style="color:#000">$$</span>public.pgbench_history<span style="color:#000">$$</span><span style="color:#ce5c00;font-weight:bold">)</span><span style="color:#000;font-weight:bold">;</span>
@@ -284,9 +292,14 @@ This is the multi-page printable view of this section.
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-c07c8fe46183ed562301b41033998686">2 - WiltonDB (MSSQL)</h1>
+	<h1 id="pg-c07c8fe46183ed562301b41033998686">2 - Babelfish (MSSQL)</h1>
     <div class="lead">使用 WiltonDB 与 Babelfish 创建兼容 Microsoft SQL Server 的 PostgreSQL 数据库集群！（线缆协议级仿真）</div>
-	<p>Pigsty 允许用户使用 Babelfish 与 WiltonDB 创建 Microsoft SQL Server 兼容的 PostgreSQL 集群！</p>
+	<blockquote>
+<p><a href="https://babelfishpg.org/">Babelfish</a> 是一个基于 PostgreSQL 的 MSSQL（微软 SQL Server）兼容性方案，由 AWS 开源。</p>
+</blockquote>
+<hr>
+<h2 id="概览">概览</h2>
+<p>Pigsty 允许用户使用 Babelfish 与 WiltonDB 创建 Microsoft SQL Server 兼容的 PostgreSQL 集群！</p>
 <ul>
 <li><a href="https://babelfishpg.org/">Babelfish</a> ：一个由 AWS 开源的 MSSQL（微软 SQL Server） 兼容性扩展插件</li>
 <li><a href="https://github.com/wiltondb/wiltondb">WiltonDB</a>： 一个专注于整合 Babelfish 的 PostgreSQL 内核发行版</li>
@@ -297,7 +310,13 @@ This is the multi-page printable view of this section.
 <p>MSSQL 兼容集群在启动后，除了监听 PostgreSQL 默认的端口外，还会监听 MSSQL 默认的 <code>1433</code> 端口，并在此端口上通过 TDS WireProtocol 提供 MSSQL 服务。
 您可以用任何 MSSQL 客户端连接至 Pigsty 提供的 MSSQL 服务，如 SQL Server Management Studio，或者使用 <code>sqlcmd</code> 命令行工具。</p>
 <hr>
-<h2 id="注意事项">注意事项</h2>
+<h2 id="安装">安装</h2>
+<p>WiltonDB 与原生 PostgreSQL 内核冲突，在一个节点上只能选择一个内核进行安装，使用以下命令在线安装 WiltonDB 内核。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;local,mssql&#34;,&#34;node_packages&#34;:[&#34;wiltondb&#34;]}&#39;</span>
+</span></span></code></pre></div><p>请注意 WiltonDB 仅在 EL 与 Ubuntu 系统中可用，目前尚未提供 Debian 支持。</p>
+<p>Pigsty 专业版提供了 WiltonDB 离线安装包，可以从本地软件源安装 WiltonDB。</p>
+<hr>
+<h2 id="配置">配置</h2>
 <p>在安装部署 MSSQL 模块时需要特别注意以下事项：</p>
 <ul>
 <li>WiltonDB 在 EL (7/8/9) 和 Ubuntu (20.04/22.04) 中可用，<strong>在Debian系统中不可用</strong>。</li>
@@ -371,7 +390,7 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">&#39;babelfishpg_tsql.migration_mode&#39; </span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;multi-db&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">babelfish cluster, a MSSQL compatible pg cluster</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><hr>
-<h2 id="客户端访问">客户端访问</h2>
+<h2 id="访问">访问</h2>
 <p>您可以使用任何 SQL Server 兼容的客户端工具来访问这个数据库集群。</p>
 <p>Microsoft 提供了 <a href="https://learn.microsoft.com/en-us/sql/tools/sqlcmd/sqlcmd-use-utility?view=sql-server-ver16">sqlcmd</a> 作为官方的命令行工具。</p>
 <p>除此之外，他们还提供了一个 Go 语言版本的命令行工具 <a href="https://github.com/microsoft/go-sqlcmd">go-sqlcmd</a>。</p>
@@ -398,14 +417,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 访问任意集群成员上的 5434 端口，指向任意可读库上的 1433 MSSQL 端口</span>
 </span></span><span style="display:flex;"><span>sqlcmd -S 10.10.10.11,5434 -U dbuser_mssql -P DBUser.MSSQL
 </span></span></code></pre></div><hr>
-<h2 id="下载安装">下载安装</h2>
-<p>如果您的环境有互联网访问，您可以使用以下方式，直接将 WiltonDB 仓库加入到节点上，然后作为节点软件包安装：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_repo_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">local,node,pgsql,mssql</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">node_packages</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">wiltondb ]</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>使用以下命令在线安装 WiltonDB 软件包。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_repo,node_pkg
-</span></span></code></pre></div><hr>
-<h2 id="扩展列表">扩展列表</h2>
+<h2 id="扩展">扩展</h2>
 <p>绝大多数 <strong>PGSQL</strong> 模块的 <a href="/zh/docs/pgext/list"><strong>扩展插件</strong></a>（非纯 SQL 类）都无法直接在 MSSQL 模块的 WiltonDB 内核上使用，需要重新编译。</p>
 <p>目前 WiltonDB 自带了以下扩展插件，除了 PostgreSQL Contrib 扩展，四个 BabelfishPG 核心扩展之外，还提供了 <code>pg_hint_pan</code>，<code>tds_fdw</code>，以及 <code>system_stats</code> 三个第三方扩展。</p>
 <table>
@@ -745,9 +757,18 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-cd3a97cb8e8be2f2db28d114fe918f9c">3 - IvorySQL (Oracle)</h1>
     <div class="lead">使用瀚高开源的 IvorySQL 内核，基于 PostgreSQL 集群实现 Oracle 语法/PLSQL 兼容性。</div>
-	<p>Pigsty 允许使用 IvorySQL 创建带有 “Oracle兼容性” 的 PostgreSQL 集群！</p>
+	<p><a href="https://www.ivorysql.org/">IvorySQL</a> 是一个开源的，旨在基于 PG 提供 “Oracle兼容性” 的 PostgreSQL 内核分支。</p>
 <hr>
-<h2 id="注意事项">注意事项</h2>
+<h2 id="概览">概览</h2>
+<p>IvorySQL 内核支持在 Pigsty 开源版本中提供，您的服务器需要互联网访问，直接从 IvorySQL 的官方仓库下载相关软件包。</p>
+<p>请注意，直接将 IvorySQL 加入 Pigsty 默认软件仓库中会影响原生 PostgreSQL 内核的安装。Pigsty 专业版提供包括 IvorySQL 内核在内的离线安装解决方案。</p>
+<p>使用 Oracle 兼容性模式时，需要动态加载 <code>liboracle_parser</code> 扩展插件。</p>
+<hr>
+<h2 id="安装">安装</h2>
+<p>如果您的环境有互联网访问，您可以使用以下方式，直接将 IvorySQL 仓库加入到节点上，然后执行 PGSQL 剧本进行安装</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_repo -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;local,node,pgsql,ivory&#34;}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="配置">配置</h2>
 <p>以下参数需要针对 IvorySQL 数据库集群进行配置：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#----------------------------------#</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># Ivory SQL Configuration</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -761,13 +782,6 @@ This is the multi-page printable view of this section.
 <h2 id="客户端访问">客户端访问</h2>
 <p>IvorySQL 等效于 PostgreSQL 16，任何兼容 PostgreSQL 线缆协议的客户端工具都可以访问 IvorySQL 集群。</p>
 <hr>
-<h2 id="下载安装">下载安装</h2>
-<p>如果您的环境有互联网访问，您可以使用以下方式，直接将 IvorySQL 仓库加入到节点上，然后作为节点软件包安装：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_repo_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">local,node,pgsql,ivory</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">node_packages</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ivorysql ]</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>使用以下命令在线安装 IvorySQL 软件包。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_repo,node_pkg
-</span></span></code></pre></div><hr>
 <h2 id="扩展列表">扩展列表</h2>
 <p>绝大多数 <strong>PGSQL</strong> 模块的 <a href="/zh/docs/pgext/list"><strong>扩展插件</strong></a> （非纯 SQL 类）都无法直接在 IvorySQL 内核上使用，如果需要使用，请针对新内核从源码重新编译安装。</p>
 <p>目前 IvorySQL 内核自带了以下 <strong>101</strong> 个扩展插件。</p>
@@ -1305,10 +1319,20 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-e9444969fe5469879c2afc7db4af9eeb">4 - PolarDB PG (RAC)</h1>
     <div class="lead">使用阿里云开源的 PolarDB for PostgreSQL 内核提供国产信创资质支持，与类似 Oracle RAC 的使用体验。</div>
-	<p>Pigsty 允许使用 PolarDB 创建带有 “国产化信创资质” 的 PostgreSQL 集群！</p>
+	<hr>
+<h2 id="概览">概览</h2>
+<p>Pigsty 允许使用 PolarDB 创建带有 “国产化信创资质” 的 PostgreSQL 集群！</p>
+<p>PolarDB for PostgreSQL 基本等效于 PostgreSQL 11，任何兼容 PostgreSQL 线缆协议的客户端工具都可以访问 PolarDB 集群。</p>
+<p>Pigsty 的 PGSQL 仓库中提供了 EL7 / EL8 的 PolarDB PG 开源版安装包，但不会在 Pigsty 安装时下载到本地软件仓库。</p>
+<p>如果您需要 PolarDB PG 的离线安装支持，请考虑我们的 <a href="/zh/docs/price/product">专业版</a></p>
 <hr>
-<h2 id="注意事项">注意事项</h2>
-<p>以下参数需要针对 PolarDB 数据库集群进行配置：</p>
+<h2 id="安装">安装</h2>
+<p>如果您的环境有互联网访问，您可以使用以下方式，直接将 Pigsty PGSQL 及依赖仓库加入到节点上，</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_repo_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">local,node,pgsql</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>然后在 <code>pg_packages</code> 中，使用 <code>polardb</code> 替换原生的 <code>postgresql</code> 软件包。</p>
+<hr>
+<h2 id="配置">配置</h2>
+<p>以下参数需要针对 PolarDB 数据库集群进行特殊配置：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#----------------------------------#</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># PGSQL &amp; PolarDB</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#----------------------------------#</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1325,17 +1349,8 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: replicator   ,superuser: true  ,replication: true ,roles: [pg_monitor, dbrole_readonly] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">system replicator }</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># &lt;- superuser is required for replication</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dba   ,superuser: true  ,roles: [dbrole_admin]  ,pgbouncer: true ,pool_mode: session, pool_connlimit: 16 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql admin user }</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_monitor ,roles: [pg_monitor] ,pgbouncer: true ,parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#204a87;font-weight:bold">log_min_duration_statement: 1000 } ,pool_mode: session ,pool_connlimit: 8 ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pgsql monitor user }</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><hr>
-<h2 id="客户端访问">客户端访问</h2>
-<p>PolarDB for PostgreSQL 基本等效于 PostgreSQL 11，任何兼容 PostgreSQL 线缆协议的客户端工具都可以访问 PolarDB 集群。</p>
+</span></span></span></code></pre></div><p>这里特别注意，PolarDB PG 要求 <code>replicator</code> 复制用户为 Superuser，与原生 PG 不同。</p>
 <hr>
-<h2 id="下载安装">下载安装</h2>
-<p>如果您的环境有互联网访问，您可以使用以下方式，直接将 PolarDB 仓库加入到节点上，然后作为节点软件包安装：</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">node_repo_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">local,node,pgsql</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">node_packages</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">polardb ]</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>使用以下命令在线安装 PolarDB 软件包。</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_repo,node_pkg
-</span></span></code></pre></div><hr>
 <h2 id="扩展列表">扩展列表</h2>
 <p>绝大多数 <strong>PGSQL</strong> 模块的 <a href="/zh/docs/pgext/list"><strong>扩展插件</strong></a> （非纯 SQL 类）都无法直接在 PolarDB 内核上使用，如果需要使用，请针对新内核从源码重新编译安装。</p>
 <p>目前 PolarDB 内核自带了以下 <strong>61</strong> 个扩展插件，除去 Contrib 扩展外，提供的额外扩展包括：</p>
@@ -1944,6 +1959,19 @@ And the supabase studio WebUI credential is managed by <code>DASHBOARD_USERNAME<
 	<h1 id="pg-0a6512885669a2f1cdcdf701791e9975">7 - Greenplum (MPP)</h1>
     <div class="lead">使用 Pigsty 部署/监控 Greenplum 集群，构建大规模并行处理（MPP）的 PostgreSQL 数据仓库集群！</div>
 	<p>Pigsty 支持部署 Greenplum 集群，及其衍生发行版 YMatrixDB，并提供了将现有 Greenplum 部署纳入 Pigsty 监控的能力。</p>
+<hr>
+<h2 id="概览">概览</h2>
+<p>Greenplum / YMatrix 集群部署能力仅在专业版本/企业版本中提供，目前不对外开源。</p>
+<hr>
+<h2 id="安装">安装</h2>
+<p>Pigsty 提供了 Greenplum 6 (@el7) 与 Greenplum 7 (@el8) 的安装包，开源版本用户可以自行安装配置。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL 7 Only (Greenplum6)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;pgsql&#34;,&#34;node_packages&#34;:[&#34;open-source-greenplum-db-6&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL 8 Only (Greenplum7)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;pgsql&#34;,&#34;node_packages&#34;:[&#34;open-source-greenplum-db-7&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="配置">配置</h2>
 <p>要定义 Greenplum 集群，需要用到 <code>pg_mode</code> = <code>gpsql</code>，并使用额外的身份参数 <code>pg_shard</code> 与 <code>gp_role</code>。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#================================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#                        GPSQL Clusters                          #</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1998,7 +2026,6 @@ And the supabase studio WebUI credential is managed by <code>DASHBOARD_USERNAME<
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_exporter_config</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg_exporter_basic.yml                            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># use basic config to avoid segment server crash</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_exporter_params</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;options=-c%20gp_role%3Dutility&amp;sslmode=disable&#39;</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># use gp_role = utility to connect to segments</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>此外，PG Exporter 需要额外的连接参数，才能连接到 Greenplum Segment 实例上采集监控指标。</p>
-<p><strong>此能力仅在专业版本/企业版本中提供，目前不对外开源。</strong></p>
 
 </div>
 
