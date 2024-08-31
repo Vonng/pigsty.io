@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.f538c7a036500deb037a84f34998de42.json"
+    data-offline-search-index-json-src="/offline-search-index.6261f0cbe2250e69385dc268bac0c553.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1796,6 +1796,7 @@ If you need to use them, you need to recompile and install from source code for 
 <blockquote>
 <p>Notice: Supabase is <a href="https://supabase.com/ga">GA</a> since 2024.04.15</p>
 </blockquote>
+<p><img src="/img/pigsty/supa.jpg"></p>
 <hr>
 <h2 id="quick-start">Quick Start</h2>
 <p>To run supabase with existing postgres instance, prepare the <a href="/docs/kernel/supabase/#database">database</a> with <a href="https://github.com/Vonng/pigsty/blob/master/files/sample/supabase.yml"><code>supabase.yml</code></a></p>
@@ -1849,31 +1850,14 @@ If you need to use them, you need to recompile and install from source code for 
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- <span style="color:#000">pg_repack_${pg_version}* wal2json_${pg_version}* pgvector_${pg_version}* pg_cron_${pg_version}* pgsodium_${pg_version}*</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- <span style="color:#000">vault_${pg_version}* pg_graphql_${pg_version}* pgjwt_${pg_version}* pg_net_${pg_version}* pgsql-http_${pg_version}*</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_libs</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;pg_net, pg_stat_statements, auto_explain&#39;</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic"># add pg_net to shared_preload_libraries</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p>Beware that <code>baseline: supa.sql</code> parameter will use the <a href="https://github.com/Vonng/pigsty/blob/master/files/supa.sql"><code>files/supa.sql</code></a> as database baseline schema, which is gathered from <a href="https://github.com/supabase/postgres/tree/develop/migrations/db/init-scripts">here</a>.
-You also have to run the migration script: <a href="migration.sqlc"><code>migration.sql</code></a> after the cluster provisioning, which is gathered from <a href="https://github.com/supabase/postgres/tree/develop/migrations/db/migrations">supabase/postgres/migrations/db/migrations</a> in chronological order and slightly modified to fit Pigsty.</p>
-<p>You can check the latest migration files and add them to <a href="migration.sqlc"><code>migration.sql</code></a>, the current script is synced with <a href="https://github.com/supabase/postgres/blob/develop/migrations/db/migrations/20231013070755_grant_authenticator_to_supabase_storage_admin.sql">20231013070755</a>.
-You can run migration on provisioned postgres cluster <code>pg-meta</code> with simple <code>psql</code> command:</p>
-<blockquote>
-<p>Known issue: &ldquo;ERROR:  unrecognized configuration parameter &ldquo;pgsodium.enable_event_trigger&rdquo;: <a href="https://github.com/Vonng/pigsty/issues/350">https://github.com/Vonng/pigsty/issues/350</a> , fix with:</p>
-</blockquote>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg edit-config pg-meta --force -p pgsodium.enable_event_trigger<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;off&#39;</span> <span style="color:#8f5902;font-style:italic"># setup pgsodium event trigger</span>
-</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGURL</span><span style="color:#4e9a06">}</span> -c <span style="color:#4e9a06">&#39;SHOW pgsodium.enable_event_trigger;&#39;</span>                <span style="color:#8f5902;font-style:italic"># should be off or false</span>
-</span></span><span style="display:flex;"><span>pg restart pg-meta                                                    <span style="color:#8f5902;font-style:italic"># restart pg-meta to enable the new configuration</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># connection string</span>
+</span></span></span></code></pre></div><p>To serve a self-hosting supabase, you have to perform schema migration on the bootstrapped cluster <code>pg-meta</code>, which is achieved by the  <a href="https://github.com/Vonng/pigsty/blob/master/files/supa.sql"><code>files/supa.sql</code></a> baseline in <code>pg_databases[supa]</code>,
+and a migration script <a href="migration.sql"><code>migration.sql</code></a>,  which is gathered from <a href="https://github.com/supabase/postgres/tree/develop/migrations/db/migrations">supabase/postgres/migrations/db/migrations</a> in chronological order and slightly modified to fit Pigsty.</p>
+<p>The latest migration file is synced with <a href="https://github.com/supabase/postgres/blob/develop/migrations/db/migrations/20240606060239_grant_predefined_roles_to_postgres.sql">20240606060239</a>, to run it on the provisioned postgres cluster <code>pg-meta</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># adjust the connection string if necessary</span>
 </span></span><span style="display:flex;"><span><span style="color:#000">PGURL</span><span style="color:#ce5c00;font-weight:bold">=</span>postgres://supabase_admin:DBUser.Supa@10.10.10.10:5432/supa
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># check connectivity &amp; extensions</span>
-</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGURL</span><span style="color:#4e9a06">}</span> -c <span style="color:#4e9a06">&#39;\dx&#39;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># perform migration</span>
 </span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGURL</span><span style="color:#4e9a06">}</span> -v <span style="color:#000">ON_ERROR_STOP</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">1</span> --no-psqlrc -f ~/pigsty/app/supabase/migration.sql
 </span></span></code></pre></div><p>The database is now ready for supabase!</p>
-<p><strong>Optional</strong>: setup <code>pg_cron</code> extension</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># install pg_cron</span>
-</span></span><span style="display:flex;"><span>pg edit-config pg-meta --force -p cron.database_name<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#39;supa&#39;</span>           <span style="color:#8f5902;font-style:italic"># setup pg_cron database_name parameter</span>
-</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGURL</span><span style="color:#4e9a06">}</span> -c <span style="color:#4e9a06">&#39;SHOW cron.database_name;&#39;</span>                           <span style="color:#8f5902;font-style:italic"># should be the underlying database name for supabase</span>
-</span></span><span style="display:flex;"><span>psql <span style="color:#4e9a06">${</span><span style="color:#000">PGURL</span><span style="color:#4e9a06">}</span> -c <span style="color:#4e9a06">&#39;CREATE EXTENSION pg_cron;&#39;</span><span style="color:#000;font-weight:bold">;</span>                         <span style="color:#8f5902;font-style:italic"># create pg_cron extension on the database &#39;supa&#39;</span>
-</span></span></code></pre></div><hr>
+<hr>
 <h2 id="stateless-part">Stateless Part</h2>
 <p>Supabase stateless part is managed by <code>docker-compose</code>, the <a href="docker-compose.yml"><code>docker-compose</code></a> file we use here is a simplified version of <a href="https://github.com/supabase/supabase/blob/master/docker/docker-compose.yml">github.com/supabase/docker/docker-compose.yml</a>.</p>
 <p>Everything you need to care about is in the <a href=".env"><code>.env</code></a> file, which contains important settings for supabase. It is already configured to use the <code>pg-meta</code>.<code>supa</code> database by default, You have to change that according to your actual deployment.</p>
