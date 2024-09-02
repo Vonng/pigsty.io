@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.93ec90dc509ba162cfa92918e01e40ad.json"
+    data-offline-search-index-json-src="/offline-search-index.75c0db5868126e539e2372039b733d2e.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -155,7 +155,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>3: <a href="#pg-d96b1765e9d967725a0824edd07fe95d">声明配置</a></li>
+<li>3: <a href="#pg-d60be46e5d740cf44a1e202f51236986">最小化安装</a></li>
 
 
     
@@ -163,7 +163,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>4: <a href="#pg-24263fa625b63eabb5c32f29ec96c5f7">准备工作</a></li>
+<li>4: <a href="#pg-d96b1765e9d967725a0824edd07fe95d">声明配置</a></li>
 
 
     
@@ -171,7 +171,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>5: <a href="#pg-98758ad7ef56ab0b1a9ad8320b14506b">执行剧本</a></li>
+<li>5: <a href="#pg-24263fa625b63eabb5c32f29ec96c5f7">准备工作</a></li>
 
 
     
@@ -179,7 +179,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>6: <a href="#pg-2b6cc71ea6f4c2bb3c7905255869cead">置备机器</a></li>
+<li>6: <a href="#pg-98758ad7ef56ab0b1a9ad8320b14506b">执行剧本</a></li>
 
 
     
@@ -187,7 +187,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>7: <a href="#pg-d6a656f7f8306b7de558a78bf1164ae0">安全考量</a></li>
+<li>7: <a href="#pg-2b6cc71ea6f4c2bb3c7905255869cead">置备机器</a></li>
 
 
     
@@ -195,7 +195,15 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>8: <a href="#pg-262f396efed9aff5d120f3d92b472bdf">常见问题</a></li>
+<li>8: <a href="#pg-d6a656f7f8306b7de558a78bf1164ae0">安全考量</a></li>
+
+
+    
+  
+    
+    
+	
+<li>9: <a href="#pg-262f396efed9aff5d120f3d92b472bdf">常见问题</a></li>
 
 
     
@@ -254,6 +262,7 @@ This is the multi-page printable view of this section.
 <p>安装完成后，您可以通过域名，或<code>80/443</code>端口通过 Nginx 访问 WEB <a href="/zh/docs/setup/install/#用户界面"><strong>界面</strong></a>，
 通过 <code>5432</code> 端口 <a href="/zh/docs/concept/svc#%E6%8E%A5%E5%85%A5%E6%9C%8D%E5%8A%A1"><strong>访问</strong></a> 默认的 PostgreSQL 数据库 <a href="/zh/docs/concept/svc/"><strong>服务</strong></a>。
 您可以继续使用 Pigsty 纳管 <a href="/zh/docs/setup/install/#更多"><strong>更多</strong></a> 节点，并部署各种 <a href="/zh/docs/about/module/"><strong>模块</strong></a>。</p>
+<p>如果您觉得 Pigsty 的组件过于复杂，还可以考虑使用 <a href="/zh/docs/setup/mini/">最小化安装</a> ，仅安装高可用 PostgreSQL 集群所必需的组件。</p>
 <p><strong>视频样例：在线单机安装（EL9）</strong></p>
 <p><a href="https://asciinema.org/a/673459"><img alt="asciicast" src="https://asciinema.org/a/673459.svg"></a></p>
 <hr>
@@ -856,7 +865,93 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-d96b1765e9d967725a0824edd07fe95d">3 - 声明配置</h1>
+	<h1 id="pg-d60be46e5d740cf44a1e202f51236986">3 - 最小化安装</h1>
+    <div class="lead">如何</div>
+	<p>Pigsty 带有一整套服务于高可用 PostgreSQL 基础设施堆栈，但是这也完全是可选的，您可以通过<strong>最小化安装</strong>，只安装必要的 PostgreSQL 高可用集群组件。</p>
+<hr>
+<h2 id="概览">概览</h2>
+<p>最小化安装专注于纯粹的 HA-PostgreSQL 集群，仅安装所需的基本组件。</p>
+<p>在最小化安装模式下，不会有 <a href="/zh/docs/infra"><strong><code>Infra</code></strong></a> 模块，没有监控，没有 <a href="/zh/docs/setup/offline/#build-local-repo"><strong>本地仓库</strong></a></p>
+<p>只有部分 NODE 模块的一部分，以及 ETCD 和 PGSQL 模块会被安装：您依然可以使用完整的 PGSQL 模块与 ETCD 模块的功能</p>
+<p>在节点上会启用的 Systemd 服务有：</p>
+<ul>
+<li>patroni：<strong>必选</strong>，PostgreSQL 高可用与管控组件</li>
+<li>etcd：<strong>必选</strong>, Patroni 高可用依赖的配置中心</li>
+<li>pgbouncer：<strong>可选</strong>，数据库连接池</li>
+<li>vip-manager：<strong>可选</strong>，为主库绑定一个可选的二层VIP。</li>
+<li>haproxy：<strong>可选</strong>，提供自动路由的 <a href="/zh/docs/concept/svc"><strong>服务</strong></a> 接入</li>
+<li>chronyd： <strong>可选</strong>，同步节点时间</li>
+<li>tuned：<strong>可选</strong>，管理节点配置模板与系统内核参数</li>
+</ul>
+<p>其中 <code>patroni</code> 和 <code>etcd</code> 是必选的组件，其他组件都是可选的，尽管如此，Pigsty 不建议关闭这些组件 —— 您可以留着它们不用。</p>
+<hr>
+<h2 id="配置">配置</h2>
+<p>要执行最小化安装，您需要额外配置几个选项开关，如 <a href="https://github.com/Vonng/pigsty/blob/main/conf/sandbox/mini.yml"><code>mini.yml</code></a> instead: 所示：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">all</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">children</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">infra</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">infra_seq: 1 } }, vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">docker_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">etcd</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">etcd_seq</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic">#10.10.10.11: { etcd_seq:  2 } # optional</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic">#10.10.10.12: { etcd_seq:  3 } # optional</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">etcd_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">etcd }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg-meta</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">pg_seq: 1, pg_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">primary }  # init one single-node pgsql cluster by default, with</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic">#10.10.10.11: { pg_seq: 2, pg_role: replica } # optional replica : bin/pgsql-add pg-meta 10.10.10.11</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic">#10.10.10.12: { pg_seq: 3, pg_role: replica } # optional replica : bin/pgsql-add pg-meta 10.10.10.12</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">pg_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pg-meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">pg_users:         # define business users here</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">https://pigsty.io/docs/pgsql/user/</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">          </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_meta ,password: DBUser.Meta ,pgbouncer: true ,roles: [ dbrole_admin ] ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pigsty default user }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">pg_databases:     # define business databases here</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">https://pigsty.io/docs/pgsql/db/</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">          </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: meta ,comment</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pigsty default database  }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">pg_hba_rules:     # define HBA rules here</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">https://pigsty.io/docs/pgsql/hba/#define-hba</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">          </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">user: dbuser_meta , db: all ,addr: world ,auth: pwd ,title</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;allow default user world access with password (not a good idea!)&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">node_crontab</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic"># define backup policy with crontab (full|diff|incr)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">          </span>- <span style="color:#4e9a06">&#39;00 01 * * * postgres /pg/bin/pg-backup full&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic">#pg_vip_address: 10.10.10.2/24  # optional l2 vip address and netmask</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#204a87;font-weight:bold">pg_extensions:    # define pg extensions (333 available)</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">https://pigsty.io/docs/pgext/</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">          </span>- <span style="color:#000">postgis timescaledb pgvector</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">v3.0.1                  </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># pigsty version string</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">admin_ip</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">10.10.10.10</span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#8f5902;font-style:italic"># admin node ip address</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">region: default                   # upstream mirror region</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">default|china|europe</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">node_tune</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tiny                  </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># use tiny template for NODE  in demo environment</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_conf</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tiny.yml                </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># use tiny template for PGSQL in demo environment</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic"># minimal installation setup</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">node_repo_modules</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">node,infra,pgsql</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">nginx_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">dns_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">prometheus_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">grafana_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_exporter_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pgbouncer_exporter_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">pg_vip_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>同时在初始化安装时，您应该使用  <a href="https://github.com/Vonng/pigsty/blob/main/pgsql-min.yml"><code>pgsql-min.yml</code></a>  剧本进行安装，而不是默认的 <code>install.yml</code>。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./pgsql-min.yml
+</span></span></code></pre></div><p>然后，配置指定的节点上便会安装最小化的 PostgreSQL 高可用集群组件。</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-d96b1765e9d967725a0824edd07fe95d">4 - 声明配置</h1>
     <div class="lead">使用声明式的配置来描述数据库集群与基础设施</div>
 	<blockquote>
 <p><strong>Pigsty将基础设施和数据库视为代码</strong>：Database as Code &amp; Infra as Code</p>
@@ -1157,7 +1252,7 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-24263fa625b63eabb5c32f29ec96c5f7">4 - 准备工作</h1>
+	<h1 id="pg-24263fa625b63eabb5c32f29ec96c5f7">5 - 准备工作</h1>
     <div class="lead">如何准备部署 Pigsty 所需的节点，操作系统，管理员用户，端口，与所需权限。</div>
 	<p>与 Pigsty 部署有关的 101 入门知识。</p>
 <hr>
@@ -1363,7 +1458,7 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-98758ad7ef56ab0b1a9ad8320b14506b">5 - 执行剧本</h1>
+	<h1 id="pg-98758ad7ef56ab0b1a9ad8320b14506b">6 - 执行剧本</h1>
     <div class="lead">Pigsty 使用 Ansible 剧本来实现所需的安装部署管理功能，但如果只是使用的话，您并不需要了解太多细节。</div>
 	<p>在 Pigsty 中，剧本 / Playbooks 用于在节点上安装<a href="/zh/docs/about/module">模块</a>。</p>
 <p>剧本可以视作可执行文件直接执行，例如：<code>./install.yml</code>.</p>
@@ -1556,7 +1651,7 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-2b6cc71ea6f4c2bb3c7905255869cead">6 - 置备机器</h1>
+	<h1 id="pg-2b6cc71ea6f4c2bb3c7905255869cead">7 - 置备机器</h1>
     <div class="lead">介绍 Pigsty 演示所使用的标准四节点沙箱环境，以及如何使用 Vagrant 与 Terraform 置备所需的虚拟机。</div>
 	<p>Pigsty 在节点上运行，这些节点可以是裸机或虚拟机。您可以手工置备它们，或使用 terraform 和 vagrant 这样的工具在云端或本地进行自动配置。</p>
 <hr>
@@ -1752,7 +1847,7 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-d6a656f7f8306b7de558a78bf1164ae0">7 - 安全考量</h1>
+	<h1 id="pg-d6a656f7f8306b7de558a78bf1164ae0">8 - 安全考量</h1>
     <div class="lead">Pigsty部署中与安全有关的考量</div>
 	<p>Pigsty 的默认配置已经足以覆盖绝大多数场景对于安全的需求。</p>
 <p>Pigsty 已经提供了开箱即用的<a href="/zh/docs/pgsql/hba">认证</a>与<a href="/zh/docs/pgsql/acl">访问控制</a>模型，对于绝大多数场景已经足够安全。</p>
@@ -1936,7 +2031,7 @@ Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式�
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-262f396efed9aff5d120f3d92b472bdf">8 - 常见问题</h1>
+	<h1 id="pg-262f396efed9aff5d120f3d92b472bdf">9 - 常见问题</h1>
     <div class="lead">Pigsty 下载，安装，部署常见问题答疑</div>
 	<blockquote>
 <p>这里列出了Pigsty用户在下载、安装、部署时常遇到的问题，如果您遇到了难以解决的问题，可以提交 <a href="https://github.com/Vonng/pigsty/issues/new">Issue</a> 或者<a href="/zh/docs/about/community">联系我们</a>。</p>

@@ -1731,6 +1731,47 @@ PostgreSQL 17 还引入了一个新视图，&lt;a href=&#34;https://www.postgres
     </item>
     
     <item>
+      <title>Blog: PostgreSQL可以替代MSSQL吗？</title>
+      <link>/zh/blog/pg/pg-replace-mssql/</link>
+      <pubDate>Mon, 04 Mar 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/pg/pg-replace-mssql/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/pg/pg-replace-mssql/featured_hu02aa61ae1d9de35cbe238d2676170cb9_346897_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;h1 id=&#34;postgresql可以替换微软sql-server吗&#34;&gt;PostgreSQL可以替换微软SQL Server吗？&lt;/h1&gt;
+&lt;p&gt;许多人对于 PostgreSQL 生态已经发展到什么阶段并没有一个直观的印象 —— 除了吞噬数据库世界，囊括万物的扩展生态之外，PostgreSQL 还可以直接从内核层面，替换掉 Oracle，SQL Server 与 MongoDB，当然，MySQL 就更不在话下了。&lt;/p&gt;
+&lt;p&gt;当然，要说主流数据库中，暴露风险最高的是谁，那毫无疑问是微软的 SQL Server 了。微软的 Microsoft SQL Server 被替代的是最彻底的 —— 直接在 WireProtocol 层面被替代了。而主导这件事的是 AWS，亚马逊云服务。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;babelfish&#34;&gt;Babelfish&lt;/h2&gt;
+&lt;p&gt;虽然我一直吐槽云厂商白嫖开源，但我承认这种策略是极为有效的 —— AWS 拿着开源的 PostgreSQL 和 MySQL 内核，一路杀穿数据库市场，拳打 Oracle ，脚踢微软，成为数据库市场份额毫无争议的一哥。而这两年 AWS 更是玩了一招釜底抽薪，开发整合了一个 BabelfishPG 的扩展插件，提供“&lt;strong&gt;线缆协议&lt;/strong&gt;”级别的兼容性。&lt;/p&gt;
+&lt;p&gt;所谓线缆协议兼容，就是指客户端什么都不用改，依然访问 SQL Server 1433 端口，使用 MSSQL 的驱动与命令行工具（sqlcmd）访问加装 BabelfishPG 的集群就可以了。而且更神奇的是，你依然可以使用 PostgreSQL 的协议语言语法，从原来的 5432 端口访问，和 SQL Server 的客户端并存 —— 这就给迁移带来了极大的便利条件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;wiltondb&#34;&gt;WiltonDB&lt;/h2&gt;
+&lt;p&gt;当然 Babelfish 并不是一个单纯的 PG 扩展插件，它对 PostgreSQL 内核进行了少量修改与适配。并通过四个扩展插件分别提供了 TSQL 语法支持，TDS 线缆协议支持，数据类型以及其他函数支持。编译打包这样的内核与扩展并不是非常容易的一件事，因此 WiltonDB —— 一个 Babelfish 的发行版就做了这件事，将 BabelfishPG 编译打包为 EL 7/8/9 与 Ubuntu 系统下可用的 RPM / DEB 包。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pigsty-v3&#34;&gt;Pigsty v3&lt;/h2&gt;
+&lt;p&gt;当然，只有 RPM / DEB 包，距离提供生产级的服务还依然差的太远，而在最近发布的 Pigsty v3 中，我们提供了将原生 PostgreSQL 内核替换为 BabelfishPG 的能力。&lt;/p&gt;
+&lt;p&gt;这意味着原本属于 PostgreSQL RDS 的能力 —— 高可用，时间点恢复，监控系统，IaC管控，SOP预案，甚至无数的扩展插件都可以嫁接融合到 SQL Server 版本的内核之上。&lt;/p&gt;
+&lt;p&gt;在使用实践上，你完全可以把 Babelfish 集群当作一套普通的 PostgreSQL 集群来使用与管理。唯一的区别就是客户端在使用 5432 PGSQL 协议的基础上，还可以选择是否要使用 1433 端口上的 TSQL 协议支持。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;如何迁移&#34;&gt;如何迁移？&lt;/h2&gt;
+&lt;p&gt;PostgreSQL 生态除了有Babelfish这样给力的内核与扩展，还有着繁荣的工具生态。如果要想从 SQL Server 或 MySQL 迁移到 PostgreSQL ，我强烈推荐一款杀手级迁移工具： PGLOADER。&lt;/p&gt;
+&lt;p&gt;这款迁移工具傻瓜化到了离谱的程度，在理想的情况下，你只需要两个数据库的连接串，就可以完成迁移了（https://pgloader.readthedocs.io/en/latest/ref/mssql.html）。对，真的是一行多余的废话都没有。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;pgloader mssql://user@mshost/dbname pgsql://pguser@pghost/dbname
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;有了 MSSQL 兼容内核扩展，又有了迁移工具，存量的 SQL Server 搬迁会变的非常容易。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;除了-mssql还有&#34;&gt;除了 MSSQL，还有……&lt;/h2&gt;
+&lt;p&gt;除了 MSSQL，PostgreSQL 生态还有旨在替代 Oracle替代：PolarDB O 与 IvorySQL，旨在替代 MongoDB 的 FerretDB 与 PongoDB。以及三百多个提供各式各样功能的扩展插件。实际上，几乎整个数据库世界都在受到 PostgreSQL 的冲击 —— 除了那些与 PostgreSQL 错开生态位（SQLite，DuckDB，MinIO），或者干脆就是 PostgreSQL 套壳（Supabase，RDS，Aurora/Polar）的数据库。&lt;/p&gt;
+&lt;p&gt;我们最近发布的开源 RDS PostgreSQL 方案 —— Pigsty 最近就支持了这些 PG 替换内核，允许用户在一套 PostgreSQL 部署中提供 MSSQL，Oracle，MongoDB，Firebase，MongoDB 的兼容性替代能力。不过限于篇幅，那就是后面几篇要介绍的内容了。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: PostgreSQL正在吞噬数据库世界</title>
       <link>/zh/blog/pg/pg-eat-db-world/</link>
       <pubDate>Mon, 04 Mar 2024 00:00:00 +0000</pubDate>
@@ -10404,96 +10445,6 @@ PostgreSQL 本身就包含了完整的 JSON 特性，可直接用作文档数据
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;同样，查询数据是通过正常的SQL 命令完成的。&lt;code&gt;SELECT&lt;/code&gt;&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-fallback&#34; data-lang=&#34;fallback&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;SELECT * FROM conditions ORDER BY time DESC LIMIT 100;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;SQL 和命令也按预期工作。有关使用TimescaleDB标准SQL接口的更多示例，请参阅我们的&lt;a href=&#34;https://docs.timescale.com/using-timescaledb&#34;&gt;使用页面&lt;/a&gt;。&lt;code&gt;UPDATE``DELETE&lt;/code&gt;&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: 故障档案：PostgreSQL事务号回卷</title>
-      <link>/zh/blog/admin/xid-wrap-around/</link>
-      <pubDate>Fri, 20 Jul 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/admin/xid-wrap-around/</guid>
-      <description>
-        
-        
-        &lt;p&gt;遇到一次磁盘坏块导致的事务回卷故障：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;主库（PostgreSQL 9.3）磁盘坏块导致几张表上的VACUUM FREEZE执行失败。&lt;/li&gt;
-&lt;li&gt;无法回收老旧事务ID，导致整库事务ID濒临用尽，数据库进入自我保护状态不可用。&lt;/li&gt;
-&lt;li&gt;磁盘坏块导致手工VACUUM抢救不可行。&lt;/li&gt;
-&lt;li&gt;提升从库后，需要紧急VACUUM FREEZE才能继续服务，进一步延长了故障时间。&lt;/li&gt;
-&lt;li&gt;主库进入保护状态后提交日志（clog）没有及时复制到从库，从库产生存疑事务拒绝服务。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;摘要&#34;&gt;摘要&lt;/h2&gt;
-&lt;p&gt;这是一个即将下线老旧库，疏于管理。坏块征兆在一周前就已经出现，没有及时跟进年龄。
-通常AutoVacuum会保证很难出现这种故障，但一旦出现往往意味着祸不单行…让救火更加困难了……&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;背景&#34;&gt;背景&lt;/h2&gt;
-&lt;p&gt;PostgreSQL实现了&lt;strong&gt;快照隔离（Snapshot Isolation）&lt;/strong&gt;，每个事务开始时都能获取数据库在该时刻的快照（也就是只能看到&lt;strong&gt;过去&lt;/strong&gt;事务提交的结果，看不见&lt;strong&gt;后续&lt;/strong&gt;事务提交的结果）。这一强大的功能是通过MVCC实现的，但也引入了额外复杂度，例如&lt;strong&gt;事务ID回卷&lt;/strong&gt;问题。&lt;/p&gt;
-&lt;p&gt;事务ID（&lt;code&gt;xid&lt;/code&gt;）是用于标识事务的&lt;strong&gt;32位无符号整型数值&lt;/strong&gt;，递增分配，其中值0,1,2为保留值，溢出后回卷为3重新开始。&lt;strong&gt;事务ID之间的大小关系决定了事务的先后顺序&lt;/strong&gt;。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;/*
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt; * TransactionIdPrecedes --- is id1 logically &amp;lt; id2?
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt; */&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;bool&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;TransactionIdPrecedes&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;TransactionId&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;id1&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;TransactionId&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;id2&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;/*
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;	 * If either ID is a permanent XID then we can just do unsigned
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;	 * comparison.  If both are normal, do a modulo-2^32 comparison.
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;	 */&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#000&#34;&gt;int32&lt;/span&gt;		&lt;span style=&#34;color:#000&#34;&gt;diff&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;!&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;TransactionIdIsNormal&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id1&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;||&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;!&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;TransactionIdIsNormal&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id2&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;))&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;		&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id1&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;id2&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#000&#34;&gt;diff&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;int32&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;id1&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;id2&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;	&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;diff&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img alt=&#34;xid-wrap-around&#34; src=&#34;/img/blog/pg/xid-wrap-around.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;可以将&lt;code&gt;xid&lt;/code&gt;的取值域视为一个整数环，但刨除&lt;code&gt;0,1,2&lt;/code&gt;三个特殊值。0代表无效事务ID，1代表系统事务ID，2代表冻结事务ID。特殊的事务ID比任何普通事务ID小。而普通事务ID之间的比较可参见上图：它取决于两个事务ID的差值是否超出&lt;code&gt;INT32_MAX&lt;/code&gt;。对任意一个事务ID，都有约21亿个位于过去的事务和21亿个位于未来的事务。&lt;/p&gt;
-&lt;p&gt;xid不仅仅存在于活跃的事务上，xid会影响所有的元组：事务会给自己影响的元组打上自己的xid作为记号。每个元组都会用&lt;code&gt;(xmin, xmax)&lt;/code&gt;来标识自己的可见性，&lt;code&gt;xmin&lt;/code&gt; 记录了最后写入（&lt;code&gt;INSERT&lt;/code&gt;, &lt;code&gt;UPDATE&lt;/code&gt;）该元组的事务ID，而&lt;code&gt;xmax&lt;/code&gt;记录了删除或锁定该元组的事务ID。每个事务只能看见由先前事务提交（&lt;code&gt;xmin &amp;lt; xid&lt;/code&gt;）且未被删除的元组（从而实现快照隔离）。&lt;/p&gt;
-&lt;p&gt;如果一个元组是由很久很久以前的事务产生的，那么在数据库的例行VACUUM FREEZE时，会找出当前活跃事务中最老的xid，将所有&lt;code&gt;xmin &amp;lt; xid&lt;/code&gt;的元组的&lt;code&gt;xmin&lt;/code&gt;标记为&lt;code&gt;2&lt;/code&gt;，也就是冻结事务ID。这意味着这条元组跳出了这个比较环，比所有普通事务ID都要小，所以能被所有的事务看到。通过清理，数据库中最老的xid会不断追赶当前的xid，从而避免事务回卷。&lt;/p&gt;
-&lt;p&gt;数据库或表的&lt;strong&gt;年龄（age）&lt;/strong&gt;，定义为当前事务ID与数据库/表中存在最老的&lt;code&gt;xid&lt;/code&gt;之差。最老的&lt;code&gt;xid&lt;/code&gt;可能来自一个持续了几天的超长事务。也可能来自几天前老事务写入，但尚未被冻结的元组中。如果数据库的年龄超过了&lt;code&gt;INT32_MAX&lt;/code&gt;，灾难性情况就发生了。过去的事务变成了未来的事务，过去事务写入的元组将变得不可见。&lt;/p&gt;
-&lt;p&gt;为了避免这种情况，需要避免&lt;strong&gt;超长事务&lt;/strong&gt;与定期VACUUM FREEZE冻结老元组。如果单库在平均3万TPS的超高负载下，20亿个事务号一整天内就会用完。在这样的库上就无法执行一个超过一天的超长事务。而如果由于某种原因，自动清理工作无法继续进行，一天之内就可能遇到事务回卷。&lt;/p&gt;
-&lt;p&gt;9.4之后对FREEZE的机制进行了修改，FREEZE使用元组中单独的标记位来表示。&lt;/p&gt;
-&lt;p&gt;PostgreSQL应对事务回卷有自我保护机制。当临界事务号还剩&lt;strong&gt;一千万&lt;/strong&gt;时，会进入紧急状态。&lt;/p&gt;
-&lt;h2 id=&#34;查询&#34;&gt;查询&lt;/h2&gt;
-&lt;p&gt;查询当前所有表的年龄，SQL 语句如下：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SELECT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;c&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;oid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;regclass&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;as&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;table_name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;greatest&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;age&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;c&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;relfrozenxid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;),&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;age&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;t&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;relfrozenxid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;))&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;as&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;age&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_class&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;c&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;LEFT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;JOIN&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_class&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;t&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;ON&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;c&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;reltoastrelid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;t&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;oid&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;WHERE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;c&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;relkind&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;IN&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;r&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;m&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;order&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;by&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;desc&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;查询数据库的年龄，SQL语句如下：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SELECT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;age&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;datfrozenxid&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_database&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; 
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;清理&#34;&gt;清理&lt;/h4&gt;
-&lt;p&gt;执行&lt;code&gt;VACUUM FREEZE&lt;/code&gt;可以冻结老旧事务的ID&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;set&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;vacuum_cost_limit&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;10000&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;set&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;vacuum_cost_delay&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;VACUUM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FREEZE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;VERBOSE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;可以针对特定的表进行VACUUM FREEZE，抓主要矛盾。&lt;/p&gt;
-&lt;h2 id=&#34;问题&#34;&gt;问题&lt;/h2&gt;
-&lt;p&gt;通常来说，PostgreSQL的AutoVacuum机制会自动执行FREEZE操作，冻结老旧事务的ID，从而降低数据库的年龄。因此一旦出现事务ID回卷故障，通常祸不单行，意味着vacuum机制可能被其他的故障挡住了。&lt;/p&gt;
-&lt;p&gt;目前遇到过三种触发事务ID回卷故障的情况&lt;/p&gt;
-&lt;h3 id=&#34;idle-in-transaction&#34;&gt;IDLE IN TRANSACTION&lt;/h3&gt;
-&lt;p&gt;空闲事务会阻塞VACUUM FREEZE老旧元组。&lt;/p&gt;
-&lt;p&gt;解决方法很简单，干掉IDEL IN TRANSACTION的长事务然后执行VACUUM FREEZE即可。&lt;/p&gt;
-&lt;h3 id=&#34;存疑事务&#34;&gt;存疑事务&lt;/h3&gt;
-&lt;p&gt;clog损坏，或没有复制到从库，会导致相关表进入事务存疑状态，拒绝服务。&lt;/p&gt;
-&lt;p&gt;需要手工拷贝，或使用dd生成虚拟的clog来强行逃生。&lt;/p&gt;
-&lt;h3 id=&#34;磁盘内存坏块&#34;&gt;磁盘/内存坏块&lt;/h3&gt;
-&lt;p&gt;因为坏块导致的无法VACUUM比较尴尬。&lt;/p&gt;
-&lt;p&gt;需要通过二分法定位并跳过脏数据，或者干脆直接抢救从库。&lt;/p&gt;
-&lt;h3 id=&#34;注意事项&#34;&gt;注意事项&lt;/h3&gt;
-&lt;p&gt;紧急抢救的时候，不要整库来，按照年龄大小降序挨个清理表会更快。&lt;/p&gt;
-&lt;p&gt;注意当主库进入事务回卷保护状态时，从库也会面临同样的问题。&lt;/p&gt;
-&lt;h2 id=&#34;解决方案&#34;&gt;解决方案&lt;/h2&gt;
-&lt;h3 id=&#34;autovacuum参数配置&#34;&gt;AutoVacuum参数配置&lt;/h3&gt;
-&lt;h3 id=&#34;年龄监控&#34;&gt;年龄监控&lt;/h3&gt;
-&lt;p&gt;[未完待续]&lt;/p&gt;
 
       </description>
     </item>
