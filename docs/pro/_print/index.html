@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.75c0db5868126e539e2372039b733d2e.json"
+    data-offline-search-index-json-src="/offline-search-index.a4b163925bf9d825ddfa3f8eedb44f9a.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -316,8 +316,121 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-d4e376db3dab032716f59a614a6943f2">1 - Module: MySQL</h1>
     <div class="lead">Deploy a MySQL 8.0 cluster with Pigsty for demonstration or benchmarking purposes.</div>
-	<p>TBD</p>
-
+	<blockquote>
+<p><a href="https://mysql.apache.org/">MySQL</a> used to be the &ldquo;most popular open-source relational database in the world&rdquo;.</p>
+</blockquote>
+<p><a href="/docs/pro/mysql/#install">Install</a> | <a href="/docs/pro/mysql/#config">Config</a> | <a href="/docs/pro/mysql/#manage">Manage</a> | <a href="/docs/pro/mysql/#playbook">Playbook</a> | <a href="/docs/pro/mysql/#monitor">Monitor</a> | <a href="/docs/pro/mysql/#parameters">Parameters</a></p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>MySQL module is currently available in Pigsty Pro as a Beta Preview.</p>
+<hr>
+<h2 id="installation">Installation</h2>
+<p>You can install MySQL 8.0 from the official software source on EL systems directly on the nodes managed by Pigsty.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># el 7,8,9</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node,mysql&#34;,&#34;node_packages&#34;:[&#34;mysql-community-server,mysql-community-client&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># debian / ubuntu</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node,mysql&#34;,&#34;node_packages&#34;:[&#34;mysql-server&#34;]}&#39;</span>
+</span></span></code></pre></div><p>You can also add the MySQL package to the repo_packages and use the playbook <code>mysql.yml</code> for production deployment.</p>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<p>This config snippet defines a single-node MySQL instance, along with its Databases and Users.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">my-test</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">mysql_seq: 1, mysql_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">primary } }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">mysql_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">my-test</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">mysql_databases</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">meta }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">mysql_users</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_meta    ,host: &#39;%&#39; ,password: &#39;dbuesr_meta&#39;    ,priv</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">&#34;*.*&#34;: </span><span style="color:#4e9a06">&#34;SELECT, UPDATE, DELETE, INSERT&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_dba     ,host: &#39;%&#39; ,password: &#39;DBUser.DBA&#39;     ,priv</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">&#34;*.*&#34;: </span><span style="color:#4e9a06">&#34;ALL PRIVILEGES&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: dbuser_monitor ,host: &#39;%&#39; ,password: &#39;DBUser.Monitor&#39; ,priv</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">&#34;*.*&#34;: </span><span style="color:#4e9a06">&#34;SELECT, PROCESS, REPLICATION CLIENT&#34;</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,connlimit</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">  
+</span></span></span></code></pre></div><hr>
+<h2 id="administration">Administration</h2>
+<p>Here are some basic MySQL cluster management operations:</p>
+<p>Create MySQL cluster with <code>mysql.yml</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./mysql.yml -l my-test
+</span></span></code></pre></div><hr>
+<h2 id="playbook">Playbook</h2>
+<p>Pigsty has the following playbooks related to the <a href="/en/docs/pro/mysql"><code>MYSQL</code></a> module:</p>
+<ul>
+<li><a href="/docs/pro/mysql/#mysqlyml"><code>mysql.yml</code></a>: Deploy MySQL according to the inventory</li>
+</ul>
+<hr>
+<h3 id="mysqlyml"><code>mysql.yml</code></h3>
+<p>The playbook <a href="https://github.com/vonng/pigsty/blob/main/mysql.yml"><code>mysql.yml</code></a> contains the following subtasks:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mysql-id       : generate mysql instance identity
+</span></span><span style="display:flex;"><span>mysql_clean    : remove existing mysql instance <span style="color:#ce5c00;font-weight:bold">(</span>DANGEROUS<span style="color:#ce5c00;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span>mysql_dbsu     : create os user mysql
+</span></span><span style="display:flex;"><span>mysql_install  : install mysql rpm/deb packages
+</span></span><span style="display:flex;"><span>mysql_dir      : create mysql data <span style="color:#000;font-weight:bold">&amp;</span> conf dir
+</span></span><span style="display:flex;"><span>mysql_config   : generate mysql config file
+</span></span><span style="display:flex;"><span>mysql_boot     : bootstrap mysql cluster
+</span></span><span style="display:flex;"><span>mysql_launch   : launch mysql service
+</span></span><span style="display:flex;"><span>mysql_pass     : write mysql password
+</span></span><span style="display:flex;"><span>mysql_db       : create mysql biz database
+</span></span><span style="display:flex;"><span>mysql_user     : create mysql biz user
+</span></span><span style="display:flex;"><span>mysql_exporter : launch mysql exporter
+</span></span><span style="display:flex;"><span>mysql_register : register mysql service to prometheus
+</span></span></code></pre></div><hr>
+<h2 id="监控">监控</h2>
+<p>Pigsty 提供了两个与 <a href="/zh/docs/pro/mysql"><code>MYSQL</code></a> 模块有关的监控面板：</p>
+<p><a href="https://demo.pigsty.cc/d/mysql-overview">MYSQL Overview</a> 展示了 MySQL 集群的整体监控指标。</p>
+<p><a href="https://demo.pigsty.cc/d/mysql-instance">MYSQL Instance</a> 展示了单个 MySQL 实例的监控指标详情</p>
+<hr>
+<h2 id="参数">参数</h2>
+<p>MySQL 的可用配置项：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># MYSQL_IDENTITY</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># mysql_cluster:           #CLUSTER  # mysql cluster name, required identity parameter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># mysql_role: replica      #INSTANCE # mysql role, required, could be primary,replica</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># mysql_seq: 0             #INSTANCE # mysql instance seq number, required identity parameter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># MYSQL_BUSINESS</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># mysql business object definition, overwrite in group vars</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_users</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                      </span><span style="color:#8f5902;font-style:italic"># mysql business users</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_databases</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#8f5902;font-style:italic"># mysql business databases</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_services</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">                   </span><span style="color:#8f5902;font-style:italic"># mysql business services</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># global credentials, overwrite in global vars</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_root_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">root</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_root_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.Root</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_replication_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">replicator</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_replication_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.Replicator</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_admin_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbuser_dba</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_admin_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.DBA</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_monitor_username</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dbuser_monitor</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_monitor_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">DBUser.Monitor</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># MYSQL_INSTALL</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># - install - #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_dbsu</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">mysql                   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># os dbsu name, mysql by default, better not change it</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_dbsu_uid</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">27</span><span style="color:#f8f8f8;text-decoration:underline">                   </span><span style="color:#8f5902;font-style:italic"># os dbsu uid and gid, 306 for default mysql users and groups</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_dbsu_home</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/var/lib/mysql     </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql home directory, `/var/lib/mysql` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_dbsu_ssh_exchange</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># exchange mysql dbsu ssh key among same mysql cluster</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_packages</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">                      </span><span style="color:#8f5902;font-style:italic"># mysql packages to be installed, `mysql-community*` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#000">mysql-community*</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- <span style="color:#000">mysqld_exporter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># - bootstrap - #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_data</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/data/mysql             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql data directory, `/data/mysql` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_listen</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0.0.0.0&#39;</span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#8f5902;font-style:italic"># mysql listen addresses, comma separated IP list</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">3306</span><span style="color:#f8f8f8;text-decoration:underline">                     </span><span style="color:#8f5902;font-style:italic"># mysql listen port, 3306 by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_sock</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/var/lib/mysql/mysql.sock</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql socket dir, `/var/lib/mysql/mysql.sock` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_pid</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/var/run/mysqld/mysqld.pid</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql pid file, `/var/run/mysqld/mysqld.pid` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_conf</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/etc/my.cnf             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql config file, `/etc/my.cnf` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_log_dir</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/var/log             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># mysql log dir, `/var/log/mysql` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_exporter_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">9104</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># mysqld_exporter listen port, 9104 by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{}<span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># extra parameters for mysqld</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">mysql_default_parameters</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># default parameters for mysqld</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
 </div>
 
 
@@ -347,9 +460,28 @@ This is the multi-page printable view of this section.
 	<h1 id="pg-cbdf66994bf7e3529fb70b0baaaab194">2 - Module: Kafka</h1>
     <div class="lead">Deploy kafka with pigsty:  open-source distributed event streaming platform</div>
 	<p>Kafka module is currently available in Pigsty Pro as a Beta Preview.</p>
+<p><a href="/docs/pro/kafka/#installation">Installation</a> | <a href="/docs/pro/kafka/#configuration">Configuration</a> | <a href="/docs/pro/kafka/#administration">Administration</a> | <a href="/docs/pro/kafka/#playbook">Playbook</a> | <a href="/docs/pro/kafka/#monitoring">Monitoring</a> | <a href="/docs/pro/kafka/#parameter">Parameter</a></p>
 <hr>
+<h2 id="overview">Overview</h2>
+<p>Kafka module is currently available in Pigsty Pro as a Beta Preview.</p>
+<hr>
+<h2 id="installation">Installation</h2>
+<p>Kafka module is currently available in Pigsty Pro as a Beta Preview.</p>
+<p>You can install Kafka and its Java dependencies on the specified node using the following command if you are using the open-source version of Pigsty.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;kafka&#34;]}&#39;</span>
+</span></span></code></pre></div><p>Kafka requires a Java runtime, so you need to install an available JDK when installing Kafka (OpenJDK 17 is used by default, but other JDKs and versions, such as 8 and 11, can also be used).</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL7  (use jdk 11 instead)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;java-11-openjdk-headless&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># EL8 / EL9 (use OpenJDK 17)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;java-17-openjdk-headless&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># Debian / Ubuntu (use OpenJDK 17)</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node&#34;,&#34;node_packages&#34;:[&#34;openjdk-17-jdk&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
 <h2 id="configuration">Configuration</h2>
-<p>Single node Kafka configuration example, please note that in Pigsty single machine deployment mode, the Kafka Peer 9093 port is already occupied by AlertManager, it is recommended to use other ports, such as (9095).</p>
+<p>Single node Kafka configuration example, please note that in Pigsty single machine deployment mode.
+the Kafka Peer 9093 port is already occupied by AlertManager, it is recommended to use other ports, such as (9095).</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">kf-main</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">kafka_seq: 1, kafka_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">controller }</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -366,19 +498,16 @@ This is the multi-page printable view of this section.
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">kafka_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">kf-test</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><hr>
-<h2 id="deploy">Deploy</h2>
-<p>deploy Kafka cluster with <code>kafka.yml</code> playbook:</p>
+<h2 id="administration">Administration</h2>
+<p>Create Kafka clusters with <code>kafka.yml</code> playbook:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka.yml -l kf-main
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka.yml -l kf-test
-</span></span></code></pre></div><hr>
-<h2 id="admin">Admin</h2>
-<p>here are some basic Kafka commands:</p>
-<p>Create a Topic named <code>test</code>:</p>
+</span></span><span style="display:flex;"><span>./kafka.yml -l kf-test
+</span></span></code></pre></div><p>Create a topic named <code>test</code>:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kafka-topics.sh --create --topic <span style="color:#204a87">test</span> --partitions <span style="color:#0000cf;font-weight:bold">1</span> --replication-factor <span style="color:#0000cf;font-weight:bold">1</span> --bootstrap-server localhost:9092
-</span></span></code></pre></div><p>here the <code>--repliaction-factor 1</code> means each data will be replicated once, and <code>--partitions 1</code> means only one partition will be created.</p>
+</span></span></code></pre></div><p>Here the <code>--replication-factor 1</code> means each data will be replicated once, and <code>--partitions 1</code> means only one partition will be created.</p>
 <p>Use the following command to view the list of Topics in Kafka:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kafka-topics.sh --bootstrap-server localhost:9092 --list
-</span></span></code></pre></div><p>Send some messages to the <code>test</code> Topic using the Kafka built-in producer:</p>
+</span></span></code></pre></div><p>Use the built-in Kafka producer to send messages to the <code>test</code> Topic:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kafka-console-producer.sh --topic <span style="color:#204a87">test</span> --bootstrap-server localhost:9092
 </span></span><span style="display:flex;"><span>&gt;haha
 </span></span><span style="display:flex;"><span>&gt;xixi
@@ -386,7 +515,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>&gt;hello
 </span></span><span style="display:flex;"><span>&gt;world
 </span></span><span style="display:flex;"><span>&gt; ^D
-</span></span></code></pre></div><p>Read the messages from the <code>test</code> Topic using the Kafka built-in consumer:</p>
+</span></span></code></pre></div><p>Use the built-in Kafka consumer to read messages from the <code>test</code> Topic:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kafka-console-consumer.sh --topic <span style="color:#204a87">test</span> --from-beginning --bootstrap-server localhost:9092
 </span></span></code></pre></div><hr>
 <h2 id="playbook">Playbook</h2>
@@ -471,38 +600,26 @@ This is the multi-page printable view of this section.
 	<h1 id="pg-093364b86e0d5cfc2fb345296ef803f7">3 - Module: DuckDB</h1>
     <div class="lead">Install duckdb, the</div>
 	<p><a href="https://duckdb.org/">DuckDB</a> is a fast in-process analytical database</p>
+<hr>
+<h2 id="overview">Overview</h2>
 <p>DuckDB supports a feature-rich SQL dialect complemented with deep integrations into client APIs.</p>
+<hr>
+<h2 id="install">Install</h2>
 <p>Pigsty already provides DuckDB software package (RPM / DEB) in the Infra software repository, you can install it with the following commands:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_repo -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;}&#39;</span>
-</span></span><span style="display:flex;"><span>./node.yml -t node_pkg  -e <span style="color:#4e9a06">&#39;{&#34;node_default_packages&#34;:[&#34;duckdb&#34;]}&#39;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># one-pass</span>
-</span></span><span style="display:flex;"><span>./node.yml -t node_repo,node_pkg  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_default_packages&#34;:[&#34;duckdb&#34;]}&#39;</span>
-</span></span></code></pre></div><p><a href="https://duckdb.org/">DuckDB</a> is a fast in-process analytical database, similar to SQLite, but for analytics.</p>
-<p>Pigsty has pre-packed <code>duckdbcli</code> (0.10.0), <code>libduckdb</code> (0.9.2) and <code>duckdb_fdw</code> RPMs, you can just install them via:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>yum install duckdb
-</span></span></code></pre></div><p>Notices: these packages are not available for debian / ubuntu yet.</p>
-<h2 id="get-started">Get Started</h2>
-<p>Check duckdb documentation for more details: <a href="https://duckdb.org/docs/guides/index">https://duckdb.org/docs/guides/index</a></p>
-<p>The <a href="https://github.com/alitrack/duckdb_fdw"><code>duckdb_fdw</code></a> RPM is available on EL 8 and EL 9. To install it, define it in <code>pg_extensions</code> in <code>pigsty.yml</code>:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pg_extensions: <span style="color:#8f5902;font-style:italic"># citus &amp; hydra are exclusive</span>
-</span></span><span style="display:flex;"><span>  - postgis34_<span style="color:#4e9a06">${</span><span style="color:#000">pg_version</span><span style="color:#4e9a06">}</span>* timescaledb-2-postgresql-<span style="color:#4e9a06">${</span><span style="color:#000">pg_version</span><span style="color:#4e9a06">}</span>* pgvector_<span style="color:#4e9a06">${</span><span style="color:#000">pg_version</span><span style="color:#4e9a06">}</span>*
-</span></span><span style="display:flex;"><span>  - duckdb_fdw_<span style="color:#4e9a06">${</span><span style="color:#000">pg_version</span><span style="color:#4e9a06">}</span>*   <span style="color:#8f5902;font-style:italic"># &lt;-------- add duckdb_fdw here</span>
-</span></span></code></pre></div><p>The dependency <code>libduckdb</code> will be automatically installed when <code>duckdb_fdw</code> is installed.</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">EXTENSION</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">duckdb_fdw</span><span style="color:#000;font-weight:bold">;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- map duckdb file to foreign server 
-</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">SERVER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">duckdb_server</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">FOREIGN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">DATA</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">WRAPPER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">duckdb_fdw</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">OPTIONS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">database</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;/tmp/duck.db&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">-- create foreign table
-</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#204a87;font-weight:bold">CREATE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">FOREIGN</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">TABLE</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">t1</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">a</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">integer</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">b</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87">text</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">)</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">SERVER</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">duckdb_server</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">OPTIONS</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">(</span><span style="color:#204a87;font-weight:bold">table</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;t1_duckdb&#39;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install  -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;duckdb&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="resource">Resource</h2>
+<p>There are some DuckDB-related extension plugins provided by Pigsty for PostgreSQL:</p>
+<ul>
+<li><a href="/docs/pgext/olap/pg_lakehouse/"><strong><code>pg_lakehouse</code></strong></a>: Access external files from S3/MinIO through DuckDB</li>
+<li><a href="/docs/pgext/olap/pg_analytics/"><strong><code>pg_analytics</code></strong></a>: Add OLAP capabilities to PostgreSQL based on DuckDB</li>
+<li><a href="/docs/pgext/fdw/duckdb_fdw"><strong><code>duckdb_fdw</code></strong></a>: Foreign data wrapper for DuckDB, read/write DuckDB data files from PG</li>
+<li><a href="/docs/pgext/olap/pg_duckdb/"><strong><code>pg_duckdb</code></strong></a>: WIP extension plugin by DuckDB official MotherDuck and Hydra, only available on EL systems</li>
+</ul>
+<br>
+<hr>
+<br>
+
 </div>
 
 
@@ -532,6 +649,14 @@ This is the multi-page printable view of this section.
 	<h1 id="pg-04be65d69c579a181c9ef89ab3d98511">4 - Module: TigerBeetle</h1>
     <div class="lead">The Financial Transactions Database that is 1000x faster and much reliable.</div>
 	<p>The TigerBeetle module is currently available for <strong>Beta</strong> preview only in the Pigsty Professional Edition.</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>The TigerBeetle module is currently available for <strong>Beta</strong> preview only in the Pigsty Pro Edition</p>
+<hr>
+<h2 id="installation">Installation</h2>
+<p>Pigsty Infra Repo has the RPM / DEB packages for TigerBeetle, use the following command to install:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;tigerbeetle&#34;]}&#39;</span>
+</span></span></code></pre></div><p>After installation, please refer to the official documentation for configuration: <a href="https://github.com/tigerbeetle/tigerbeetle">https://github.com/tigerbeetle/tigerbeetle</a></p>
 
 
 <div class="alert alert-danger" role="alert">
@@ -543,12 +668,6 @@ This is the multi-page printable view of this section.
 
 </div>
 
-<hr>
-<h2 id="installation">Installation</h2>
-<p>The TigerBeetle package is available in the Pigsty Infra repository:</p>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>yum install tigerbeetle
-</span></span><span style="display:flex;"><span>apt install tigerbeetle
-</span></span></code></pre></div><p>After installation, please refer to the official documentation for configuration: <a href="https://github.com/tigerbeetle/tigerbeetle">https://github.com/tigerbeetle/tigerbeetle</a></p>
 
 </div>
 
@@ -578,8 +697,42 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-f5ba60f3b72df90eeebc1e61990264a1">5 - Module: Kubernetes</h1>
     <div class="lead">Deploy kubernetes, the Production-Grade Container Orchestration Platform</div>
-	<p>Kubernetes module is currently in Beta status and only available for Pro edition customers.</p>
-
+	<p><a href="https://kubernetes.io/">Kubernetes</a> is a production-grade, open-source container orchestration platform. It helps you automate, deploy, scale, and manage containerized applications.</p>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Pigsty has native support for [<strong><code>ETCD</code></strong>] clusters, which can be used by Kubernetes. Therefore, the pro version also provides the <strong><code>KUBE</code></strong> module for deploying production-grade Kubernetes clusters.</p>
+<p>The <code>KUBE</code> module is currently in Beta status and only available for Pro edition customers.</p>
+<hr>
+<h2 id="sealos">SealOS</h2>
+<p><a href="https://sealos.io/">SealOS</a> is a lightweight, high-performance, and easy-to-use Kubernetes distribution.
+It is designed to simplify the deployment and management of Kubernetes clusters.</p>
+<p>Pigsty provides SealOS 5.0 RPM and DEB packages in the Infra repository, which can be downloaded and installed directly.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;sealos&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="kubernetes">Kubernetes</h2>
+<p>If you prefer to deploy Kubernetes using the classic Kubeadm, please refer to the module reference below.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;kube&#34;,&#34;node_packages&#34;:[&#34;kubeadm,kubelet,kubectl&#34;]}&#39;</span>
+</span></span></code></pre></div><p>Kubernetes support multiple container runtimes, if you want to use Containerd as container runtime, please make sure Containerd is installed on the node.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node,docker&#34;,&#34;node_packages&#34;:[&#34;containerd.io&#34;]}&#39;</span>
+</span></span></code></pre></div><p>If you want to use Docker as container runtime, you need to install Docker and bridge with the <code>cri-dockerd</code> project (not available on EL9/D11/U20 yet):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;node,infra,docker&#34;,&#34;node_packages&#34;:[&#34;docker-ce,docker-compose-plugin,cri-dockerd&#34;]}&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="playbook">Playbook</h2>
+<p>TBD</p>
+<hr>
+<h2 id="monitoring">Monitoring</h2>
+<p>TBD</p>
+<hr>
+<h2 id="parameter">Parameter</h2>
+<p>Kubernetes module parameters:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#kube_cluster:                                          #IDENTITY# # define kubernetes cluster name </span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">node                                                   </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># default kubernetes role (master|node)</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_version</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1.31.0</span><span style="color:#f8f8f8;text-decoration:underline">                                               </span><span style="color:#8f5902;font-style:italic"># kubernetes version</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_registry</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">registry.aliyuncs.com/google_containers            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># kubernetes version aliyun k8s miiror repository</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_pod_cidr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;10.11.0.0/16&#34;</span><span style="color:#f8f8f8;text-decoration:underline">                                      </span><span style="color:#8f5902;font-style:italic"># kubernetes pod network cidr</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_service_cidr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;10.12.0.0/16&#34;</span><span style="color:#f8f8f8;text-decoration:underline">                                  </span><span style="color:#8f5902;font-style:italic"># kubernetes service network cidr</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">kube_dashboard_admin_user</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dashboard-admin-sa                     </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># kubernetes dashboard admin user name</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
 </div>
 
 
@@ -609,7 +762,30 @@ This is the multi-page printable view of this section.
 	<h1 id="pg-d2737a4524ed5b8363b58f3926548df0">6 - Module: Consul</h1>
     <div class="lead">Deploy consul, the alternative of Etcd, with Pigsty.</div>
 	<p>In the old version (1.x) of Pigsty, Consul was used as the default high-availability DCS. Now this support has been removed, but it will be provided as a separate module in the future.</p>
-
+<ul>
+<li><a href="https://github.com/Vonng/pigsty/tree/v1.5.1/roles/consul">https://github.com/Vonng/pigsty/tree/v1.5.1/roles/consul</a></li>
+</ul>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<p>Consul should be defined as the <code>consul</code> group in the inventory file.</p>
+<p>At least one node should be designated as the consul server, and the others are consul nodes.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>consul:
+</span></span><span style="display:flex;"><span>  hosts:
+</span></span><span style="display:flex;"><span>    10.10.10.10: <span style="color:#ce5c00;font-weight:bold">{</span> nodename: meta , consul_role: server <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    10.10.10.11: <span style="color:#ce5c00;font-weight:bold">{</span> nodename: node-1 <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    10.10.10.12: <span style="color:#ce5c00;font-weight:bold">{</span> nodename: node-2 <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>    10.10.10.13: <span style="color:#ce5c00;font-weight:bold">{</span> nodename: node-3 <span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span></code></pre></div><hr>
+<h2 id="parameters">Parameters</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># CONSUL</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#-----------------------------------------------------------------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">consul_role</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">node                </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># consul role, node or server, node by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">consul_dc</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pigsty                </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># consul data center name, `pigsty` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">consul_data</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/data/consul        </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># consul data dir, `/data/consul`</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">consul_clean</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># consul purge flag, if true, clean consul during init</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">consul_ui</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">                  </span><span style="color:#8f5902;font-style:italic"># enable consul ui, the default value for consul server is true</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div>
 </div>
 
 
@@ -638,7 +814,22 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-377104ba18e11d3e5c3773edc35be067">7 - Module: Victoria</h1>
     <div class="lead">Deploy VictoriaMetrics &amp; VictoriaLogs, the in-place replacement for Prometheus &amp; Loki.</div>
-	<p>TBD</p>
+	<blockquote>
+<p><a href="https://victoriametrics.com/">VictoriaMetrics</a> is the in-place replacement for Prometheus, offering better performance and compression ratio.</p>
+</blockquote>
+<hr>
+<h2 id="overview">Overview</h2>
+<p>Victoria is currently only available in the Pigsty Professional Edition <strong>Beta</strong> preview.
+It includes the deployment and management of VictoriaMetrics and VictoriaLogs components.</p>
+<hr>
+<h2 id="installation">Installation</h2>
+<p>Pigsty Infra Repo has the RPM / DEB packages for VictoriaMetrics, use the following command to install:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;victoria-metrics&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;victoria-metrics-cluster&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;victoria-metrics-utils&#34;]}&#39;</span>
+</span></span><span style="display:flex;"><span>./node.yml -t node_install -e <span style="color:#4e9a06">&#39;{&#34;node_repo_modules&#34;:&#34;infra&#34;,&#34;node_packages&#34;:[&#34;victoria-logs&#34;]}&#39;</span>
+</span></span></code></pre></div><p>For common users, installing the standalone version of VictoriaMetrics is sufficient.
+If you need to deploy a cluster, you can install the <code>victoria-metrics-cluster</code> package.</p>
 
 </div>
 
@@ -668,8 +859,67 @@ This is the multi-page printable view of this section.
     
 	<h1 id="pg-bfe36ba059ef1cc146fec37ded42bd11">8 - Module: Jupyter</h1>
     <div class="lead">Launch Jupyter notebook server with Pigsty, a web-based interactive scientific notebook.</div>
-	<p>TBD</p>
-
+	<p>Run jupyter notebook with docker, you have to:</p>
+<ul>
+<li>
+<ol>
+<li>change the default password in <a href=".env"><code>.env</code></a>: <code>JUPYTER_TOKEN</code></li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>create data dir with proper permission: <code>make dir</code>, owned by <code>1000:100</code></li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li><code>make up</code> to pull up jupyter with docker compose</li>
+</ol>
+</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pigsty/app/jupyter <span style="color:#000;font-weight:bold">;</span> make dir up
+</span></span></code></pre></div><p>Visit <a href="http://lab.pigsty">http://lab.pigsty</a> or http://10.10.10.10:8888, the default password is <code>pigsty</code></p>
+<ul>
+<li><a href="http://lab.pigsty?token=pigsty"><code>http://lab.pigsty?token=pigsty</code></a></li>
+</ul>
+<h2 id="prepare">Prepare</h2>
+<p>Create a data directory <code>/data/jupyter</code>, with the default uid &amp; gid <code>1000:100</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>make dir   <span style="color:#8f5902;font-style:italic"># mkdir -p /data/jupyter; chown -R 1000:100 /data/jupyter</span>
+</span></span></code></pre></div><h2 id="connect-to-postgres">Connect to Postgres</h2>
+<p>Use the jupyter terminal to install <code>psycopg2-binary</code> &amp; <code>psycopg2</code> package.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pip install psycopg2-binary psycopg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># install with a mirror</span>
+</span></span><span style="display:flex;"><span>pip install -i https://pypi.tuna.tsinghua.edu.cn/simple psycopg2-binary psycopg2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pip install --upgrade pip
+</span></span><span style="display:flex;"><span>pip config <span style="color:#204a87">set</span> global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+</span></span></code></pre></div><p>Or installation with <code>conda</code>:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+</span></span><span style="display:flex;"><span>conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+</span></span><span style="display:flex;"><span>conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+</span></span></code></pre></div><p>then use the driver in your notebook</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">import</span> <span style="color:#000">psycopg2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#000">conn</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">psycopg2</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">connect</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;postgres://dbuser_dba:DBUser.DBA@10.10.10.10:5432/meta&#39;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">cursor</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#000">conn</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">cursor</span><span style="color:#000;font-weight:bold">()</span>
+</span></span><span style="display:flex;"><span><span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">execute</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#39;SELECT * FROM pg_stat_activity&#39;</span><span style="color:#000;font-weight:bold">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">for</span> <span style="color:#000">i</span> <span style="color:#204a87;font-weight:bold">in</span> <span style="color:#000">cursor</span><span style="color:#ce5c00;font-weight:bold">.</span><span style="color:#000">fetchall</span><span style="color:#000;font-weight:bold">():</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#204a87">print</span><span style="color:#000;font-weight:bold">(</span><span style="color:#000">i</span><span style="color:#000;font-weight:bold">)</span>
+</span></span></code></pre></div><h2 id="alias">Alias</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>make up         <span style="color:#8f5902;font-style:italic"># pull up jupyter with docker compose</span>
+</span></span><span style="display:flex;"><span>make dir        <span style="color:#8f5902;font-style:italic"># create required /data/jupyter and set owner</span>
+</span></span><span style="display:flex;"><span>make run        <span style="color:#8f5902;font-style:italic"># launch jupyter with docker</span>
+</span></span><span style="display:flex;"><span>make view       <span style="color:#8f5902;font-style:italic"># print jupyter access point</span>
+</span></span><span style="display:flex;"><span>make log        <span style="color:#8f5902;font-style:italic"># tail -f jupyter logs</span>
+</span></span><span style="display:flex;"><span>make info       <span style="color:#8f5902;font-style:italic"># introspect jupyter with jq</span>
+</span></span><span style="display:flex;"><span>make stop       <span style="color:#8f5902;font-style:italic"># stop jupyter container</span>
+</span></span><span style="display:flex;"><span>make clean      <span style="color:#8f5902;font-style:italic"># remove jupyter container</span>
+</span></span><span style="display:flex;"><span>make pull       <span style="color:#8f5902;font-style:italic"># pull latest jupyter image</span>
+</span></span><span style="display:flex;"><span>make rmi        <span style="color:#8f5902;font-style:italic"># remove jupyter image</span>
+</span></span><span style="display:flex;"><span>make save       <span style="color:#8f5902;font-style:italic"># save jupyter image to /tmp/docker/jupyter.tgz</span>
+</span></span><span style="display:flex;"><span>make load       <span style="color:#8f5902;font-style:italic"># load jupyter image from /tmp/docker/jupyter.tgz</span>
+</span></span></code></pre></div>
 </div>
 
 
