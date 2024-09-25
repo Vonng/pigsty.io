@@ -24,12 +24,12 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/docs/etcd/faq/" /><meta property="article:section" content="docs" />
 
-<meta property="article:modified_time" content="2024-02-29T15:31:24+08:00" />
+<meta property="article:modified_time" content="2024-09-25T22:46:02+08:00" />
 
 <meta itemprop="name" content="FAQ">
 <meta itemprop="description" content="Pigsty ETCD dcs module frequently asked questions">
-<meta itemprop="dateModified" content="2024-02-29T15:31:24+08:00" />
-<meta itemprop="wordCount" content="305">
+<meta itemprop="dateModified" content="2024-09-25T22:46:02+08:00" />
+<meta itemprop="wordCount" content="1057">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="FAQ"/>
 <meta name="twitter:description" content="Pigsty ETCD dcs module frequently asked questions"/>
 
@@ -95,7 +95,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.d9577cbd919fc5a0c0d653bc5a912f3b.json"
+    data-offline-search-index-json-src="/offline-search-index.12d6a483e12d5adfc3d0cdefb24bf811.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -119,7 +119,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.d9577cbd919fc5a0c0d653bc5a912f3b.json"
+    data-offline-search-index-json-src="/offline-search-index.12d6a483e12d5adfc3d0cdefb24bf811.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -2152,7 +2152,14 @@ if (!doNotTrack) {
             <div class="td-toc">
         <nav id="TableOfContents">
   <ul>
-    <li><a href="#what-is-the-impact-of-etcd-failure">What is the impact of ETCD failure?</a></li>
+    <li><a href="#what-is-the-role-of-the-etcd-in-pigsty">What is the role of the etcd in pigsty?</a></li>
+    <li><a href="#how-many-etcd-instance-should-i-choose">How many etcd instance should I choose?</a></li>
+    <li><a href="#what-is-the-impact-of-etcd-failure">What is the impact of etcd failure?</a></li>
+    <li><a href="#what-data-is-stored-in-the-etcd-cluster">What data is stored in the etcd cluster?</a></li>
+    <li><a href="#how-to-recover-from-etcd-failure">How to recover from etcd failure?</a></li>
+    <li><a href="#is-any-maintenance-work-for-etcd-cluster">Is any maintenance work for etcd cluster?</a></li>
+    <li><a href="#how-to-enable-etcd-auto-compaction">How to enable etcd auto compaction?</a></li>
+    <li><a href="#where-does-the-postgresql-ha-data-stored-in-etcd">Where does the PostgreSQL HA data stored in etcd?</a></li>
     <li><a href="#how-to-use-existing-external-etcd-cluster">How to use existing external etcd cluster?</a></li>
     <li><a href="#how-to-add-a-new-member-to-the-existing-etcd-cluster">How to add a new member to the existing etcd cluster?</a></li>
     <li><a href="#how-to-remove-a-member-from-an-existing-etcd-cluster">How to remove a member from an existing etcd cluster?</a></li>
@@ -2319,14 +2326,83 @@ if (!doNotTrack) {
 
   </header>
 	<hr>
-<h2 id="what-is-the-impact-of-etcd-failure">What is the impact of ETCD failure?</h2>
-<p><a href="/docs/etcd/">ETCD</a> availability is critical for the PGSQL cluster&rsquo;s HA, which is guaranteed by using multiple nodes.
-With a 3-node ETCD cluster, if one node is down, the other two nodes can still function normally; and with a 5-node ETCD cluster, two-node failure can still be tolerated.
-If more than half of the ETCD nodes are down, the ETCD cluster and its service will be unavailable.
-Before Patroni 3.0, this could lead to a global <a href="/docs/pgsql/">PGSQL</a> outage; all primary will be demoted and reject write requests.</p>
-<p>Since pigsty 2.0, the patroni 3.0 <a href="https://patroni.readthedocs.io/en/master/dcs_failsafe_mode.html">DCS failsafe mode</a> is enabled by default, which will <strong>LOCK</strong> the PGSQL cluster status if the ETCD cluster is unavailable and all PGSQL members are still known to the primary.</p>
-<p>The PGSQL cluster can still function normally, but you must recover the ETCD cluster ASAP. (you can&rsquo;t configure the PGSQL cluster through patroni if etcd is down)</p>
+<h2 id="what-is-the-role-of-the-etcd-in-pigsty">What is the role of the etcd in pigsty?</h2>
+<p>etcd is a distributed, reliable key-value store used to store the most critical config / consensus data in the deployment.
+Pigsty uses etcd as the DCS (Distributed Configuration Store) service for Patroni, which will store the high availability status information of the PostgreSQL cluster.</p>
 <hr>
+<h2 id="how-many-etcd-instance-should-i-choose">How many etcd instance should I choose?</h2>
+<p>If more than (include) half of the etcd instances are down, the etcd cluster and its service will be unavailable.</p>
+<p>For example, a 3-node etcd cluster can tolerate at most one node failure, and the other two nodes can still work normally; while a 5-node etcd cluster can tolerate 2 node failures.</p>
+<p>Beware that the <strong>learner</strong> instances in the etcd cluster do not count in the member number, so in a 3-node etcd cluster, if there is a learner instance, the actual member count is 2, so no node failure can be tolerated.</p>
+<p>It is advisable to choose an odd number of etcd instances to avoid split-brain scenarios. It is recommended to use 3 or 5 nodes for the production environment.</p>
+<hr>
+<h2 id="what-is-the-impact-of-etcd-failure">What is the impact of etcd failure?</h2>
+<p>If etcd cluster is unavailable, it will affect the control plane of Pigsty, but not the data plane - the existing PostgreSQL cluster will continue to serve, but admin operations through Patroni will not work.</p>
+<p>During etcd failure, PostgreSQL HA is unable to perform automatic failover, and most of the Patroni operations will be blocked, such as edit-config, restart, switchover, etc&hellip;
+Admin tasks through Ansible playbooks are usually not affected by etcd failure, such as create database, create user, reload HBA and Service, etc&hellip;, And you can always operate the PostgreSQL cluster directly to achieve most of the patroni functions.</p>
+<p>Beware that the above description is only applicable to newer versions of Patroni (&gt;=3.0, Pigsty &gt;= 2.0). If you are using an older version of Patroni (&lt;3.0, corresponding to Pigsty version 1.x), etcd / consul failure will cause a serious impact:
+All PostgreSQL clusters will be demoted and reject write requests, and etcd failure will be amplified as a global PostgreSQL failure. After Patroni 3.0&rsquo;s DCS Failsafe feature, this situation has been significantly improved.</p>
+<hr>
+<h2 id="what-data-is-stored-in-the-etcd-cluster">What data is stored in the etcd cluster?</h2>
+<p>etcd is only used for PostgreSQL HA consensus in Pigsty, no other data is stored in etcd by default.</p>
+<p>These consensus data are managed by Patroni, and when these data are lost in etcd, Patroni will automatically rebuild them.</p>
+<p>Thus, by default, the <strong>etcd</strong> in Pigsty can be regarded as a &ldquo;stateless service&rdquo; that is disposable, which brings great convenience to maintenance work.</p>
+<p>If you use etcd for other purposes, such as storing metadata for Kubernetes, or storing other data, you need to back up the etcd data yourself and restore the data after the etcd cluster is restored.</p>
+<hr>
+<h2 id="how-to-recover-from-etcd-failure">How to recover from etcd failure?</h2>
+<p>Since etcd is disposable in Pigsty, you can quickly stop the bleeding by &ldquo;restarting&rdquo; or &ldquo;redeploying&rdquo; etcd in case of failure.</p>
+<p>To <strong>Restart</strong> the etcd cluster, you can use the following Ansible command (or <code>systemctl restart etcd</code>):</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./etcd.yml -t etcd_launch
+</span></span></code></pre></div><p>To <strong>Reset</strong> the etcd cluster, you can run this playbook, it will <strong>nuke</strong> the etcd cluster and redeploy it:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./etcd.yml
+</span></span></code></pre></div><p>Beware that if you use etcd to store other data, don&rsquo;t forget to backup etcd data before nuking the etcd cluster.</p>
+<hr>
+<h2 id="is-any-maintenance-work-for-etcd-cluster">Is any maintenance work for etcd cluster?</h2>
+<p>In short: do not use all the <strong>quota</strong> of etcd.</p>
+<p>etcd has a default quota for database size of 2GB, if your etcd database size exceeds this limit, etcd will reject write requests.
+Meanwhile, as etcd&rsquo;s <a href="https://etcd.io/docs/v3.5/learning/data_model/">data model</a> illustrates, each write will generate a new version (a.k.a. revision),
+so if your etcd cluster writes frequently, even with very few keys, the etcd database size may continue to grow, and may fail when it reaches the quota limit.</p>
+<p>You can achieve this by <strong>Auto Compact</strong>, <strong>Manual Compact</strong>, <strong>Defragmentation</strong>, and <strong>Quota Increase</strong>, etc., please refer to the etcd <a href="https://etcd.io/docs/v3.5/op-guide/maintenance/">official maintenance guide</a>.</p>
+<p>Pigsty has auto compact enabled by default since v2.6, so you usually don&rsquo;t have to worry about etcd full.
+For versions before v2.6, we <strong>strongly recommend</strong> enabling etcd&rsquo;s auto compact feature in the production environment.</p>
+
+
+<div class="alert alert-danger" role="alert">
+<h4 class="alert-heading">Fill etcd may lead to PostgreSQL failure!</h4>
+
+    For Pigsty v2.0 - v2.5 users, we strongly recommend upgrading to a newer version, or following the instructions below to enable etcd auto compaction!
+
+</div>
+
+<hr>
+<h2 id="how-to-enable-etcd-auto-compaction">How to enable etcd auto compaction?</h2>
+<p>If you are using an earlier version of Pigsty (v2.0 - v2.5), we strongly recommend that you enable etcd&rsquo;s auto compaction feature in the production environment.</p>
+<p>Edit the etcd config template in <a href="https://github.com/Vonng/pigsty/blob/main/roles/etcd/templates/etcd.conf.j2#L30"><code>roles/etcd/templates/etcd.conf.j2</code></a> with these 3 new lines:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">auto-compaction-mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">periodic</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">auto-compaction-retention</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;24h&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">quota-backend-bytes</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">17179869184</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>You can set all the PostgreSQL cluster to <strong>maintenance mode</strong> and then redeploy the etcd cluster with <code>./etcd.yml</code> to apply the these changes.</p>
+<p>It will increase the etcd default quota from 2 GiB to 16 GiB, and ensure that only the most recent day&rsquo;s write history is retained, avoiding the infinite growth of the etcd database size.</p>
+<hr>
+<h2 id="where-does-the-postgresql-ha-data-stored-in-etcd">Where does the PostgreSQL HA data stored in etcd?</h2>
+<p>Patroni will use the <a href="/docs/reference/param/#pg_namespace"><strong><code>pg_namespace</code></strong></a> (default is <code>/pg</code>) as the prefix for all metadata keys in etcd, followed by the PostgreSQL cluster name.</p>
+<p>For example, a PG cluster named <code>pg-meta</code>, its metadata keys will be stored under <code>/pg/pg-meta</code>, which may look like this:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/pg/pg-meta/config
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;ttl&#34;</span>:30,<span style="color:#4e9a06">&#34;loop_wait&#34;</span>:10,<span style="color:#4e9a06">&#34;retry_timeout&#34;</span>:10,<span style="color:#4e9a06">&#34;primary_start_timeout&#34;</span>:10,<span style="color:#4e9a06">&#34;maximum_lag_on_failover&#34;</span>:1048576,<span style="color:#4e9a06">&#34;maximum_lag_on_syncnode&#34;</span>:-1,<span style="color:#4e9a06">&#34;primary_stop_timeout&#34;</span>:30,<span style="color:#4e9a06">&#34;synchronous_mode&#34;</span>:false,<span style="color:#4e9a06">&#34;synchronous_mode_strict&#34;</span>:false,<span style="color:#4e9a06">&#34;failsafe_mode&#34;</span>:true,<span style="color:#4e9a06">&#34;pg_version&#34;</span>:16,<span style="color:#4e9a06">&#34;pg_cluster&#34;</span>:<span style="color:#4e9a06">&#34;pg-meta&#34;</span>,<span style="color:#4e9a06">&#34;pg_shard&#34;</span>:<span style="color:#4e9a06">&#34;pg-meta&#34;</span>,<span style="color:#4e9a06">&#34;pg_group&#34;</span>:0,<span style="color:#4e9a06">&#34;postgresql&#34;</span>:<span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;use_slots&#34;</span>:true,<span style="color:#4e9a06">&#34;use_pg_rewind&#34;</span>:true,<span style="color:#4e9a06">&#34;remove_data_directory_on_rewind_failure&#34;</span>:true,<span style="color:#4e9a06">&#34;parameters&#34;</span>:<span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;max_connections&#34;</span>:100,<span style="color:#4e9a06">&#34;superuser_reserved_connections&#34;</span>:10,<span style="color:#4e9a06">&#34;max_locks_per_transaction&#34;</span>:200,<span style="color:#4e9a06">&#34;max_prepared_transactions&#34;</span>:0,<span style="color:#4e9a06">&#34;track_commit_timestamp&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;wal_level&#34;</span>:<span style="color:#4e9a06">&#34;logical&#34;</span>,<span style="color:#4e9a06">&#34;wal_log_hints&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;max_worker_processes&#34;</span>:16,<span style="color:#4e9a06">&#34;max_wal_senders&#34;</span>:50,<span style="color:#4e9a06">&#34;max_replication_slots&#34;</span>:50,<span style="color:#4e9a06">&#34;password_encryption&#34;</span>:<span style="color:#4e9a06">&#34;scram-sha-256&#34;</span>,<span style="color:#4e9a06">&#34;ssl&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;ssl_cert_file&#34;</span>:<span style="color:#4e9a06">&#34;/pg/cert/server.crt&#34;</span>,<span style="color:#4e9a06">&#34;ssl_key_file&#34;</span>:<span style="color:#4e9a06">&#34;/pg/cert/server.key&#34;</span>,<span style="color:#4e9a06">&#34;ssl_ca_file&#34;</span>:<span style="color:#4e9a06">&#34;/pg/cert/ca.crt&#34;</span>,<span style="color:#4e9a06">&#34;shared_buffers&#34;</span>:<span style="color:#4e9a06">&#34;7969MB&#34;</span>,<span style="color:#4e9a06">&#34;maintenance_work_mem&#34;</span>:<span style="color:#4e9a06">&#34;1993MB&#34;</span>,<span style="color:#4e9a06">&#34;work_mem&#34;</span>:<span style="color:#4e9a06">&#34;79MB&#34;</span>,<span style="color:#4e9a06">&#34;max_parallel_workers&#34;</span>:8,<span style="color:#4e9a06">&#34;max_parallel_maintenance_workers&#34;</span>:2,<span style="color:#4e9a06">&#34;max_parallel_workers_per_gather&#34;</span>:0,<span style="color:#4e9a06">&#34;hash_mem_multiplier&#34;</span>:8.0,<span style="color:#4e9a06">&#34;huge_pages&#34;</span>:<span style="color:#4e9a06">&#34;try&#34;</span>,<span style="color:#4e9a06">&#34;temp_file_limit&#34;</span>:<span style="color:#4e9a06">&#34;7GB&#34;</span>,<span style="color:#4e9a06">&#34;vacuum_cost_delay&#34;</span>:<span style="color:#4e9a06">&#34;20ms&#34;</span>,<span style="color:#4e9a06">&#34;vacuum_cost_limit&#34;</span>:2000,<span style="color:#4e9a06">&#34;bgwriter_delay&#34;</span>:<span style="color:#4e9a06">&#34;10ms&#34;</span>,<span style="color:#4e9a06">&#34;bgwriter_lru_maxpages&#34;</span>:800,<span style="color:#4e9a06">&#34;bgwriter_lru_multiplier&#34;</span>:5.0,<span style="color:#4e9a06">&#34;min_wal_size&#34;</span>:<span style="color:#4e9a06">&#34;7GB&#34;</span>,<span style="color:#4e9a06">&#34;max_wal_size&#34;</span>:<span style="color:#4e9a06">&#34;28GB&#34;</span>,<span style="color:#4e9a06">&#34;max_slot_wal_keep_size&#34;</span>:<span style="color:#4e9a06">&#34;42GB&#34;</span>,<span style="color:#4e9a06">&#34;wal_buffers&#34;</span>:<span style="color:#4e9a06">&#34;16MB&#34;</span>,<span style="color:#4e9a06">&#34;wal_writer_delay&#34;</span>:<span style="color:#4e9a06">&#34;20ms&#34;</span>,<span style="color:#4e9a06">&#34;wal_writer_flush_after&#34;</span>:<span style="color:#4e9a06">&#34;1MB&#34;</span>,<span style="color:#4e9a06">&#34;commit_delay&#34;</span>:20,<span style="color:#4e9a06">&#34;commit_siblings&#34;</span>:10,<span style="color:#4e9a06">&#34;checkpoint_timeout&#34;</span>:<span style="color:#4e9a06">&#34;15min&#34;</span>,<span style="color:#4e9a06">&#34;checkpoint_completion_target&#34;</span>:0.8,<span style="color:#4e9a06">&#34;archive_mode&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;archive_timeout&#34;</span>:300,<span style="color:#4e9a06">&#34;archive_command&#34;</span>:<span style="color:#4e9a06">&#34;pgbackrest --stanza=pg-meta archive-push %p&#34;</span>,<span style="color:#4e9a06">&#34;max_standby_archive_delay&#34;</span>:<span style="color:#4e9a06">&#34;10min&#34;</span>,<span style="color:#4e9a06">&#34;max_standby_streaming_delay&#34;</span>:<span style="color:#4e9a06">&#34;3min&#34;</span>,<span style="color:#4e9a06">&#34;wal_receiver_status_interval&#34;</span>:<span style="color:#4e9a06">&#34;1s&#34;</span>,<span style="color:#4e9a06">&#34;hot_standby_feedback&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;wal_receiver_timeout&#34;</span>:<span style="color:#4e9a06">&#34;60s&#34;</span>,<span style="color:#4e9a06">&#34;max_logical_replication_workers&#34;</span>:8,<span style="color:#4e9a06">&#34;max_sync_workers_per_subscription&#34;</span>:6,<span style="color:#4e9a06">&#34;random_page_cost&#34;</span>:1.1,<span style="color:#4e9a06">&#34;effective_io_concurrency&#34;</span>:1000,<span style="color:#4e9a06">&#34;effective_cache_size&#34;</span>:<span style="color:#4e9a06">&#34;23907MB&#34;</span>,<span style="color:#4e9a06">&#34;default_statistics_target&#34;</span>:200,<span style="color:#4e9a06">&#34;log_destination&#34;</span>:<span style="color:#4e9a06">&#34;csvlog&#34;</span>,<span style="color:#4e9a06">&#34;logging_collector&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;log_directory&#34;</span>:<span style="color:#4e9a06">&#34;/pg/log/postgres&#34;</span>,<span style="color:#4e9a06">&#34;log_filename&#34;</span>:<span style="color:#4e9a06">&#34;postgresql-%Y-%m-%d.log&#34;</span>,<span style="color:#4e9a06">&#34;log_checkpoints&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;log_lock_waits&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;log_replication_commands&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;log_statement&#34;</span>:<span style="color:#4e9a06">&#34;ddl&#34;</span>,<span style="color:#4e9a06">&#34;log_min_duration_statement&#34;</span>:100,<span style="color:#4e9a06">&#34;track_io_timing&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;track_functions&#34;</span>:<span style="color:#4e9a06">&#34;all&#34;</span>,<span style="color:#4e9a06">&#34;track_activity_query_size&#34;</span>:8192,<span style="color:#4e9a06">&#34;log_autovacuum_min_duration&#34;</span>:<span style="color:#4e9a06">&#34;1s&#34;</span>,<span style="color:#4e9a06">&#34;autovacuum_max_workers&#34;</span>:2,<span style="color:#4e9a06">&#34;autovacuum_naptime&#34;</span>:<span style="color:#4e9a06">&#34;1min&#34;</span>,<span style="color:#4e9a06">&#34;autovacuum_vacuum_cost_delay&#34;</span>:-1,<span style="color:#4e9a06">&#34;autovacuum_vacuum_cost_limit&#34;</span>:-1,<span style="color:#4e9a06">&#34;autovacuum_freeze_max_age&#34;</span>:1000000000,<span style="color:#4e9a06">&#34;deadlock_timeout&#34;</span>:<span style="color:#4e9a06">&#34;50ms&#34;</span>,<span style="color:#4e9a06">&#34;idle_in_transaction_session_timeout&#34;</span>:<span style="color:#4e9a06">&#34;10min&#34;</span>,<span style="color:#4e9a06">&#34;shared_preload_libraries&#34;</span>:<span style="color:#4e9a06">&#34;timescaledb, pg_stat_statements, auto_explain&#34;</span>,<span style="color:#4e9a06">&#34;auto_explain.log_min_duration&#34;</span>:<span style="color:#4e9a06">&#34;1s&#34;</span>,<span style="color:#4e9a06">&#34;auto_explain.log_analyze&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;auto_explain.log_verbose&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;auto_explain.log_timing&#34;</span>:<span style="color:#4e9a06">&#34;on&#34;</span>,<span style="color:#4e9a06">&#34;auto_explain.log_nested_statements&#34;</span>:true,<span style="color:#4e9a06">&#34;pg_stat_statements.max&#34;</span>:5000,<span style="color:#4e9a06">&#34;pg_stat_statements.track&#34;</span>:<span style="color:#4e9a06">&#34;all&#34;</span>,<span style="color:#4e9a06">&#34;pg_stat_statements.track_utility&#34;</span>:<span style="color:#4e9a06">&#34;off&#34;</span>,<span style="color:#4e9a06">&#34;pg_stat_statements.track_planning&#34;</span>:<span style="color:#4e9a06">&#34;off&#34;</span>,<span style="color:#4e9a06">&#34;timescaledb.telemetry_level&#34;</span>:<span style="color:#4e9a06">&#34;off&#34;</span>,<span style="color:#4e9a06">&#34;timescaledb.max_background_workers&#34;</span>:8,<span style="color:#4e9a06">&#34;citus.node_conninfo&#34;</span>:<span style="color:#4e9a06">&#34;sslm
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">ode=prefer&#34;</span><span style="color:#ce5c00;font-weight:bold">}}}</span>
+</span></span><span style="display:flex;"><span>/pg/pg-meta/failsafe
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;pg-meta-2&#34;</span>:<span style="color:#4e9a06">&#34;http://10.10.10.11:8008/patroni&#34;</span>,<span style="color:#4e9a06">&#34;pg-meta-1&#34;</span>:<span style="color:#4e9a06">&#34;http://10.10.10.10:8008/patroni&#34;</span><span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>/pg/pg-meta/initialize
+</span></span><span style="display:flex;"><span><span style="color:#0000cf;font-weight:bold">7418384210787662172</span>
+</span></span><span style="display:flex;"><span>/pg/pg-meta/leader
+</span></span><span style="display:flex;"><span>pg-meta-1
+</span></span><span style="display:flex;"><span>/pg/pg-meta/members/pg-meta-1
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;conn_url&#34;</span>:<span style="color:#4e9a06">&#34;postgres://10.10.10.10:5432/postgres&#34;</span>,<span style="color:#4e9a06">&#34;api_url&#34;</span>:<span style="color:#4e9a06">&#34;http://10.10.10.10:8008/patroni&#34;</span>,<span style="color:#4e9a06">&#34;state&#34;</span>:<span style="color:#4e9a06">&#34;running&#34;</span>,<span style="color:#4e9a06">&#34;role&#34;</span>:<span style="color:#4e9a06">&#34;primary&#34;</span>,<span style="color:#4e9a06">&#34;version&#34;</span>:<span style="color:#4e9a06">&#34;4.0.1&#34;</span>,<span style="color:#4e9a06">&#34;tags&#34;</span>:<span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;clonefrom&#34;</span>:true,<span style="color:#4e9a06">&#34;version&#34;</span>:<span style="color:#4e9a06">&#34;16&#34;</span>,<span style="color:#4e9a06">&#34;spec&#34;</span>:<span style="color:#4e9a06">&#34;8C.32G.125G&#34;</span>,<span style="color:#4e9a06">&#34;conf&#34;</span>:<span style="color:#4e9a06">&#34;tiny.yml&#34;</span><span style="color:#ce5c00;font-weight:bold">}</span>,<span style="color:#4e9a06">&#34;xlog_location&#34;</span>:184549376,<span style="color:#4e9a06">&#34;timeline&#34;</span>:1<span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>/pg/pg-meta/members/pg-meta-2
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;conn_url&#34;</span>:<span style="color:#4e9a06">&#34;postgres://10.10.10.11:5432/postgres&#34;</span>,<span style="color:#4e9a06">&#34;api_url&#34;</span>:<span style="color:#4e9a06">&#34;http://10.10.10.11:8008/patroni&#34;</span>,<span style="color:#4e9a06">&#34;state&#34;</span>:<span style="color:#4e9a06">&#34;running&#34;</span>,<span style="color:#4e9a06">&#34;role&#34;</span>:<span style="color:#4e9a06">&#34;replica&#34;</span>,<span style="color:#4e9a06">&#34;version&#34;</span>:<span style="color:#4e9a06">&#34;4.0.1&#34;</span>,<span style="color:#4e9a06">&#34;tags&#34;</span>:<span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;clonefrom&#34;</span>:true,<span style="color:#4e9a06">&#34;version&#34;</span>:<span style="color:#4e9a06">&#34;16&#34;</span>,<span style="color:#4e9a06">&#34;spec&#34;</span>:<span style="color:#4e9a06">&#34;8C.32G.125G&#34;</span>,<span style="color:#4e9a06">&#34;conf&#34;</span>:<span style="color:#4e9a06">&#34;tiny.yml&#34;</span><span style="color:#ce5c00;font-weight:bold">}</span>,<span style="color:#4e9a06">&#34;xlog_location&#34;</span>:184549376,<span style="color:#4e9a06">&#34;replication_state&#34;</span>:<span style="color:#4e9a06">&#34;streaming&#34;</span>,<span style="color:#4e9a06">&#34;timeline&#34;</span>:1<span style="color:#ce5c00;font-weight:bold">}</span>
+</span></span><span style="display:flex;"><span>/pg/pg-meta/status
+</span></span><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;optime&#34;</span>:184549376,<span style="color:#4e9a06">&#34;slots&#34;</span>:<span style="color:#ce5c00;font-weight:bold">{</span><span style="color:#4e9a06">&#34;pg_meta_2&#34;</span>:184549376,<span style="color:#4e9a06">&#34;pg_meta_1&#34;</span>:184549376<span style="color:#ce5c00;font-weight:bold">}</span>,<span style="color:#4e9a06">&#34;retain_slots&#34;</span>:<span style="color:#ce5c00;font-weight:bold">[</span><span style="color:#4e9a06">&#34;pg_meta_1&#34;</span>,<span style="color:#4e9a06">&#34;pg_meta_2&#34;</span><span style="color:#ce5c00;font-weight:bold">]}</span>
+</span></span></code></pre></div><hr>
 <h2 id="how-to-use-existing-external-etcd-cluster">How to use existing external etcd cluster?</h2>
 <p>The hard-coded group, <code>etcd</code>, will be used as DCS servers for PGSQL. You can initialize them with <code>etcd.yml</code> or assume it is an existing external etcd cluster.</p>
 <p>To use an existing external etcd cluster, define them as usual and make sure your current etcd cluster certificate is signed by the same CA as your self-signed CA for PGSQL.</p>
@@ -2399,7 +2475,7 @@ Before Patroni 3.0, this could lead to a global <a href="/docs/pgsql/">PGSQL</a>
 </script>
 <br />
 <div class="td-page-meta__lastmod">
-  Last modified 2024-02-29: <a href="https://github.com/Vonng/pigsty.cc/commit/34b2b75d8513170d48dd6c26a7fe1e2d26f6cf58">update content (34b2b75)</a>
+  Last modified 2024-09-25: <a href="https://github.com/Vonng/pigsty.cc/commit/c1bcd3778e3bd0ff2e318a593126caf20d8b3ded">update etcd en docs (c1bcd37)</a>
 </div>
 
 </div>

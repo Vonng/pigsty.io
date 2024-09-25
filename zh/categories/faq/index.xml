@@ -59,17 +59,21 @@
         &lt;hr&gt;
 &lt;h2 id=&#34;etcd集群起什么作用&#34;&gt;etcd集群起什么作用？&lt;/h2&gt;
 &lt;p&gt;etcd 是一个分布式的、可靠的键-值存储，用于存放系统中最为关键的数据，Pigsty 使用 etcd 作为 Patroni 的 DCS（分布式配置存储）服务，用于存储 PostgreSQL 集群的高可用状态信息。&lt;/p&gt;
-&lt;p&gt;Patroni 将通过 etcd，实现集群故障检测、自动故障转移、主从切换，集群配置管理等功能。因此 etcd 对于 PostgreSQL 高可用性至关重要，是 Pigsty 默认启用的核心模块组件。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;etcd集群可以容忍多少节点同时出现故障&#34;&gt;etcd集群可以容忍多少节点同时出现故障？&lt;/h2&gt;
+&lt;p&gt;Patroni 将通过 etcd，实现集群故障检测、自动故障转移、主从切换，集群配置管理等功能。&lt;/p&gt;
 &lt;p&gt;etcd 对于 PostgreSQL 集群的高可用至关重要，而 etcd 本身的可用性与容灾，是通过使用多个分布式的节点来保证的。&lt;/p&gt;
-&lt;p&gt;如果超过成员数一半的 etcd 实例宕机，例如：使用 3 节点的 etcd 集群允许最多一个节点宕机，而其他两个节点仍然可以正常工作；而使用 5 节点的 etcd 集群则可以容忍 2 节点失效。&lt;/p&gt;
-&lt;p&gt;请注意，etcd 集群中的 &lt;strong&gt;学习者&lt;/strong&gt;（Learner）实例不计入成员数，因此在 3 节点 etcd 集群中，如果有一个学习者实例，那么实际上成员数量为 2，那么不能容忍任何节点的故障。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;etcd集群使用多大规模合适&#34;&gt;etcd集群使用多大规模合适？&lt;/h2&gt;
+&lt;p&gt;如果超过集群成员数一半（包括正好一半）的 etcd 实例不可用，那么 etcd 集群将进入不可用状态，拒绝对外提供服务。&lt;/p&gt;
+&lt;p&gt;例如：使用 3 节点的 etcd 集群允许最多一个节点宕机，而其他两个节点仍然可以正常工作；而使用 5 节点的 etcd 集群则可以容忍 2 节点失效。&lt;/p&gt;
+&lt;p&gt;请注意，etcd 集群中的 &lt;strong&gt;学习者&lt;/strong&gt;（Learner）实例不计入成员数，因此在 3 节点 etcd 集群中，如果有一个学习者实例，那么实际上成员数量为 2，不能容忍任一节点失效。&lt;/p&gt;
+&lt;p&gt;在生产环境中，我们建议使用奇数个 etcd 实例，对于生产环境，建议使用 3 节点或 5 节点的 etcd 集群部署以确保足够的可靠性。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;etcd集群不可用会有什么影响&#34;&gt;etcd集群不可用会有什么影响？&lt;/h2&gt;
-&lt;p&gt;如果超过成员数一半的 etcd 实例宕机，etcd 集群及其服务将不可用。在这种情况下，部分管控命令将无法执行，例如，数据库不会执行自动故障转移，与主动主从切换，你也无法通过 Patroni 命令行工具来修改 PostgreSQL 配置。&lt;/p&gt;
-&lt;p&gt;但如果仅仅是 etcd 本身的故障与服务不可用，默认并不会影响到依赖 etcd 的 PostgreSQL 服务，因为 PG 高可用组件 Patroni 会在 DCS (etcd) 故障时点名 PostgreSQL 集群成员，如果所有成员都能够感知到彼此，那么 Patroni 会判定这是单纯的 DCS 故障，锁定 PGSQL 集群状态，不进行集群领导权变更操作。&lt;/p&gt;
-&lt;p&gt;请注意，这一行为仅适用于较新版本的 Patroni (&amp;gt;=3.0，对应 Pigsty &amp;gt;= 2.0)：如果您使用的是较老版本的 Patroni (&amp;lt;3.0，对应 Pigsty 版本为 1.x)，则 etcd / consul 故障会引发极为严重的全局性影响：所有 PostgreSQL 集群将发生降级：主库将降级为从库，拒绝写请求，etcd 故障将放大为全局性 PostgreSQL 故障。&lt;/p&gt;
+&lt;p&gt;如果 etcd 集群不可用，那么会影响 PostgreSQL 的管控平面，但不会影响数据平面 —— 现有的 PostgreSQL 集群将继续运行，但通过 Patroni 进行的管理操作将无法执行。&lt;/p&gt;
+&lt;p&gt;etcd 故障期间，PostgreSQL 高可用将无法实现自动故障转移，您也无法使用 &lt;code&gt;patronictl&lt;/code&gt; 对 PostgreSQL 集群发起管理操作，例如修改配置，执行手动故障转移等。
+通过 Ansible 发起的管理命令不受 etcd 故障影响：例如创建数据库，创建用户，刷新 HBA 与 Service 配置等，etcd 故障期间，您依然可以直接操作 PostgreSQL 集群来实现这些功能。&lt;/p&gt;
+&lt;p&gt;请注意，以上描述的行为仅适用于较新版本的 Patroni (&amp;gt;=3.0，对应 Pigsty &amp;gt;= 2.0)。如果您使用的是较老版本的 Patroni (&amp;lt;3.0，对应 Pigsty 版本为 1.x)，则 etcd / consul 故障会引发极为严重的全局性影响：
+所有 PostgreSQL 集群将发生降级：主库将降级为从库，拒绝写请求，etcd 故障将放大为全局性 PostgreSQL 故障。在 Patroni 3.0 引入 DCS Failsafe 功能后，这种情况得到了显著改善。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;etcd集群中存储着什么数据&#34;&gt;etcd集群中存储着什么数据？&lt;/h2&gt;
 &lt;p&gt;在 Pigsty 中，etcd 仅用于 PostgreSQL 高可用，并不会用于存储任何其他配置或状态数据。&lt;/p&gt;
