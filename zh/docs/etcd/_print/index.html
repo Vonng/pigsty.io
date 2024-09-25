@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.71494444de8cb03a2beaa9dd3c8f5b0f.json"
+    data-offline-search-index-json-src="/offline-search-index.d9577cbd919fc5a0c0d653bc5a912f3b.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -1556,29 +1556,29 @@ This is the multi-page printable view of this section.
 <div class="td-content" style="page-break-before: always">
     
 	<h1 id="pg-bfaeae9f961d15c2f4a30d7af548af0c">2 - 常见问题</h1>
-    <div class="lead">Pigsty ETCD DCS 模块常见问题答疑</div>
+    <div class="lead">Pigsty etcd 模块常见问题答疑</div>
 	<hr>
-<h2 id="在-pigsty-中etcd-集群起什么作用">在 Pigsty 中，etcd 集群起什么作用？</h2>
+<h2 id="etcd集群起什么作用">etcd集群起什么作用？</h2>
 <p>etcd 是一个分布式的、可靠的键-值存储，用于存放系统中最为关键的数据，Pigsty 使用 etcd 作为 Patroni 的 DCS（分布式配置存储）服务，用于存储 PostgreSQL 集群的高可用状态信息。</p>
 <p>Patroni 将通过 etcd，实现集群故障检测、自动故障转移、主从切换，集群配置管理等功能。因此 etcd 对于 PostgreSQL 高可用性至关重要，是 Pigsty 默认启用的核心模块组件。</p>
 <hr>
-<h2 id="etcd-集群可以容忍多少节点同时出现故障">etcd 集群可以容忍多少节点同时出现故障？</h2>
+<h2 id="etcd集群可以容忍多少节点同时出现故障">etcd集群可以容忍多少节点同时出现故障？</h2>
 <p>etcd 对于 PostgreSQL 集群的高可用至关重要，而 etcd 本身的可用性与容灾，是通过使用多个分布式的节点来保证的。</p>
 <p>如果超过成员数一半的 etcd 实例宕机，例如：使用 3 节点的 etcd 集群允许最多一个节点宕机，而其他两个节点仍然可以正常工作；而使用 5 节点的 etcd 集群则可以容忍 2 节点失效。</p>
 <p>请注意，etcd 集群中的 <strong>学习者</strong>（Learner）实例不计入成员数，因此在 3 节点 etcd 集群中，如果有一个学习者实例，那么实际上成员数量为 2，那么不能容忍任何节点的故障。</p>
 <hr>
-<h2 id="etcd-集群不可用会有什么影响">etcd 集群不可用会有什么影响？</h2>
+<h2 id="etcd集群不可用会有什么影响">etcd集群不可用会有什么影响？</h2>
 <p>如果超过成员数一半的 etcd 实例宕机，etcd 集群及其服务将不可用。在这种情况下，部分管控命令将无法执行，例如，数据库不会执行自动故障转移，与主动主从切换，你也无法通过 Patroni 命令行工具来修改 PostgreSQL 配置。</p>
 <p>但如果仅仅是 etcd 本身的故障与服务不可用，默认并不会影响到依赖 etcd 的 PostgreSQL 服务，因为 PG 高可用组件 Patroni 会在 DCS (etcd) 故障时点名 PostgreSQL 集群成员，如果所有成员都能够感知到彼此，那么 Patroni 会判定这是单纯的 DCS 故障，锁定 PGSQL 集群状态，不进行集群领导权变更操作。</p>
 <p>请注意，这一行为仅适用于较新版本的 Patroni (&gt;=3.0，对应 Pigsty &gt;= 2.0)：如果您使用的是较老版本的 Patroni (&lt;3.0，对应 Pigsty 版本为 1.x)，则 etcd / consul 故障会引发极为严重的全局性影响：所有 PostgreSQL 集群将发生降级：主库将降级为从库，拒绝写请求，etcd 故障将放大为全局性 PostgreSQL 故障。</p>
 <hr>
-<h2 id="etcd-集群中存储着什么数据">etcd 集群中存储着什么数据？</h2>
+<h2 id="etcd集群中存储着什么数据">etcd集群中存储着什么数据？</h2>
 <p>在 Pigsty 中，etcd 仅用于 PostgreSQL 高可用，并不会用于存储任何其他配置或状态数据。</p>
 <p>而 PG 高可用组件 Patroni 会自动生成并管理 etcd 中的数据，当这些数据在 etcd 中丢失时，Patroni 会自动重建。</p>
 <p>因此默认情况下，Pigsty 中的 <strong>etcd</strong> 可以视作 “无状态服务”，可以进行销毁与重建，这为维护工作带来了极大的便利。</p>
 <p>如果您将 etcd 用于其他目的，例如作为 Kubernetes 的元数据存储，或自行存储其他数据，那么您需要自行备份 etcd 数据，并在 etcd 集群恢复后进行数据恢复。</p>
 <hr>
-<h2 id="如何从-etcd-故障中恢复">如何从 etcd 故障中恢复？</h2>
+<h2 id="如何从etcd故障中恢复">如何从etcd故障中恢复？</h2>
 <p>因为 Pigsty 中的 etcd 只用于 PostgreSQL 高可用，本质上是可销毁、可重建的 “无状态服务”，因此在出现故障时，您可以通过 “重启” / “重置” 来进行快速止血。</p>
 <p>要 <strong>重启</strong> etcd 集群，您可以使用以下 Ansible 命令：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./etcd.yml -t etcd_launch
@@ -1586,7 +1586,7 @@ This is the multi-page printable view of this section.
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./etcd.yml
 </span></span></code></pre></div><p>如果您自行使用 etcd 存储了其他数据，那么通常需要备份 etcd 数据，并在 etcd 集群恢复后进行数据恢复。</p>
 <hr>
-<h2 id="维护-etcd-有什么注意事项">维护 etcd 有什么注意事项？</h2>
+<h2 id="维护etcd有什么注意事项">维护etcd有什么注意事项？</h2>
 <p>简单的版本是：<strong>不要写爆 etcd 就好</strong>。</p>
 <p>etcd 默认设置了一个 2GB 的数据库容量上限，如果您的 etcd 数据库容量超过了这个限制，etcd 将会拒绝写入请求，这可能导致依赖 etcd 的 PostgreSQL 高可用机制无法正常工作。
 与此同时，etcd 的<a href="https://etcd.io/docs/v3.5/learning/data_model/">数据模型</a> 使得每一次写入都会产生一个新的版本，因此如果您的 etcd 集群频繁写入，即使只有极个别的 Key， etcd 数据库的大小也可能会不断增长，并在达到容量上限时出现故障。</p>
@@ -1602,7 +1602,7 @@ This is the multi-page printable view of this section.
 </div>
 
 <hr>
-<h2 id="如何启动-etcd-自动垃圾回收">如何启动 etcd 自动垃圾回收？</h2>
+<h2 id="如何启动etcd自动垃圾回收">如何启动etcd自动垃圾回收？</h2>
 <p>如果您使用的早先版本的 Pigsty （v2.0 - v2.5），我们强烈建议您通过以下步骤，在生产环境中启用 etcd 的自动压实功能，从而避免 etcd 容量配额写满导致的 etcd 不可用故障。</p>
 <p>在 Pigsty 源码目录中，编辑 etcd 配置文件模板：<a href="https://github.com/Vonng/pigsty/blob/main/roles/etcd/templates/etcd.conf.j2#L30"><code>roles/etcd/templates/etcd.conf.j2</code></a>，添加以下三条配置项：</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">auto-compaction-mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">periodic</span><span style="color:#f8f8f8;text-decoration:underline">
@@ -1611,7 +1611,7 @@ This is the multi-page printable view of this section.
 </span></span></span></code></pre></div><p>然后将所有相关 PostgreSQL 集群设置为 <a href="/zh/docs/pgsql/admin"><strong>维护模式</strong></a> 后，重新使用 <code>./etcd.yml</code> 覆盖部署 etcd 集群即可。</p>
 <p>该配置会将 etcd 默认的容量配额从 2 GiB 提高到 16 GiB，并确保只保留最近一天的写入历史版本，从而避免了 etcd 数据库大小的无限增长。</p>
 <hr>
-<h2 id="etcd-中的-postgresql-高可用数据存储在哪里">etcd 中的 PostgreSQL 高可用数据存储在哪里？</h2>
+<h2 id="etcd中的postgresql高可用数据存储在哪里">etcd中的PostgreSQL高可用数据存储在哪里？</h2>
 <p>默认情况下，Patroni 使用 <a href="/zh/docs/reference/param#pg_namespace"><strong><code>pg_namespace</code></strong></a> 指定的前缀（默认为 <code>/pg</code>）作为所有元数据键的前缀，随后是 PostgreSQL 集群名称，例如，名为 <code>pg-meta</code> 的 PG 集群，其元数据键将存储在 <code>/pg/pg-meta</code> 下。</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>etcdctl get /pg/pg-meta --prefix
 </span></span></code></pre></div><p>其中的数据样本如下所示：</p>
@@ -1636,7 +1636,7 @@ This is the multi-page printable view of this section.
 <p>要使用现有的外部 etcd 集群，只要像往常一样定义它们即可，您可以跳过 <code>etcd.yml</code> 剧本的执行，因为集群已经存在，不需要部署。</p>
 <p>但用户必须确保 <strong>现有 etcd 集群证书是由 Pigsty 使用的相同 CA 签名颁发的</strong>。否则客户端无法使用 Pigsty 自签名 CA 颁发的证书来访问外部的 etcd 集群。</p>
 <hr>
-<h2 id="如何向现有-etcd-集群添加新的成员">如何向现有 etcd 集群添加新的成员？</h2>
+<h2 id="如何向现有etcd集群添加新的成员">如何向现有etcd集群添加新的成员？</h2>
 <blockquote>
 <p>详细过程，请参考<a href="/zh/docs/etcd#%E6%B7%BB%E5%8A%A0%E6%88%90%E5%91%98">向 etcd 集群添加成员</a></p>
 </blockquote>
@@ -1644,7 +1644,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>./etcd.yml -l &lt;new_ins_ip&gt; -e <span style="color:#000">etcd_init</span><span style="color:#ce5c00;font-weight:bold">=</span>existing                                 <span style="color:#8f5902;font-style:italic"># 真正初始化新 etcd 成员</span>
 </span></span><span style="display:flex;"><span>etcdctl member promote &lt;new_ins_server_id&gt;                                       <span style="color:#8f5902;font-style:italic"># 在管理节点上提升新成员为正式成员</span>
 </span></span></code></pre></div><hr>
-<h2 id="如何从现有-etcd-集群中移除成员">如何从现有 etcd 集群中移除成员？</h2>
+<h2 id="如何从现有etcd集群中移除成员">如何从现有etcd集群中移除成员？</h2>
 <blockquote>
 <p>详细过程，请参考<a href="/zh/docs/etcd#%E7%A7%BB%E9%99%A4%E6%88%90%E5%91%98">从 etcd 集群中移除成员</a></p>
 </blockquote>
