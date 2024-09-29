@@ -24,11 +24,11 @@
 <meta property="og:type" content="article" />
 <meta property="og:url" content="/zh/blog/releases/v2.6.0/" /><meta property="og:image" content="/zh/blog/releases/v2.6.0/featured.webp" /><meta property="article:section" content="blog" />
 <meta property="article:published_time" content="2024-02-27T00:00:00+00:00" />
-<meta property="article:modified_time" content="2024-05-22T17:07:04+08:00" />
+<meta property="article:modified_time" content="2024-09-29T14:45:01+08:00" />
 
 <meta itemprop="name" content="v2.6：PG 踢馆 OLAP">
 <meta itemprop="description" content="Pigsty v2.6 使用 PostgreSQL 16.2 作为了默认主版本，并引入了 ParadeDB 与 DuckDB 支持。"><meta itemprop="datePublished" content="2024-02-27T00:00:00+00:00" />
-<meta itemprop="dateModified" content="2024-05-22T17:07:04+08:00" />
+<meta itemprop="dateModified" content="2024-09-29T14:45:01+08:00" />
 <meta itemprop="wordCount" content="557"><meta itemprop="image" content="/zh/blog/releases/v2.6.0/featured.webp" />
 <meta itemprop="keywords" content="Pigsty,Release," /><meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="/zh/blog/releases/v2.6.0/featured.webp" /><meta name="twitter:title" content="v2.6：PG 踢馆 OLAP"/>
@@ -96,7 +96,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.5f438fec60055d31c00ef3b0d50a8f1b.json"
+    data-offline-search-index-json-src="/offline-search-index.b0a8b845b72511ad0acd7a2cc0a1a3c8.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -120,7 +120,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.5f438fec60055d31c00ef3b0d50a8f1b.json"
+    data-offline-search-index-json-src="/offline-search-index.b0a8b845b72511ad0acd7a2cc0a1a3c8.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -277,7 +277,7 @@ if (!doNotTrack) {
   <ul class="ul-2 foldable">
     <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudexit-li">
   <input type="checkbox" id="m-zhblogcloudexit-check"/>
-  <label for="m-zhblogcloudexit-check"><a href="/zh/blog/cloud/exit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudexit"><span class="">云计算泥石流：下云专栏合订本</span></a></label>
+  <label for="m-zhblogcloudexit-check"><a href="/zh/blog/cloud/exit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudexit"><span class="">云计算泥石流：文章导航</span></a></label>
   
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudaliyun-ha-li">
   <input type="checkbox" id="m-zhblogcloudaliyun-ha-check"/>
@@ -1159,36 +1159,36 @@ if (!doNotTrack) {
 <hr>
 <h2 id="分析性能史诗级加强">分析性能史诗级加强</h2>
 <p>TPC-H 和 Clickbench 是分析领域的权威评测，Clickbench 上有许多 OLAP 数据库性能的横向对比，可以作为量化参考依据。例如在这个最有代表性的例子中，我们可以看到许多知名的数据库组件的相对性能表现（耗时越短越好）：</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlSBXxvkR3eZCr7qxibg4t29h8iaA0dkz8dtMcms8Ll2zd06fL5FiaHqdztg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="olap.jpg" src="/zh/blog/releases/v2.6.0/olap.jpg"></p>
 <p>c6a.4xlarge, 500gb gp2 / 10亿条记录</p>
 <p>在这张图表上我们标注出了 PostgreSQL 与生态扩展插件的性能表现。原生未经过调优的 PostgreSQL 耗时（<strong>x1000</strong>），调优后可以达到（<strong>x47</strong>），同时，PG生态还有三个与分析有关系的扩展：列存 <strong>Hydra</strong>（<strong>x42</strong>），时序扩展 <strong>TimescaleDB</strong>（<strong>x103</strong>），以及分布式扩展 <strong>Citus</strong>（<strong>x262</strong>）。但与专注于 OLAP 的第一梯队组件：Umbra，ClickHouse，Databend，SelectDB（<strong>x3~x4</strong>）相比仍然有十几倍的性能差距。然而最近出现的 <a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486913&idx=1&sn=3b7d8cf3f0e323932aba52c897f3c7a4&chksm=fe4b381ac93cb10cc6175c4c7978b5903946d369fe0084fbae5edf76ab08d84134260f28dffc&scene=21#wechat_redirect"><strong>ParadeDB</strong></a> 和 <strong>DuckDB</strong> 的出现改变了这一点！</p>
 <p><strong>ParadeDB</strong> 提供的 PG 原生扩展 <strong>pg_analytics</strong> 实现了第二梯队（<strong>x10</strong>）的性能表现，与第一梯队的 OLAP 数据库只有 3～4 倍的性能差距。比起额外的好处来说：ACID，数据新鲜性，无需 ETL，额外学习成本，维护独立的新服务，（更别提它还提供了 ElasticSearch 质量的全文检索能力），这种性能差距通常是可以接受的。</p>
 <p>而 <strong>DuckDB</strong> （<strong>x3.2</strong>）则把 OLAP 拔高到了一个全新高度 —— 抛开 Umbra 这种学术类研究数据库的用例，DuckDB 也许是 OLAP 实战性能最快的分析数据库。虽然说它并不是 PG 的扩展插件，但它是一个嵌入式组件，而 <strong>DuckDB FDW</strong> 以及 <strong>pg_quack</strong> 这样的项目能让 PostgreSQL 充分利用到 DuckDB 带来的完整分析性能红利！</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2rWhN2vRTRJaYueksEbIoibQLdibx3suzNKic5KdJ6wG8micUh0ia5TN8J6OdUnrtgqSyibZUxBvxSibSKw/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="duck.jpg" src="/zh/blog/releases/v2.6.0/duck.jpg"></p>
 <p>来自 ParadeDB 创始人与 DuckdbFDW 作者的感谢致意</p>
 <hr>
 <h2 id="全新的价值主张">全新的价值主张</h2>
 <p>价值主张是数据库发行版的灵魂，在这个版本中，我们提出了<strong>六条核心价值</strong>，如下图所示：</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_jpg/Wkpr3rA9wF0btsIHOLTwdiaGqOJG2FYLZ9LPicYiaicFHKoK17CcoDrA0zGh7fvQs1p5nNW4BdeDUf7MrPichRHllcQ/640?wx_fmt=jpeg&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="value1.jpg" src="/zh/blog/releases/v2.6.0/value1.jpg"></p>
 <p>这张图列出了 PostgreSQL 要解决的六个核心问题：Postgres 的可扩展性，基础设施的可靠性，图形化的可观测性，服务的可用性，工具的可维护性，以及扩展模块和三方组件可组合性。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0btsIHOLTwdiaGqOJG2FYLZHZ1TmdRMPPYKWQooWvMa4ibpJDyJFc8j9hw5690MYHXeiaYh1wjiaqPzw/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="value2.jpg" src="/zh/blog/releases/v2.6.0/value2.jpg"></p>
 <p>Pigsty 的六条缩写正好构成 PIGSTY 首字母缩写 —— 除了 <strong>P</strong>ostgreSQL <strong>i</strong>n <strong>G</strong>reat <strong>STY</strong>le 之外，这六点价值主张提供了另外一种缩写解释：</p>
 <blockquote>
 <p><strong>P</strong>ostgres, <strong>I</strong>nfras, <strong>G</strong>raphics, <strong>S</strong>ervice, <strong>T</strong>oolbox, <strong>Y</strong>ours.</p>
 <p>你的图形化 Postgres 基础设施服务工具箱。</p>
 </blockquote>
 <p>同时我们还重新设计了 Logo，从戴墨镜的装象猪头变成了六边形组合，配色正好是这些关键组件的颜色（PG蓝，ETCD青，Grafana橙，Ansible黑，Redis/MinIO 红，Nginx绿），是上图大六边形的一个浓缩精简版本。原来的墨镜小猪将作为 Pigsty 项目的吉祥物继续存在。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0btsIHOLTwdiaGqOJG2FYLZITF8o863QvAnvKwglkqRjdIg4PZicWLHyrkhvlsMzb1ozJR037XNy9g/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="mascot.jpg" src="/zh/blog/releases/v2.6.0/mascot.jpg"></p>
 <hr>
 <h2 id="全新的网站">全新的网站</h2>
 <p>在这个版本中，我们重新翻修了老网站。使用了最新版本的 Docsy 作为文档框架，并更新调整了大量内容。我们放弃了花哨繁而不实的设计，直接把将 Pigsty 的价值主张与核心特性放在 Landing Page 上。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0btsIHOLTwdiaGqOJG2FYLZActVCQKeU20LUtXkwIhicf38wFGzs9FWKxNaPFibNonmFIRJ6dDGDhibg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="web1.jpg" src="/zh/blog/releases/v2.6.0/web1.jpg"></p>
 <p>而真正的内容，都在文档目录里，我们重新梳理设计了文档的目录结构</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF0btsIHOLTwdiaGqOJG2FYLZu0KgxRMGwHAiaE16os1tWDHFsT4h72q9PJfYUJib319ZrxI280IVbWeg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="web2.jpg" src="/zh/blog/releases/v2.6.0/web2.jpg"></p>
 <p>当然，抛下了纯 Markdown 的执念后，我们也可以在文档内容中使用一些好看的样式与花活。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlSKaOezy02YOUibcAVhYVUshwiarxtjJcRh2CD92MDNMc5NYEyD4TgFyicQ/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="web3.jpg" src="/zh/blog/releases/v2.6.0/web3.jpg"></p>
 <p>除了文档外，我们也整理了一下最近的文章纳入 Pigsty 博客。重新划分为六个专栏：云计算泥石流，数据库老司机，以及 PostgreSQL 的生态、开发、管理、内核四个板块。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2rWhN2vRTRJaYueksEbIoibm9suNwv9icFXcPIibtHXYviaFrARVF8aEJiaRfUByqssOOOCcUgrrpoWuA/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="web4.jpg" src="/zh/blog/releases/v2.6.0/web4.jpg"></p>
 <p>与此同时， Pigsty 提供的软件源也有了全球的镜像仓库，由 Cloudflare R2 强力驱动。并托管在 Cloudflare 上，为全球用户都带来丝滑的访问体验（当然国内可以继续使用 pigsty.cc ）。</p>
 <hr>
 <h2 id="postgresql-16-成为默认版本">PostgreSQL 16 成为默认版本</h2>
@@ -1196,7 +1196,7 @@ if (!doNotTrack) {
 <p>在三个月前的 《<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486540&idx=1&sn=b14725207c993018836c4cf60d936ced&chksm=fe4b3997c93cb08185bb598ab5121238fc7dec371ff3cb0d99c99962f68d478f88a8485bccaa&scene=21#wechat_redirect">Pigsty v2.5.1发布：PG16能打了吗？</a>》 中，我们已经指出 PostgreSQL 的主要扩展插件已经就位，加上第二个小版本发布，可以上生产环境了。</p>
 <p>而 Pigsty v2.6 正值 PostgreSQL 16.2 第三个小版本发布，Hydra，PGML，AGE 这几个重要扩展也跟进了 PG 16，所以我们决定，正式将默认的 PG 大版本升级为 16 ，而且将成为开源版唯一支持的 PG 大版本（EL7除外）。</p>
 <p>因此，在这个版本中，我们做出的另一个重要的技术决策是：在开源版中移除了默认囊括的 PG 12 - 15 软件包与扩展。Pigsty 并非不支持 PG 12 - 15，只需要稍微调整配置文件，就可以轻松使用老版本的 PostgreSQL 扩展插件，只是我们不会再针对这些版本启用集成测试了（虽然在老版本的 Pigsty 里已经测试的很充分了）。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlS92b1GHr5Wyp7ibaaYIvIY4EibibdxtyE8tCsxup8JRIcZvLE13Oibhp2lA/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="pg16.jpg" src="/zh/blog/releases/v2.6.0/pg16.jpg"></p>
 <p>同理，我们也将开源版本的支持范围进一步收窄，缩小到 EL 8 / EL 9 与 Ubuntu 22.04 这三个使用范围最广的操作系统发行版上来。因为在 Pigsty 2.5 的时候，我们支持的是 PG 12 - 16 五个大版本乘以七个操作系统发行版，共 34 种排列组合，加上后续的 ARM 适配支持，给测试带来了很大压力。</p>
 <p>让开源版聚焦于一个核心PG大版本与三个主流操作系统大版本，可以更好的利用研发带宽，满足最广大开源用户的使用需求。同理，这并不意味着 Pigsty 不能在老系统上用了，你依然可以在 EL7，Ubuntu 20.04，Debian 11/12 上丝滑运行，但我们不会为这些操作系统提供离线软件包，冒烟测试与支持了。</p>
 <p>对于小众冷门操作系统系统与过时大版本的支持，并不是占总体绝大多数用户所需要的，却需要耗费许多额外的精力与成本，因此纳入了我们的付费商业支持中。</p>
@@ -1204,17 +1204,17 @@ if (!doNotTrack) {
 <h2 id="开源版与专业版划分">开源版与专业版划分</h2>
 <p>有一些开源用户反馈 —— 我并不需要那些和 PostgreSQL 关系不大的东西来拖慢下载安装速度并增加管理复杂度 —— 什么 Redis, MinIO, Docker, K8S，Supabase 之类的，虽然你觉得这些东西能给 PG 打辅助，但花里胡哨的东西只会拖慢我出刀的速度。</p>
 <p>具体的功能切割方式还没有确定与落地，因此 2.6 也许是最后一个全功能的 Pigsty 开源版本。但基本原则是，开源版将保留所有的核心功能模块与PG扩展插件（PGSQL, INFRA, NODE, ETCD），而与 PostgreSQL 关系没有那么紧密的模块，在后续可能会作为专业版的内容提供。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlSicfar9wUNjtPDvy5EzkPlL7NkEQLfILLjd6Il0LL1XXWQmrMoO8LtLQ/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="pro.jpg" src="/zh/blog/releases/v2.6.0/pro.jpg"></p>
 <p>在后面，Pigsty 开源版将专注于做好一件事 —— 提供可靠，高可用，可扩展的本地 PostgreSQL RDS 服务，当然像 Docker 模板这样的实用特性可能还是会留开源版中。</p>
 <p>并不是说这些功能在开源版 Pigsty 里就没有了，我相信开源老师傅还是可以很轻松的仅仅通过修改配置文件就把它们重新弄出来，但这些功能不会成为开源版本的默认组成部分了。</p>
 <hr>
 <h2 id="商业订阅服务">商业订阅服务</h2>
 <p>开源是用爱发电的情怀事业，但要想让这条路走得更长，还需要商业的利益来浇灌。在这个版本中，我们正式推出了商业版本的 Pigsty，为有需要的用户提供更丰富的支持选项。</p>
 <p>除了提供额外功能模块支持，Pigsty 专业订阅 还提供了咨询答疑与兜底服务。并且支持更为宽泛的操作系统与数据库版本，如下表所示：</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlStjZmSsSyv55fwLaH6MeYT6Q2VA6dZmCicJY6L28lxkUXL3QHk2JxndQ/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="svc.jpg" src="/zh/blog/releases/v2.6.0/svc.jpg"></p>
 <p>尽管 Pigsty 本身的宗旨便是让用户拥有开箱即用的数据库服务，甚至还带有硬件故障自愈的 HA 和为软件/人为失误兜底的时间点恢复PITR。也许你拉起了它，一年、两年、三年都没有遇到任何问题 —— 从概率上讲这蛮正常的。</p>
 <p>但数据库出了问题，通常都是大问题。用不好数据库，也容易发展成大问题。所以我们也会为付费用户提供专家咨询与服务，作为最终的疑难杂症兜底。（例子：我们<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486234&idx=1&sn=d1273152e624fb31bf7be2c8f3991315&chksm=fe4b3ec1c93cb7d7ffd84c438746f3379fab6dc5b2ed98ae37d40538a4d064d6fefcb4e458a4&scene=21#wechat_redirect">抢救过一个烤糊的，没有备份的 Gitlab 数据库</a>）。与此同时，我们也可以提供<a href="http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247486903&idx=1&sn=01c57499f41e8f51045bb8dd52586595&chksm=fe4b386cc93cb17a2d2fad903e809107162cc1e67e8ad7c8bfdd51de657c97f32f912cabe550&scene=21#wechat_redirect">专业 PostgreSQL DBA 的咨询服务</a>。提供备份、安全、合规建议，管理开发最佳实践，性能评估与优化，设计建议与答疑解惑。</p>
-<p><img alt="图片" src="https://mmbiz.qpic.cn/mmbiz_png/Wkpr3rA9wF2AjrSq2oprktCwXqVmghlSdjUicHSKBRWGKBszQLtjEUsicQiaD2u5ANoxPVURMSDSLVR77zN5nbYeg/640?wx_fmt=png&from=appmsg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1"></p>
+<p><img alt="sub.jpg" src="/zh/blog/releases/v2.6.0/sub.jpg"></p>
 <p>许多时候，化腐朽为神奇，能带来几个数量级改善的秘密就是专家的一句话。对于以可扩展性作为灵魂，扩展生态极度繁荣的 PostgreSQL 来说更是如此。我们的服务可以确保您的每一分钱都花得物有所值，并花在真正的刀刃上。</p>
 <hr>
 <h2 id="展望未来">展望未来</h2>
@@ -1298,7 +1298,7 @@ if (!doNotTrack) {
 </ul>
 
 	<div class="td-page-meta__lastmod">
-  Last modified 2024-05-22: <a href="https://github.com/Vonng/pigsty.cc/commit/d83b9d3ff37eb18da7e8ee9a73550103e251075f">add release note image (d83b9d3)</a>
+  Last modified 2024-09-29: <a href="https://github.com/Vonng/pigsty.cc/commit/ca050f4e998debe938644eea543d7bbd0e936b46">update release note (ca050f4)</a>
 </div>
 </div>
 
