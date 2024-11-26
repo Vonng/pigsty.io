@@ -1,0 +1,536 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – 云故障</title>
+    <link>/zh/tags/%E4%BA%91%E6%95%85%E9%9A%9C/</link>
+    <description>Recent content in 云故障 on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    <lastBuildDate>Tue, 17 Sep 2024 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="/zh/tags/%E4%BA%91%E6%95%85%E9%9A%9C/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Blog: 阿里云：高可用容灾神话破灭</title>
+      <link>/zh/blog/cloud/aliyun-ha/</link>
+      <pubDate>Tue, 17 Sep 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/aliyun-ha/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/aliyun-ha/featured_hu02aa61ae1d9de35cbe238d2676170cb9_676376_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;2024年9月10日，阿里云新加坡可用区C数据中心因锂电池爆炸导致火灾，到现在已经过去一周了，仍未完全恢复。
+按照月度 SLA 定义的可用性计算规则（7天+/30天≈75%），&lt;strong&gt;服务可用性别说几个9了，连一个8都不剩了&lt;/strong&gt;，而且还在进一步下降中。
+当然，可用性八八九九已经是小问题了 —— 真正的问题是，放在单可用区里的数据还能不能找回来？&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://status.aliyun.com/#/?region=ap-southeast-1&#34;&gt;&lt;img alt=&#34;status.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/status.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;截止至 09-17，关键服务如 ECS, OSS, EBS, NAS, RDS 等仍然处于异常状态&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;通常来说，如果只是机房小范围失火的话，问题并不会特别大，因为电源和UPS通常放在单独房间内，与服务器机房隔离开。
+但一旦触发了消防淋水，问题就大条了：一旦服务器整体性断电，恢复时间基本上要以天计；
+如果泡水，那就不只是什么可用性的问题了，要考虑的是数据还能不能找回 —— &lt;strong&gt;数据完整性&lt;/strong&gt; 的问题了。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=21&#34;&gt;&lt;img alt=&#34;event.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/event.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;目前公告上的说法是，14号晚上已经拖出来一批服务器，正在干燥、一直到16号都没干燥完。从这个“干燥”说法来看，有很大概率是泡水了。
+虽然在任何官方公告出来前，我们无法断言事实如何，但根据常理判断，出现数据一致性受损是大概率事件，只是丢多丢少的问题。
+所以目测这次新加坡火灾大故障的影响，基本与 2022 年底 &lt;a href=&#34;https://help.aliyun.com/noticelist/articleid/1061819219.html&#34;&gt;香港盈科机房大故障&lt;/a&gt; 与2023年&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;双十一全球不可用&lt;/a&gt; 故障在一个量级甚至更大。&lt;/p&gt;
+&lt;p&gt;天有不测风云，人有旦夕祸福。故障的发生概率不会降为零，重要的是我们从中故障能学到什么经验与教训？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;容灾实战战绩&#34;&gt;容灾实战战绩&lt;/h2&gt;
+&lt;p&gt;整个数据中心着火是一件很倒霉的事，绝大多数用户除了靠异地冷备份逃生外，通常也只能自认倒霉。我们可以讨论锂电池还是铅酸电池更好，UPS电源应该怎么布局这类问题，但因为这些责备阿里云也没什么意义。&lt;/p&gt;
+&lt;p&gt;但有意义的是，在这次 &lt;strong&gt;可用区级故障中&lt;/strong&gt;，标称自己为 “&lt;strong&gt;跨可用区容灾高可用&lt;/strong&gt;” 的产品，例如云数据库 RDS，到底表现如何？&lt;strong&gt;故障给了我们一次用真实战绩来检验这些产品容灾能力的机会。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;容灾的核心指标是 &lt;strong&gt;RTO&lt;/strong&gt; （恢复耗时）与 &lt;strong&gt;RPO&lt;/strong&gt;（数据损失），而不是什么几个9的可用性 —— 道理很简单，你可以单凭运气做到不出故障，实现 100% 的可用性。但真正检验容灾能力的，是灾难出现后的恢复速度与恢复效果。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;配置策略&lt;/th&gt;
+&lt;th&gt;RTO&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;RPO&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-music text-danger&#34;&gt;&lt;/i&gt; 什么也不做&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;数据永久丢失，无法恢复&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;数据全部丢失&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-copy text-secondary&#34;&gt;&lt;/i&gt; 基础备份&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; 取决于备份大小与带宽（几小时）&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; 丢失上一次备份后的数据（几个小时到几天）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-copy text-primary&#34;&gt;&lt;/i&gt; 基础备份 + &lt;i class=&#34;fa-solid fa-clock-rotate-left text-primary&#34;&gt;&lt;/i&gt; WAL归档&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; 取决于备份大小与带宽（几小时）&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; 丢失最后尚未归档的数据（几十MB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-wrench text-secondary&#34;&gt;&lt;/i&gt; 手工故障切换&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt;  十分钟&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 丢失复制延迟中的数据（约百KB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; 自动故障切换&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 一分钟内&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 丢失复制延迟中的数据（约百KB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; 自动故障切换 + &lt;i class=&#34;fa-solid fa-rotate text-success&#34;&gt;&lt;/i&gt; 同步提交&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; 一分钟内&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; 无数据丢失&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;毕竟，&lt;a href=&#34;/zh/blog/cloud/sla&#34;&gt;&lt;strong&gt;SLA&lt;/strong&gt;&lt;/a&gt; 中的规定的几个9 可用性指标&lt;strong&gt;并非真实历史战绩&lt;/strong&gt;，而是达不到此水平就补偿月消费XX元代金券的承诺。要想考察产品真正的容灾能力，还是要靠演练或真实灾难下的实际战绩表现。&lt;/p&gt;
+&lt;p&gt;然而实际战绩如何呢？在这次在这次新加坡火灾中，整个可用区 RDS 服务的切换用了多长时间 —— 多AZ高可用的 RDS 服务在 11:30 左右完成切换，&lt;strong&gt;耗时 70 分钟&lt;/strong&gt;（10:20 故障开始），也就是 &lt;strong&gt;RTO &amp;lt; 70分&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这个指标相比 2022 年香港C可用区故障 RDS 切换的的 &lt;strong&gt;133&lt;/strong&gt; 分钟，有进步。但和阿里云自己标注的指标（&lt;strong&gt;RTO &amp;lt; 30秒&lt;/strong&gt;）还是差了两个数量级。&lt;/p&gt;
+&lt;p&gt;至于单可用区的基础版 RDS 服务，官方文档上说 &lt;strong&gt;RTO &amp;lt; 15分&lt;/strong&gt;，实际情况是：单可用区的RDS都要过头七了。&lt;strong&gt;RTO &amp;gt; 7天&lt;/strong&gt;，至于 RTO 和 RPO 会不会变成 &lt;strong&gt;无穷大 ∞&lt;/strong&gt; （彻底丢完无法恢复），我们还是等官方消息吧。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;如实标注容灾指标&#34;&gt;如实标注容灾指标&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/zh/rds/product-overview/competitive-advantages-of-apsaradb-rds-instances-over-self-managed-databases&#34;&gt;阿里云官方文档&lt;/a&gt; 宣称：RDS 服务提供多可用区容灾， “&lt;em&gt;高可用系列和集群系列提供自研高可用系统，实现&lt;strong&gt;30秒&lt;/strong&gt;内故障恢复。基础系列约&lt;strong&gt;15分钟&lt;/strong&gt;即可完成故障转移&lt;/em&gt;。”
+也就是高可用版 RDS 的 RTO &amp;lt; 30s，基础单机版的 RTO &amp;lt; 15min，中规中矩的指标，没啥问题。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/zh/rds/product-overview/competitive-advantages-of-apsaradb-rds-instances-over-self-managed-databases&#34;&gt;&lt;img alt=&#34;rds.jpg&#34; src=&#34;/zh/blog/cloud/aliyun-ha/rds.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;我相信在单个集群的主实例出现单机硬件故障时，阿里云 RDS 是可以实现上面的容灾指标的 —— 但既然这里声称的是 “&lt;strong&gt;多可用区容灾&lt;/strong&gt;”，那么用户的合理期待是当整个可用区故障时，RDS 故障切换也可以做到这一点。&lt;/p&gt;
+&lt;p&gt;可用区容灾是一个合理需求，特别是考虑到阿里云在最近短短一年内出现过好几次整个可用区范围的故障（**&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;甚至还有一次全球/全服务级别的故障&lt;/a&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;2024-09-10 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=21&#34;&gt;&lt;strong&gt;新加坡可用区C机房火灾&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-07-02 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=20&#34;&gt;&lt;strong&gt;上海可用区N网络访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-04-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=19&#34;&gt;浙江地域访问其他地域或其他地域访问杭州地域的OSS、SLS服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-04-25 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=18&#34;&gt;&lt;strong&gt;新加坡地域可用区C部分云产品服务异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-11-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=17&#34;&gt;&lt;strong&gt;阿里云部分地域云数据库控制台访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-11-12 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=16&#34;&gt;&lt;strong&gt;阿里云云产品控制台服务异常&lt;/strong&gt;&lt;/a&gt; （&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;全球大故障&lt;/a&gt;）&lt;/p&gt;
+&lt;p&gt;2023-11-09 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=15&#34;&gt;中国内地访问中国香港、新加坡地域部分EIP无法访问&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-10-12 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=14&#34;&gt;阿里云杭州地域可用区J、杭州地域金融云可用区J网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-07-31 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=13&#34;&gt;暴雨影响北京房山地域NO190机房&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-21 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=12&#34;&gt;&lt;strong&gt;阿里云北京地域可用区I网络访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-20 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=11&#34;&gt;部分地域电信网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-16 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=10&#34;&gt;移动网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-13 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=9&#34;&gt;阿里云广州地域访问公网网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-05 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=8&#34;&gt;中国香港可用区D某机房机柜异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-05-31 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=7&#34;&gt;阿里云访问江苏移动地域网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-05-18 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=6&#34;&gt;阿里云杭州地域云服务器ECS控制台服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-04-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=5&#34;&gt;部分北京移动(原中国铁通) 用户网络访问存在丢包现象&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-04-26 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=4&#34;&gt;杭州地域容器镜像服务ACR服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-03-01 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=3&#34;&gt;深圳可用区A部分ECS访问Local DNS异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-02-18 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=2&#34;&gt;阿里云广州地域网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2022-12-25 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=1&#34;&gt;&lt;strong&gt;阿里云香港地域电讯盈科机房制冷设备故障&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;那么，为什么在实战中，单个RDS集群故障可以做到的指标，在可用区级故障时就做不到了呢？&lt;strong&gt;从历史的故障中我们不难&lt;/strong&gt;推断&lt;/strong&gt; —— 数据库高可用依赖的基础设施本身，很可能就是单AZ部署的。包括在先前&lt;a href=&#34;https://www.aliyun.com/noticelist/articleid/1061819219.html&#34;&gt;香港盈科机房故障&lt;/a&gt;中展现出来的 ：单可用区的故障很快蔓延到了整个 Region —— &lt;strong&gt;因为管控平面本身不是多可用区容灾的&lt;/strong&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;12月18日10:17开始，阿里云香港Region可用区C部分RDS实例出现不可用的报警。随着该可用区受故障影响的主机范围扩大，出现服务异常的实例数量随之增加，工程师启动数据库应急切换预案流程。截至12:30，RDS MySQL与Redis、MongoDB、DTS等大部分跨可用区实例完成跨可用区切换。部分单可用区实例以及单可用区高可用实例，由于依赖单可用区的数据备份，仅少量实例实现有效迁移。少量支持跨可用区切换的RDS实例没有及时完成切换。&lt;strong&gt;经排查是由于这部分RDS实例依赖了部署在香港Region可用区C的代理服务&lt;/strong&gt;，由于代理服务不可用，无法通过代理地址访问RDS实例。我们协助相关客户通过临时切换到使用RDS主实例的地址访问来进行恢复。随着机房制冷设备恢复，21:30左右绝大部分数据库实例恢复正常。对于受故障影响的单机版实例及主备均在香港Region可用区C的高可用版实例，我们提供了克隆实例、实例迁移等临时性恢复方案，但由于底层服务资源的限制，部分实例的迁移恢复过程遇到一些异常情况，需要花费较长的时间来处理解决。&lt;/p&gt;
+&lt;p&gt;ECS管控系统为B、C可用区双机房容灾，C可用区故障后由B可用区对外提供服务，由于大量可用区C的客户在香港其他可用区新购实例，同时可用区C的ECS实例拉起恢复动作引入的流量，导致可用区 B 管控服务资源不足。新扩容的ECS管控系统启动时依赖的中间件服务部署在可用区C机房，导致较长时间内无法扩容。ECS管控依赖的自定义镜像数据服务，&lt;strong&gt;依赖可用区C的单AZ冗余版本的OSS服务&lt;/strong&gt;，导致客户新购实例后出现启动失败的现象。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;我建议在包括 RDS 在内的云产品应当实事求是，如实标注历史故障案例里的 RTO 和 RPO 战绩，以及真实可用区灾难下的实际表现。不要笼统地宣称 “&lt;em&gt;&lt;strong&gt;30秒/15分钟恢复，不丢数据，多可用区容灾&lt;/strong&gt;&lt;/em&gt;”，承诺一些自己做不到的事情。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;阿里云的可用区到底是什么&#34;&gt;阿里云的可用区到底是什么？&lt;/h2&gt;
+&lt;p&gt;在这次新加坡C可用区故障，包括之前香港C可用区故障中，阿里云表现出来的一个问题就是，单个数据中心的故障扩散蔓延到了整个可用区中，而单个可用区的故障又会影响整个区域。&lt;/p&gt;
+&lt;p&gt;在云计算中， &lt;strong&gt;区域（Region）&lt;/strong&gt; 与 &lt;strong&gt;可用区（AZ）&lt;/strong&gt; 是一个非常基本的概念，熟悉 AWS 的用户肯定不会感到陌生。
+按照 &lt;a href=&#34;https://aws.amazon.com/cn/about-aws/global-infrastructure/regions_az&#34;&gt;AWS的说法&lt;/a&gt; ：一个 &lt;strong&gt;区域&lt;/strong&gt; 包含多个可用区，每个可用区是一个或多个独立的数据中心。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;aws-az-region.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/aws-az-region.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;对于 AWS 来说，并没有特别多的 Region，比如美国也就四个区域，但每个区域里 &lt;a href=&#34;https://gist.github.com/karstenmueller/98381c897178a260be8c08f98ffe2c3e&#34;&gt;两三个可用区&lt;/a&gt;，而一个可用区（AZ）通常对应着多个数据中心（DC）。
+AWS 的实践是一个 DC 规模控制在八万台主机，DC之间距离在 70 ～ 100 公里。这样构成了一个 Region - AZ - DC 的三级关系。&lt;/p&gt;
+&lt;p&gt;不过 &lt;a href=&#34;https://help.aliyun.com/document_detail/40654.html&#34;&gt;阿里云&lt;/a&gt; 上似乎不是这样的，它们缺少了一个关键的 &lt;strong&gt;数据中心（DC）&lt;/strong&gt; 的概念。
+因此 &lt;strong&gt;可用区（AZ）&lt;/strong&gt; 似乎就是一个数据中心，而 &lt;strong&gt;区域（Region）&lt;/strong&gt; 与 AWS 的上一层 &lt;strong&gt;可用区（AZ）概念&lt;/strong&gt; 对应。&lt;/p&gt;
+&lt;p&gt;把原本的 AZ 拔高成了 Region，把原本的 DC （或者DC的一部分，一层楼？）拔高成了可用区。&lt;/p&gt;
+&lt;p&gt;我们不好说阿里云这么设计的动机，一种可能的猜测是：本来可能阿里云国内搞个华北，华东，华南，西部几个区域就行，但为了汇报起来带劲（你看AWS美国才4个Region，我们国内有14个！），就搞成了现在这个样子。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云厂商有责任推广最佳实践&#34;&gt;云厂商有责任推广最佳实践&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;提供单az对象存储服务的云，可不可以评价为：不是傻就是坏？&lt;/p&gt;
+&lt;p&gt;云厂商有责任推广好的实践，不然出了问题，也还是“都是云的问题”&lt;/p&gt;
+&lt;p&gt;你给别人默认用的就是本地三副本冗余，绝大多数用户就会选择你默认的这个。&lt;/p&gt;
+&lt;p&gt;看有没有告知,没告知，那就是坏，告知了，长尾用户能不能看懂？但其实很多人不懂的。&lt;/p&gt;
+&lt;p&gt;你都已经三副本存储了，为什么不把一个副本放在另一个 DC 或者另一个 AZ ？
+你都已经在存储上收取了上百倍的溢价了，为什么就不不愿意多花一点点钱去做同城冗余，难道是扣数据跨 AZ 复制的那点流量费吗？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;做健康状态页请认真一点&#34;&gt;做健康状态页请认真一点&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;我听说过天气预报，但从未听说过故障预报。但阿里云健康看板为我们提供了这一神奇的能力 —— 你可以选择未来的日期，而且未来日期里还有服务健康状态数据。例如，你可以查看20年后的服务健康状态 ——&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;2044.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/2044.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;未来的 “故障预报” 数据看上去是用当前状态填充的。所以当前处于故障状态的服务在未来的状态还是异常。如果你选择 20 年后，你依然可以看到当前新加坡大故障的健康状态为“异常”。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;也许&lt;/strong&gt; 阿里云是想用这种隐晦的方式告诉用户：&lt;em&gt;&lt;strong&gt;新加坡区域单可用区里的数据已经泡汤了，Gone Forever, 乃们还是不要指望找回了&lt;/strong&gt;&lt;/em&gt;。当然，更合理推断是：这不是什么故障预报，这个健康看板是实习生做的。完全没有设计 Review，没有 QA 测试，不考虑边际条件，拍拍脑袋拍拍屁股就上线了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云是新的故障单点那怎么办&#34;&gt;云是新的故障单点，那怎么办？&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;信息安全三要素 CIA：机密性，完整性，可用性，最近阿里都遇上了大翻车。&lt;/p&gt;
+&lt;p&gt;前有 &lt;a href=&#34;https://mp.weixin.qq.com/s/C7XGgGmzvMjKJGbBGVmrzw&#34;&gt;阿里云盘灾难级BUG&lt;/a&gt; 泄漏隐私照片破坏机密性；&lt;/p&gt;
+&lt;p&gt;后有这次可用区故障故障，击穿多可用区/单可用区可用性神话，甚至威胁到了命根子 —— 数据完整性。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/odyssey/&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;FinOps的终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/profit/&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/rds/&#34;&gt;云数据库是不是智商税？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/paradigm/&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cdn/&#34;&gt;腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908#rd&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486438&amp;idx=1&amp;sn=b2c489675134d4e84fbc249089777cb4&amp;chksm=fe4b3e3dc93cb72b5d0d90ef61011dda5a09e5f08d96c8cca87148706451c859777162bd18da#rd&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;chksm=fe4b3e68c93cb77ed5b627c8caf78666cab9deafc18dacf528e51411682e616b4df1deab87f9&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483770&amp;idx=1&amp;sn=723c865ff27fd0ceace1d8fb2c76ddca&amp;chksm=c0ca8db0f7bd04a63f79aba185e093bbb0ab5763b1f91f58cfc86551daf7e47bd6627dd8c73b#rd&#34;&gt;阿里云的故障在其他云也可能发生,并且可能丢数据&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483764&amp;idx=1&amp;sn=8aebb4053257fac48f71b75a957153ad&amp;chksm=c0ca8dbef7bd04a816feba238a2232abdc02b5ccdb405f32217455dc3bf3a1811bd4ff8815af#rd&#34;&gt;中国云服务走向全球？先把 Status Page 搞定&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483759&amp;idx=1&amp;sn=eb12dfe4df37c22aadd120676391f4cb&amp;chksm=c0ca8da5f7bd04b3a024111b5c3be9f273c70087cc986937e72e12d7a0fe496753a88568afe9#rd&#34;&gt;我们可以信任阿里云的故障处理吗?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483762&amp;idx=1&amp;sn=903405e0b64037f1b7d44b23f0c9b08d&amp;chksm=c0ca8db8f7bd04ae55f719df891d811d05269dac3a8e0a894d23292e06674058c943712672f5#rd&#34;&gt;给阿里云的一封公开信&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484048&amp;idx=1&amp;sn=b57839c9dc85fe3dc6eaac01ff37b995&amp;chksm=c0ca8e5af7bd074ca5221de40c47b82378a8ca20f348ab1c80de7d244679733ee80e29cb3381#rd&#34;&gt;平台软件应该像数学一样严谨 &amp;mdash; 和阿里云RAM团队商榷&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484025&amp;idx=1&amp;sn=5c6f1b0035b7f9a657a5d24d68699943&amp;chksm=c0ca8eb3f7bd07a550325dd691c5761cbf99a9b4644d14c9bbb512dc9ecd27033622bb83e58e#rd&#34;&gt;被医药业吊打的中国软件从业者&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484019&amp;idx=1&amp;sn=5dbe25e5c8d39a67bf9e9573ba2e9b98&amp;chksm=c0ca8eb9f7bd07af03f6d1228d73153fc37479a132a697c310851bfbffcf997ce991a7c2f010#rd&#34;&gt;腾讯的错别字文化&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484064&amp;idx=1&amp;sn=cedf630065c88b936133001f84690c75&amp;chksm=c0ca8e6af7bd077c417aae032cc91281808e8768ea4f103dd1c71039986079c49bbd0aa03507#rd&#34;&gt;云为什么留不住客户 — 以腾讯云 CAM 为例&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483883&amp;idx=1&amp;sn=f2644e9ff54790b319d63a1ffb26e717&amp;chksm=c0ca8d21f7bd0437b3be51f1d093ff45fac4e36552cdbf8b27c8d0ec5470e85ac46dd7f136a3#rd&#34;&gt;腾讯云团队为什么用阿里云的服务名？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483846&amp;idx=1&amp;sn=9a2f3cd59147d2444b7432ecf50af9ba&amp;chksm=c0ca8d0cf7bd041a3f56fcf0bb4adbde8434d81818009f9906c0fa3d1121017996f572b0237e#rd&#34;&gt;究竟是客户差劲，还是腾讯云差劲？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483694&amp;idx=1&amp;sn=618a3aa4f196c30eb9e89969643b06e9&amp;chksm=c0ca8de4f7bd04f25b277942fb41da2092c073f3db55fb92020ba66f21e14522e823a8a3346c#rd&#34;&gt;百度腾讯阿里真的是高科技企业吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483663&amp;idx=1&amp;sn=27f37af0dc4e755d7a64f341de6d8aad&amp;chksm=c0ca8dc5f7bd04d3f4a4437a63958eb93be56722ed32c43385bf41631c86a869bdeada35af04#rd&#34;&gt;云计算厂商们，你们辜负了中国的用户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483712&amp;idx=1&amp;sn=acdb5adf0d588d9617ed72b5ffca8dd3&amp;chksm=c0ca8d8af7bd049c0a69cfebb950c07f599a807876a5d0748122e9a0b0528d216a8d5d968197#rd&#34;&gt;除了打折虚拟机, 云计算用户究竟在用什么高阶云服务?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483743&amp;idx=1&amp;sn=9f329de1649fac75f69e57270978d047&amp;chksm=c0ca8d95f7bd0483d6af4940ca342e2544135e9de0b56fa1a6f299c887800aae04c11b0551bd#rd&#34;&gt;腾讯云阿里云做的真的是云计算吗?&amp;ndash;从客户成功案例的视角&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483828&amp;idx=1&amp;sn=e03403d98876700134be4d1127371fe2&amp;chksm=c0ca8d7ef7bd0468677fc02cc47c530cdad242ac56ee485cb7b16667afafabc2339af0a995c6#rd&#34;&gt;本土云厂家究竟在服务谁？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 删库：Google云爆破了大基金的整个云账户</title>
+      <link>/zh/blog/cloud/gcp-unisuper/</link>
+      <pubDate>Sat, 11 May 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/gcp-unisuper/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/gcp-unisuper/featured_hu50ab7c4fbc198efd9360dce2beeed295_606930_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
+        
+        &lt;p&gt;由于“&lt;em&gt;&lt;strong&gt;前所未有的配置错误&lt;/strong&gt;&lt;/em&gt;”，Google Cloud 误删了 &lt;strong&gt;UniSuper&lt;/strong&gt; 的云账户。&lt;/p&gt;
+&lt;p&gt;澳洲养老金基金负责人与 Google Cloud 全球首席执行官联合发布声明，为这一“极其令人沮丧和失望”的故障表示道歉。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/gcp-unisuper/gcp-unisuper.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://x.com/0xdabbad00/status/1789011008549450025&#34;&gt;https://x.com/0xdabbad00/status/1789011008549450025&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;因为一次 Google Cloud “&lt;strong&gt;举世无双&lt;/strong&gt;” 的配置失误，澳洲养老金基金 Unisuper 的整个云账户被误删了，超过五十万名 UniSuper 基金会员一周都无法访问他们的养老金账户。故障发生后，服务于上周四开始恢复，UniSuper 表示将尽快更新投资账户的余额。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;UniSuper首席执行官 Peter Chun 在周三晚上向62万名成员解释，此次中断非由网络攻击引起，且无个人数据在此次事件中泄露。Chun 明确指出问题源于 Google的云服务。&lt;/p&gt;
+&lt;p&gt;在 Peter Chun 和 Google Cloud 全球CEO Thomas Kurian 的联合声明中，两人为此次故障向成员们致歉，称此事件“极其令人沮丧和失望”。他们指出，由于配置错误，导致 UniSuper 的云账户被删除，&lt;strong&gt;这是 Google Cloud 上前所未有的事件&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.unisuper.com.au/about-us/media-centre/2024/a-joint-statement-from-unisuper-and-google-cloud&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/gcp-unisuper/announcement.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.unisuper.com.au/about-us/media-centre/2024/a-joint-statement-from-unisuper-and-google-cloud&#34;&gt;UniSuper CEO 与 Google云 CEO 联合声明&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Google Cloud CEO Thomas Kurian 确认了这次故障的原因是，在设定 UniSuper 私有云服务过程中的一次疏忽，最终导致 UniSuper 的私有云订阅被删除。两人表示，这是一次孤立的、前所未有的事件，Google Cloud 已采取措施确保类似事件不再发生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;虽然 UniSuper 通常在两个不同的地理区域设置了备份，以便于服务故障或丢失时能够迅速恢复，&lt;strong&gt;但此次删除云订阅的同时，两地的备份也同时被删除了&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;万幸的是，因为 UniSuper 在另一家供应商里还有一个备份，所以最终成功恢复了服务。这些备份在极大程度上挽回了数据损失，并显著提高了 UniSuper 与 Google Cloud 完成恢复的能力。&lt;/p&gt;
+&lt;p&gt;“UniSuper 私有云实例的全面恢复，离不开双方团队的极大专注努力，以及双方的密切合作” 通过 UniSuper 与 Google Cloud 的共同努力与合作，我们的私有云得到了全面恢复，包括 &lt;strong&gt;数百台虚拟机、数据库和应用程序&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;UniSuper 目前管理着大约 &lt;strong&gt;1250 亿美元&lt;/strong&gt; 的基金。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;下云老冯评论&#34;&gt;下云老冯评论&lt;/h3&gt;
+&lt;p&gt;如果说 &lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;&lt;strong&gt;阿里云全球服务不可用&lt;/strong&gt;&lt;/a&gt; 大故障称得上是 “&lt;strong&gt;史诗级&lt;/strong&gt;”，那么 Google 云上的这一次故障堪称 “&lt;strong&gt;无双级&lt;/strong&gt;” 了。前者主要涉及服务的&lt;strong&gt;可用性&lt;/strong&gt;，而这次故障直击许多企业的命根 —— &lt;strong&gt;数据完整性&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;据我所知这应当是云计算历史上的新纪录 —— 第一次如此大规模的删库。上一次类似的数据完整性受损事件还是 &lt;a href=&#34;/zh/blog/cloud/sla.md#%E6%B6%88%E5%A4%B1%E7%9A%84%E5%8F%AF%E9%9D%A0%E6%80%A7&#34;&gt;&lt;strong&gt;腾讯云与 “前言数控” 的案例&lt;/strong&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;但一家小型创业公司与掌管千亿美金的大基金完全不可同日而语；影响的范围与规模也完全不可同日而语 —— &lt;strong&gt;整个云账户下的所有东西都没了！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这次事件再次展示了（异地、多云、不同供应商）&lt;strong&gt;备份&lt;/strong&gt;的重要性 —— UniSuper 是幸运的，他们在别的地方还有其他备份。&lt;/p&gt;
+&lt;p&gt;但如果你相信公有云厂商在其他的区域 / 可用区的数据备份可以帮你“兜底”，那么请记住这次案例 —— &lt;strong&gt;避免 Vendor Lock-in，并且 Always has Plan B&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;参考：&lt;a href=&#34;https://www.unisuper.com.au/about-us/media-centre/2024/a-joint-statement-from-unisuper-and-google-cloud&#34;&gt;英国卫报关于此次事件的报道&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 我们能从腾讯云大故障中学到什么?</title>
+      <link>/zh/blog/cloud/qcloud/</link>
+      <pubDate>Sun, 14 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/qcloud/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/qcloud/featured_hub66694ad4eb732902c5255ff25185583_250704_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
+        
+        &lt;p&gt;故障过去八天后，腾讯云发布了 4.8 号大故障的&lt;a href=&#34;https://mp.weixin.qq.com/s/2e2ovuwDrmwlu-vW0cKqcA&#34;&gt;&lt;strong&gt;复盘报告&lt;/strong&gt;&lt;/a&gt;。我认为是一件好事，因为阿里云&lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;双十一大故障&lt;/a&gt;的官方故障复盘至今仍然是拖欠着的。公有云厂商想要真正成为 —— &lt;strong&gt;提供水与电的公共基础设施&lt;/strong&gt;，那就需要承担起责任，接受公众监督 —— 云厂商有义务披露自己故障原因，并提出切实的可靠性改进方案与措施。&lt;/p&gt;
+&lt;p&gt;那么我们就来看一看这份复盘报告，看看里面有哪些信息，以及可以从中学到什么教训。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#事实是什么&#34;&gt;事实是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#原因是什么&#34;&gt;原因是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#影响是什么&#34;&gt;影响是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#评论与观点&#34;&gt;评论与观点？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#能学到什么&#34;&gt;能学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事实是什么&#34;&gt;事实是什么？&lt;/h2&gt;
+&lt;p&gt;按照腾讯云官方给出的复盘报告（官方发布的“权威事实”）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;15:23，监测到故障，立即执行服务的恢复，同时进行原因的排查；&lt;/li&gt;
+&lt;li&gt;15:47，发现通过回滚版本没能完全恢复服务，进一步定位问题；&lt;/li&gt;
+&lt;li&gt;15:57，定位出故障根因是配置数据出现错误，紧急设计数据修复方案；&lt;/li&gt;
+&lt;li&gt;16:02，对全地域进行数据修复工作，API服务逐地域恢复中；&lt;/li&gt;
+&lt;li&gt;16:05，观测到除上海外的地域API服务均已恢复，进一步定位上海地域的恢复问题；&lt;/li&gt;
+&lt;li&gt;16:25，定位到上海的技术组件存在API循环依赖问题，决定通过流量调度至其他地域来恢复；&lt;/li&gt;
+&lt;li&gt;16:45，观测到上海地域恢复了，此时API和依赖API的PaaS服务彻底恢复，但控制台流量剧增，按九倍容量进行了扩容；&lt;/li&gt;
+&lt;li&gt;16:50，请求量逐渐恢复到正常水平，业务稳定运行，控制台服务全部恢复；&lt;/li&gt;
+&lt;li&gt;17:45，持续观察一小时，未发现问题，按预案处理过程完毕。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;复盘报告给出的原因是：&lt;strong&gt;云API服务新版本向前兼容性考虑不够和配置数据灰度机制不足的问题&lt;/strong&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本次API升级过程中，由于新版本的接口协议发生了变化，在后台发布新版本之后对于旧版本前端传来的数据处理逻辑异常，导致生成了一条错误的配置数据，由于灰度机制不足导致异常数据快速扩散到了全网地域，造成整体API使用异常。&lt;/p&gt;
+&lt;p&gt;发生故障后，按照标准回滚方案将服务后台和配置数据同时回滚到旧版本，并重启API后台服务，但此时因为承载API服务的容器平台也依赖API服务才能提供调度能力，即发生了循环依赖，导致服务无法自动拉起。通过运维手工启动方式才使API服务重启，完成整个故障恢复。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这份复盘报告中有一个存疑的点：复盘报告将故障归因为：向前兼容考虑不足。&lt;strong&gt;向前兼容性&lt;/strong&gt;（Forward Compatibility）指的是老的版本的代码可以使用新版本的代码产生的数据。如果管控回滚到旧版本，无法读取由新版本产生的脏数据 —— 那这是确实是一个前向兼容性问题。但在下面的解释中：是新版本代码没有处理好旧版本数据 —— 而这是一个典型的&lt;strong&gt;向后兼容性&lt;/strong&gt;（Backward）问题。对于一个 ToB 服务产品，我认为这样的严谨性是有问题的。&lt;/p&gt;
+&lt;h2 id=&#34;原因是什么&#34;&gt;原因是什么？&lt;/h2&gt;
+&lt;p&gt;作为客户，我也在此前获取了私下流传的故障复盘过程，一份具有高置信度的小道消息：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;15:25 平台监控到云API进程故障告警,工程师立即介入分析;&lt;/li&gt;
+&lt;li&gt;15:36 排查发现异常集中在云API现网版本,旧版本运行正常,开始进行回滚操作;&lt;/li&gt;
+&lt;li&gt;15:47 官网控制台所用集群回滚完成,通过监控确定恢复;&lt;/li&gt;
+&lt;li&gt;15:50 开始回滚非控制台集群;&lt;/li&gt;
+&lt;li&gt;15:57 定位出故障根因是配置系统中存在错误数据;&lt;/li&gt;
+&lt;li&gt;16:02 删除配置数据的错误数据,各地域集群开始自动恢复;&lt;/li&gt;
+&lt;li&gt;16:05 由于历史配置不规范,导致上海集群无法通过回滚快速恢复,决策采用流量调度方式恢复上海集群;&lt;/li&gt;
+&lt;li&gt;16:40 上海集群流量全量切换到其他地域集群;&lt;/li&gt;
+&lt;li&gt;16:45 经过观测和现网监控,确认上海集群已经恢复。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;应该说，官方发布的版本在关键点上基本上和几天前私下流出的版本是一致的，只是私下流传的版本更加详细地指出了根因： &lt;strong&gt;相较旧版本，现网版本新引入逻辑存在对空字典配置数据兼容的bug，在读取数据场景下触发bug逻辑，引发云API服务进程异常 Crash&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;根据这两份故障复盘信息，我们可以确定，这是一次由&lt;strong&gt;人为失误&lt;/strong&gt;导致的故障，而不是因为天灾（硬件故障，机房断电断网）导致的。我们基本上可以&lt;strong&gt;推断&lt;/strong&gt;出故障发生的过程分为两个阶段 —— 两个子问题。&lt;/p&gt;
+&lt;p&gt;第一个问题是，管控 API 没有保持良好的双向兼容性 —— 新管控 API 因为老配置数据中的空字典崩掉了。这体现出一系列软件工程上的问题 —— 处理空对象的代码基本功，处理异常的逻辑，测试的覆盖率，发布的灰度流程。&lt;/p&gt;
+&lt;p&gt;第二个问题是，循环依赖（容器平台与管控API）导致系统无法自动拉起，需要运维手工介入进行 Bootstrap。这反映出 —— 架构设计的问题，以及 —— &lt;strong&gt;腾讯云并没有从去年阿里云的大故障中吸取最核心的教训&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;影响是什么&#34;&gt;影响是什么？&lt;/h2&gt;
+&lt;p&gt;在复盘报告中，腾讯云用了大篇幅来描述故障的影响，解释管控面故障与数据面故障的区别。用了一些酒店前台的比喻。其实类似的故障在去年阿里云双十一大故障已经出现过了 —— 管控面挂了，数据面正常，在《&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;》中，我们也分析过，管控面挂了确实不会影响继续使用现有纯 IaaS 资源。但是会影响云厂商的核心服务 —— 比如，对象存储在腾讯云上叫 COS。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;对象存储 COS 实在是太重要了&lt;/strong&gt;，可以说是云计算的“定义性服务”，也许是唯一能在所有云上基本达成共识标准的服务。云厂商的各种“上层”服务或多或少都直接/间接地依赖 COS，例如 CVM/ RDS 虽然可以运行，但 CVM 快照和 RDS 备份显然是深度依赖 COS 的，CDN 回源是依赖 COS 的，各个服务的日志往往也是写入 COS 的**。所以，任何涉及到基础服务的故障，都不应该糊弄敷衍过去**。&lt;/p&gt;
+&lt;p&gt;当然最让人生气的其实是腾讯云傲慢的态度 —— 我自己作为腾讯云的用户，提了一个工单，用于测试云上的 SLA 到底好不好使 —— 事实证明：&lt;strong&gt;不主张就不赔付，主张了不认账也可以不赔付 —— 这个 SLA 确实跟厕纸一样。&lt;/strong&gt;《&lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云 SLA 是安慰剂还是厕纸合同&lt;/a&gt;》&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;评论与观点&#34;&gt;评论与观点&lt;/h2&gt;
+&lt;p&gt;马斯克的推特 X 和 DHH 的 37 Signal &lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;通过下云省下了千万美元真金白银&lt;/a&gt;，创造了降本增效的“奇迹”，让下云开始成为一种潮流。云上的用户在对着账单犹豫着是否要下云，未上云的用户更是内心纠结。&lt;/p&gt;
+&lt;p&gt;在这样的背景下，作为本土云领导者的阿里云先出现史诗级大故障，紧接着腾讯云又再次出现了这种全球性管控面故障，对于犹豫观望者的信心无疑是沉重的打击。如果说阿里云大故障是公有云&lt;strong&gt;拐点级别的标志性事件&lt;/strong&gt;，那么腾讯云大故障再次确认了这条投射线的方向。&lt;/p&gt;
+&lt;p&gt;这次故障再次揭示出关键基础设施的巨大风险 —— 大量依托于公有云的网络服务&lt;strong&gt;缺乏最基本的自主可控&lt;/strong&gt;能力：当故障发生时没有任何自救能力，除了等死做不了别的事情。它也反映出了&lt;strong&gt;垄断中心化基础设施的脆弱性&lt;/strong&gt;：互联网这个&lt;strong&gt;去中心化&lt;/strong&gt;的世界奇观现在主要是在少数几个大公司/云厂商拥有的服务器上运行 —— 某个云厂商本身成为了最大的业务单点，这可不是互联网设计的初衷！&lt;/p&gt;
+&lt;p&gt;根据海恩法则，一次严重故障的背后有几十次轻微事故，几百起未遂先兆，以及上千条事故隐患。这样的事故对于腾讯云的品牌形象绝对是致命打击，甚至&lt;strong&gt;对整个行业的声誉都有严重的损害&lt;/strong&gt;。Cloudflare 月初的管控面故障后，CEO 立即撰写了详细的&lt;a href=&#34;https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/&#34;&gt;事后复盘分析&lt;/a&gt;，挽回了一些声誉。腾讯云这次发布的故障复盘报告不能说及时，但起码比起遮遮掩掩的阿里云要好多了。&lt;/p&gt;
+&lt;p&gt;通过故障复盘，提出改进措施，让用户看到改进的态度，对于用户的信心非常重要。做一个故障复盘，也许会暴露更多草台班子的糗态 —— 我不会收回 “草台班子” 的评价。但重要的是 —— 技术/管理菜是可以想办法改进的，服务态度傲慢则是无药可医的。&lt;/p&gt;
+&lt;p&gt;公有云厂商想要真正成为 —— &lt;strong&gt;提供水与电的公共基础设施&lt;/strong&gt;，那就需要承担起责任来，并敢于接受公众与用户的公开监督。我在《&lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;》与《&lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云 SLA 是安慰剂还是厕纸合同&lt;/a&gt;》中指出了腾讯云面对故障时的问题 —— 故障信息发布不及时，不准确，不透明。在这一点上，我欣慰的看到在复盘报告改进措施中，腾讯云能够承认这些问题并承诺进行改进。但我无法原谅的是 ——  腾讯云选择在微信公众号上文章审核封口。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;能学到什么&#34;&gt;能学到什么？&lt;/h2&gt;
+&lt;p&gt;往者不可留，逝者不可追，比起哀悼无法挽回的损失，更重要的是从损失中吸取教训 —— 要是能从别人的损失中吸取教训那就更好了。所以，我们能从腾讯云这场史诗级故障中学到什么？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;不要把鸡蛋放在同一个篮子里&lt;/strong&gt;，准备好 PlanB，比如，业务域名解析一定要套一层 CNAME，且 CNAME 域名用不同服务商的解析服务。这个中间层对于阿里云、腾讯云这样的全局云厂商故障非常重要，用另外一个 DNS 供应商，至少可以给你一个把流量切到别的地方去的选择，而不是干坐在屏幕前等死，毫无自救能力。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎依赖需要云基础设施&lt;/strong&gt;：&lt;/p&gt;
+&lt;p&gt;云 API 是云服务的基石，大家都期待它可以始终正常工作 —— 然而越是人们感觉不可能出现故障的东西，真的出现故障时产生的杀伤力就越是毁天灭地。如无必要，勿增实体，更多的依赖意味着更多的失效点，更低的可靠性：正如在这次故障中，使用自身认证机制的 CVM/RDS 本身就没有受到直接冲击。深度使用云厂商提供的 AK/SK/IAM 不仅会让自己陷入供应商锁定，更是将自己暴露在公用基础设施的单点风险里。&lt;/p&gt;
+&lt;p&gt;我的朋友/对手，公有云的鼓吹者瑞典马工和他的朋友AK王老板，一直主张呼吁用 IAM / RAM 做访问控制，并深度利用云上的基础设施。但是在这两次故障后，马工的原话是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“我一直鼓吹大家用 IAM 做访问控制，结果两家云都出大故障，纷纷打我的脸。云厂商不管是 PR 还是 SRE，都在用实际行动向客户证明：“&lt;em&gt;别听马工的，你用他那一套，我就让你系统完蛋&lt;/em&gt;”。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用云服务，优先使用纯资源&lt;/strong&gt;。在本次故障中，&lt;strong&gt;云服务&lt;/strong&gt;受到影响，但&lt;strong&gt;云资源&lt;/strong&gt;仍然可用。类似 CVM/云盘 这样的&lt;strong&gt;纯资源&lt;/strong&gt;，以及单纯使用这两者的 RDS，可以不受管控面故障影响可以继续运行。基础云资源（CVM/云盘）是所有云厂商的提供服务的&lt;strong&gt;最大公约数&lt;/strong&gt;，只用资源有利于用户在不同公有云、以及本地自建中间择优而选。不过，很难想象在公有云上却不用对象存储 —— 在 CVM 和天价云盘 上用 MinIO 自建对象存储服务并不是真正可行的选项，这涉及到公有云商业模式的核心秘密：&lt;a href=&#34;/zh/blog/cloud/s3&#34;&gt;廉价S3获客&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;天价EBS杀猪&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;自建是掌握自身命运的终极道路&lt;/strong&gt;：如果用户想真正掌握自己的命运，最终恐怕早晚会走上自建这条路。互联网先辈们平地起高楼创建了这些服务，而现在做这件事只会容易得多：IDC 2.0 解决硬件资源问题，开源平替解决软件问题，大裁员释放出的专家解决了人力问题。短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择。稍微有点规模的用户&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;下云省下的钱&lt;/a&gt;，可以换几个从大厂出来的资深SRE 还能盈余不少。更重要的是，自家人出问题你可以进行奖惩激励督促其改进，但是云出问题能赔给你几毛钱的代金券？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;明确云厂商的 SLA 是营销工具，而非战绩承诺&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在云计算的世界里，&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;&lt;strong&gt;服务等级协议&lt;/strong&gt;&lt;/a&gt;（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 从降本增笑到真的降本增效</title>
+      <link>/zh/blog/cloud/smile/</link>
+      <pubDate>Wed, 29 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/smile/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/smile/featured_hu6223e3c0619909b9bbc2fcb72636f074_373130_640x0_resize_catmullrom_3.png" width="640" height="476"/>]]>
+        
+        &lt;p&gt;年底正是冲绩效的时间，互联网大厂大事故却是一波接一波。硬生生把降本增效搞成了“&lt;strong&gt;降本增笑&lt;/strong&gt;” —— 这已经不仅仅是梗了，而是来自官方的自嘲。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;smile.png&#34; src=&#34;/zh/blog/cloud/smile/featured.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;双十一刚过，阿里云就出了打破行业纪录的 &lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;&lt;strong&gt;全球史诗级大翻车&lt;/strong&gt;&lt;/a&gt;，然后开始了11月连环炸模式，在几次小故障后，又来了一场&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云数据库管控面&lt;/strong&gt;&lt;/a&gt;跨国俩小时大故障—— 从月爆到周爆再到日爆。&lt;/p&gt;
+&lt;p&gt;但话音未落，&lt;strong&gt;滴滴&lt;/strong&gt;又出现了一场超过12小时的大失效，资损&lt;strong&gt;几个亿&lt;/strong&gt; —— 替代品阿里旗下的高德打车直接爆单赚翻，堪称失之桑榆，收之东隅。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;didi.png&#34; src=&#34;/zh/blog/cloud/smile/smile-didi.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;我已经替装死的阿里云做过&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;复盘&lt;/strong&gt;&lt;/a&gt;了《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;》：Auth因为配置失当挂了，推测根因是 OSS/Auth 循环依赖，一改错黑白名单就死锁了。&lt;/p&gt;
+&lt;p&gt;滴滴的问题，据说是 &lt;strong&gt;Kubernetes&lt;/strong&gt; 升级大翻车。这种惊人的恢复时长通常会与存储/数据库有关，合理推测根因是：不小心降级了 k8s master ，还一口气跳了多个版本 ——  etcd 中的元数据被污染，最后节点全都挂掉，而且无法快速回滚。&lt;/p&gt;
+&lt;p&gt;故障是难以避免的，无论是硬件缺陷，软件Bug，还是人为操作失误，发生的概率都不可能降为零。然而&lt;strong&gt;可靠的系统&lt;/strong&gt;应当具有&lt;strong&gt;容错韧性&lt;/strong&gt; —— 能够预料并应对这些故障，并将冲击降低至最小程度，尽可能缩短整体失效时间。&lt;/p&gt;
+&lt;p&gt;不幸的是在这一点上，这些互联网大厂的表现都远远有失水准 —— 至少实际表现与其声称的 “&lt;em&gt;&lt;strong&gt;1分钟发现、5分钟处置、10分钟恢复&lt;/strong&gt;&lt;/em&gt;” 相距甚远。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降本增笑&#34;&gt;降本增笑&lt;/h2&gt;
+&lt;p&gt;根据&lt;strong&gt;海因法则&lt;/strong&gt;，一起重大故障背后有着29次事故，300次未遂事故以及数千条事故隐患。在民航行业如果出现类似的事情 —— 甚至不需要出现真正造成任何后果的事故，只是连续出现两起事故征候 —— 甚至都还不是事故，那么可怕严厉的行业安全整顿马上就会全面展开。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;prymaid.jpg&#34; src=&#34;/zh/blog/cloud/smile/smile-prymaid.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;可靠性很重要，不仅仅是对于空中交管/飞行控制系统这类关键服务而言，我们也期望更多平凡的服务与应用能够可靠地运行 —— 云厂商的全局不可用故障几乎等同于停电停水，出行平台宕机意味着交通运力网络部分瘫痪，电商平台与支付工具的不可用则会导致收入和声誉的巨大损失。&lt;/p&gt;
+&lt;p&gt;互联网已经深入至我们生活的各个层面，然而针对互联网平台的有效监管还没有建立起来。行业领导者在面对危机时选择躺尸装死 —— 甚至都没人出来做一个坦率的危机公关与故障复盘。没有人来回答；这些故障为什么会出现？它们还会继续出现吗？其他互联网平台为此做了自纠自查了吗？它们确认自己的备用方案依然有效了吗？&lt;/p&gt;
+&lt;p&gt;这些问题的答案，我们不得而知。但可以确定的是，毫无节制堆积复杂度与大规模裁员的恶果开始显现，服务故障失效会越来越频繁以至于成为一种新常态 —— 谁都随时可能会成为下一个惹人笑话的“倒霉蛋”。想要摆脱这种暗淡的前景命运，我们需要的是真正的“降本增效”&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降本增效&#34;&gt;降本增效&lt;/h2&gt;
+&lt;p&gt;当故障出现时，都会经过一个 &lt;strong&gt;感知问题，分析定位，解决处理&lt;/strong&gt; 的过程。所有的这些事情都需要系统的研发/运维人员投入脑力进行处理，而在这个过程中有一条基本经验法则：&lt;/p&gt;
+&lt;p&gt;处理故障的耗时 &lt;strong&gt;t&lt;/strong&gt; =&lt;/p&gt;
+&lt;p&gt;系统与问题复杂度 &lt;strong&gt;W&lt;/strong&gt; / 在线可用的智力功率 &lt;strong&gt;P&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;故障处理的优化的目标是尽可能缩短故障恢复时间 &lt;code&gt;t&lt;/code&gt; ，例如阿里喜欢讲的 “1-5-10” 稳定性指标：1 分钟发现、5 分钟处置、10 分钟恢复，就是设置了一个时间硬指标。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;time-limit.png&#34; src=&#34;/zh/blog/cloud/smile/smile-time-limit.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在时间限制死的情况下，要么降本，要么增效。只不过，&lt;strong&gt;降本要降的不是人员成本，而是系统的复杂度成本；增效不是增加汇报的谈资笑料，而是在线可用的智力功率与管理的有效性&lt;/strong&gt;。很不幸的是，很多公司这两件事都没做好，活生生地把降本增效搞成了降本增笑。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降低复杂度成本&#34;&gt;降低复杂度成本&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;复杂度&lt;/strong&gt;有着各种别名 —— 技术债，屎山代码，泥潭沼泽，架构杂耍体操。症状可能表现为：状态空间激增、模块间紧密耦合、纠结的依赖关系、不一致的命名和术语、解决性能问题的 Hack、需要绕开的特例等等。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;复杂度是一种成本&lt;/strong&gt;，因而&lt;strong&gt;简单性&lt;/strong&gt;应该是构建系统时的一个关键目标。然而很多技术团队在制定方案时并不会将其纳入考虑，反而是怎么复杂怎么来：能用几个服务解决的任务，非要用微服务理念拆分成几十个服务；没多少机器，却非要上一套 Kubernetes 玩弹性杂耍；单一关系型数据库就能解决的任务，非要拆给几种不同的组件或者倒腾个分布式数据库。&lt;/p&gt;
+&lt;p&gt;这些行为都会引入大量的&lt;strong&gt;额外复杂度&lt;/strong&gt; —— 即由具体实现中涌现，而非问题本身固有的复杂度。一个最典型的例子，就是许多公司不管需要不需要，都喜欢把什么东西都往 K8S 上怼，etcd / Prometheus / CMDB / 数据库，一旦出现问题就循环依赖大翻车，一次大挂就彻底起不来了。&lt;/p&gt;
+&lt;p&gt;再比如应该支付复杂度成本的地方，很多公司又不愿意支付了：一个机房就放一个特大号 K8S ，而不是多个小集群灰度验证，蓝绿部署，滚动升级。一个版本一个版本的兼容性升级嫌麻烦，非要一次性跳几个版本。&lt;/p&gt;
+&lt;p&gt;在畸形的工程师文化中，不少工程师都会以傻大黑粗的无聊规模与高空走钢丝的架构杂耍为荣 —— 而这些折腾出来欠下的技术债都会在故障的时候变为业报回来算账。&lt;/p&gt;
+&lt;p&gt;“&lt;strong&gt;智力功率&lt;/strong&gt;” 则是另一个重要的问题。&lt;strong&gt;智力功率很难在空间上累加&lt;/strong&gt; —— 团队的智力功率往往取决于最资深几个灵魂人物的水平以及他们的沟通成本。比如，当数据库出现问题时需要数据库专家来解决；当 Kubernetes 出现问题时需要 K8S 专家来看问题；&lt;/p&gt;
+&lt;p&gt;然而当你把数据库放入 Kubernetes 时，单独的数据库专家和 K8S 专家的智力带宽是很难叠加的 —— 你需要一个双料专家才能解决问题。认证服务和对象存储循环依赖也同理 —— 你需要同时熟悉两者的工程师。使用两个独立专家不是不可以，但他们之间的协同增益很容易就会被平方增长的沟通成本拉低到负收益，故障时人一多就变傻就是这个道理。&lt;/p&gt;
+&lt;p&gt;当系统的复杂度成本超出团队的智力功率时，就很容易出现翻车性的灾难。然而这一点在平时很难看出来：因为调试分析解决一个出问题的服务的复杂度，远远高于将服务拉起运行的复杂度。平时好像这里裁两个人，那里裁三个，系统还是能正常跑的嘛。&lt;/p&gt;
+&lt;p&gt;然而组织的默会知识随着老司机离开而流失，流失到一定程度后，这个系统就已经是期货死人了 —— 只差某一个契机被推倒引爆。在废墟之中，新一代年轻嫩驴又逐渐变为老司机，随即丧失性价比被开掉，并在上面的循环中不断轮回。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;增加管理效能&#34;&gt;增加管理效能&lt;/h2&gt;
+&lt;p&gt;阿里云和滴滴招不到足够优秀的工程师吗？并不是，&lt;strong&gt;而是其的管理水平与理念低劣，用不好这些工程师&lt;/strong&gt;。我自己在阿里工作过，也在探探这种北欧风格的创业公司和苹果这样的外企待过，对其中管理水平的差距深有体会。我可以举几个简单的例子：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第一点是值班OnCall&lt;/strong&gt;，在 Apple 时，我们的团队有十几号人分布在三个时区：欧洲柏林，中国上海，美国加州，工作时间首尾衔接。每一个地方的工程师都有着完整处理各种问题的脑力功率，保证任一时刻都有在工作时间待命OnCall的能力，同时也不会影响各自的生活质量。&lt;/p&gt;
+&lt;p&gt;而在阿里时，OnCall 通常变成了研发需要兼任的职责，24小时随时可能有惊喜，即使是半夜告警轰炸也屡见不鲜。本土大厂在真正可以砸人的地方，反而又吝啬起来：等研发睡眼惺忪爬起来打开电脑连上 VPN，可能已经过去好几分钟了。在真正可以砸人砸资源解决问题的地方反而不砸了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第二点是体系建设&lt;/strong&gt;，比如从故障处理的报告看，核心基础设施服务变更如果没测试，没监控，没告警，没校验，没灰度，没回滚，架构循环依赖没过脑袋，那确实配得上草台班子的称号。还是说一个具体的例子：&lt;strong&gt;监控系统&lt;/strong&gt;。设计良好的监控系统可以极大缩短故障的判定时间 —— 这种本质上是对服务器指标/日志提前进行了数据分析，而这一部分往往是最需要直觉、灵感与洞察力，最耗费时间的步骤。&lt;/p&gt;
+&lt;p&gt;定位不到根因这件事，就是反映出可观测性建设和故障预案不到位。拿数据库举个例子吧，我做 PostgreSQL DBA 的时候做了这个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485827&amp;idx=1&amp;sn=9b13273b559fa63e96d4ac77268bd00a&amp;chksm=fe4b3c58c93cb54e87b062c6db4b3a712037e25dbfbe69aa50ad9b79abf2c97967b625fe1a7f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;监控系统&lt;/strong&gt;&lt;/a&gt; (&lt;a href=&#34;https://demo.pigsty.cc&#34;&gt;https://demo.pigsty.cc&lt;/a&gt;[1])，如左图，几十个Dashboard 紧密组织，任何PG故障用鼠标点点下钻两三层，1分钟不用就能立即定位各种问题，然后迅速按照预案处理恢复。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;monitor-1.png&#34; src=&#34;/zh/blog/cloud/smile/smile-monitor-1.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;monitor-2.png&#34; src=&#34;/zh/blog/cloud/smile/smile-monitor-2.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;再看一下阿里云 RDS for PostgreSQL 与 PolarDB 云数据库用的监控系统，所有的东西就这可怜巴巴的一页图，如果他们是拿这个玩意来分析定位故障，那也怪不得别人要几十分钟了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第三点是管理理念与洞察力&lt;/strong&gt;，比如，稳定性建设需要投入一千万，总会有机会主义的草台班子跳出来说：我们只要五百万或者更少 —— 然后可能什么都不做，就&lt;strong&gt;赌&lt;/strong&gt;不会出现问题，赌赢了就白赚，赌输了就走人。但也有可能，这个团队有真本事用技术降低成本，可是又有多少坐在领导位置上的人有足够的洞察力可以真正分辨这一点呢？&lt;/p&gt;
+&lt;p&gt;再比如，高级的故障经验对于工程师和公司来说其实是一笔非常宝贵的财富 —— 这是用真金白银喂出来的教训。然而很多管理者出了问题第一时间想到的就是要“开个程序员/运维祭天”，把这笔财富白送给下家公司。这样的环境自然而然就会产生甩锅文化、不做不错、苟且偷安的现象。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第四点是以人为本&lt;/strong&gt;。以我自己为例，我在探探将自己作为 DBA 的数据库管理工作几乎全自动化了。我会做这件事的原因：首先是我自己能享受到技术进步带来的红利 —— 自动化自己的工作，我就可以有大把时间喝茶看报；公司也不会因为我搞自动化每天喝茶看报就把我开了，所以没有安全感的问题，就可以自由探索，一个人搞出一整套完整的 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect&#34;&gt;开源 RDS&lt;/a&gt; 出来。&lt;/p&gt;
+&lt;p&gt;但这样的事在类似阿里这样的环境中可能会发生吗？—— “&lt;em&gt;今天最好的表现是明天最低的要求&lt;/em&gt;” ，好的，你做了自动化对不对？结果工作时间不饱和，管理者就要找一些垃圾活或者垃圾会议给你填满；更有甚者，你幸幸苦苦的建立好了体系，把自己的不可替代性打掉了，立即面临狡兔死走狗烹的结果，最后被干写PPT出嘴的人摘了桃子。那么最后的博弈优势策略当然是能打的出去单干，能演的坐在列车上摇晃身体假装前进直到大翻车。&lt;/p&gt;
+&lt;p&gt;最可怕的是，本土大厂讲究人都是可替换的螺丝钉，是35岁就“开采完”的人矿，末位淘汰大裁员也不鲜见。如果 &lt;strong&gt;Job Security&lt;/strong&gt; 成为迫在眉睫的问题，谁还能安下心来踏实做事呢？&lt;/p&gt;
+&lt;p&gt;孟子曰：“&lt;strong&gt;君之视臣如手足，则臣视君如腹心；君之视臣如犬马，则臣视君如国人；君之视臣如土芥，则臣视君如寇仇&lt;/strong&gt;”。这种落后的管理水平才是很多公司真正应该增效的地方。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 我们能从阿里云全球故障中学到什么?</title>
+      <link>/zh/blog/cloud/aliyun/</link>
+      <pubDate>Mon, 13 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/aliyun/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/aliyun/featured_hu6f68b510db9e8d11f7c0b144e7aeacbe_322615_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;时隔一年阿里云又出大故障，并创造了云计算行业闻所未闻的新记录 —— 全球所有区域/所有服务同时异常。阿里云不愿意发布故障复盘报告，那我就来替他复盘 —— 我们应当如何看待这一史诗级故障案例，以及，能从中学习到什么经验与教训？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#事实是什么&#34;&gt;事实是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#原因是什么&#34;&gt;原因是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#影响是什么&#34;&gt;影响是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#评论与观点&#34;&gt;评论与观点？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#能学到什么&#34;&gt;能学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/featured.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事实是什么&#34;&gt;事实是什么？&lt;/h2&gt;
+&lt;p&gt;2023年11月12日，双十一后第一天，阿里云出了一场&lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;史诗级大翻车&lt;/a&gt;。&lt;strong&gt;全球所有区域同时出现故障&lt;/strong&gt;，创造了闻所未闻的行业新记录。
+根据阿里云官方的&lt;a href=&#34;https://status.aliyun.com/#/&#34;&gt;服务状态页&lt;/a&gt;，全球所有区域/可用区 ✖️ 所有服务全部出现异常，时间范围从 17:44 到 21: 11 ，共计三个半小时。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;status-page.jpg&#34; src=&#34;/zh/blog/cloud/aliyun/status-page.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云 &lt;strong&gt;Status Page&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/noticelist/articleid/1064981333.html&#34;&gt;阿里云公告&lt;/a&gt;称：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“云产品控制台、管控API等功能受到影响，OSS、OTS、SLS、MNS等产品的服务受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响”。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/announce.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;大量依赖阿里云服务的应用 APP，包括阿里系自己的一系列应用：淘宝，钉钉，闲鱼，…… 都出现了问题。产生了显著的外部影响，APP崩了的新闻组团冲上了热搜。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;yunpan.png&#34; src=&#34;/zh/blog/cloud/aliyun/yunpan.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;淘宝刷不出聊天图片，闪送上传不了接单凭据，充电桩用不了，原神发不出验证码，饿了么下不了单，骑手进不了系统，点不了外卖、停车场不抬杆、超市无法结账。甚至有的学校因此无法用智能公共洗衣机和开水机。无数在周末休息中的研发与运维人员被喊起来加班排障……&lt;/p&gt;
+&lt;p&gt;包括金融云、政务云在内的区域也没有幸免。阿里云应该感到万幸：故障不是发生在双十一当天，也不在衙门与钱庄的工作时间段，否则大家说不定能上电视看故障复盘了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;原因是什么&#34;&gt;原因是什么？&lt;/h2&gt;
+&lt;p&gt;尽管阿里云至今仍未给出一份事后故障复盘报告，但老司机根据爆炸半径，就足以判断出问题在哪里了 —— &lt;strong&gt;Auth&lt;/strong&gt; （认证 / 鉴权 / RAM）。&lt;/p&gt;
+&lt;p&gt;存储计算硬件故障、机房断电这些问题最多影响单个可用区（AZ），网络故障最多影响一个区域（Region），能让全球所有区域同时出问题的肯定不会是这些问题，而是跨区域共用的云基础设施组件。 —— 极大概率是 &lt;strong&gt;Auth&lt;/strong&gt;，低概率是其他诸如计量付费之类的全局性服务。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/notice.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云的事件进展公告：出问题的是某个底层服务组件，而不是网络、机房硬件的问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;根因出在 &lt;strong&gt;Auth&lt;/strong&gt; 上的可能性最大，最直接的证明就是：深度与 &lt;strong&gt;Auth&lt;/strong&gt; 集成的云服务：对象存储 &lt;strong&gt;OSS&lt;/strong&gt; （类 S3），表格存储 &lt;strong&gt;OTS&lt;/strong&gt; （类 DynamoDB），以及其他深度依赖 &lt;strong&gt;Auth&lt;/strong&gt; 的服务本身可用性直接受到影响。而本身运行不依赖 &lt;strong&gt;Auth&lt;/strong&gt; 的云资源，比如云服务器 &lt;strong&gt;ECS&lt;/strong&gt; / 云数据库 &lt;strong&gt;RDS&lt;/strong&gt; 以及网络仍然可以“正常”运行，用户只是无法通过控制台与API对其进行管理与变更。此外，一个可以排除的&lt;strong&gt;计量付费&lt;/strong&gt;服务出问题的现象是：故障期间还有用户成功付款&lt;a href=&#34;/zh/blog/cloud/aliyun-ecs-pigsty/&#34;&gt;薅下了ECS的羊毛&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;尽管上面的分析过程只是一种推断，但它与流传出来的内部消息相吻合：&lt;strong&gt;认证&lt;/strong&gt;挂了导致所有服务异常。至于认证服务本身到底是怎么挂的，在尸检报告出来前我们也只能猜测：&lt;strong&gt;人为配置失误&lt;/strong&gt;的可能性最大 —— 因为故障不在常规变更发布窗口中，也没有灰度生效，不太像是代码/二进制发布。但具体是哪里配置失误：证书，黑白名单，循环依赖死锁，还是什么其他东西，就不知道了。&lt;/p&gt;
+&lt;p&gt;关于根因的小道消息也漫天飞舞，比如，有人说 ”权限系统推了个黑名单规则，黑名单规则维护在OSS上，访问OSS叉需要访问权限系统，然后权限系统又要访问OSS，就尬住了“。”。还有人说 “这次双11期间，技术人员连续一周加班加点，双11一过，大家都松懈了。有个新手写了一段代码，更新了组件，导致了本次的断网“，还有人说：”阿里云所有服务用的都是同一个通配符证书，证书换错了“。&lt;/p&gt;
+&lt;p&gt;如果是因为这些原因导致 &lt;strong&gt;Auth&lt;/strong&gt; 挂掉，那可真是&lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;草台班子&lt;/a&gt;到家了。尽管听上去很离谱，但这样的先例并不少。再次强调，这些路边社消息仅供参考，具体事故原因请以阿里云官方给出的复盘分析报告为准。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;影响是什么&#34;&gt;影响是什么？&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;认证/鉴权&lt;/strong&gt;是服务的基石，像这样的基础性组件一旦出现问题，影响是&lt;strong&gt;全局性&lt;/strong&gt;、&lt;strong&gt;灾难性&lt;/strong&gt;的。这会导致整个&lt;strong&gt;云管控面&lt;/strong&gt;不可用，伤害会直接冲击控制台，API，以及深度依赖 &lt;strong&gt;Auth&lt;/strong&gt; 基础设施的服务 —— 比如公有云上的另一个基石性服务，对象存储 &lt;strong&gt;OSS&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;从阿里云公告上来看，好像只有 “&lt;em&gt;几个服务（ &lt;strong&gt;OSS、OTS、SLS、MNS&lt;/strong&gt;）受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响&lt;/em&gt; ”。但对象存储 &lt;strong&gt;OSS&lt;/strong&gt; 这样的基石性服务出了问题，带来的爆炸半径是难以想象的，绝非“个别服务受到影响” 就能敷衍过去 —— 这就像汽车的油箱都着火了，说发动机和轮子仍然在转是没有意义的。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/auth.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;对象存储 &lt;strong&gt;OSS&lt;/strong&gt; 这样的服务是通过云厂商包装的 HTTP API 对外提供服务的，因此必然深度依赖认证组件：你需要AK/SK/IAM 签名才能使用这些 HTTP API，而 Auth 故障将导致这类服务本身不可用。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;对象存储 OSS 实在是太重要了&lt;/strong&gt;，可以说是云计算的“定义性服务”，也许是唯一能在所有云上基本达成共识标准的服务。云厂商的各种“上层”服务或多或少都直接/间接地依赖 OSS，例如 ECS/ RDS 虽然可以运行，但 ECS 快照和 RDS 备份显然是深度依赖 OSS 的，CDN 回源是依赖 OSS 的，各个服务的日志往往也是写入 OSS 的。&lt;/p&gt;
+&lt;p&gt;从现象上看，核心功能跟 OSS 深度绑定的阿里云盘就挂的很惨烈，核心功能跟 OSS 关系不大的服务，比如高德地图就没听说有什么大影响。大部分相关应用的状态是，主体可以正常打开运行，但是和图片展示，文件上传/下载文件这类有关的功能就不可用了。&lt;/p&gt;
+&lt;p&gt;有一些实践减轻了对 OSS 的冲击：比如通常被认为是不安全的 —— 不走认证的 Public 存储桶就不受影响；CDN 的使用也缓释了 OSS 的问题：淘宝商品图片走 CDN 缓存还可以正常看到，但是买家聊天记录里实时发送的图片直接走 OSS 就挂了。&lt;/p&gt;
+&lt;p&gt;不仅仅是 OSS，其他深度集成依赖 Auth 的云服务也会有这样的问题，比如 &lt;strong&gt;OTS，SLS，MNS&lt;/strong&gt; 等等。例如对标 DynamoDB 的表格存储服务 &lt;strong&gt;OTS&lt;/strong&gt; 同样出现了问题。这里有一个非常鲜明的对比，像 &lt;strong&gt;RDS&lt;/strong&gt; for PostgreSQL / MySQL 这样的云数据库服务使用的是数据库自身的认证机制，所以不受云厂商 Auth 服务故障影响。然而 OTS 没有自己的权限系统，而是直接使用 IAM/RAM，与云厂商的 Auth 深度绑定，因此受到了冲击。&lt;/p&gt;
+&lt;p&gt;技术上的影响是一方面，更重要的是业务影响。根据阿里云的 &lt;strong&gt;服务等级协议（SLA）&lt;/strong&gt;，3个半小时的故障使得当月各服务可用性指标降至 99.5%。落入绝大多数服务赔偿标准的中间档位上，也就是赔偿用户月度服务费用 25% ~ 30% 的&lt;strong&gt;代金券&lt;/strong&gt;。特殊的是这一次故障的区域范围和服务范围是&lt;strong&gt;全部&lt;/strong&gt;！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/oss-sla.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云 OSS SLA&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;当然阿里云也可以主张说虽然 &lt;strong&gt;OSS / OTS&lt;/strong&gt; 这些服务挂了，但他们的 &lt;strong&gt;ECS&lt;/strong&gt;/&lt;strong&gt;RDS&lt;/strong&gt; 只挂了&lt;strong&gt;管控面&lt;/strong&gt;，不影响正在运行的服务,所以不影响 SLA。不过这种补偿即便真的全部落地也没几个钱，更像是一种安抚性的姿态：&lt;strong&gt;毕竟&lt;/strong&gt;和用户的业务损失比，赔个服务月消 25%代金券简直就是一种&lt;strong&gt;羞辱&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;比起用户信任、技术声望以及商誉折损而言，赔的那点代金券真的算不上三瓜两枣。这次事件如果处理不当，会成为&lt;strong&gt;公有云拐点级别的标志性事件&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;评论与观点&#34;&gt;评论与观点？&lt;/h2&gt;
+&lt;p&gt;马斯克的推特 X 和 DHH 的 37 Signal &lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;通过下云省下了千万美元真金白银&lt;/a&gt;，创造了降本增效的“奇迹”，让下云开始成为一种潮流。云上的用户在对着账单犹豫着是否要下云，未上云的用户更是内心纠结。在这样的背景下，作为本土云领导者的阿里云发生如此重大故障，对于犹豫观望者的信心无疑是沉重的打击。恐怕此次故障会成为公有云&lt;strong&gt;拐点级别的标志性事件&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;阿里云一向以安全稳定高可用自居，上周还刚在云栖大会上吹极致稳定性之类的牛逼。但是无数所谓的的灾备，高可用，多活，多中心，降级方案，被一次性全部击穿，打破了N个9神话。如此大范围、长时间、影响面如此广的故障，更是创下了云计算行业的历史记录。&lt;/p&gt;
+&lt;p&gt;这次故障揭示出关键基础设施的巨大风险，大量依托于公有云的网络服务&lt;strong&gt;缺乏最基本的自主可控&lt;/strong&gt;能力：当故障发生时没有任何自救能力，除了等死做不了别的事情。甚至包括金融云和政务云在内也同样出现了服务不可用。同时，它也反映出了&lt;strong&gt;垄断中心化基础设施的脆弱性&lt;/strong&gt;：互联网这个&lt;strong&gt;去中心化&lt;/strong&gt;的世界奇观现在主要是在少数几个大公司/云厂商拥有的服务器上运行 —— 某个云厂商本身成为了最大的业务单点，这可不是互联网设计的初衷！&lt;/p&gt;
+&lt;p&gt;更为严峻的挑战恐怕还在后面，全球用户追索赔钱事还小，真正要命的是在各个国家都在强调&lt;strong&gt;数据主权&lt;/strong&gt;的时候，如果因为在中国境内的某个控制中心配置失当导致全球故障的话，（即：你真的卡了别人的脖子）很多海外客户会立即采取行动迁移到别的云供应商上：&lt;strong&gt;这关乎合规性，与可用性无关&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;根据海恩法则，一次严重故障的背后有几十次轻微事故，几百起未遂先兆，以及上千条事故隐患。去年十二月阿里云香港机房的大故障已经暴露出来许多问题，然而一年后又给了用户一个更大的惊喜（吓！）。这样的事故对于阿里云的品牌形象绝对是致命打击，甚至&lt;strong&gt;对整个行业的声誉都有严重的损害&lt;/strong&gt;。阿里云应该尽快给用户一个解释与交代，发布详细的故障复盘报告，讲清楚后续改进措施，挽回用户的信任。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;cf-post-moterm.png&#34; src=&#34;/zh/blog/cloud/aliyun/cf-post-moterm.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;毕竟这种规模的故障，不是“找个临时工背锅，杀个程序员祭天” 能解决的事，CEO 得亲自出面道歉解决。Cloudflare 月初的管控面故障后，CEO 立即撰写了详细的&lt;a href=&#34;https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/&#34;&gt;事后复盘分析&lt;/a&gt;，挽回了一些声誉。可不幸的是，阿里云经过了几轮裁员，一年连换三轮 CEO ，恐怕已经难有能出来扛事背责的人了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;能学到什么&#34;&gt;能学到什么？&lt;/h2&gt;
+&lt;p&gt;往者不可留，逝者不可追，比起哀悼无法挽回的损失，更重要的是从损失中吸取教训 —— 要是能从别人的损失中吸取教训那就更好了。所以，我们能从阿里云这场史诗级故障中学到什么？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;不要把鸡蛋放在同一个篮子里&lt;/strong&gt;，准备好 PlanB，比如，业务域名解析一定要套一层 CNAME，且 CNAME 域名用不同服务商的解析服务。这个中间层对于阿里云这样的故障非常重要，用另外一个 DNS 供应商，至少可以给你一个把流量切到别的地方去的选择，而不是干坐在屏幕前等死，毫无自救能力。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;区域优先使用杭州与北京&lt;/strong&gt;，阿里云故障恢复明显有优先级，阿里云总部所在地的杭州（华东1）和北京（华北2）故障修复的速度明显要比其他区域快很多，别的可用区故障恢复用了三个小时，这两个可用区一个小时就修复了。这两个区域可以考虑优先使用，虽然同样是吃故障，但你可以和阿里自家业务享受同种婆罗门待遇。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用需要云认证的服务&lt;/strong&gt;：Auth 是云服务的基石，大家都期待它可以始终正常工作 —— 然而越是人们感觉不可能出现故障的东西，真的出现故障时产生的杀伤力就越是毁天灭地。如无必要，勿增实体，更多的依赖意味着更多的失效点，更低的可靠性：正如在这次故障中，使用自身认证机制的 ECS/RDS 本身就没有受到直接冲击。深度使用云厂商提供的 AK/SK/IAM 不仅会让自己陷入供应商锁定，更是将自己暴露在公用基础设施的单点风险里。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用云服务，优先使用纯资源&lt;/strong&gt;。在本次故障中，&lt;strong&gt;云服务&lt;/strong&gt;受到影响，但&lt;strong&gt;云资源&lt;/strong&gt;仍然可用。类似 ECS/ESSD 这样的&lt;strong&gt;纯资源&lt;/strong&gt;，以及单纯使用这两者的 RDS，可以不受管控面故障影响可以继续运行。基础云资源（ECS/EBS）是所有云厂商的提供服务的&lt;strong&gt;最大公约数&lt;/strong&gt;，只用资源有利于用户在不同公有云、以及本地自建中间择优而选。不过，很难想象在公有云上却不用对象存储 —— 在 ECS 和天价 ESSD 上用 MinIO 自建对象存储服务并不是真正可行的选项，这涉及到公有云商业模式的核心秘密：&lt;a href=&#34;/zh/blog/cloud/s3&#34;&gt;廉价S3获客&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;天价EBS杀猪&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;自建是掌握自身命运的终极道路&lt;/strong&gt;：如果用户想真正掌握自己的命运，最终恐怕早晚会走上自建这条路。互联网先辈们平地起高楼创建了这些服务，而现在做这件事只会容易得多：IDC 2.0 解决硬件资源问题，开源平替解决软件问题，大裁员释放出的专家解决了人力问题。短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择。稍微有点规模的用户&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;下云省下的钱&lt;/a&gt;，可以换几个从大厂出来的资深SRE 还能盈余不少。更重要的是，自家人出问题你可以进行奖惩激励督促其改进，但是云出问题能赔给你几毛代金券？ —— &lt;em&gt;“你算老几能让高P舔你？”&lt;/em&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;明确云厂商的 SLA 是营销工具，而非战绩承诺&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在云计算的世界里，&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;&lt;strong&gt;服务等级协议&lt;/strong&gt;&lt;/a&gt;（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;最后，尊重技术，善待工程师&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;阿里云这两年在大力搞“降本增效”：学人家马斯克推特大裁员，人裁几千你裁几万。但人家推挂来挂去用户捏着鼻子继续凑合用，ToB 业务跟着连环裁员连环挂，企业用户可忍得了这个？队伍动荡，人心不稳，稳定性自然会受到影响。&lt;/p&gt;
+&lt;p&gt;很难说这跟企业文化没有关系：996 修福报，大把时间内耗在无穷的会议汇报上。领导不懂技术，负责汇总周报写PPT 吹牛逼，P9 出嘴；P8 带队，真正干活的都是567，晋升没指望，裁员先找你；真正能打的顶尖人才根本不吃这一套 PUA 窝囊气，成批成批地出来创业单干 —— 环境盐碱地化：学历门槛越来越高，人才密度却越来越低。&lt;/p&gt;
+&lt;p&gt;我亲自见证的例子是，一个独立开源贡献者单人搞的 &lt;a href=&#34;https://mp.weixin.qq.com/s/-E_-HZ7LvOze5lmzy3QbQA&#34;&gt;&lt;strong&gt;开源 RDS&lt;/strong&gt;&lt;/a&gt; for PostgreSQL，可以&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;&lt;strong&gt;骑脸输出&lt;/strong&gt;&lt;/a&gt;几十人 RDS 团队的产品，而对方团队甚至连发声辩白反驳的勇气都没有 —— 阿里云确实不缺足够优秀的产品经理和工程师，但请问这种事情为什么可能会发生呢？这是应该反思的问题。&lt;/p&gt;
+&lt;p&gt;阿里云作为本土公有云中的领导者，应当是一面旗帜 —— 所以它可以做的更好，而不应该是现在这幅样子。作为曾经的阿里人，我希望阿里云能吸取这次故障的教训，尊重技术，踏实做事，善待工程师。更不要沉迷于&lt;a href=&#34;/zh/blog/cloud/profit&#34;&gt;&lt;strong&gt;杀猪盘快钱&lt;/strong&gt;&lt;/a&gt;而忘记了自己的初心愿景 —— &lt;strong&gt;提供物美价廉的公共计算服务，让存算资源像水电一样普及&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/odyssey/&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;FinOps的终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/profit/&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/rds/&#34;&gt;云数据库是不是智商税？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/paradigm/&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cdn/&#34;&gt;腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908#rd&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486438&amp;idx=1&amp;sn=b2c489675134d4e84fbc249089777cb4&amp;chksm=fe4b3e3dc93cb72b5d0d90ef61011dda5a09e5f08d96c8cca87148706451c859777162bd18da#rd&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;chksm=fe4b3e68c93cb77ed5b627c8caf78666cab9deafc18dacf528e51411682e616b4df1deab87f9&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483770&amp;idx=1&amp;sn=723c865ff27fd0ceace1d8fb2c76ddca&amp;chksm=c0ca8db0f7bd04a63f79aba185e093bbb0ab5763b1f91f58cfc86551daf7e47bd6627dd8c73b#rd&#34;&gt;阿里云的故障在其他云也可能发生,并且可能丢数据&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483764&amp;idx=1&amp;sn=8aebb4053257fac48f71b75a957153ad&amp;chksm=c0ca8dbef7bd04a816feba238a2232abdc02b5ccdb405f32217455dc3bf3a1811bd4ff8815af#rd&#34;&gt;中国云服务走向全球？先把 Status Page 搞定&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483759&amp;idx=1&amp;sn=eb12dfe4df37c22aadd120676391f4cb&amp;chksm=c0ca8da5f7bd04b3a024111b5c3be9f273c70087cc986937e72e12d7a0fe496753a88568afe9#rd&#34;&gt;我们可以信任阿里云的故障处理吗?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483762&amp;idx=1&amp;sn=903405e0b64037f1b7d44b23f0c9b08d&amp;chksm=c0ca8db8f7bd04ae55f719df891d811d05269dac3a8e0a894d23292e06674058c943712672f5#rd&#34;&gt;给阿里云的一封公开信&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484048&amp;idx=1&amp;sn=b57839c9dc85fe3dc6eaac01ff37b995&amp;chksm=c0ca8e5af7bd074ca5221de40c47b82378a8ca20f348ab1c80de7d244679733ee80e29cb3381#rd&#34;&gt;平台软件应该像数学一样严谨 &amp;mdash; 和阿里云RAM团队商榷&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484025&amp;idx=1&amp;sn=5c6f1b0035b7f9a657a5d24d68699943&amp;chksm=c0ca8eb3f7bd07a550325dd691c5761cbf99a9b4644d14c9bbb512dc9ecd27033622bb83e58e#rd&#34;&gt;被医药业吊打的中国软件从业者&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484019&amp;idx=1&amp;sn=5dbe25e5c8d39a67bf9e9573ba2e9b98&amp;chksm=c0ca8eb9f7bd07af03f6d1228d73153fc37479a132a697c310851bfbffcf997ce991a7c2f010#rd&#34;&gt;腾讯的错别字文化&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484064&amp;idx=1&amp;sn=cedf630065c88b936133001f84690c75&amp;chksm=c0ca8e6af7bd077c417aae032cc91281808e8768ea4f103dd1c71039986079c49bbd0aa03507#rd&#34;&gt;云为什么留不住客户 — 以腾讯云 CAM 为例&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483883&amp;idx=1&amp;sn=f2644e9ff54790b319d63a1ffb26e717&amp;chksm=c0ca8d21f7bd0437b3be51f1d093ff45fac4e36552cdbf8b27c8d0ec5470e85ac46dd7f136a3#rd&#34;&gt;腾讯云团队为什么用阿里云的服务名？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483846&amp;idx=1&amp;sn=9a2f3cd59147d2444b7432ecf50af9ba&amp;chksm=c0ca8d0cf7bd041a3f56fcf0bb4adbde8434d81818009f9906c0fa3d1121017996f572b0237e#rd&#34;&gt;究竟是客户差劲，还是腾讯云差劲？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483694&amp;idx=1&amp;sn=618a3aa4f196c30eb9e89969643b06e9&amp;chksm=c0ca8de4f7bd04f25b277942fb41da2092c073f3db55fb92020ba66f21e14522e823a8a3346c#rd&#34;&gt;百度腾讯阿里真的是高科技企业吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483663&amp;idx=1&amp;sn=27f37af0dc4e755d7a64f341de6d8aad&amp;chksm=c0ca8dc5f7bd04d3f4a4437a63958eb93be56722ed32c43385bf41631c86a869bdeada35af04#rd&#34;&gt;云计算厂商们，你们辜负了中国的用户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483712&amp;idx=1&amp;sn=acdb5adf0d588d9617ed72b5ffca8dd3&amp;chksm=c0ca8d8af7bd049c0a69cfebb950c07f599a807876a5d0748122e9a0b0528d216a8d5d968197#rd&#34;&gt;除了打折虚拟机, 云计算用户究竟在用什么高阶云服务?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483743&amp;idx=1&amp;sn=9f329de1649fac75f69e57270978d047&amp;chksm=c0ca8d95f7bd0483d6af4940ca342e2544135e9de0b56fa1a6f299c887800aae04c11b0551bd#rd&#34;&gt;腾讯云阿里云做的真的是云计算吗?&amp;ndash;从客户成功案例的视角&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483828&amp;idx=1&amp;sn=e03403d98876700134be4d1127371fe2&amp;chksm=c0ca8d7ef7bd0468677fc02cc47c530cdad242ac56ee485cb7b16667afafabc2339af0a995c6#rd&#34;&gt;本土云厂家究竟在服务谁？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

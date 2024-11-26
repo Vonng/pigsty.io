@@ -1,0 +1,328 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Arch</title>
+    <link>/zh/categories/arch/</link>
+    <description>Recent content in Arch on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    
+	  <atom:link href="/zh/categories/arch/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: 架构</title>
+      <link>/zh/docs/pgsql/arch/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgsql/arch/</guid>
+      <description>
+        
+        
+        &lt;blockquote&gt;
+&lt;p&gt;PGSQL 模块总览：关键概念与架构细节&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;组件概览&#34;&gt;组件概览&lt;/h2&gt;
+&lt;p&gt;以下是 PostgreSQL 模块组件及其相互作用的详细描述，从上至下分别为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;集群 DNS 由 infra 节点上的 DNSMASQ 负责解析&lt;/li&gt;
+&lt;li&gt;集群 VIP 由 &lt;code&gt;vip-manager&lt;/code&gt; 组件管理，它负责将 &lt;a href=&#34;/zh/docs/reference/param#pg_vip_address&#34;&gt;&lt;code&gt;pg_vip_address&lt;/code&gt;&lt;/a&gt; 绑定到集群主库节点上。
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;vip-manager&lt;/code&gt; 从 &lt;code&gt;etcd&lt;/code&gt; 集群获取由 &lt;code&gt;patroni&lt;/code&gt; 写入的集群领导者信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;集群服务由节点上的 Haproxy 对外暴露，不同服务通过节点的不同端口（543x）区分。
+&lt;ul&gt;
+&lt;li&gt;Haproxy 端口 9101：监控指标 &amp;amp; 统计 &amp;amp; 管理页面&lt;/li&gt;
+&lt;li&gt;Haproxy 端口 5433：默认路由至主 pgbouncer：&lt;a href=&#34;/zh/docs/pgsql/svc#primary%E6%9C%8D%E5%8A%A1&#34;&gt;读写服务&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Haproxy 端口 5434：默认路由至从库 pgbouncer：&lt;a href=&#34;/zh/docs/pgsql/svc#replica%E6%9C%8D%E5%8A%A1&#34;&gt;只读服务&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Haproxy 端口 5436：默认路由至主 postgres：&lt;a href=&#34;/zh/docs/pgsql/svc#default%E6%9C%8D%E5%8A%A1&#34;&gt;默认服务&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Haproxy 端口 5438：默认路由至离线 postgres：&lt;a href=&#34;/zh/docs/pgsql/svc#offline%E6%9C%8D%E5%8A%A1&#34;&gt;离线服务&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;HAProxy 将根据 &lt;code&gt;patroni&lt;/code&gt; 提供的健康检查信息路由流量。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Pgbouncer 是一个连接池中间件，默认监听6432端口，可以缓冲连接、暴露额外的指标，并提供额外的灵活性。
+&lt;ul&gt;
+&lt;li&gt;Pgbouncer 是无状态的，并通过本地 Unix 套接字以 1:1 的方式与 Postgres 服务器部署。&lt;/li&gt;
+&lt;li&gt;生产流量（主/从）将默认通过 pgbouncer（可以通过&lt;a href=&#34;/zh/docs/reference/param#pg_default_service_dest&#34;&gt;&lt;code&gt;pg_default_service_dest&lt;/code&gt;&lt;/a&gt;指定跳过）&lt;/li&gt;
+&lt;li&gt;默认/离线服务将始终绕过 pgbouncer ，并直接连接到目标 Postgres。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;PostgreSQL 监听5432端口，提供关系型数据库服务
+&lt;ul&gt;
+&lt;li&gt;在多个节点上安装 PGSQL 模块，并使用同一集群名，将自动基于流式复制组成高可用集群&lt;/li&gt;
+&lt;li&gt;PostgreSQL 进程默认由 &lt;code&gt;patroni&lt;/code&gt; 管理。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Patroni 默认监听端口 8008，监管着 PostgreSQL 服务器进程
+&lt;ul&gt;
+&lt;li&gt;Patroni 将 Postgres 服务器作为子进程启动&lt;/li&gt;
+&lt;li&gt;Patroni 使用 &lt;code&gt;etcd&lt;/code&gt; 作为 DCS：存储配置、故障检测和领导者选举。&lt;/li&gt;
+&lt;li&gt;Patroni 通过健康检查提供 Postgres 信息（比如主/从），HAProxy 通过健康检查使用该信息分发服务流量&lt;/li&gt;
+&lt;li&gt;Patroni 指标将被 infra 节点上的 Prometheus 抓取&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;PG Exporter 在 9630 端口对外暴露 postgres 架空指标
+&lt;ul&gt;
+&lt;li&gt;PostgreSQL 指标将被 infra 节点上的 Prometheus 抓取&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Pgbouncer Exporter 在端口 9631 暴露 pgbouncer 指标
+&lt;ul&gt;
+&lt;li&gt;Pgbouncer 指标将被 infra 节点上的 Prometheus 抓取&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;pgBackRest 默认在使用本地备份仓库 （&lt;code&gt;pgbackrest_method&lt;/code&gt; = &lt;code&gt;local&lt;/code&gt;）
+&lt;ul&gt;
+&lt;li&gt;如果使用 &lt;code&gt;local&lt;/code&gt;（默认）作为备份仓库，pgBackRest 将在主库节点的&lt;a href=&#34;/zh/docs/reference/param#pg_fs_bkup&#34;&gt;&lt;code&gt;pg_fs_bkup&lt;/code&gt;&lt;/a&gt; 下创建本地仓库&lt;/li&gt;
+&lt;li&gt;如果使用 &lt;code&gt;minio&lt;/code&gt; 作为备份仓库，pgBackRest 将在专用的 MinIO 集群上创建备份仓库：&lt;a href=&#34;/zh/docs/reference/param#pgbackrest_repo&#34;&gt;&lt;code&gt;pgbackrest_repo&lt;/code&gt;.&lt;code&gt;minio&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Postgres 相关日志（postgres, pgbouncer, patroni, pgbackrest）由 promtail 负责收集
+&lt;ul&gt;
+&lt;li&gt;Promtail 监听 9080 端口，也对 infra 节点上的 Prometheus 暴露自身的监控指标&lt;/li&gt;
+&lt;li&gt;Promtail 将日志发送至 infra 节点上的 Loki&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/infra/&#34;&gt;&lt;img alt=&#34;pigsty-arch.jpg&#34; src=&#34;/img/pigsty/arch.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;高可用&#34;&gt;高可用&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;主库故障恢复时间目标 (RTO) ≈ 30s，数据恢复点目标 (RPO) &amp;lt; 1MB，从库故障 RTO ≈ 0 (重置当前连接)&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Pigsty 的 PostgreSQL 集群带有开箱即用的高可用方案，由 &lt;a href=&#34;https://patroni.readthedocs.io/en/latest/&#34;&gt;patroni&lt;/a&gt;、&lt;a href=&#34;https://etcd.io/&#34;&gt;etcd&lt;/a&gt; 和 &lt;a href=&#34;http://www.haproxy.org/&#34;&gt;haproxy&lt;/a&gt; 强力驱动。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty-ha.png&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;当主库故障时，将触发新一轮领导者竞选，集群中最为健康的从库将胜出，并被提升为新的主库。读写流量将立即路由至新的主库。主库故障影响是：默认情况下写入查询将被阻塞 15 ~ 40s，直到选出新的领导者来。&lt;/p&gt;
+&lt;p&gt;当从库故障时，只读流量将路由至其他从库，如果所有从库都故障，只读流量才会最终由主库承载。从库故障的影响非常小：查询闪断：该从库上正在运行查询将由于连接重置而中止。&lt;/p&gt;
+&lt;p&gt;故障检测由 &lt;code&gt;patroni&lt;/code&gt; 和 &lt;code&gt;etcd&lt;/code&gt; 完成，集群领导者将持有一个租约，如果它因为故障而没有及时续租（10s），租约将会被释放，新一轮集群选举会被触发。&lt;/p&gt;
+&lt;p&gt;您可以使用 &lt;a href=&#34;/zh/docs/reference/param#pg_rto&#34;&gt;&lt;code&gt;pg_rto&lt;/code&gt;&lt;/a&gt; 参数调整集群的 TTL，默认 RTO 配置为 30s，增大它将导致更长的故障转移等待时间，而减少它将增加误报故障转移率（例如，网络抖动）。&lt;/p&gt;
+&lt;p&gt;Pigsty 默认使用&lt;strong&gt;可用性优先&lt;/strong&gt;模式，这意味着当主库故障时，它将尽快进行故障转移，尚未复制到从库的数据可能会丢失（常规万兆网络下，复制延迟在通常在几KB到100KB）。&lt;/p&gt;
+&lt;p&gt;最大潜在数据丢失由 &lt;a href=&#34;/zh/docs/reference/param#pg_rpo&#34;&gt;&lt;code&gt;pg_rpo&lt;/code&gt;&lt;/a&gt; 控制，默认为 1MB，减小这个值将会减少故障恢复时的可能数据损失，但也会增加故障时因为从库不够健康（落后太久）而拒绝自动切换的概率。&lt;/p&gt;
+&lt;p&gt;RTO 与 RPO 是高可用集群设计时需要仔细权衡的两个参数，您应当根据您的硬件水平，网络质量，业务需求来合理调整它们。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;时间点恢复&#34;&gt;时间点恢复&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;您可以将集群恢复回滚至过去任意时刻，避免软件缺陷与人为失误导致的数据损失。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Pigsty 的 PostgreSQL 集群带有自动配置的时间点恢复（PITR）方案，基于 &lt;a href=&#34;https://pgbackrest.org/&#34;&gt;pgBackRest&lt;/a&gt; 与可选的 &lt;a href=&#34;https://min.io/&#34;&gt;MinIO&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;高可用可以解决硬件故障，软件缺陷与人为失误导致的数据删除/覆盖写入却无能为力：因为变更操作会立即同步至从库应用。时间点恢复（Point in Time Recovery, PITR）可以解决这个问题。此外当您只有单个实例时，PITR也可以代替高可用，为最坏的情况兜底。&lt;/p&gt;
+&lt;p&gt;如果想将集群恢复至某个备份，用户需要提前定期做好基础备份，如果想将集群恢复至任意时间点，用户还需要从备份时刻迄今的 WAL归档。这两项工作 Pigsty 为您自动进行了兜底配置。
+Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓库可以进行灵活配置（&lt;a href=&#34;/zh/docs/reference/param#pgbackrest_repo&#34;&gt;&lt;code&gt;pgbackrest_repo&lt;/code&gt;&lt;/a&gt;）：默认使用主库本地文件系统（&lt;code&gt;local&lt;/code&gt;），但也可以使用其他磁盘路径，或使用自带的可选 &lt;a href=&#34;/zh/docs/minio&#34;&gt;MinIO&lt;/a&gt; 服务（&lt;code&gt;minio&lt;/code&gt;）与云上 S3 服务。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_enabled&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 pgsql 主机上启用 pgBackRest 吗？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_clean&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;            &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化时删除 pg 备份数据？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_log_dir&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;/pg/log/pgbackrest&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 日志目录，默认为 `/pg/log/pgbackrest`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_method&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;local         &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 仓库方法：local, minio, [用户定义...]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_repo&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 仓库：https://pgbackrest.org/configuration.html#section-repository&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;local&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                          &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 默认使用本地 posix 文件系统的 pgbackrest 仓库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;path&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;/pg/backup             &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 本地备份目录，默认为 `/pg/backup`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full_type&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;count   &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 按计数保留完整备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;             &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用本地文件系统仓库时，最多保留 3 个完整备份，至少保留 2 个&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;minio&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                          &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 的可选 minio 仓库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;type&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;s3                     &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 是与 s3 兼容的，所以使用 s3&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;sss.pigsty      &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 端点域名，默认为 `sss.pigsty`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_region&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;us-east-1         &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 区域，默认为 us-east-1，对 minio 无效&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_bucket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgsql             &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 桶名称，默认为 `pgsql`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_key&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgbackrest           &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 的 minio 用户访问密钥&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_key_secret&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;S3User.Backup &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest 的 minio 用户秘密密钥&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;s3_uri_style&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;path           &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 对 minio 使用路径风格的 uri，而不是主机风格&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;path&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;/pgbackrest            &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 备份路径，默认为 `/pgbackrest`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;storage_port&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;9000&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;            &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio 端口，默认为 9000&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;storage_ca_file&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;/etc/pki/ca.crt &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# minio ca 文件路径，默认为 `/etc/pki/ca.crt`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;bundle&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;y&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                     &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将小文件打包成一个文件&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;cipher_type&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;aes-256-cbc     &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 为远程备份仓库启用 AES 加密&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;cipher_pass&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgBackRest      &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# AES 加密密码，默认为 &amp;#39;pgBackRest&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full_type&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;time    &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 minio 仓库上按时间保留完整备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;14&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;            &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 保留过去 14 天的完整备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;默认情况下，Pigsty提供了两种预置&lt;a href=&#34;/zh/docs/pgsql/pitr#%E5%A4%87%E4%BB%BD%E7%AD%96%E7%95%A5&#34;&gt;备份策略&lt;/a&gt;：默认使用本地文件系统备份仓库，在这种情况下每天进行一次全量备份，确保用户任何时候都能回滚至一天内的任意时间点。备选策略使用专用的 MinIO 集群或S3存储备份，每周一全备，每天一增备，默认保留两周的备份与WAL归档。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 系统架构</title>
+      <link>/zh/docs/concept/arch/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/concept/arch/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 使用 &lt;strong&gt;模块化架构&lt;/strong&gt; 与 &lt;strong&gt;声明式接口&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Pigsty 使用&lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt;描述整套部署环境，并通过 ansible &lt;a href=&#34;/zh/docs/setup/playbook&#34;&gt;剧本&lt;/a&gt;实现。&lt;/li&gt;
+&lt;li&gt;Pigsty 在可以在任意节点上运行，无论是物理裸机还是虚拟机，只要操作系统&lt;a href=&#34;/zh/docs/setup/install#%E8%A6%81%E6%B1%82&#34;&gt;兼容&lt;/a&gt;即可。&lt;/li&gt;
+&lt;li&gt;Pigsty 的行为由配置参数控制，具有幂等性的剧本 会将节点调整到配置所描述的状态。&lt;/li&gt;
+&lt;li&gt;Pigsty 采用模块化设计，可自由组合以适应不同场景。使用剧本将模块安装到配置指定的节点上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;模块&#34;&gt;模块&lt;/h2&gt;
+&lt;p&gt;Pigsty 采用模块化设计，有六个主要的默认模块：&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;：由 Patroni、Pgbouncer、HAproxy、PgBackrest 等驱动的自治高可用 Postgres 集群。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;：本地软件仓库、Prometheus、Grafana、Loki、AlertManager、PushGateway、Blackbox Exporter&amp;hellip;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;：调整节点到所需状态、名称、时区、NTP、ssh、sudo、haproxy、docker、promtail、keepalived&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;：分布式键值存储，用作高可用 Postgres 集群的 DCS：共识选主/配置管理/服务发现。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt;：Redis 服务器，支持独立主从、哨兵、集群模式，并带有完整的监控支持。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;：与 S3 兼容的简单对象存储服务器，可作为 PG数据库备份的可选目的地。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;你可以声明式地自由组合它们。如果你想要主机监控，在基础设施节点上安装&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;模块，并在纳管节点上安装 &lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt; 模块就足够了。
+&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 模块用于搭建高可用 PG 集群，将模块安装在多个节点上，可以自动形成一个高可用的数据库集群。
+您可以复用 Pigsty 基础架构并开发您自己的模块，&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 可以作为一个样例。后续还会有更多的模块加入，例如对 Mongo 与 MySQL 的初步支持已经提上了日程。&lt;/p&gt;
+&lt;p&gt;请注意，所有模块都强依赖 &lt;code&gt;NODE&lt;/code&gt; 模块：在 Pigsty 中节点必须先安装 &lt;code&gt;NODE&lt;/code&gt; 模块，被 Pigsty 纳管后方可部署其他模块。
+当节点（默认）使用本地软件源进行安装时，&lt;code&gt;NODE&lt;/code&gt; 模块对 &lt;code&gt;INFRA&lt;/code&gt; 模块有弱依赖。因此安装 &lt;code&gt;INFRA&lt;/code&gt; 模块的管理节点/基础设施节点会在 [&lt;code&gt;install.yml&lt;/code&gt;] 剧本中完成 Bootstrap 过程，解决循环依赖。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/setup/provision&#34;&gt;&lt;img alt=&#34;pigsty-sandbox.jpg&#34; src=&#34;/img/pigsty/sandbox.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;单机安装&#34;&gt;单机安装&lt;/h2&gt;
+&lt;p&gt;默认情况下，Pigsty 将在单个 &lt;strong&gt;节点&lt;/strong&gt; (物理机/虚拟机) 上安装。&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/install.yml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt; 剧本将在&lt;strong&gt;当前&lt;/strong&gt;节点上安装 &lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 模块，
+这将为你提供一个功能完备的可观测性技术栈全家桶 (Prometheus、Grafana、Loki、AlertManager、PushGateway、BlackboxExporter 等) ，以及一个内置的 PostgreSQL 单机实例作为 CMDB，也可以开箱即用。 (集群名 &lt;code&gt;pg-meta&lt;/code&gt;，库名为 &lt;code&gt;meta&lt;/code&gt;)。&lt;/p&gt;
+&lt;p&gt;这个节点现在会有完整的自我监控系统、可视化工具集，以及一个自动配置有 PITR 的 Postgres 数据库（HA不可用，因为你只有一个节点）。你可以使用此节点作为开发箱、测试、运行演示以及进行数据可视化和分析。或者，还可以把这个节点当作管理节点，部署纳管更多的节点！&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/infra/&#34;&gt;&lt;img alt=&#34;pigsty-arch.jpg&#34; src=&#34;/img/pigsty/arch.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;监控&#34;&gt;监控&lt;/h2&gt;
+&lt;p&gt;安装的 &lt;a href=&#34;/zh/docs/concept/arch/#单机安装&#34;&gt;单机元节点&lt;/a&gt; 可用作&lt;strong&gt;管理节点&lt;/strong&gt;和&lt;strong&gt;监控中心&lt;/strong&gt;，以将更多节点和数据库服务器置于其监视和控制之下。&lt;/p&gt;
+&lt;p&gt;Pigsty 的监控系统可以独立使用，如果你想安装 Prometheus / Grafana 可观测性全家桶，Pigsty 为你提供了最佳实践！
+它为 &lt;a href=&#34;https://demo.pigsty.cc/d/node-overview&#34;&gt;主机节点&lt;/a&gt; 和 &lt;a href=&#34;https://demo.pigsty.cc/d/pgsql-overview&#34;&gt;PostgreSQL数据库&lt;/a&gt; 提供了丰富的仪表盘。
+无论这些节点或 PostgreSQL 服务器是否由 Pigsty 管理，只需简单的配置，你就可以立即拥有生产级的监控和告警系统，并将现有的主机与PostgreSQL纳入监管。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgsql/dashboard&#34;&gt;&lt;img alt=&#34;pigsty-dashboard.jpg&#34; src=&#34;/img/pigsty/dashboard.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;高可用pg集群&#34;&gt;高可用PG集群&lt;/h2&gt;
+&lt;p&gt;Pigsty 帮助您在任何地方 &lt;strong&gt;拥有&lt;/strong&gt; 您自己的生产级高可用 PostgreSQL RDS 服务。&lt;/p&gt;
+&lt;p&gt;要创建这样一个高可用 PostgreSQL 集群/RDS服务，你只需用简短的配置来描述它，并运行剧本来创建即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-test&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 2, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.13&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 3, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-test }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ bin/pgsql-add pg-test  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化集群 &amp;#39;pg-test&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;不到10分钟，您将拥有一个服务接入，监控，备份PITR，高可用配置齐全的 PostgreSQL 数据库集群。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;&lt;img alt=&#34;pigsty-ha.png&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;硬件故障由 patroni、etcd 和 haproxy 提供的自愈高可用架构来兜底，在主库故障的情况下，默认会在 30 秒内执行自动故障转移（Failover）。
+客户端无需修改配置重启应用：Haproxy 利用 patroni 健康检查进行流量分发，读写请求会自动分发到新的集群主库中，并避免脑裂的问题。
+这一过程十分丝滑，例如在从库故障，或主动切换（switchover）的情况下，客户端只有一瞬间的当前查询闪断，&lt;/p&gt;
+&lt;p&gt;软件故障、人为错误和 数据中心级灾难由 pgbackrest 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;MinIO&lt;/a&gt; 集群来兜底。这为您提供了本地/云端的 PITR 能力，并在数据中心失效的情况下提供了跨地理区域复制，与异地容灾功能。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;数据库即代码&#34;&gt;数据库即代码&lt;/h2&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 集群模型</title>
+      <link>/zh/docs/concept/model/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/concept/model/</guid>
+      <description>
+        
+        
+        &lt;p&gt;在 Pigsty 中，功能模块是以 “集群” 的方式组织起来的。每一个集群都是一个 Ansible 分组，包含有若干节点资源，定义有实例&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;PGSQL 模块总览：关键概念与架构细节&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;PGSQL模块在生产环境中以&lt;strong&gt;集群&lt;/strong&gt;的形式组织，这些&lt;strong&gt;集群&lt;/strong&gt;是由一组由&lt;strong&gt;主-备&lt;/strong&gt;关联的数据库&lt;strong&gt;实例&lt;/strong&gt;组成的&lt;strong&gt;逻辑实体&lt;/strong&gt;。
+每个&lt;strong&gt;数据库集群&lt;/strong&gt;都是一个&lt;strong&gt;自治&lt;/strong&gt;的业务服务单元，由至少一个 &lt;strong&gt;数据库（主库）实例&lt;/strong&gt; 组成。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;实体概念图&#34;&gt;实体概念图&lt;/h2&gt;
+&lt;p&gt;让我们从ER图开始。在Pigsty的PGSQL模块中，有四种核心实体：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;集群&lt;/strong&gt;（Cluster）：自治的PostgreSQL业务单元，用作其他实体的顶级命名空间。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;服务&lt;/strong&gt;（Service）：集群能力的命名抽象，路由流量，并使用节点端口暴露postgres服务。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;实例&lt;/strong&gt;（Instance）：一个在单个节点上的运行进程和数据库文件组成的单一postgres服务器。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;节点&lt;/strong&gt;（Node）：硬件资源的抽象，可以是裸金属、虚拟机或甚至是k8s pods。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&#34;/img/pigsty/er.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;命名约定&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;集群名应为有效的 DNS 域名，不包含任何点号，正则表达式为：&lt;code&gt;[a-zA-Z0-9-]+&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;服务名应以集群名为前缀，并以特定单词作为后缀：&lt;code&gt;primary&lt;/code&gt;、&lt;code&gt;replica&lt;/code&gt;、&lt;code&gt;offline&lt;/code&gt;、&lt;code&gt;delayed&lt;/code&gt;，中间用&lt;code&gt;-&lt;/code&gt;连接。&lt;/li&gt;
+&lt;li&gt;实例名以集群名为前缀，以正整数实例号为后缀，用&lt;code&gt;-&lt;/code&gt;连接，例如&lt;code&gt;${cluster}-${seq}&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;节点由其首要内网IP地址标识，因为PGSQL模块中数据库与主机1:1部署，所以主机名通常与实例名相同。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;身份参数&#34;&gt;身份参数&lt;/h2&gt;
+&lt;p&gt;Pigsty使用&lt;strong&gt;身份参数&lt;/strong&gt;来识别实体：&lt;a href=&#34;/zh/docs/reference/param#pg_id&#34;&gt;&lt;code&gt;PG_ID&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;除了节点IP地址，&lt;a href=&#34;/zh/docs/reference/param#pg_cluster&#34;&gt;&lt;code&gt;pg_cluster&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/reference/param#pg_role&#34;&gt;&lt;code&gt;pg_role&lt;/code&gt;&lt;/a&gt;和&lt;a href=&#34;/zh/docs/reference/param#pg_seq&#34;&gt;&lt;code&gt;pg_seq&lt;/code&gt;&lt;/a&gt;三个参数是定义postgres集群所必需的最小参数集。
+以&lt;a href=&#34;/zh/docs/setup/provision#%E6%B2%99%E7%AE%B1%E7%8E%AF%E5%A2%83&#34;&gt;沙箱环境&lt;/a&gt;测试集群&lt;code&gt;pg-test&lt;/code&gt;为例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-test&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 2, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.13&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 3, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-test&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;集群的三个成员如下所示：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;集群&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;序号&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;角色&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;主机 / IP&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;实例&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;服务&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;节点名&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;1&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;primary&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;10.10.10.11&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-1&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-primary&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-1&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;2&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;replica&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;10.10.10.12&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-2&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-replica&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-2&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;3&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;replica&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;10.10.10.13&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-3&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-replica&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg-test-3&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;这里包含了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;一个集群：该集群命名为&lt;code&gt;pg-test&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;两种角色：&lt;code&gt;primary&lt;/code&gt;和&lt;code&gt;replica&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;三个实例：集群由三个实例组成：&lt;code&gt;pg-test-1&lt;/code&gt;、&lt;code&gt;pg-test-2&lt;/code&gt;、&lt;code&gt;pg-test-3&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;三个节点：集群部署在三个节点上：&lt;code&gt;10.10.10.11&lt;/code&gt;、&lt;code&gt;10.10.10.12&lt;/code&gt;和&lt;code&gt;10.10.10.13&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;四个服务：
+&lt;ul&gt;
+&lt;li&gt;读写服务：&lt;a href=&#34;/zh/docs/pgsql/svc#primary%E6%9C%8D%E5%8A%A1&#34;&gt;&lt;code&gt;pg-test-primary&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;只读服务：&lt;a href=&#34;/zh/docs/pgsql/svc#replica%E6%9C%8D%E5%8A%A1&#34;&gt;&lt;code&gt;pg-test-replica&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;直接连接的管理服务：&lt;a href=&#34;/zh/docs/pgsql/svc#default%E6%9C%8D%E5%8A%A1&#34;&gt;&lt;code&gt;pg-test-default&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;离线读服务：&lt;a href=&#34;/zh/docs/pgsql/svc#offline%E6%9C%8D%E5%8A%A1&#34;&gt;&lt;code&gt;pg-test-offline&lt;/code&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在监控系统（Prometheus/Grafana/Loki）中，相应的指标将会使用这些身份参数进行标记：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_up{cls=&amp;#34;pg-meta&amp;#34;, ins=&amp;#34;pg-meta-1&amp;#34;, ip=&amp;#34;10.10.10.10&amp;#34;, job=&amp;#34;pgsql&amp;#34;}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_up{cls=&amp;#34;pg-test&amp;#34;, ins=&amp;#34;pg-test-1&amp;#34;, ip=&amp;#34;10.10.10.11&amp;#34;, job=&amp;#34;pgsql&amp;#34;}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_up{cls=&amp;#34;pg-test&amp;#34;, ins=&amp;#34;pg-test-2&amp;#34;, ip=&amp;#34;10.10.10.12&amp;#34;, job=&amp;#34;pgsql&amp;#34;}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_up{cls=&amp;#34;pg-test&amp;#34;, ins=&amp;#34;pg-test-3&amp;#34;, ip=&amp;#34;10.10.10.13&amp;#34;, job=&amp;#34;pgsql&amp;#34;}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+  </channel>
+</rss>

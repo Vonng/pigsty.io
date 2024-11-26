@@ -1,0 +1,881 @@
+<!doctype html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="canonical" type="text/html" href="/zh/docs/pgext/build/">
+<link rel="alternate" type="application/rss&#43;xml" href="/zh/docs/pgext/build/index.xml">
+<meta name="robots" content="noindex, nofollow">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>构建打包 | Pigsty</title>
+<meta name="description" content="如何准备构建 PostgreSQL rpm/deb 扩展包的环境，以及重要扩展的构建打包方式。">
+<meta property="og:title" content="构建打包" />
+<meta property="og:description" content="如何准备构建 PostgreSQL rpm/deb 扩展包的环境，以及重要扩展的构建打包方式。" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="/zh/docs/pgext/build/" />
+
+<meta itemprop="name" content="构建打包">
+<meta itemprop="description" content="如何准备构建 PostgreSQL rpm/deb 扩展包的环境，以及重要扩展的构建打包方式。"><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="构建打包"/>
+<meta name="twitter:description" content="如何准备构建 PostgreSQL rpm/deb 扩展包的环境，以及重要扩展的构建打包方式。"/>
+
+
+
+
+<link rel="preload" href="/scss/main.min.194607c777ee31a481a26dfc3d1c65134dfc8eb296a0aae9d353b3bd5be6a683.css" as="style">
+<link href="/scss/main.min.194607c777ee31a481a26dfc3d1c65134dfc8eb296a0aae9d353b3bd5be6a683.css" rel="stylesheet" integrity="">
+
+<script
+  src="/js/jquery-3.6.3.min.js"
+  integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
+  crossorigin="anonymous"></script>
+<script defer
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
+  </head>
+  <body class="td-section">
+    <header>
+      <nav class="td-navbar navbar-dark js-navbar-scroll">
+<div class="container-fluid flex-column flex-md-row">
+  <a class="navbar-brand" href="/zh/"><span class="navbar-brand__logo navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="navbar-brand__name">Pigsty</span></a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link active" href="/zh/docs/"><i class='fa-solid fa-book'></i><span>文档</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/zh/blog/"><i class="fas fa-blog"></i><span>博客</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" rel="noopener"><i class='fab fa-github'></i><span>GitHub</span></a>
+      </li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Link</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/">v3 Docs</a></li>
+    <li><a class="dropdown-item" href="https://demo.pigsty.cc">Public Demo</a></li>
+    <li><a class="dropdown-item" href="https://ext.pigsty.io">Extension Repo</a></li>
+    <li><a class="dropdown-item" href="https://pigsty.cc/zh/docs">pigsty.cc</a></li>
+    <li><a class="dropdown-item" href="https://pigsty.cc/zh/blog">ZH Blog</a></li>
+    </ul>
+</div></li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/pgext/build/">English</a></li>
+    </ul>
+</div>
+</li>
+      </ul>
+  </div>
+  <div class="d-none d-lg-block">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.e20cef2c1fb59d65c1649f8d99b8930d.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+  </div>
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <main class="col-12 col-md-9 col-xl-8 ps-md-5" role="main">
+            
+
+
+
+
+<div class="td-content">
+<div class="pageinfo pageinfo-primary d-print-none">
+<p>
+This is the multi-page printable view of this section.
+<a href="#" onclick="print();return false;">Click here to print</a>.
+</p><p>
+<a href="/zh/docs/pgext/build/">Return to the regular view of this page</a>.
+</p>
+</div>
+
+
+
+<h1 class="title">构建打包</h1>
+<div class="lead">如何准备构建 PostgreSQL rpm/deb 扩展包的环境，以及重要扩展的构建打包方式。</div>
+
+
+
+
+    <ul>
+    
+  
+  
+  
+  
+
+  
+    
+    
+	
+<li>1: <a href="#pg-398aac129de6e3ae40e7dd0d7c794b48">虚拟机构建环境</a></li>
+
+
+    
+  
+    
+    
+	
+<li>2: <a href="#pg-554c918ec45c4c894cb751aa520b995d">准备 rust 与 pgrx</a></li>
+
+
+    
+  
+    
+    
+	
+<li>3: <a href="#pg-edc8fb61560b6266d83b2b253813869b">PGML 构建指南</a></li>
+
+
+    
+  
+    
+    
+	
+<li>4: <a href="#pg-3c9a637fae23b45ca38055d648d7a312">PLv8 构建指南</a></li>
+
+
+    
+  
+    
+    
+	
+<li>5: <a href="#pg-2b4c0e6160521dc8ca6ea08c11b287dc">ParadeDB 构建指南</a></li>
+
+
+    
+  
+    
+    
+	
+<li>6: <a href="#pg-664f493636925aaf6578ac560b7b904a">DuckDB FDW 构建指南</a></li>
+
+
+    
+  
+    
+    
+	
+<li>7: <a href="#pg-bb010574fb7ac74e04d5db2a29799401">Parquet S3 FDW 构建指南</a></li>
+
+
+    
+  
+
+    </ul>
+
+
+<div class="content">
+      
+</div>
+</div>
+
+
+  
+  
+  
+  
+
+  
+  
+
+  
+    
+    
+	
+    
+
+<div class="td-content" style="">
+    
+	<h1 id="pg-398aac129de6e3ae40e7dd0d7c794b48">1 - 虚拟机构建环境</h1>
+    <div class="lead">如何制备构建 Pigsty 扩展所需的虚拟机环境：EL 8/9，Debian12，Ubuntu22。</div>
+	<hr>
+<h2 id="准备虚拟机">准备虚拟机</h2>
+<p>想要在 EL / Debian 环境下构建 PGML RPM 包，需要准备虚拟机环境，Pigsty 提供 <code>ext.yml</code> 模板，用于准备构建所需的虚拟机环境</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> pigsty
+</span></span><span style="display:flex;"><span>make build
+</span></span><span style="display:flex;"><span>./node.yml -i conf/build/ext.yml -t node_repo,node_pkg
+</span></span></code></pre></div><p>在该配置下，Pigsty 默认提供 EL8，EL9，Debian12，Ubuntu22 四台虚拟机，并安装构建所需的依赖软件包。</p>
+<hr>
+<h2 id="代理服务器">代理服务器</h2>
+<p>如果您的网络条件不佳，最好配置一个 HTTP 代理，例如，假设你的本地环境中，有一台可用的代理服务器： <code>http://192.168.0.106:8118</code>（需要换成你自己的地址）。那么 EL 环境下的环境变量配置如下：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#000">PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span>http://192.168.0.107:8118
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">HTTP_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">HTTPS_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">ALL_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">NO_PROXY</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;localhost,127.0.0.1,10.0.0.0/8,192.168.0.0/16,*.pigsty,*.aliyun.com,mirrors.*,*.myqcloud.com,*.tsinghua.edu.cn&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">build</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;HTTPS_PROXY=</span><span style="color:#4e9a06">${</span><span style="color:#000">PROXY</span><span style="color:#4e9a06">}</span><span style="color:#4e9a06"> cargo pgrx package -v&#34;</span>
+</span></span></code></pre></div><p>编辑 <code>~/.ssh/config</code> 文件，添加代理配置，让 Github git 克隆走 HTTPS 代理（可选）：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Host github.com
+</span></span><span style="display:flex;"><span>    Hostname ssh.github.com
+</span></span><span style="display:flex;"><span>    Port <span style="color:#0000cf;font-weight:bold">443</span>
+</span></span><span style="display:flex;"><span>    User git
+</span></span></code></pre></div><p>如果以下命令可以成功执行，说明 <code>github</code> 代理配置成功：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ssh -T git@github.com
+</span></span></code></pre></div><hr>
+<h2 id="快捷别名">快捷别名</h2>
+<p>EL 环境下，可以使用以下 Alias 便捷地切换 PG 环境：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg17</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-17/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg16</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-16/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg15</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-15/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg14</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-14/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg13</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-13/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg12</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/pgsql-12/bin:~/.cargo/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin&#34;</span>
+</span></span></code></pre></div><p>而 Debian / Ubuntu 环境下则使用以下的 Alias：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg17</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/17/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg16</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/16/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg15</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/15/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg14</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/14/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg13</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/13/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">alias</span> <span style="color:#000">pg12</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;export PATH=/usr/lib/postgresql/12/bin:~/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;&#34;</span>
+</span></span></code></pre></div><hr>
+<h2 id="安装构建工具链">安装构建工具链</h2>
+<p>在 EL 8 / EL 9 环境中，还需要额外安装 <code>'Development Tools'</code> 组件。其中，EL8 因为依赖错漏问题，需要添加 <code>--nobest</code> 选项才能完成安装。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo yum groupinstall --nobest -y <span style="color:#4e9a06">&#39;Development Tools&#39;</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rpmdev-setuptree  <span style="color:#8f5902;font-style:italic"># 在当前用户家目录下创建 rpmbuild 目录</span>
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-554c918ec45c4c894cb751aa520b995d">2 - 准备 rust 与 pgrx</h1>
+    <div class="lead">编译 Rust 扩展需要安装 Rust 与 pgrx ，这里是配置说明与扩展编译的清单与手册。</div>
+	<hr>
+<h2 id="安装rust">安装Rust</h2>
+<p>如果需要构建 Rust 扩展，需要安装 <code>rust</code> 与 <code>pgrx</code></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl --proto <span style="color:#4e9a06">&#39;=https&#39;</span> --tlsv1.2 -sSf https://sh.rustup.rs <span style="color:#000;font-weight:bold">|</span> sh
+</span></span><span style="display:flex;"><span><span style="color:#204a87">source</span> <span style="color:#4e9a06">&#34;</span><span style="color:#000">$HOME</span><span style="color:#4e9a06">/.cargo/env&#34;</span>
+</span></span></code></pre></div><p>安装 <code>pgrx</code>，注意 <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml#L42">版本</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cargo install --locked cargo-pgrx@<span style="color:#4e9a06">${</span><span style="color:#000">PGRX_VER</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">&#39;0.12.7&#39;</span><span style="color:#4e9a06">}</span> <span style="color:#8f5902;font-style:italic"># &lt;--- </span>
+</span></span><span style="display:flex;"><span>cargo install --locked cargo-pgrx@<span style="color:#4e9a06">${</span><span style="color:#000">PGRX_VER</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">&#39;0.11.3&#39;</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span>cargo install --locked cargo-pgrx@<span style="color:#4e9a06">${</span><span style="color:#000">PGRX_VER</span><span style="color:#000;font-weight:bold">-</span><span style="color:#4e9a06">&#39;0.10.2&#39;</span><span style="color:#4e9a06">}</span>
+</span></span><span style="display:flex;"><span>cargo pgrx init
+</span></span></code></pre></div><details><summary>配置 Rust Cargo 使用中国镜像（可选）</summary>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -vp <span style="color:#4e9a06">${</span><span style="color:#000">CARGO_HOME</span><span style="color:#204a87;font-weight:bold">:-</span><span style="color:#000">$HOME</span><span style="color:#000;font-weight:bold">/.cargo</span><span style="color:#4e9a06">}</span><span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>cat &gt; <span style="color:#4e9a06">${</span><span style="color:#000">CARGO_HOME</span><span style="color:#204a87;font-weight:bold">:-</span><span style="color:#000">$HOME</span><span style="color:#000;font-weight:bold">/.cargo</span><span style="color:#4e9a06">}</span>/config <span style="color:#4e9a06">&lt;&lt; EOF
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">[source.crates-io]
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">replace-with = &#39;mirror&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">[source.mirror]
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">registry = &#34;sparse+https://mirrors.tuna.tsinghua.edu.cn/crates.io-index/&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#4e9a06">EOF</span>
+</span></span><span style="display:flex;"><span>env <span style="color:#000">RUSTUP_DIST_SERVER</span><span style="color:#ce5c00;font-weight:bold">=</span>https://mirrors.tuna.tsinghua.edu.cn/rustup rustup install stable
+</span></span></code></pre></div></details><br>
+<hr>
+<h2 id="rust扩展清单">Rust扩展清单</h2>
+<table>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>Name</th>
+<th>Version</th>
+<th>PGRX</th>
+<th>License</th>
+<th>PG Ver</th>
+<th>Deps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supabase</td>
+<td><a href="https://github.com/supabase/pg_graphql">pg_graphql</a></td>
+<td>v1.5.9</td>
+<td><a href="https://github.com/supabase/pg_graphql/blob/master/Cargo.toml#L17">v0.12.5</a></td>
+<td><a href="https://github.com/supabase/pg_graphql/blob/master/LICENSE">Apache-2.0</a></td>
+<td>17,16,15</td>
+<td></td>
+</tr>
+<tr>
+<td>Supabase</td>
+<td><a href="https://github.com/supabase/pg_jsonschema">pg_jsonschema</a></td>
+<td>v0.3.2</td>
+<td><a href="https://github.com/supabase/pg_jsonschema/blob/master/Cargo.toml#L19">v0.12.5</a></td>
+<td><a href="https://github.com/supabase/pg_jsonschema/blob/master/LICENSE">Apache-2.0</a></td>
+<td>17,16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>Supabase</td>
+<td><a href="https://github.com/supabase/wrappers">wrappers</a></td>
+<td>v0.4.3</td>
+<td><a href="https://github.com/supabase/wrappers/blob/main/Cargo.lock#L4254">v0.12.6</a></td>
+<td><a href="https://github.com/supabase/wrappers/blob/main/LICENSE">Apache-2.0</a></td>
+<td>17,16,15,14</td>
+<td></td>
+</tr>
+<tr>
+<td>TimescaleDB</td>
+<td><a href="https://github.com/timescale/pgvectorscale">vectorscale</a></td>
+<td>v0.3.0</td>
+<td><a href="https://github.com/timescale/pgvectorscale/blob/main/pgvectorscale/Cargo.toml#L17">v0.12.5</a></td>
+<td><a href="https://github.com/timescale/pgvectorscale/blob/main/LICENSE">PostgreSQL</a></td>
+<td>17,16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>kelvich</td>
+<td><a href="https://github.com/Vonng/pg_tiktoken">pg_tiktoken</a></td>
+<td>v0.0.1</td>
+<td><a href="https://github.com/Vonng/pg_tiktoken/blob/main/Cargo.toml">v0.12.6</a></td>
+<td><a href="https://github.com/kelvich/pg_tiktoken/blob/main/LICENSE">Apache-2.0</a></td>
+<td>16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>PostgresML</td>
+<td><a href="https://github.com/postgresml/postgresml">pgml</a></td>
+<td>v2.9.3</td>
+<td><a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.lock#L1785">v0.11.3</a></td>
+<td><a href="https://github.com/postgresml/postgresml/blob/master/MIT-LICENSE.txt">MIT</a></td>
+<td>16,15,14</td>
+<td></td>
+</tr>
+<tr>
+<td>Tembo</td>
+<td><a href="https://github.com/tembo-io/pg_vectorize">pg_vectorize</a></td>
+<td>v0.17.0</td>
+<td><a href="https://github.com/tembo-io/pg_vectorize/blob/main/extension/Cargo.toml#L24">v0.11.3</a></td>
+<td><a href="https://github.com/tembo-io/pg_vectorize/blob/main/LICENSE">PostgreSQL</a></td>
+<td>16,15,14</td>
+<td>pgmq, pg_cron</td>
+</tr>
+<tr>
+<td>Tembo</td>
+<td><a href="https://github.com/tembo-io/pg_later">pg_later</a></td>
+<td>v0.1.1</td>
+<td><a href="https://github.com/tembo-io/pg_later/blob/main/Cargo.toml#L23">v0.11.3</a></td>
+<td><a href="https://github.com/tembo-io/pg_later/blob/main/LICENSE">PostgreSQL</a></td>
+<td>16,15,14,13</td>
+<td>pgmq</td>
+</tr>
+<tr>
+<td>kaspermarstal</td>
+<td><a href="https://github.com/kaspermarstal/plprql">plprql</a></td>
+<td>v0.1.0</td>
+<td><a href="https://github.com/kaspermarstal/plprql/blob/main/Cargo.toml#L21">v0.11.3</a></td>
+<td><a href="https://github.com/kaspermarstal/plprql/blob/main/LICENSE">Apache-2.0</a></td>
+<td>16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>VADOSWARE</td>
+<td><a href="https://github.com/VADOSWARE/pg_idkit">pg_idkit</a></td>
+<td>v0.2.3</td>
+<td>v0.12.5</td>
+<td><a href="https://github.com/VADOSWARE/pg_idkit/blob/main/LICENSE">Apache-2.0</a></td>
+<td>17,16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>pgsmcrypto</td>
+<td><a href="https://github.com/Vonng/pgsmcrypto">pgsmcrypto</a></td>
+<td>v0.1.0</td>
+<td>v0.12.6</td>
+<td><a href="https://github.com/zhuobie/pgsmcrypto/blob/main/LICENSE">MIT</a></td>
+<td>17,16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>rustprooflabs</td>
+<td><a href="https://github.com/rustprooflabs/pgdd">pgdd</a></td>
+<td>v0.5.2</td>
+<td><a href="https://github.com/rustprooflabs/pgdd/blob/main/Cargo.toml#L25">v0.10.2</a></td>
+<td><a href="https://github.com/zhuobie/pgsmcrypto/blob/main/LICENSE">MIT</a></td>
+<td>16,15,14,13,12</td>
+<td></td>
+</tr>
+<tr>
+<td>CrunchyData</td>
+<td><a href="https://github.com/CrunchyData/pg_parquet">pg_parquet</a></td>
+<td>v0.1.0</td>
+<td><a href="https://github.com/CrunchyData/pg_parquet">v0.12.6</a></td>
+<td><a href="https://github.com/CrunchyData/pg_parquet/blob/main/LICENSE">PostgreSQL</a></td>
+<td>17, 16</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="下载并构建rust扩展">下载并构建Rust扩展</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recursive git@github.com:postgresml/postgresml.git  <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/postgresml     <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v2.9.3
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:supabase/pg_graphql.git                <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_graphql     <span style="color:#8f5902;font-style:italic">#&amp;&amp; git checkout v1.5.8             </span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:supabase/pg_jsonschema.git             <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_jsonschema  <span style="color:#8f5902;font-style:italic">#&amp;&amp; git checkout v0.3.2       </span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:supabase/wrappers.git                  <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/wrappers       <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v0.4.3               
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:Vonng/pgsmcrypto.git                   <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pgsmcrypto
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:Vonng/pg_tiktoken.git                  <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_tiktoken
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:VADOSWARE/pg_idkit.git                 <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_idkit       <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v0.2.4             
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:timescale/pgvectorscale.git            <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pgvectorscale  <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout 0.4.0                    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:tembo-io/pg_vectorize.git              <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_vectorize   <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v0.18.3 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:tembo-io/pg_later.git                  <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_later       <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v0.1.3           
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:kaspermarstal/plprql.git               <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/plprql         <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v1.0.0
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone git@github.com:rustprooflabs/pgdd.git                 <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pgdd           <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout 0.5.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git@github.com:CrunchyData/pg_parquet.git                       <span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/pg_parquet     <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout 0.1.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#cd ~; git clone git@github.com:tembo-io/pgmq.git                      ; cd ~/pgmq           &amp;&amp; git checkout v1.2.1 #v1.3.3</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#cd ~; git clone --recursive https://github.com/paradedb/paradedb.git  ; cd ~/paradedb       &amp;&amp; git checkout v0.8.6</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#cd ~/paradedb;     cargo update</span>
+</span></span></code></pre></div><p>您可以使用扩展别名，批量构建 Rust 扩展：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># pgrx 0.12.6</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_graphql<span style="color:#000;font-weight:bold">;</span>                  pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span>  
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_jsonschema<span style="color:#000;font-weight:bold">;</span>               pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/wrappers/wrappers<span style="color:#000;font-weight:bold">;</span>           pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pgsmcrypto<span style="color:#000;font-weight:bold">;</span>                  pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_tiktoken<span style="color:#000;font-weight:bold">;</span>                 pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_idkit<span style="color:#000;font-weight:bold">;</span>                    pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">RUSTFLAGS</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;-C target-feature=+avx2,+fma&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pgvectorscale/pgvectorscale<span style="color:#000;font-weight:bold">;</span> pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># pgrx 0.11.3</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/plprql/plprql<span style="color:#000;font-weight:bold">;</span>               pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_later<span style="color:#000;font-weight:bold">;</span>                    pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_vectorize/extension<span style="color:#000;font-weight:bold">;</span>      pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># pgrx 0.10.2</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pgdd<span style="color:#000;font-weight:bold">;</span>                        pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_parquet<span style="color:#000;font-weight:bold">;</span>                  pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_polyline<span style="color:#000;font-weight:bold">;</span>                 pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_explain_ui<span style="color:#000;font-weight:bold">;</span>               pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_cardano<span style="color:#000;font-weight:bold">;</span>                  pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_base58<span style="color:#000;font-weight:bold">;</span>                   pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/pg_summarize<span style="color:#000;font-weight:bold">;</span>                pg17 build<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span> pg13 build<span style="color:#000;font-weight:bold">;</span> pg12 build<span style="color:#000;font-weight:bold">;</span> 
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-edc8fb61560b6266d83b2b253813869b">3 - PGML 构建指南</h1>
+    <div class="lead">构建库内机器学习扩展 PostgresML 需要一些额外的配置</div>
+	<hr>
+<h2 id="构建-pgml">构建 PGML</h2>
+<p>构建 PostgresML 是相当麻烦的工作，下面是在 EL8 与 EL9 上构建 PGML 的教程。</p>
+<p>首先，根据 <a href="/zh/docs/extension/rpmbuild">RPM 构建环境</a> 的说明，配置好 <a href="/zh/docs/extension/rpmbuild#%E7%8E%AF%E5%A2%83%E4%B8%8E%E4%BB%A3%E7%90%86">环境与代理</a>，安装 <a href="/zh/docs/extension/rpmbuild#%E5%AE%89%E8%A3%85rust"><code>rust</code></a> 与 <a href="/zh/docs/extension/rpmbuild#%E5%AE%89%E8%A3%85pgrx"><code>pgrx</code></a>，特别注意 <code>pgml</code> 使用的 <code>pgrx</code> <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml#L42"><strong>版本号</strong></a>。</p>
+<h3 id="准备python3">准备Python3</h3>
+<p>安装 Python，并设置为默认版本：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo yum install python3.11 python3.11-devel python3-virtualenv openssl openssl-devel cmake pkg-config libomp libomp-devel openblas* llvm llvm-devel lld openblas*
+</span></span><span style="display:flex;"><span>sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 <span style="color:#0000cf;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>sudo alternatives --set python3 /usr/bin/python3.11
+</span></span><span style="display:flex;"><span>sudo alternatives --set python /usr/bin/python3.11
+</span></span></code></pre></div><h3 id="准备代码仓库">准备代码仓库</h3>
+<p>克隆 <code>pgml</code>，并 <strong>检出指定版本</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recursive git@github.com:postgresml/postgresml.git<span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> git checkout v2.9.3
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml/pgml-extension
+</span></span></code></pre></div><h3 id="el8专用编译说明">EL8专用编译说明</h3>
+<p>本节修改在 EL8 上进行，EL9 无需执行此操作。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo dnf install gcc-toolset-13
+</span></span><span style="display:flex;"><span><span style="color:#204a87">source</span> /opt/rh/gcc-toolset-13/enable
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">source</span> /opt/rh/gcc-toolset-13/enable
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">CC</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/bin/gcc
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">CXX</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/bin/g++
+</span></span><span style="display:flex;"><span><span style="color:#204a87">export</span> <span style="color:#000">LD_LIBRARY_PATH</span><span style="color:#ce5c00;font-weight:bold">=</span>/opt/rh/gcc-toolset-13/root/usr/lib64:<span style="color:#000">$LD_LIBRARY_PATH</span>
+</span></span></code></pre></div><p>在 EL8 上构建时，需要修改 <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/build.rs"><code>build.rs</code></a> 文件，在合适的位置添加两行编译选项：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-lib=static=stdc++fs&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-search=native=/opt/rh/gcc-toolset-13/root/usr/lib/gcc/x86_64-redhat-linux/13&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>整个文件应该是这样的：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-rust" data-lang="rust"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">fn</span> <span style="color:#000">main</span><span style="color:#000;font-weight:bold">()</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">{</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">#[cfg(target_os = </span><span style="color:#4e9a06">&#34;macos&#34;</span><span style="color:#8f5902;font-style:italic">)]</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">{</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-search=/opt/homebrew/opt/openblas/lib&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-search=/opt/homebrew/opt/libomp/lib&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">// PostgreSQL is using dlopen(RTLD_GLOBAL). this will parse some
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">// of symbols into the previous opened .so file, but the others will use a
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">// relative offset in pgml.so, and will cause a null-pointer crash.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">// hide all symbol to avoid symbol conflicts.
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">//
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#8f5902;font-style:italic">// append mode (link-args) only works with clang ld (lld)
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"></span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#4e9a06">&#34;cargo:link-args=-Wl,--version-script=</span><span style="color:#4e9a06">{}</span><span style="color:#4e9a06">/ld.map&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#000">std</span>::<span style="color:#000">env</span>::<span style="color:#000">current_dir</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">unwrap</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">to_string_lossy</span><span style="color:#000;font-weight:bold">(),</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-lib=static=stdc++fs&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">println!</span><span style="color:#000;font-weight:bold">(</span><span style="color:#4e9a06">&#34;cargo:rustc-link-search=native=/opt/rh/gcc-toolset-13/root/usr/lib/gcc/x86_64-redhat-linux/13&#34;</span><span style="color:#000;font-weight:bold">);</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">vergen</span>::<span style="color:#000">EmitBuilder</span>::<span style="color:#000">builder</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">all_git</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">emit</span><span style="color:#000;font-weight:bold">().</span><span style="color:#000">unwrap</span><span style="color:#000;font-weight:bold">();</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">}</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>接着修改 <a href="https://github.com/postgresml/postgresml/blob/master/pgml-extension/Cargo.toml"><code>Cargo.toml</code></a></p>
+<p>在 <code>[build-dependencies]</code> 一节中添加：<code>cc = &quot;1.0&quot;</code>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#ce5c00;font-weight:bold">[</span>build-dependencies<span style="color:#ce5c00;font-weight:bold">]</span>
+</span></span><span style="display:flex;"><span>+++ <span style="color:#000">cc</span> <span style="color:#ce5c00;font-weight:bold">=</span> <span style="color:#4e9a06">&#34;1.0&#34;</span>
+</span></span></code></pre></div><h3 id="开始构建">开始构建</h3>
+<p>针对 PostgreSQL 16, 15, 14 构建 PGML：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/postgresml/pgml-extension<span style="color:#000;font-weight:bold">;</span> pg16 build<span style="color:#000;font-weight:bold">;</span> pg15 build<span style="color:#000;font-weight:bold">;</span> pg14 build<span style="color:#000;font-weight:bold">;</span>
+</span></span></code></pre></div><p>将构建产物放置于 <code>~/rpmbuild/SOURCES</code> 目录备用</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_16<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg16 ~/rpmbuild/SOURCES/pgml_16<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_15<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg15 ~/rpmbuild/SOURCES/pgml_15<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pgml_14<span style="color:#000;font-weight:bold">;</span> cp -r ~/postgresml/pgml-extension/target/release/pgml-pg14 ~/rpmbuild/SOURCES/pgml_14<span style="color:#000;font-weight:bold">;</span>
+</span></span></code></pre></div><p>使用 <code>pgml.spec</code> 执行 RPM 打包：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make pgml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 或手工进行构建：</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/RPMS/x86_64/pgml*.rpm<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 16&#34;</span> -ba ~/rpmbuild/SPECS/pgml.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 15&#34;</span> -ba ~/rpmbuild/SPECS/pgml.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 14&#34;</span> -ba ~/rpmbuild/SPECS/pgml.spec
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-3c9a637fae23b45ca38055d648d7a312">4 - PLv8 构建指南</h1>
+    <div class="lead">构建 Javascript 存储过程与编程语言支持扩展 PLv8</div>
+	<hr>
+<h2 id="构建plv8">构建plv8</h2>
+<ul>
+<li><a href="https://github.com/plv8/plv8">GitHub Repo: PLv8</a></li>
+</ul>
+<p>安装依赖 （EL）：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo yum groupinstall --nobest -y <span style="color:#4e9a06">&#39;Development Tools&#39;</span><span style="color:#000;font-weight:bold">;</span> 
+</span></span><span style="display:flex;"><span>sudo yum install git cmake
+</span></span></code></pre></div><p>克隆代码：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rpmdev-setuptree
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SOURCES/
+</span></span><span style="display:flex;"><span>git clone git@github.com:plv8/plv8.git
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> plv8<span style="color:#000;font-weight:bold">;</span> git checkout v3.2.2
+</span></span><span style="display:flex;"><span>make -j16
+</span></span></code></pre></div><p>基于第一段编译产物，针对不同 PG 大版本制作 RPM 包：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>rpmbuild --define <span style="color:#4e9a06">&#34;pgmajorversion 16&#34;</span>  -ba ~/rpmbuild/SPECS/plv8.spec
+</span></span><span style="display:flex;"><span>rpmbuild --define <span style="color:#4e9a06">&#34;pgmajorversion 15&#34;</span>  -ba ~/rpmbuild/SPECS/plv8.spec
+</span></span><span style="display:flex;"><span>rpmbuild --define <span style="color:#4e9a06">&#34;pgmajorversion 14&#34;</span>  -ba ~/rpmbuild/SPECS/plv8.spec
+</span></span><span style="display:flex;"><span>rpmbuild --define <span style="color:#4e9a06">&#34;pgmajorversion 13&#34;</span>  -ba ~/rpmbuild/SPECS/plv8.spec
+</span></span><span style="display:flex;"><span>rpmbuild --define <span style="color:#4e9a06">&#34;pgmajorversion 12&#34;</span>  -ba ~/rpmbuild/SPECS/plv8.spec
+</span></span></code></pre></div><p>或者：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make plv8
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-2b4c0e6160521dc8ca6ea08c11b287dc">5 - ParadeDB 构建指南</h1>
+    <div class="lead">构建 ParadeDB 扩展 需要一些额外的注意事项</div>
+	<p>下面是构建 ParadeDB 扩展插件的教程：</p>
+<p>首先，根据 <a href="/zh/docs/pgext/build/env">RPM 构建环境</a> 的说明，配置好环境与代理，安装 <a href="/zh/docs/pgext/build/rust"><code>rust</code></a> 与 <code>pgrx</code>。</p>
+<p>安装时特别需要注意 <code>pg_search</code> 与 <code>pg_lakehouse</code> 使用的 <code>pgrx</code> <a href="https://github.com/paradedb/paradedb/blob/dev/pg_search/Cargo.toml#L36"><strong>版本号</strong></a>。</p>
+<p>克隆 ParadeDB，并 <a href="https://github.com/paradedb/paradedb/releases"><strong>检出最新版本</strong></a>，完成编译。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recursive git@github.com:paradedb/paradedb.git<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/paradedb<span style="color:#000;font-weight:bold">;</span> git checkout v0.8.6
+</span></span></code></pre></div><hr>
+<h2 id="pg_search">pg_search</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/paradedb/pg_search/
+</span></span><span style="display:flex;"><span>cargo update
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># build pg_search</span>
+</span></span><span style="display:flex;"><span>pg16 build
+</span></span><span style="display:flex;"><span>pg15 build
+</span></span><span style="display:flex;"><span>pg14 build
+</span></span><span style="display:flex;"><span>pg13 build
+</span></span><span style="display:flex;"><span>pg12 build
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># move to rpmbuild SOURCES dir</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_search_16<span style="color:#000;font-weight:bold">;</span> cp -r ~/paradedb/target/release/pg_search-pg16 ~/rpmbuild/SOURCES/pg_search_16<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_search_15<span style="color:#000;font-weight:bold">;</span> cp -r ~/paradedb/target/release/pg_search-pg15 ~/rpmbuild/SOURCES/pg_search_15<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_search_14<span style="color:#000;font-weight:bold">;</span> cp -r ~/paradedb/target/release/pg_search-pg14 ~/rpmbuild/SOURCES/pg_search_14<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_search_13<span style="color:#000;font-weight:bold">;</span> cp -r ~/paradedb/target/release/pg_search-pg13 ~/rpmbuild/SOURCES/pg_search_13<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_search_12<span style="color:#000;font-weight:bold">;</span> cp -r ~/paradedb/target/release/pg_search-pg12 ~/rpmbuild/SOURCES/pg_search_12<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># packaging with rpmbuild</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make pg_search
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 16&#34;</span> -ba ~/rpmbuild/SPECS/pg_search.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 15&#34;</span> -ba ~/rpmbuild/SPECS/pg_search.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 14&#34;</span> -ba ~/rpmbuild/SPECS/pg_search.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 13&#34;</span> -ba ~/rpmbuild/SPECS/pg_search.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 12&#34;</span> -ba ~/rpmbuild/SPECS/pg_search.spec
+</span></span></code></pre></div><hr>
+<h2 id="pg_lakehouse">pg_lakehouse</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/paradedb/pg_lakehouse/
+</span></span><span style="display:flex;"><span>cargo update
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># build pg_lakehouse</span>
+</span></span><span style="display:flex;"><span>pg16 build
+</span></span><span style="display:flex;"><span>pg15 build
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># move to rpmbuild SOURCES dir</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_lakehouse_16<span style="color:#000;font-weight:bold">;</span>  cp -r ~/paradedb/target/release/pg_lakehouse-pg16   ~/rpmbuild/SOURCES/pg_lakehouse_16<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>rm -rf ~/rpmbuild/SOURCES/pg_lakehouse_15<span style="color:#000;font-weight:bold">;</span>  cp -r ~/paradedb/target/release/pg_lakehouse-pg15   ~/rpmbuild/SOURCES/pg_lakehouse_15<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># packaging with rpmbuild</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make pg_lakehouse
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 16&#34;</span> -ba ~/rpmbuild/SPECS/pg_lakehouse.spec
+</span></span><span style="display:flex;"><span>rpmbuild --without debuginfo --define <span style="color:#4e9a06">&#34;pgmajorversion 15&#34;</span> -ba ~/rpmbuild/SPECS/pg_lakehouse.spec
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-664f493636925aaf6578ac560b7b904a">6 - DuckDB FDW 构建指南</h1>
+    <div class="lead">如何构建 DuckDB FDW 及其依赖的 libduckdb.so 动态链接库。</div>
+	<p>DuckDB FDW 依赖 <code>libduckdb.so</code> 动态链接库。在 Ubuntu 与 Debian 上，可以直接使用由 DuckDB 官方提供的预编译二进制。</p>
+<p>在 EL 系操作系统上，需要从头编译 <code>libduckdb</code> 并使用此版本编译 <code>duckdb_fdw</code>。</p>
+<p>Pigsty 的 <a href="https://github.com/pgsty/pgsql-rpm">github.com/pgsty/pgsql-rpm</a> 仓库提供了预置的构建模板：</p>
+<ul>
+<li><a href="https://github.com/pgsty/pgsql-rpm/blob/main/rpmbuild/SPECS/libduckdb.spec"><code>libduckdb</code></a></li>
+<li><a href="https://github.com/pgsty/pgsql-rpm/blob/main/rpmbuild/SPECS/duckdb_fdw.spec"><code>duckdb_fdw</code></a></li>
+</ul>
+<p>DuckDB 官方已经提供了 <a href="https://github.com/duckdb/duckdb/releases/download/v1.0.0/libduckdb-src.zip"><code>libduckdb-src.zip</code></a>
+源码，可以方便地进行构建。</p>
+<hr>
+<h2 id="构建注意事项">构建注意事项</h2>
+<p>在 Ubuntu / Debian 上，可以直接使用 DuckDB 官方提供的预编译二进制 <code>libduckdb.so</code> 。</p>
+<p>在 EL8 和 EL9 上需要从源码编译构建 <code>libduckdb</code>。</p>
+<p>要构建 <code>libduckdb-src</code>，你需要使用与构建 <code>duckdb_fdw</code> 一致的编译环境与参数：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>clang++ -c -fPIC -std<span style="color:#ce5c00;font-weight:bold">=</span>c++11 -D_GLIBCXX_USE_CXX11_ABI<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#0000cf;font-weight:bold">0</span> duckdb.cpp -o duckdb.o
+</span></span><span style="display:flex;"><span>clang++ -shared -o libduckdb.so *.o
+</span></span></code></pre></div><p>构建 <code>libduckdb</code> RPM 包，可以使用以下命令：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make libduckdb
+</span></span></code></pre></div><p>要构建 <code>duckdb_fdw</code> RPM 包，可以使用以下命令：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS <span style="color:#ce5c00;font-weight:bold">&amp;&amp;</span> make duckdb_fdw
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-bb010574fb7ac74e04d5db2a29799401">7 - Parquet S3 FDW 构建指南</h1>
+    <div class="lead">构建 Parquet S3 FDW 扩展，及其依赖 libarrow, libparquet, 以及 libaws-cpp 的过程</div>
+	<hr>
+<h2 id="构建parquet_s3_fdw">构建parquet_s3_fdw</h2>
+<p>扩展 <code>parquet_s3_fdw</code> 有两个主要依赖：<code>arrow</code> 与 <code>awssdk</code>。</p>
+<hr>
+<h3 id="构建arrow">构建arrow</h3>
+<p>克隆 arrow 仓库并使用 cmake 构建：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~ <span style="color:#000;font-weight:bold">;</span> git clone git@github.com:apache/arrow.git<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>mkdir -p ~/arrow/cpp/release<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/arrow/cpp/release<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>cmake .. -DARROW_PARQUET<span style="color:#ce5c00;font-weight:bold">=</span>ON -DARROW_S3<span style="color:#ce5c00;font-weight:bold">=</span>ON<span style="color:#000;font-weight:bold">;</span> make -j8
+</span></span><span style="display:flex;"><span>sudo make install
+</span></span></code></pre></div><hr>
+<h3 id="构建libaws">构建libaws</h3>
+<p><code>libaws-cpp</code> 里有许多服务的驱动，但我们只需要两个：<code>core</code> 和 <code>s3</code>：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 安装依赖</span>
+</span></span><span style="display:flex;"><span>sudo yum install libcurl-devel openssl-devel libuuid-devel pulseaudio-libs-devel
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># sudo apt-get install libcurl4-openssl-dev libssl-dev uuid-dev libpulse-dev # debian/ubuntu</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># 克隆 libaws 仓库 (很大！)</span>
+</span></span><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~<span style="color:#000;font-weight:bold">;</span> git clone --recurse-submodules git@github.com:aws/aws-sdk-cpp.git
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mkdir -p ~/aws-sdk-cpp/release<span style="color:#000;font-weight:bold">;</span> <span style="color:#204a87">cd</span> ~/aws-sdk-cpp/release<span style="color:#000;font-weight:bold">;</span>
+</span></span><span style="display:flex;"><span>cmake .. -DBUILD_ONLY<span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#4e9a06">&#34;s3&#34;</span><span style="color:#000;font-weight:bold">;</span> make -j20
+</span></span><span style="display:flex;"><span>sudo make install
+</span></span></code></pre></div><hr>
+<h3 id="构建libarrow-s3">构建libarrow-s3</h3>
+<p>收集生成的 <code>.so</code> 文件，然后将其打包为一个 RPM / DEB 包：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkdir -p ~/libarrow-s3
+</span></span><span style="display:flex;"><span>cp -d ~/arrow/cpp/release/release/libarrow.so*                                     ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/arrow/cpp/release/release/libparquet.so*                                   ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -f ~/aws-sdk-cpp/release/generated/src/aws-cpp-sdk-s3/libaws-cpp-sdk-s3.so      ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -f ~/aws-sdk-cpp/release/src/aws-cpp-sdk-core/libaws-cpp-sdk-core.so            ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/lib/libaws-c-event-stream.so*                          ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/lib/libs2n.so*                                         ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/libaws-crt-cpp.so                        ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-common/libaws-c-common.so*     ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-checksums/libaws-checksums.so*   ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-io/libaws-c-io.so*             ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-mqtt/libaws-c-mqtt.so*         ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-cal/libaws-c-cal.so*           ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-checksums/libaws-checksums.so*   ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-s3/libaws-c-s3.so*             ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-common/libaws-c-common.so*     ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-http/libaws-c-http.so*         ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-sdkutils/libaws-c-sdkutils.so* ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-auth/libaws-c-auth.so*         ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>cp -d ~/aws-sdk-cpp/release/crt/aws-crt-cpp/crt/aws-c-compression/libaws-c-compression.so* ~/libarrow-s3/
+</span></span></code></pre></div><p>构建生成的 <code>so</code> 文件包含空 RPATH，使用 <code>patchelf</code> 去除 (EL系统)：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/libarrow-s3/
+</span></span><span style="display:flex;"><span>patchelf --remove-rpath libarrow.so.1800.0.0
+</span></span><span style="display:flex;"><span>patchelf --remove-rpath libparquet.so.1800.0.0
+</span></span><span style="display:flex;"><span>patchelf --remove-rpath libaws-cpp-sdk-core.so
+</span></span><span style="display:flex;"><span>patchelf --remove-rpath libaws-cpp-sdk-s3.so
+</span></span></code></pre></div><p>将这些 <code>so</code> 文件整体打包为一个 <code>libarrow-s3</code> 软件包：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#204a87">cd</span> ~/rpmbuild/SPECS
+</span></span><span style="display:flex;"><span>rpmbuild -ba ~/rpmbuild/SPECS/libarrow-s3.spec
+</span></span><span style="display:flex;"><span>sudo rpm -ivh ~/rpmbuild/RPMS/x86_64/libarrow-s3-17.0.0-1PIGSTY.*
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+
+
+
+          </main>
+        </div>
+      </div>
+      <footer class="td-footer row d-print-none">
+  <div class="container-fluid">
+    <div class="row mx-md-2">
+      <div class="td-footer__left col-6 col-sm-4 order-sm-1">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Mail" aria-label="Mail">
+    <a target="_blank" rel="noopener" href="mailto:rh@vonng.com" aria-label="Mail">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="GitHub" aria-label="GitHub">
+    <a target="_blank" rel="noopener" href="https://github.com/Vonng/pigsty" aria-label="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Twitter" aria-label="Twitter">
+    <a target="_blank" rel="noopener" href="https://twitter.com/GobeUncleWang" aria-label="Twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__right col-6 col-sm-4 order-sm-3">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="WeChat" aria-label="WeChat">
+    <a target="_blank" rel="noopener" href="/img/pigsty/pigsty-cc.jpg" aria-label="WeChat">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Discord" aria-label="Discord">
+    <a target="_blank" rel="noopener" href="https://discord.gg/wDzt5VyWEz" aria-label="Discord">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Telegram" aria-label="Telegram">
+    <a target="_blank" rel="noopener" href="https://t.me/joinchat/gV9zfZraNPM3YjFh" aria-label="Telegram">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__center col-12 col-sm-4 py-2 order-sm-2">
+        <span class="td-footer__copyright">&copy;
+    2018&ndash;2024
+    <span class="td-footer__authors">Ruohang Feng</span></span><span class="td-footer__all_rights_reserved">All Rights Reserved</span></span><span class="ms-2"><a href="https://vonng.com/en/" target="_blank" rel="noopener">@Vonng</a></span>
+<br><span>Pigsty® distributed under <a href="/docs/about/license" target="_blank" rel="noopener">AGPLv3</a></span>
+<br><span class="ms-2"><a href="/docs/about/privacy" target="_blank" rel="noopener">Privacy Policy</a></span>
+<span><a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备15016890号</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <script src="/js/main.min.248655eb216150e39da254c2f7aa5357805d0ec66bdb741b591cd35fb5f629ab.js" integrity="sha256-JIZV6yFhUOOdolTC96pTV4BdDsZr23QbWRzTX7X2Kas=" crossorigin="anonymous"></script>
+<script defer src="/js/click-to-copy.min.f724d3de49218995223b7316aa2e53e2b34bf42026bf399ebb21bb02212402d1.js" integrity="sha256-9yTT3kkhiZUiO3MWqi5T4rNL9CAmvzmeuyG7AiEkAtE=" crossorigin="anonymous"></script>
+<script src='/js/tabpane-persist.js'></script>
+
+  </body>
+</html>

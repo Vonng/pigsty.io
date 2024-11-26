@@ -1,0 +1,229 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Offline</title>
+    <link>/tags/offline/</link>
+    <description>Recent content in Offline on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    
+	  <atom:link href="/tags/offline/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: Offline Install</title>
+      <link>/docs/setup/offline/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/docs/setup/offline/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty&amp;rsquo;s &lt;a href=&#34;/docs/setup/install/&#34;&gt;&lt;strong&gt;Installation&lt;/strong&gt;&lt;/a&gt; procedure requires Internet access, but production database servers are often isolated from the Internet.&lt;/p&gt;
+&lt;p&gt;To address this issue, Pigsty supports offline installation from &lt;a href=&#34;/docs/setup/offline/#offline-package&#34;&gt;&lt;strong&gt;offline packages&lt;/strong&gt;&lt;/a&gt;, which can help you install Pigsty in an environment without Internet access, and increase the certainty, reliability, speed and consistency of the installation process.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#build-local-repo&#34;&gt;Build Local Repo&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#make-offline-pacakge&#34;&gt;Make Offline Pacakge&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#use-offline-pacakge&#34;&gt;Use Offline Package&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#compatibility-notes&#34;&gt;Compatibility Notes&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#download-pre-made-package&#34;&gt;Download Pre-made Package&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/setup/offline/#bootstrap&#34;&gt;Bootstrap&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;build-local-repo&#34;&gt;Build Local Repo&lt;/h2&gt;
+&lt;p&gt;Pigsty&amp;rsquo;s &lt;a href=&#34;/docs/setup/install/&#34;&gt;&lt;strong&gt;install&lt;/strong&gt;&lt;/a&gt; procedure will download all the required rpm/deb packages and all its dependencies from the upstream yum/apt repo, and build a local repo before installing the software.&lt;/p&gt;
+&lt;p&gt;The repo is served by Nginx and is available to all nodes in the deployment environment, including itself. All the installation will go through this local repo without further internet access.&lt;/p&gt;
+&lt;p&gt;There are certain benefits to using a local repo:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;It can avoid repetitive download requests and traffic consumption, significantly speeding up the installation and improving its reliability.&lt;/li&gt;
+&lt;li&gt;It will take a &lt;strong&gt;snapshot&lt;/strong&gt; of current software versions, ensuring the consistency of the software versions installed across nodes in the environment.&lt;/li&gt;
+&lt;li&gt;The snapshot contains all the deps, so it can avoid upstream dependency changes that may cause installation failures. One successful node can ensure all nodes in the same env.&lt;/li&gt;
+&lt;li&gt;The built local software repo can be packaged as a whole tarball and copied to an isolated environment with the same operating system for &lt;strong&gt;offline installation&lt;/strong&gt;.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The default location for local repo is &lt;code&gt;/www/pigsty&lt;/code&gt; (customizable by &lt;a href=&#34;/docs/reference/param/#nginx_home&#34;&gt;&lt;code&gt;nginx_home&lt;/code&gt;&lt;/a&gt; &amp;amp; &lt;a href=&#34;/docs/reference/param/#repo_name&#34;&gt;&lt;code&gt;repo_name&lt;/code&gt;&lt;/a&gt;).
+The repo will be created by &lt;code&gt;createrepo_c&lt;/code&gt; or &lt;code&gt;dpkg_dev&lt;/code&gt; according to the OS distro, and referenced by all nodes in the environment through &lt;a href=&#34;/docs/reference/param/#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; entry with &lt;code&gt;module=local&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;You can perform install on one node with the exact same OS version, then copy the local repo directory to another node with the same OS version for offline installation.&lt;/p&gt;
+&lt;p&gt;A more common practice is to package the local software repo directory into an &lt;a href=&#34;/docs/setup/offline/#make-offline-pacakge&#34;&gt;&lt;strong&gt;offline package&lt;/strong&gt;&lt;/a&gt; and copy it to the isolated node for installation.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;make-offline-pacakge&#34;&gt;Make Offline Pacakge&lt;/h2&gt;
+&lt;p&gt;Pigsty offers a &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/cache.yml&#34;&gt;&lt;strong&gt;&lt;code&gt;cache.yml&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; playbook to make offline package.
+For example, the following command will take the local software repo on the infra node &lt;code&gt;/www/pigsty&lt;/code&gt; and package it into an offline package, and retrieve it to the local &lt;code&gt;dist/${version}&lt;/code&gt; directory.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./cache.yml -l infra  
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You can customize the output directory and name of the offline package with the &lt;code&gt;cache_pkg_dir&lt;/code&gt; and &lt;code&gt;cache_pkg_name&lt;/code&gt; parameters.
+For example, the following command will fetch the made offline package to &lt;code&gt;files/pkg.tgz&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./cache.yml -l 10.10.10.10 -e &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;{&amp;#34;cache_pkg_dir&amp;#34;:&amp;#34;files&amp;#34;,&amp;#34;cache_pkg_name&amp;#34;:&amp;#34;pkg.tgz&amp;#34;}&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;use-offline-pacakge&#34;&gt;Use Offline Pacakge&lt;/h2&gt;
+&lt;p&gt;The offline package is a tarball made by &lt;code&gt;gzip&lt;/code&gt; and &lt;code&gt;tar&lt;/code&gt;, and extract to &lt;code&gt;/www/pigsty&lt;/code&gt; for use.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo rm -rf /www/pigsty ； sudo tar -xf /tmp/pkg.tgz -C /www 
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;The simpler way is to copy the offline package to &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt; on the isolated node to be installed, and Pigsty will automatically unpack it during the &lt;a href=&#34;/docs/setup/offline/#bootstrap&#34;&gt;&lt;strong&gt;&lt;code&gt;bootstrap&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; process and install from it.&lt;/p&gt;
+&lt;p&gt;When building the local software repo, Pigsty will generate a marker file &lt;code&gt;repo_complete&lt;/code&gt; to mark it as a finished Pigsty local software repo.
+When Pigsty &lt;a href=&#34;/docs/setup/install/#install&#34;&gt;&lt;strong&gt;install.yml&lt;/strong&gt;&lt;/a&gt; playbook finds that the local software repo already exists, it will enter offline install mode.&lt;/p&gt;
+&lt;p&gt;In offline install mode, pigsty will no longer download software from the internet, but install from the local software repo directly.&lt;/p&gt;
+
+
+&lt;div class=&#34;alert alert-secondary&#34; role=&#34;alert&#34;&gt;
+&lt;h4 class=&#34;alert-heading&#34;&gt;Criteria for Offline Install Mode&lt;/h4&gt;
+
+     &lt;br&gt;
+&lt;p&gt;The criteria for the existence of a local repo is the &lt;strong&gt;presence&lt;/strong&gt; of a marker file located by default at &lt;code&gt;/www/pigsty/repo_complete&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;This marker file is automatically generated after the download is complete during the standard installation procedure, indicating a usable local software repo is done.&lt;/p&gt;
+&lt;p&gt;Deleting the &lt;code&gt;repo_complete&lt;/code&gt; marker file of the local repo will mark the procedure for re-download &lt;strong&gt;missing&lt;/strong&gt; packages from upstream.&lt;/p&gt;
+
+
+&lt;/div&gt;
+
+&lt;hr&gt;
+&lt;h2 id=&#34;compatibility-notes&#34;&gt;Compatibility Notes&lt;/h2&gt;
+&lt;p&gt;The software packages (rpm/deb) can be roughly divided into 3 categories:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/infra/&#34;&gt;&lt;strong&gt;INFRA&lt;/strong&gt;&lt;/a&gt; Packages such as Prometheus &amp;amp; Grafana stacks and monitoring agents, which are OS distro/version &lt;strong&gt;independent&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/pgsql/&#34;&gt;&lt;strong&gt;PGSQL&lt;/strong&gt;&lt;/a&gt; Packages such as pgsql kernel &amp;amp; extensions, which are optionally bound to the Linux distro &lt;strong&gt;major&lt;/strong&gt; version.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/docs/node/&#34;&gt;&lt;strong&gt;NODE&lt;/strong&gt;&lt;/a&gt; Packages such as so libs, utils, deps, which are bound to the Linux distro &lt;strong&gt;major &amp;amp; minor&lt;/strong&gt; version.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Therefore, the compatibility of offline packages depends on the &lt;strong&gt;OS major version&lt;/strong&gt; and &lt;strong&gt;minor version&lt;/strong&gt; because it contains all three types of packages.&lt;/p&gt;
+&lt;p&gt;Usually, offline packages can be used in an environment with the exact same OS major/minor version.
+If the major version does not match, INFRA packages can usually be installed successfully, while PGSQL and NODE packages may have missing or conflicting dependencies.
+If the minor version does not match, INFRA and PGSQL packages can usually be installed successfully, while NODE packages have a chance of success and a chance of failure.&lt;/p&gt;
+&lt;p&gt;For example, offline packages made on RockLinux 8.9 &lt;strong&gt;may&lt;/strong&gt; have a greater chance of success when offline installed on RockyLinux 8.10 environment.
+While offline packages made on Ubuntu 22.04.3 is most likely to fail on Ubuntu 22.04.4.
+(Yes the minor version here in &lt;a href=&#34;https://wiki.ubuntu.com/Releases&#34;&gt;&lt;strong&gt;Ubuntu&lt;/strong&gt;&lt;/a&gt; is final &lt;code&gt;.3&lt;/code&gt; rather than &lt;code&gt;.04&lt;/code&gt;, and the major version is &lt;code&gt;22.04|jammy&lt;/code&gt;)&lt;/p&gt;
+&lt;p&gt;If the OS minor version is not exactly matched, you can use a hybrid strategy to install, that is, after the &lt;a href=&#34;/docs/setup/offline/#bootstrap&#34;&gt;&lt;strong&gt;bootstrap&lt;/strong&gt;&lt;/a&gt; process,
+remove the &lt;code&gt;/www/pigsty/repo_complete&lt;/code&gt; marker file, so that Pigsty will re-download the &lt;strong&gt;missing&lt;/strong&gt; NODE packages and related dependencies during the installation process.
+Which can effectively solve the dependency conflict problem when using offline packages, and don&amp;rsquo;t lose the benefits of offline installation.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;download-pre-made-package&#34;&gt;Download Pre-made Package&lt;/h3&gt;
+&lt;p&gt;Pigsty does not offer pre-made offline packages for download starting from Pigsty v3.0.0.&lt;/p&gt;
+&lt;p&gt;It will use online installation by default, since it can download the exact NODE packages from the official repo to avoid dependency conflicts.
+Besides, there are too much maintenance overhead to keep the offline packages for so many OS distros / major / minor version combinations.&lt;/p&gt;
+&lt;p&gt;BUT, we do offer pre-made offline packages for the following precise OS versions, which include Docker and pljava/jdbc_fw components, ready to use with a fair price.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;RockyLinux 8.9&lt;/li&gt;
+&lt;li&gt;RockyLinux 9.3&lt;/li&gt;
+&lt;li&gt;Ubuntu 22.04.3&lt;/li&gt;
+&lt;li&gt;Debian 12.4&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;All the integration tests of Pigsty are based on the pre-made offline package snapshot before release,
+Using these can effectively reduce the delivery risk caused by upstream dependency changes, save you the trouble and waiting time.
+And show your support for the open-source cause, with a fair price of &lt;strong&gt;$99&lt;/strong&gt;, please contact @Vonng (&lt;a href=&#34;mailto:rh@vonng.com&#34;&gt;rh@vonng.com&lt;/a&gt;) to get the download link.&lt;/p&gt;
+&lt;p&gt;We use offline package to deliver our &lt;strong&gt;pro&lt;/strong&gt; version, which is precisely matched to your specific OS distro major/minor version and has been tested after integration.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;offline-package&#34;&gt;Offline Package&lt;/h2&gt;
+&lt;p&gt;Therefore, Pigsty offers an offline installation feature, allowing you to complete the installation and deployment in an environment without internet access.&lt;/p&gt;
+&lt;p&gt;If you have internet access, downloading the pre-made &lt;a href=&#34;/docs/setup/offline/#offline-package&#34;&gt;&lt;strong&gt;Offline Package&lt;/strong&gt;&lt;/a&gt; in advance can help speed up the installation process and enhance the certainty and reliability of the installation.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Pigsty will no longer provide offline software packages for download starting from v3.0.0&lt;/p&gt;
+&lt;p&gt;You can make your own with the &lt;code&gt;bin/cache&lt;/code&gt; script after the standard installation process.&lt;/p&gt;
+&lt;p&gt;Pigsty &lt;a href=&#34;/docs/about/service/&#34;&gt;&lt;strong&gt;Pro&lt;/strong&gt;&lt;/a&gt; offers pre-made offline packages for various OS distros.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;bootstrap&#34;&gt;Bootstrap&lt;/h2&gt;
+&lt;p&gt;Pigsty needs &lt;code&gt;ansible&lt;/code&gt; to run the &lt;a href=&#34;/docs/setup/playbook/&#34;&gt;&lt;strong&gt;playbooks&lt;/strong&gt;&lt;/a&gt;, so it is not suitable to install Ansible through playbooks.
+The Bootstrap script is used to solve this problem: it will try its best to ensure that Ansible is installed on the node before the real installation.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./bootstrap       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# make suare ansible installed (if offline package available, setup &amp;amp; use offline install)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;If you are &lt;a href=&#34;/docs/setup/offline/#use-offline-pacakge&#34;&gt;&lt;strong&gt;using offline package&lt;/strong&gt;&lt;/a&gt;, the Bootstrap script will automatically recognize and process the offline package located at &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt;, and install Ansible from it if applicable.
+Otherwise, if you have internet access, Bootstrap will automatically add the upstrema yum/apt repo of the corresponding OS/region and install Ansible from it.
+If neither internet nor offline package is available, Bootstrap will leave it to the user to handle this issue, and the user needs to ensure that the repo configured on the node contains a usable Ansible.&lt;/p&gt;
+&lt;p&gt;There are some optional parameters for the Bootstrap script, you can use the &lt;code&gt;-p|--path&lt;/code&gt; parameter to specify a different offline package location other than &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt;. or designate a region with the &lt;code&gt;-r|--region&lt;/code&gt; parameter:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./boostrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-r&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--region &amp;lt;region&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;default,china,europe&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-p&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--path &amp;lt;path&amp;gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;      specify another offline pkg path
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-k&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--keep&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;             keep existing upstream repo during bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;And bootstrap will automatically backup and remove the current repo (&lt;code&gt;/etc/yum.repos.d/backup&lt;/code&gt; / &lt;code&gt;/etc/apt/source.list.d/backup&lt;/code&gt;) of the node during the process to avoid software source conflicts. If this is not the behavior you expected, or you have already configured a local software repo, you can use the &lt;code&gt;-k|--keep&lt;/code&gt; parameter to keep the existing software repo.&lt;/p&gt;
+&lt;details&gt;&lt;summary&gt;Example: Use offline package (EL8)&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;Bootstrap with offline package on a RockyLinux 8.9 node:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;vagrant@el8 pigsty&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;$ ls -alh /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--. &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; vagrant vagrant 1.4G Sep  &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; 10:20 /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;vagrant@el8 pigsty&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;$ ./bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.1.0 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; rpm,dnf
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; rocky &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Rocky Linux&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;8&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;8.9&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ssh&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant@127.0.0.1 ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; /tmp/pkg.tgz exists
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;repo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; extract from /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; old &lt;span style=&#34;color:#000&#34;&gt;repos&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; moved to /etc/yum.repos.d/backup
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; use /etc/yum.repos.d/pigsty-local.repo
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; rpm &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, may take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;pigsty &lt;span style=&#34;color:#204a87&#34;&gt;local&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;8&lt;/span&gt; - x86_64                                                                                                                               &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;49&lt;/span&gt; MB/s &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; 1.3 MB     00:00
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Metadata cache created.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; created
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; install el8 utils
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;........ yum install output
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Installed:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  createrepo_c-0.17.7-6.el8.x86_64        createrepo_c-libs-0.17.7-6.el8.x86_64 drpm-0.4.1-3.el8.x86_64   modulemd-tools-0.7-8.el8.noarch python3-createrepo_c-0.17.7-6.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3-libmodulemd-2.13.0-1.el8.x86_64 python3-pyyaml-3.12-12.el8.x86_64     sshpass-1.09-4.el8.x86_64 unzip-6.0-46.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  ansible-9.2.0-1.el8.noarch                 ansible-core-2.16.3-2.el8.x86_64              git-core-2.43.5-1.el8_10.x86_64                 mpdecimal-2.5.1-3.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3-cffi-1.11.5-6.el8.x86_64           python3-cryptography-3.2.1-7.el8_9.x86_64     python3-jmespath-0.9.0-11.el8.noarch            python3-pycparser-2.14-14.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-3.12.3-2.el8_10.x86_64          python3.12-cffi-1.16.0-2.el8.x86_64           python3.12-cryptography-41.0.7-1.el8.x86_64     python3.12-jmespath-1.0.1-1.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-libs-3.12.3-2.el8_10.x86_64     python3.12-pip-wheel-23.2.1-4.el8.noarch      python3.12-ply-3.11-2.el8.noarch                python3.12-pycparser-2.20-2.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-pyyaml-6.0.1-2.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Complete!
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;core 2.16.3&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+&lt;details&gt;&lt;summary&gt;Example: Bootstrap from Internet without offline Package (Debian 12)&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;On a debian 12 node with internet access, Pigsty add the upstream repo and install &lt;code&gt;ansible&lt;/code&gt; and its dependencies using apt:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant@d12:~/pigsty$ ./bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.1.0 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; deb,apt
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; debian &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Debian GNU/Linux&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;12&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;12&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ssh&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant@127.0.0.1 ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; old &lt;span style=&#34;color:#000&#34;&gt;repos&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; moved to /etc/apt/backup
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; add debian bookworm china upstream
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; apt &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, may take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;....... apt install output
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;core 2.14.16&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+&lt;details&gt;&lt;summary&gt;Example: Bootstrap from the Default (Ubuntu 20.04)&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;One an Ubuntu 20.04 node without internet access &amp;amp; offline package, Pigsty will assume you already have resolved this issue with your own way:
+Such as a local software repo / mirror / CDROM / intranet repo, etc&amp;hellip;&lt;/p&gt;
+&lt;p&gt;You can explicitly keep the current repo config with the &lt;code&gt;-k&lt;/code&gt; parameter, or Pigsty will keep it by default if it detects no internet access and no offline package.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant@ubuntu20:~/pigsty$ ./bootstrap -k
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.1.0 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; deb,apt
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ubuntu &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Ubuntu&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;20&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;20.04&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; ubuntu &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;20&lt;/span&gt; focal does not have corresponding offline package, use online install
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; missing and skip download
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;repo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; skip &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;/tmp/pkg.tgz not exists&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; add ubuntu focal china upstream
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; apt &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, make take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;apt update/install output&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible 2.10.8
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

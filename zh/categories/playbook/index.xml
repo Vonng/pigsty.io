@@ -1,0 +1,595 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Playbook</title>
+    <link>/zh/categories/playbook/</link>
+    <description>Recent content in Playbook on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    
+	  <atom:link href="/zh/categories/playbook/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: 剧本</title>
+      <link>/zh/docs/pgsql/playbook/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgsql/playbook/</guid>
+      <description>
+        
+        
+        &lt;h1 id=&#34;postgresql-剧本&#34;&gt;PostgreSQL 剧本&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Pigsty提供了一系列剧本，用于集群上下线扩缩容，用户/数据库管理，监控或迁移已有实例。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsqlyml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/a&gt; ：初始化PostgreSQL集群或添加新的从库。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-rmyml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/a&gt; ：移除PostgreSQL集群，或移除某个实例&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-useryml&#34;&gt;&lt;code&gt;pgsql-user.yml&lt;/code&gt;&lt;/a&gt; ：在现有的PostgreSQL集群中添加新的业务用户&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-dbyml&#34;&gt;&lt;code&gt;pgsql-db.yml&lt;/code&gt;&lt;/a&gt; ：在现有的PostgreSQL集群中添加新的业务数据库&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-monitoryml&#34;&gt;&lt;code&gt;pgsql-monitor.yml&lt;/code&gt;&lt;/a&gt; ：将远程postgres实例纳入监控中&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-migrationyml&#34;&gt;&lt;code&gt;pgsql-migration.yml&lt;/code&gt;&lt;/a&gt; ：为现有的PostgreSQL集群生成迁移手册和脚本&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;保护机制&#34;&gt;保护机制&lt;/h3&gt;
+&lt;p&gt;使用 &lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 剧本时需要&lt;strong&gt;特别注意&lt;/strong&gt;，剧本 &lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsqlyml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/a&gt; 与 &lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-rmyml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/a&gt; 使用不当会有误删数据库的风险！&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在使用&lt;code&gt;pgsql.yml&lt;/code&gt;时，请再三检查&lt;code&gt;--tags|-t&lt;/code&gt; 与 &lt;code&gt;--limit|-l&lt;/code&gt; 参数是否正确。&lt;/li&gt;
+&lt;li&gt;强烈建议在执行时添加&lt;code&gt;-l&lt;/code&gt;参数，限制命令执行的对象范围，并确保自己在正确的目标上执行正确的任务。&lt;/li&gt;
+&lt;li&gt;限制范围通常以一个数据库集群为宜，使用不带参数的&lt;code&gt;pgsql.yml&lt;/code&gt;在生产环境中是一个高危操作，务必三思而后行。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;出于防止误删的目的，Pigsty 的 PGSQL 模块提供了&lt;a href=&#34;/zh/docs/pgsql/playbook/#保护机制&#34;&gt;防误删保险&lt;/a&gt;，由以下两个参数控制：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/reference/param#pg_safeguard&#34;&gt;&lt;code&gt;pg_safeguard&lt;/code&gt;&lt;/a&gt; 默认为 &lt;code&gt;false&lt;/code&gt;，不打开。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/reference/param#pg_clean&#34;&gt;&lt;code&gt;pg_clean&lt;/code&gt;&lt;/a&gt; 默认为 &lt;code&gt;true&lt;/code&gt;，默认清理已有实例。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;对初始化剧本的影响&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当 &lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsqlyml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/a&gt; 剧本执行中遭遇配置相同的运行中现存实例时，会有以下行为表现：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard&lt;/code&gt; / &lt;code&gt;pg_clean&lt;/code&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_clean=true&lt;/code&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_clean=false&lt;/code&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard=false&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;抹除实例&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;中止执行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard=true&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;中止执行&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;中止执行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;如果 &lt;a href=&#34;/zh/docs/reference/param#pg_safeguard&#34;&gt;&lt;code&gt;pg_safeguard&lt;/code&gt;&lt;/a&gt; 启用，那么该剧本会中止执行，避免误删。&lt;/li&gt;
+&lt;li&gt;如果没有启用，那么会进一步根据 &lt;a href=&#34;/zh/docs/reference/param#pg_clean&#34;&gt;&lt;code&gt;pg_clean&lt;/code&gt;&lt;/a&gt; 的取值，来决定是否移除现有的实例。
+&lt;ul&gt;
+&lt;li&gt;如果 &lt;code&gt;pg_clean&lt;/code&gt; 为 &lt;code&gt;true&lt;/code&gt;，该剧本会直接清理现有实例，为新实例腾出空间。这是默认行为。&lt;/li&gt;
+&lt;li&gt;如果 &lt;code&gt;pg_clean&lt;/code&gt; 为 &lt;code&gt;false&lt;/code&gt;，该剧本会中止执行，这需要显式配置。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;对下线剧本的影响&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当 &lt;a href=&#34;/zh/docs/pgsql/playbook/#pgsql-rmyml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/a&gt; 剧本执行中遭遇配置相同的运行中现存实例时，会有以下行为表现：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard&lt;/code&gt; / &lt;code&gt;pg_clean&lt;/code&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_clean=true&lt;/code&gt;&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_clean=false&lt;/code&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard=false&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;抹除实例与数据&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;抹除实例&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;pg_safeguard=true&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;中止执行&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;中止执行&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;如果 &lt;a href=&#34;/zh/docs/reference/param#pg_safeguard&#34;&gt;&lt;code&gt;pg_safeguard&lt;/code&gt;&lt;/a&gt; 启用，那么该剧本会中止执行，避免误删。&lt;/li&gt;
+&lt;li&gt;如果没有启用，那么会继续抹除实例，同时 &lt;a href=&#34;/zh/docs/reference/param#pg_clean&#34;&gt;&lt;code&gt;pg_clean&lt;/code&gt;&lt;/a&gt; 在本剧本中会被解释为：是否移除数据目录。
+&lt;ul&gt;
+&lt;li&gt;如果 &lt;code&gt;pg_clean&lt;/code&gt; 为 &lt;code&gt;true&lt;/code&gt;，该剧本会直接一并清理 PostgreSQL 数据目录，即所谓“删库”，这是默认行为。&lt;/li&gt;
+&lt;li&gt;如果 &lt;code&gt;pg_clean&lt;/code&gt; 为 &lt;code&gt;false&lt;/code&gt;，该剧本保留数据目录，继续完成其他清理工作，这需要显式配置。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsqlyml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql.yml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/a&gt; 用于初始化PostgreSQL集群或添加新的从库。&lt;/p&gt;
+&lt;p&gt;下面是使用此剧本初始化沙箱环境中 PostgreSQL 集群的过程：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566417&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566417.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;本剧本包含以下子任务：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_clean      : 清理现有的 postgres（如有必要）&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_dbsu       : 为 postgres dbsu 设置操作系统用户sudo&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_install    : 安装 postgres 包和扩展&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_pkg              : 安装 postgres 相关包&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_extension        : 仅安装 postgres 扩展&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_path             : 将 pgsql 版本 bin 链接到 /usr/pgsql&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_env              : 将 pgsql bin 添加到系统路径&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_dir        : 创建 postgres 目录并设置 fhs&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_util       : 复制工具脚本，设置别名和环境&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_bin              : 同步 postgres 工具脚本 /pg/bin&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_alias            : 写入 /etc/profile.d/pg-alias.sh&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_psql             : 为 psql 创建 psqlrc 文件&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_dummy            : 创建 dummy 占位文件&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# patroni       : 使用 patroni 引导 postgres&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_config           : 生成 postgres 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_conf           : 生成 patroni 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_systemd        : 生成 patroni systemd 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbackrest_config : 生成 pgbackrest 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   -  pg_cert            : 为 postgres 签发证书&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   -  pg_launch          : 启动 postgres 主服务器和副本&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_watchdog       : 授予 postgres watchdog 权限&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_primary        : 启动 patroni/postgres 主服务器&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_init           : 使用角色/模板初始化 pg 集群&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_pass           : 将 .pgpass 文件写入 pg 主目录&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_replica        : 启动 patroni/postgres 副本&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_hba            : 生成 pg HBA 规则&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - patroni_reload    : 重新加载 patroni 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_patroni        : 必要时暂停或删除 patroni&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_user       : 配置 postgres 业务用户&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_user_config      : 渲染创建用户的 sql&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_user_create      : 在 postgres 上创建用户&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_db         : 配置 postgres 业务数据库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_db_config        : 渲染创建数据库的 sql&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_db_create        : 在 postgres 上创建数据库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_backup               : 初始化 pgbackrest 仓库和基础备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbackrest_init     : 初始化 pgbackrest 仓库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbackrest_backup   : 引导后进行初始备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbouncer     : 与 postgres 一起部署 pgbouncer 边车&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbouncer_clean     : 清理现有的 pgbouncer&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbouncer_dir       : 创建 pgbouncer 目录&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbouncer_config    : 生成 pgbouncer 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#       -  pgbouncer_svc    : 生成 pgbouncer systemd 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#       -  pgbouncer_ini    : 生成 pgbouncer 主配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#       -  pgbouncer_hba    : 生成 pgbouncer hba 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#       -  pgbouncer_db     : 生成 pgbouncer 数据库配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#       -  pgbouncer_user   : 生成 pgbouncer 用户配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   -  pgbouncer_launch   : 启动 pgbouncer 池化服务&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   -  pgbouncer_reload   : 重新加载 pgbouncer 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_vip        : 使用 vip-manager 将 vip 绑定到 pgsql 主服务器&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_vip_config       : 为 vip-manager 生成配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_vip_launch       : 启动 vip-manager 绑定 vip&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_dns        : 将 dns 名称注册到 infra dnsmasq&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_dns_ins          : 注册 pg 实例名称&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_dns_cls          : 注册 pg 集群名称&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_service    : 使用 haproxy 公开 pgsql 服务&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_service_config   : 为 pg 服务生成本地 haproxy 配置&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_service_reload   : 使用 haproxy 公开 postgres 服务&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_exporter   : 使用 haproxy 公开 pgsql 服务&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_exporter_config  : 配置 pg_exporter 和 pgbouncer_exporter&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_exporter_launch  : 启动 pg_exporter&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pgbouncer_exporter_launch : 启动 pgbouncer 导出器&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_register   : 将 postgres 注册到 pigsty 基础设施&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - register_prometheus : 将 pg 注册为 prometheus 监控目标&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - register_grafana    : 将 pg 数据库注册为 grafana 数据源&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;以下管理任务使用到了此剧本&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E5%88%9B%E5%BB%BA%E9%9B%86%E7%BE%A4&#34;&gt;创建集群&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E6%B7%BB%E5%8A%A0%E5%AE%9E%E4%BE%8B&#34;&gt;添加实例&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E9%87%8D%E8%BD%BD%E6%9C%8D%E5%8A%A1&#34;&gt;重载服务&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E9%87%8D%E8%BD%BDhba&#34;&gt;重载HBA&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;一些关于本剧本的注意事项&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;单独针对某一集群从库执行此剧本时，用户应当确保 &lt;strong&gt;集群主库已经完成初始化！&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;扩容完成后，您需要&lt;a href=&#34;/zh/docs/pgsql/admin#%E9%87%8D%E8%BD%BD%E6%9C%8D%E5%8A%A1&#34;&gt;重载服务&lt;/a&gt;与&lt;a href=&#34;/zh/docs/pgsql/admin#%E9%87%8D%E8%BD%BDhba&#34;&gt;重载HBA&lt;/a&gt;，包装脚本 &lt;code&gt;pgsql-add&lt;/code&gt; 会完成这些任务。&lt;/li&gt;
+&lt;li&gt;详情请参考管理 SOP： &lt;a href=&#34;/zh/docs/pgsql/admin#%E6%B7%BB%E5%8A%A0%E5%AE%9E%E4%BE%8B&#34;&gt;添加实例&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;集群扩容时，如果&lt;code&gt;Patroni&lt;/code&gt;拉起从库的时间过长，Ansible剧本可能会因为超时而中止。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;典型错误信息为：&lt;code&gt;wait for postgres/patroni replica&lt;/code&gt; 任务执行很长时间后中止&lt;/li&gt;
+&lt;li&gt;但制作从库的进程会继续，例如制作从库需超过1天的场景，后续处理请参考 &lt;a href=&#34;/zh/docs/pgsql/faq&#34;&gt;FAQ&lt;/a&gt;：制作从库失败。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsql-rmyml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-rm.yml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/a&gt; 用于移除PostgreSQL集群，或移除某个实例。&lt;/p&gt;
+&lt;p&gt;下面是使用此剧本移除沙箱环境中 PostgreSQL 集群的过程：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566418&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566418.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;本剧本包含以下子任务&lt;/strong&gt;：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# register       : 在 prometheus、grafana、nginx 中移除注册&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - prometheus : 从 prometheus 移除监控目标&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - grafana    : 从 grafana 移除数据源&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# dns            : 移除 INFRA节点上 DNSMASQ 的 pg dns 记录&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# vip            : 移除 vip-manager，与绑定在集群主库上的 VIP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_service     : 从 haproxy 上移除 PostgreSQL 服务定义并重载生效&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_exporter    : 移除 pg_exporter 和 pgbouncer_exporter 监控组件&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbouncer      : 移除 pgbouncer 连接池中间件&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# postgres       : 移除 postgres 实例数据库实例&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_replica : 移除所有从库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - pg_primary : 最后移除主库&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#   - dcs        : 从 dcs:etcd 移除元数据&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_data        : 移除 PostgreSQL 数据目录（使用 `pg_clean=false` 禁用）&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgbackrest     : 移除主实例时，一并移除 PostgreSQL 备份（使用 `pgbackrest_clean=false` 禁用）&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg_pkg         : 移除 PostgreSQL 软件包（使用 `pg_uninstall=true` 启用）&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;本剧本可以使用一些命令行参数影响其行为：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql-rm.yml -l pg-test     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 移除集群 `pg-test`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    -e &lt;span style=&#34;color:#000&#34;&gt;pg_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 是否一并移除 PostgreSQL 数据库目录？默认移除数据目录。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    -e &lt;span style=&#34;color:#000&#34;&gt;pgbackrest_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 是否一并移除 PostgreSQL 备份？（只针对主库执行时生效），默认移除备份数据。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    -e &lt;span style=&#34;color:#000&#34;&gt;pg_uninstall&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;false&lt;/span&gt;     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 默认不会卸载 PostgreSQL 软件包，需要显式指定此参数才会卸载。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    -e &lt;span style=&#34;color:#000&#34;&gt;pg_safeguard&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;false&lt;/span&gt;     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 防误删保险默认不打开，如果打开，可以在这里用命令行参数强行覆盖。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;以下管理任务使用到了此剧本&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E7%A7%BB%E9%99%A4%E5%AE%9E%E4%BE%8B&#34;&gt;移除实例&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql/admin#%E4%B8%8B%E7%BA%BF%E9%9B%86%E7%BE%A4&#34;&gt;下线集群&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;一些关于本剧本的注意事项&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;请不要直接对还有从库的集群主库单独直接执行此剧本&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;否则抹除主库后，其余从库会自动触发高可用自动故障切换。&lt;/li&gt;
+&lt;li&gt;总是先下线所有从库后，再下线主库，当一次性下线整个集群时不需要操心此问题。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;实例下线后请刷新集群服务&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当您从集群中下线掉某一个从库实例时，它仍然存留于在负载均衡器的配置文件中。&lt;/li&gt;
+&lt;li&gt;因为任何健康检查都无法通过，所以下线后的实例不会对集群产生影响。&lt;/li&gt;
+&lt;li&gt;但您应当在恰当的时间点 &lt;a href=&#34;/zh/docs/pgsql/admin#%E9%87%8D%E8%BD%BD%E6%9C%8D%E5%8A%A1&#34;&gt;重载服务&lt;/a&gt;，确保生产环境与配置清单的一致性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsql-useryml&#34;&gt;&lt;code&gt;pgsql-user.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-user.yml&#34;&gt;&lt;code&gt;pgsql-user.yml&lt;/code&gt;&lt;/a&gt; 用于在现有的PostgreSQL集群中添加新的业务用户&lt;/p&gt;
+&lt;p&gt;详情请参考：&lt;a href=&#34;/zh/docs/pgsql/admin#%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7&#34;&gt;管理SOP：创建用户&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsql-dbyml&#34;&gt;&lt;code&gt;pgsql-db.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-db.yml&#34;&gt;&lt;code&gt;pgsql-db.yml&lt;/code&gt;&lt;/a&gt; 用于在现有的PostgreSQL集群中添加新的业务数据库&lt;/p&gt;
+&lt;p&gt;详情请参考：&lt;a href=&#34;/zh/docs/pgsql/admin#%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93&#34;&gt;管理SOP：创建数据库&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsql-monitoryml&#34;&gt;&lt;code&gt;pgsql-monitor.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-monitor.yml&#34;&gt;&lt;code&gt;pgsql-monitor.yml&lt;/code&gt;&lt;/a&gt; 用于将远程postgres实例纳入监控中&lt;/p&gt;
+&lt;p&gt;详情请参考：&lt;a href=&#34;/zh/docs/pgsql/monitor#%E7%9B%91%E6%8E%A7rds&#34;&gt;管理SOP：监控现有PG&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pgsql-migrationyml&#34;&gt;&lt;code&gt;pgsql-migration.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-migration.yml&#34;&gt;&lt;code&gt;pgsql-migration.yml&lt;/code&gt;&lt;/a&gt; 用于为现有的PostgreSQL集群生成迁移手册和脚本&lt;/p&gt;
+&lt;p&gt;详情请参考：&lt;a href=&#34;/zh/docs/pgsql/migration&#34;&gt;管理SOP：迁移数据库集群&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 预置剧本</title>
+      <link>/zh/docs/etcd/playbook/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/etcd/playbook/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Etcd 模块提供了一个默认的剧本 &lt;a href=&#34;/zh/docs/etcd/playbook/#etcdyml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt; ，用于安装 Etcd 集群。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;etcdyml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;ETCD 模块提供了一个内置的 playbook： &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/etcd.yml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt;，用于安装 etcd 集群。但首先你需要 &lt;a href=&#34;/zh/docs/etcd/config/&#34;&gt;定义&lt;/a&gt;它。&lt;/p&gt;
+&lt;h3 id=&#34;etcdyml-1&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;在 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/etcd.yml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt; 中，提供了以下是可用的任务子集：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_assert&lt;/code&gt;  ：生成 etcd 身份&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_install&lt;/code&gt; ：安装 etcd rpm 包&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_clean&lt;/code&gt;   ：清理现有的 etcd 实例
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_check&lt;/code&gt; ：检查 etcd 实例是否在运行&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_purge&lt;/code&gt; ：删除正在运行的 etcd 实例和数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_dir&lt;/code&gt;     ：创建 etcd 数据和配置目录&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_config&lt;/code&gt;  ：生成 etcd 配置
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_conf&lt;/code&gt;  ：生成 etcd 主配置&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_cert&lt;/code&gt;  ：生成 etcd ssl 证书&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_launch&lt;/code&gt;  ：启动 etcd 服务&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_register&lt;/code&gt; ： 将 etcd 注册到 prometheus&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Etcd 模块没有提供专门的卸载剧本，如果您需要卸载 Etcd，可以使用 &lt;code&gt;etcd_&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566414&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566414.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;命令速查&#34;&gt;命令速查&lt;/h2&gt;
+&lt;p&gt;Etcd 剧本与快捷方式：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml                                      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 etcd 集群 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_launch                       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重启整个 etcd 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_clean                        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 移除整个集群，会检查现有实例是否存在，根据安全保险判断是否执行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_purge                        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 强制移除整个集群，根本不管安全保险是否启用。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_conf                         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用最新状态刷新 /etc/etcd/etcd.conf&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l 10.10.10.12 -e &lt;span style=&#34;color:#000&#34;&gt;etcd_init&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;existing &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 扩容节点：一定要添加 existing 参数，命令行或配置文件均可&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l 10.10.10.12 -t etcd_purge         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 删除节点&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;保护机制&#34;&gt;保护机制&lt;/h2&gt;
+&lt;p&gt;出于防止误删的目的，Pigsty 的 ETCD 模块提供了防误删保险，由以下参数控制：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd/param/#etcd_clean&#34;&gt;&lt;code&gt;etcd_clean&lt;/code&gt;&lt;/a&gt; 默认为 &lt;code&gt;true&lt;/code&gt;，即，默认在初始化时清理现有实例。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd/param/#etcd_safeguard&#34;&gt;&lt;code&gt;etcd_safeguard&lt;/code&gt;&lt;/a&gt;: 默认为 &lt;code&gt;false&lt;/code&gt;，即默认不打开防误删保护。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;默认配置使得您可以使用剧本重置 etcd 集群的状态，这对于开发、测试和生产环境中紧急重建 etcd 集群非常有用。&lt;/p&gt;
+&lt;p&gt;如果您希望在初始化时清理现有实例，请修改配置文件，显式关闭此保险，或者在执行时使用命令行参数 &lt;code&gt;-e etcd_clean=true&lt;/code&gt; 进行覆盖。&lt;/p&gt;
+&lt;p&gt;如果您单纯希望清理现有实例，而不安装新实例，直接执行 &lt;code&gt;etcd_clean&lt;/code&gt; 子任务即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l &amp;lt;cls&amp;gt; -e &lt;span style=&#34;color:#000&#34;&gt;etcd_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt; -t etcd_clean
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您确定要摧毁这个 etcd 集群，更简单暴力直接的方式是：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l &amp;lt;cls&amp;gt; -t etcd_purge
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;执行演示&#34;&gt;执行演示&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566415&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566415.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 预置剧本</title>
+      <link>/zh/docs/minio/playbook/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/minio/playbook/</guid>
+      <description>
+        
+        
+        &lt;p&gt;MinIO 模块提供了一个默认的剧本 &lt;a href=&#34;/zh/docs/minio/playbook/#minioyml&#34;&gt;&lt;code&gt;minio.yml&lt;/code&gt;&lt;/a&gt; ，用于安装 MinIO 集群。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;minioyml&#34;&gt;&lt;code&gt;minio.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/minio.yml&#34;&gt;&lt;code&gt;minio.yml&lt;/code&gt;&lt;/a&gt; 用于在节点上安装 MinIO 模块。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;minio-id&lt;/code&gt;        : 生成/校验 minio 身份参数&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_install&lt;/code&gt;   : 安装 minio
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;minio_os_user&lt;/code&gt; : 创建操作系统用户 minio&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_pkg&lt;/code&gt;     : 安装 minio/mcli 软件包&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_clean&lt;/code&gt;     : 移除 minio 数据目录 (默认不移除)&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_dir&lt;/code&gt;       : 创建 minio 目录&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_config&lt;/code&gt;    : 生成 minio 配置
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;minio_conf&lt;/code&gt;    : minio 主配置文件&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_cert&lt;/code&gt;    : minio SSL证书签发&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_dns&lt;/code&gt;     : minio DNS记录插入&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_launch&lt;/code&gt;    : minio 服务启动&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_register&lt;/code&gt;  : minio 纳入监控&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_provision&lt;/code&gt; : 创建 minio 别名/存储桶/业务用户
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;minio_alias&lt;/code&gt;   : 创建 minio 客户端别名（管理节点上）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_bucket&lt;/code&gt;  : 创建 minio 存储桶&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;minio_user&lt;/code&gt;    : 创建 minio 业务用户&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在执行剧本前，请先在 &lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt; 中，完成 MinIO 集群的 &lt;a href=&#34;/zh/docs/minio/config/&#34;&gt;配置&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;命令速查&#34;&gt;命令速查&lt;/h2&gt;
+&lt;p&gt;MINIO 剧本与快捷方式：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l &amp;lt;cls&amp;gt;                      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 &amp;lt;cls&amp;gt; 分组上安装 MINIO 模块&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l minio -e &lt;span style=&#34;color:#000&#34;&gt;minio_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 MINIO 模块，安装时清理现有数据目录（危险！）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l minio -e &lt;span style=&#34;color:#000&#34;&gt;minio_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;  -t minio_clean &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 停止 MinIO 并抹除 MinIO 数据目录（危险！）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l minio -t minio_instal      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在节点上安装 MinIO 服务，准备数据目录，但不启动&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l minio -t minio_config      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新配置 MinIO 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l minio -t minio_launch      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重启 MinIO 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;保护机制&#34;&gt;保护机制&lt;/h2&gt;
+&lt;p&gt;出于防止误删的目的，Pigsty 的 MINIO 模块提供了防误删保险，由以下参数控制：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/minio/param#minio_clean&#34;&gt;&lt;code&gt;minio_clean&lt;/code&gt;&lt;/a&gt; 默认为 &lt;code&gt;false&lt;/code&gt;，即，默认不清理现有实例。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果您希望在初始化时清理现有实例，请修改配置文件，显式关闭此保险，或者在执行时使用命令行参数 &lt;code&gt;-e minio_clean=true&lt;/code&gt; 进行覆盖。&lt;/p&gt;
+&lt;p&gt;如果您单纯希望清理现有实例，而不安装新实例，直接执行 &lt;code&gt;minio_clean&lt;/code&gt; 子任务即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./minio.yml -l &amp;lt;cls&amp;gt; -e &lt;span style=&#34;color:#000&#34;&gt;minio_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt; -t minio_clean
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;执行演示&#34;&gt;执行演示&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566415&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566415.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 执行剧本</title>
+      <link>/zh/docs/setup/playbook/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/setup/playbook/</guid>
+      <description>
+        
+        
+        &lt;p&gt;在 Pigsty 中，剧本 / Playbooks 用于在节点上安装&lt;a href=&#34;/zh/docs/about/module&#34;&gt;模块&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;剧本可以视作可执行文件直接执行，例如：&lt;code&gt;./install.yml&lt;/code&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;剧本&#34;&gt;剧本&lt;/h2&gt;
+&lt;p&gt;以下是 Pigsty 中默认包含的剧本：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;剧本&lt;/th&gt;
+&lt;th&gt;功能&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/install.yml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;在当前节点上一次性完整安装 Pigsty&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/infra.yml&#34;&gt;&lt;code&gt;infra.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;在 infra 节点上初始化 pigsty 基础设施&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/infra-rm.yml&#34;&gt;&lt;code&gt;infra-rm.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;从 infra 节点移除基础设施组件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/node.yml&#34;&gt;&lt;code&gt;node.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;纳管节点，并调整节点到期望的状态&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/node-rm.yml&#34;&gt;&lt;code&gt;node-rm.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;从 pigsty 中移除纳管节点&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql.yml&#34;&gt;&lt;code&gt;pgsql.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;初始化 HA PostgreSQL 集群或添加新的从库实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-rm.yml&#34;&gt;&lt;code&gt;pgsql-rm.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;移除 PostgreSQL 集群或移除从库实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-user.yml&#34;&gt;&lt;code&gt;pgsql-user.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;向现有的 PostgreSQL 集群添加新的业务用户&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-db.yml&#34;&gt;&lt;code&gt;pgsql-db.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;向现有的 PostgreSQL 集群添加新的业务数据库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-monitor.yml&#34;&gt;&lt;code&gt;pgsql-monitor.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;监控纳管远程 postgres 实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/pgsql-migration.yml&#34;&gt;&lt;code&gt;pgsql-migration.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;为现有的 PostgreSQL 生成迁移手册和脚本&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/redis.yml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;初始化 redis 集群/节点/实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/redis-rm.yml&#34;&gt;&lt;code&gt;redis-rm.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;移除 redis 集群/节点/实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/etcd.yml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;初始化 etcd 集群（patroni HA DCS所需）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/minio.yml&#34;&gt;&lt;code&gt;minio.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;初始化 minio 集群（pgbackrest 备份仓库备选项）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/docker.yml&#34;&gt;&lt;code&gt;docker.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;在节点上安装 docker&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/mongo.yml&#34;&gt;&lt;code&gt;mongo.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;在节点上安装 Mongo/FerretDB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/cert.yml&#34;&gt;&lt;code&gt;cert.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;使用 pigsty 自签名 CA 颁发证书（例如用于客户端）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;https://github.com/vonng/pigsty/blob/main/cache.yml&#34;&gt;&lt;code&gt;cache.yml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;制作离线软件包&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;一次性安装&#34;&gt;一次性安装&lt;/h3&gt;
+&lt;p&gt;特殊的剧本 &lt;code&gt;install.yml&lt;/code&gt; 实际上是一个复合剧本，它在当前环境上安装所有以下组件。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  playbook  / &lt;span style=&#34;color:#204a87&#34;&gt;command&lt;/span&gt; / group         infra           nodes    etcd     minio     pgsql
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;infra.yml&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; ./infra.yml &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-l infra&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+infra&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;][&lt;/span&gt;+node&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; 
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;node.yml&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;  ./node.yml                               &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+node&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+node&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+node&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+node&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;etcd.yml&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;  ./etcd.yml  &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-l etcd &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;                            &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+etcd&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;minio.yml&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; ./minio.yml &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-l minio&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;                                     &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+minio&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;pgsql.yml&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; ./pgsql.yml                                                          &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;+pgsql&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt; 之间存在循环依赖：为了在 INFRA 上注册 NODE，INFRA 应该已经存在，而 INFRA 模块依赖于 INFRA节点上的 NODE 模块才能工作。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，INFRA 模块的安装剧本也会在 INFRA 节点上安装 NODE 模块。所以，请确保首先初始化 INFRA 节点。&lt;/p&gt;
+&lt;p&gt;如果您非要一次性初始化包括 INFRA 在内的所有节点，&lt;code&gt;install.yml&lt;/code&gt; 剧本就是用来解决这个问题的：它会正确的处理好这里的循环依赖，一次性完成整个环境的初始化。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;ansible&#34;&gt;Ansible&lt;/h2&gt;
+&lt;p&gt;执行剧本需要 &lt;code&gt;ansible-playbook&lt;/code&gt; 可执行文件，该文件包含在 &lt;code&gt;ansible&lt;/code&gt; rpm/deb 包中。&lt;/p&gt;
+&lt;p&gt;Pigsty 将在 &lt;a href=&#34;/zh/docs/setup/install#%E5%87%86%E5%A4%87&#34;&gt;&lt;strong&gt;准备&lt;/strong&gt;&lt;/a&gt; 期间在尽最大努力尝试在当前节点安装 &lt;code&gt;ansible&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;您可以自己使用 &lt;code&gt;yum&lt;/code&gt; / &lt;code&gt;apt&lt;/code&gt; / &lt;code&gt;brew&lt;/code&gt;  &lt;code&gt;install ansible&lt;/code&gt; 来安装 Ansible，它含在各大发行版的默认仓库中。&lt;/p&gt;
+&lt;p&gt;了解 ansible 对于使用 Pigsty 很有帮助，但也不是必要的。对于基本使用，您只需要注意四个参数就足够了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-i|--inventory &amp;lt;path&amp;gt;&lt;/code&gt; ：显式指定使用的配置文件&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-l|--limit &amp;lt;pattern&amp;gt;&lt;/code&gt; : 限制剧本在特定的组/主机/模式上执行目标（在哪里/Where）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-t|--tags &amp;lt;tags&amp;gt;&lt;/code&gt; : 只运行带有特定标签的任务（做什么/What）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-e|--extra-vars &amp;lt;vars&amp;gt;&lt;/code&gt; : 传递额外的命令行参数（怎么做/How）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;指定配置文件&#34;&gt;指定配置文件&lt;/h2&gt;
+&lt;p&gt;您可以使用 &lt;code&gt;-i&lt;/code&gt; 命令行参数，显式指定使用的配置文件。&lt;/p&gt;
+&lt;p&gt;Pigsty 默认使用名为 &lt;code&gt;pigsty.yml&lt;/code&gt; 配置文件，该文件位于 Pigsty 源码根目录中的 &lt;code&gt;pigsty.yml&lt;/code&gt;。但您可以使用 &lt;code&gt;-i&lt;/code&gt; 覆盖这一行为，例如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./node.yml -i files/pigsty/rpmbuild.yml    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据 rpmbuild 配置文件，初始化目标节点，而不是使用默认的 pigsty.yml 配置文件&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -i files/pigsty/rpm.yml        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据 files/pigsty/rpm.yml 配置文件中的定义，在目标节点上安装 pgsql 模块&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -i files/pigsty/redis.yml      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据 files/pigsty/redis.yml 配置文件中的定义，在目标节点上安装 redis 模块&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您希望永久修改默认使用的配置文件，可以修改源码根目录下的 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/ansible.cfg#L6&#34;&gt;&lt;code&gt;ansible.cfg&lt;/code&gt;&lt;/a&gt; 的 &lt;code&gt;inventory&lt;/code&gt; 参数，将其指向您的配置文件路径。
+这样您就可以在执行 &lt;code&gt;ansible-playbook&lt;/code&gt; 命令时无需显式指定 &lt;code&gt;-i&lt;/code&gt; 参数了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;指定执行对象&#34;&gt;指定执行对象&lt;/h2&gt;
+&lt;p&gt;您可以使用 &lt;code&gt;-l|-limit &amp;lt;selector&amp;gt;&lt;/code&gt; 限制剧本的执行目标。&lt;/p&gt;
+&lt;p&gt;缺少此值可能很危险，因为大多数剧本会在 &lt;code&gt;all&lt;/code&gt; 分组，也就是所有主机上执行，使用时务必小心。&lt;/p&gt;
+&lt;p&gt;以下是一些主机限制的示例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml                              &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在所有主机上运行（非常危险！）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml   -l pg-test                 &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 pg-test 集群上运行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml   -l 10.10.10.10             &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在单个主机 10.10.10.10 上运行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml   -l pg-*                    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在与通配符 `pg-*` 匹配的主机/组上运行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml   -l &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;10.10.10.11,&amp;amp;pg-test&amp;#39;&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在组 pg-test 的 10.10.10.10 上运行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/pgsql-rm.yml -l &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;pg-test,!10.10.10.11&amp;#39;&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 pg-test 上运行，除了 10.10.10.11 以外&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml   -l pg-test                 &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 pg-test 集群的主机上执行 pgsql 剧本&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;执行剧本子集&#34;&gt;执行剧本子集&lt;/h2&gt;
+&lt;p&gt;你可以使用 &lt;code&gt;-t|--tags &amp;lt;tag&amp;gt;&lt;/code&gt; 执行剧本的子集。 你可以在逗号分隔的列表中指定多个标签，例如 &lt;code&gt;-t tag1,tag2&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如果指定了任务子集，将执行给定标签的任务，而不是整个剧本。以下是任务限制的一些示例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_clean    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果必要，清理现有的 postgres&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_dbsu     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 为 postgres dbsu 设置操作系统用户 sudo&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_install  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 postgres 包和扩展&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_dir      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 创建 postgres 目录并设置 fhs&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_util     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 复制工具脚本，设置别名和环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t patroni     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 patroni 引导 postgres&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_user     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 提供 postgres 业务用户&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_db       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 提供 postgres 业务数据库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_backup   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 pgbackrest 仓库和 basebackup&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pgbouncer   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 与 postgres 一起部署 pgbouncer sidecar&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_vip      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 vip-manager 将 vip 绑定到 pgsql 主库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_dns      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 dns 名称注册到 infra dnsmasq&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_service  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 haproxy 暴露 pgsql 服务&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_exporter &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 haproxy 暴露 pgsql 服务&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_register &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 postgres 注册到 pigsty 基础设施&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 运行多个任务：重新加载 postgres 和 pgbouncer hba 规则&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_hba,pg_reload,pgbouncer_hba,pgbouncer_reload
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 运行多个任务：刷新 haproxy 配置并重新加载&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./node.yml -t haproxy_config,haproxy_reload
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;传递额外参数&#34;&gt;传递额外参数&lt;/h2&gt;
+&lt;p&gt;您可以通过 &lt;code&gt;-e|-extra-vars KEY=VALUE&lt;/code&gt; 传递额外的命令行参数。&lt;/p&gt;
+&lt;p&gt;命令行参数具有压倒性的优先级，以下是一些额外参数的示例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./node.yml -e &lt;span style=&#34;color:#000&#34;&gt;ansible_user&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;admin -k -K                  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 作为另一个用户运行剧本（带有 admin sudo 密码）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -e &lt;span style=&#34;color:#000&#34;&gt;pg_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;                            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在初始化 pgsql 实例时强制清除现有的 postgres&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql-rm.yml -e &lt;span style=&#34;color:#000&#34;&gt;pg_uninstall&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;                     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 postgres 实例被删除后明确卸载 rpm&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l 10.10.10.11 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; -t redis  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化一个特定的 redis 实例：10.10.10.11:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l 10.10.10.13 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 删除一个特定的 redis 实例：10.10.10.11:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;此外，您还可以通过 JSON 的方式，传递诸如数组与对象这样的复杂参数：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 通过指定软件包与仓库模块，在节点上安装 duckdb&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./node.yml -t node_repo,node_pkg  -e &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;{&amp;#34;node_repo_modules&amp;#34;:&amp;#34;infra&amp;#34;,&amp;#34;node_default_packages&amp;#34;:[&amp;#34;duckdb&amp;#34;]}&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;大多数剧本都是幂等的，这意味着在未打开保护选项的情况下，一些部署剧本可能会 &lt;strong&gt;删除现有的数据库&lt;/strong&gt; 并创建新的数据库。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;请仔细阅读文档，多次校对命令，并小心操作。作者不对因误用造成的任何数据库损失负责&lt;/strong&gt;。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

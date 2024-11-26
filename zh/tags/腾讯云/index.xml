@@ -1,0 +1,242 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – 腾讯云</title>
+    <link>/zh/tags/%E8%85%BE%E8%AE%AF%E4%BA%91/</link>
+    <description>Recent content in 腾讯云 on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    <lastBuildDate>Sun, 14 Apr 2024 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="/zh/tags/%E8%85%BE%E8%AE%AF%E4%BA%91/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Blog: 我们能从腾讯云大故障中学到什么?</title>
+      <link>/zh/blog/cloud/qcloud/</link>
+      <pubDate>Sun, 14 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/qcloud/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/qcloud/featured_hub66694ad4eb732902c5255ff25185583_250704_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
+        
+        &lt;p&gt;故障过去八天后，腾讯云发布了 4.8 号大故障的&lt;a href=&#34;https://mp.weixin.qq.com/s/2e2ovuwDrmwlu-vW0cKqcA&#34;&gt;&lt;strong&gt;复盘报告&lt;/strong&gt;&lt;/a&gt;。我认为是一件好事，因为阿里云&lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;双十一大故障&lt;/a&gt;的官方故障复盘至今仍然是拖欠着的。公有云厂商想要真正成为 —— &lt;strong&gt;提供水与电的公共基础设施&lt;/strong&gt;，那就需要承担起责任，接受公众监督 —— 云厂商有义务披露自己故障原因，并提出切实的可靠性改进方案与措施。&lt;/p&gt;
+&lt;p&gt;那么我们就来看一看这份复盘报告，看看里面有哪些信息，以及可以从中学到什么教训。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#事实是什么&#34;&gt;事实是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#原因是什么&#34;&gt;原因是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#影响是什么&#34;&gt;影响是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#评论与观点&#34;&gt;评论与观点？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/qcloud/#能学到什么&#34;&gt;能学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事实是什么&#34;&gt;事实是什么？&lt;/h2&gt;
+&lt;p&gt;按照腾讯云官方给出的复盘报告（官方发布的“权威事实”）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;15:23，监测到故障，立即执行服务的恢复，同时进行原因的排查；&lt;/li&gt;
+&lt;li&gt;15:47，发现通过回滚版本没能完全恢复服务，进一步定位问题；&lt;/li&gt;
+&lt;li&gt;15:57，定位出故障根因是配置数据出现错误，紧急设计数据修复方案；&lt;/li&gt;
+&lt;li&gt;16:02，对全地域进行数据修复工作，API服务逐地域恢复中；&lt;/li&gt;
+&lt;li&gt;16:05，观测到除上海外的地域API服务均已恢复，进一步定位上海地域的恢复问题；&lt;/li&gt;
+&lt;li&gt;16:25，定位到上海的技术组件存在API循环依赖问题，决定通过流量调度至其他地域来恢复；&lt;/li&gt;
+&lt;li&gt;16:45，观测到上海地域恢复了，此时API和依赖API的PaaS服务彻底恢复，但控制台流量剧增，按九倍容量进行了扩容；&lt;/li&gt;
+&lt;li&gt;16:50，请求量逐渐恢复到正常水平，业务稳定运行，控制台服务全部恢复；&lt;/li&gt;
+&lt;li&gt;17:45，持续观察一小时，未发现问题，按预案处理过程完毕。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;复盘报告给出的原因是：&lt;strong&gt;云API服务新版本向前兼容性考虑不够和配置数据灰度机制不足的问题&lt;/strong&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本次API升级过程中，由于新版本的接口协议发生了变化，在后台发布新版本之后对于旧版本前端传来的数据处理逻辑异常，导致生成了一条错误的配置数据，由于灰度机制不足导致异常数据快速扩散到了全网地域，造成整体API使用异常。&lt;/p&gt;
+&lt;p&gt;发生故障后，按照标准回滚方案将服务后台和配置数据同时回滚到旧版本，并重启API后台服务，但此时因为承载API服务的容器平台也依赖API服务才能提供调度能力，即发生了循环依赖，导致服务无法自动拉起。通过运维手工启动方式才使API服务重启，完成整个故障恢复。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这份复盘报告中有一个存疑的点：复盘报告将故障归因为：向前兼容考虑不足。&lt;strong&gt;向前兼容性&lt;/strong&gt;（Forward Compatibility）指的是老的版本的代码可以使用新版本的代码产生的数据。如果管控回滚到旧版本，无法读取由新版本产生的脏数据 —— 那这是确实是一个前向兼容性问题。但在下面的解释中：是新版本代码没有处理好旧版本数据 —— 而这是一个典型的&lt;strong&gt;向后兼容性&lt;/strong&gt;（Backward）问题。对于一个 ToB 服务产品，我认为这样的严谨性是有问题的。&lt;/p&gt;
+&lt;h2 id=&#34;原因是什么&#34;&gt;原因是什么？&lt;/h2&gt;
+&lt;p&gt;作为客户，我也在此前获取了私下流传的故障复盘过程，一份具有高置信度的小道消息：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;15:25 平台监控到云API进程故障告警,工程师立即介入分析;&lt;/li&gt;
+&lt;li&gt;15:36 排查发现异常集中在云API现网版本,旧版本运行正常,开始进行回滚操作;&lt;/li&gt;
+&lt;li&gt;15:47 官网控制台所用集群回滚完成,通过监控确定恢复;&lt;/li&gt;
+&lt;li&gt;15:50 开始回滚非控制台集群;&lt;/li&gt;
+&lt;li&gt;15:57 定位出故障根因是配置系统中存在错误数据;&lt;/li&gt;
+&lt;li&gt;16:02 删除配置数据的错误数据,各地域集群开始自动恢复;&lt;/li&gt;
+&lt;li&gt;16:05 由于历史配置不规范,导致上海集群无法通过回滚快速恢复,决策采用流量调度方式恢复上海集群;&lt;/li&gt;
+&lt;li&gt;16:40 上海集群流量全量切换到其他地域集群;&lt;/li&gt;
+&lt;li&gt;16:45 经过观测和现网监控,确认上海集群已经恢复。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;应该说，官方发布的版本在关键点上基本上和几天前私下流出的版本是一致的，只是私下流传的版本更加详细地指出了根因： &lt;strong&gt;相较旧版本，现网版本新引入逻辑存在对空字典配置数据兼容的bug，在读取数据场景下触发bug逻辑，引发云API服务进程异常 Crash&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;根据这两份故障复盘信息，我们可以确定，这是一次由&lt;strong&gt;人为失误&lt;/strong&gt;导致的故障，而不是因为天灾（硬件故障，机房断电断网）导致的。我们基本上可以&lt;strong&gt;推断&lt;/strong&gt;出故障发生的过程分为两个阶段 —— 两个子问题。&lt;/p&gt;
+&lt;p&gt;第一个问题是，管控 API 没有保持良好的双向兼容性 —— 新管控 API 因为老配置数据中的空字典崩掉了。这体现出一系列软件工程上的问题 —— 处理空对象的代码基本功，处理异常的逻辑，测试的覆盖率，发布的灰度流程。&lt;/p&gt;
+&lt;p&gt;第二个问题是，循环依赖（容器平台与管控API）导致系统无法自动拉起，需要运维手工介入进行 Bootstrap。这反映出 —— 架构设计的问题，以及 —— &lt;strong&gt;腾讯云并没有从去年阿里云的大故障中吸取最核心的教训&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;影响是什么&#34;&gt;影响是什么？&lt;/h2&gt;
+&lt;p&gt;在复盘报告中，腾讯云用了大篇幅来描述故障的影响，解释管控面故障与数据面故障的区别。用了一些酒店前台的比喻。其实类似的故障在去年阿里云双十一大故障已经出现过了 —— 管控面挂了，数据面正常，在《&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;》中，我们也分析过，管控面挂了确实不会影响继续使用现有纯 IaaS 资源。但是会影响云厂商的核心服务 —— 比如，对象存储在腾讯云上叫 COS。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;对象存储 COS 实在是太重要了&lt;/strong&gt;，可以说是云计算的“定义性服务”，也许是唯一能在所有云上基本达成共识标准的服务。云厂商的各种“上层”服务或多或少都直接/间接地依赖 COS，例如 CVM/ RDS 虽然可以运行，但 CVM 快照和 RDS 备份显然是深度依赖 COS 的，CDN 回源是依赖 COS 的，各个服务的日志往往也是写入 COS 的**。所以，任何涉及到基础服务的故障，都不应该糊弄敷衍过去**。&lt;/p&gt;
+&lt;p&gt;当然最让人生气的其实是腾讯云傲慢的态度 —— 我自己作为腾讯云的用户，提了一个工单，用于测试云上的 SLA 到底好不好使 —— 事实证明：&lt;strong&gt;不主张就不赔付，主张了不认账也可以不赔付 —— 这个 SLA 确实跟厕纸一样。&lt;/strong&gt;《&lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云 SLA 是安慰剂还是厕纸合同&lt;/a&gt;》&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;评论与观点&#34;&gt;评论与观点&lt;/h2&gt;
+&lt;p&gt;马斯克的推特 X 和 DHH 的 37 Signal &lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;通过下云省下了千万美元真金白银&lt;/a&gt;，创造了降本增效的“奇迹”，让下云开始成为一种潮流。云上的用户在对着账单犹豫着是否要下云，未上云的用户更是内心纠结。&lt;/p&gt;
+&lt;p&gt;在这样的背景下，作为本土云领导者的阿里云先出现史诗级大故障，紧接着腾讯云又再次出现了这种全球性管控面故障，对于犹豫观望者的信心无疑是沉重的打击。如果说阿里云大故障是公有云&lt;strong&gt;拐点级别的标志性事件&lt;/strong&gt;，那么腾讯云大故障再次确认了这条投射线的方向。&lt;/p&gt;
+&lt;p&gt;这次故障再次揭示出关键基础设施的巨大风险 —— 大量依托于公有云的网络服务&lt;strong&gt;缺乏最基本的自主可控&lt;/strong&gt;能力：当故障发生时没有任何自救能力，除了等死做不了别的事情。它也反映出了&lt;strong&gt;垄断中心化基础设施的脆弱性&lt;/strong&gt;：互联网这个&lt;strong&gt;去中心化&lt;/strong&gt;的世界奇观现在主要是在少数几个大公司/云厂商拥有的服务器上运行 —— 某个云厂商本身成为了最大的业务单点，这可不是互联网设计的初衷！&lt;/p&gt;
+&lt;p&gt;根据海恩法则，一次严重故障的背后有几十次轻微事故，几百起未遂先兆，以及上千条事故隐患。这样的事故对于腾讯云的品牌形象绝对是致命打击，甚至&lt;strong&gt;对整个行业的声誉都有严重的损害&lt;/strong&gt;。Cloudflare 月初的管控面故障后，CEO 立即撰写了详细的&lt;a href=&#34;https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/&#34;&gt;事后复盘分析&lt;/a&gt;，挽回了一些声誉。腾讯云这次发布的故障复盘报告不能说及时，但起码比起遮遮掩掩的阿里云要好多了。&lt;/p&gt;
+&lt;p&gt;通过故障复盘，提出改进措施，让用户看到改进的态度，对于用户的信心非常重要。做一个故障复盘，也许会暴露更多草台班子的糗态 —— 我不会收回 “草台班子” 的评价。但重要的是 —— 技术/管理菜是可以想办法改进的，服务态度傲慢则是无药可医的。&lt;/p&gt;
+&lt;p&gt;公有云厂商想要真正成为 —— &lt;strong&gt;提供水与电的公共基础设施&lt;/strong&gt;，那就需要承担起责任来，并敢于接受公众与用户的公开监督。我在《&lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;》与《&lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云 SLA 是安慰剂还是厕纸合同&lt;/a&gt;》中指出了腾讯云面对故障时的问题 —— 故障信息发布不及时，不准确，不透明。在这一点上，我欣慰的看到在复盘报告改进措施中，腾讯云能够承认这些问题并承诺进行改进。但我无法原谅的是 ——  腾讯云选择在微信公众号上文章审核封口。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;能学到什么&#34;&gt;能学到什么？&lt;/h2&gt;
+&lt;p&gt;往者不可留，逝者不可追，比起哀悼无法挽回的损失，更重要的是从损失中吸取教训 —— 要是能从别人的损失中吸取教训那就更好了。所以，我们能从腾讯云这场史诗级故障中学到什么？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;不要把鸡蛋放在同一个篮子里&lt;/strong&gt;，准备好 PlanB，比如，业务域名解析一定要套一层 CNAME，且 CNAME 域名用不同服务商的解析服务。这个中间层对于阿里云、腾讯云这样的全局云厂商故障非常重要，用另外一个 DNS 供应商，至少可以给你一个把流量切到别的地方去的选择，而不是干坐在屏幕前等死，毫无自救能力。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎依赖需要云基础设施&lt;/strong&gt;：&lt;/p&gt;
+&lt;p&gt;云 API 是云服务的基石，大家都期待它可以始终正常工作 —— 然而越是人们感觉不可能出现故障的东西，真的出现故障时产生的杀伤力就越是毁天灭地。如无必要，勿增实体，更多的依赖意味着更多的失效点，更低的可靠性：正如在这次故障中，使用自身认证机制的 CVM/RDS 本身就没有受到直接冲击。深度使用云厂商提供的 AK/SK/IAM 不仅会让自己陷入供应商锁定，更是将自己暴露在公用基础设施的单点风险里。&lt;/p&gt;
+&lt;p&gt;我的朋友/对手，公有云的鼓吹者瑞典马工和他的朋友AK王老板，一直主张呼吁用 IAM / RAM 做访问控制，并深度利用云上的基础设施。但是在这两次故障后，马工的原话是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“我一直鼓吹大家用 IAM 做访问控制，结果两家云都出大故障，纷纷打我的脸。云厂商不管是 PR 还是 SRE，都在用实际行动向客户证明：“&lt;em&gt;别听马工的，你用他那一套，我就让你系统完蛋&lt;/em&gt;”。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用云服务，优先使用纯资源&lt;/strong&gt;。在本次故障中，&lt;strong&gt;云服务&lt;/strong&gt;受到影响，但&lt;strong&gt;云资源&lt;/strong&gt;仍然可用。类似 CVM/云盘 这样的&lt;strong&gt;纯资源&lt;/strong&gt;，以及单纯使用这两者的 RDS，可以不受管控面故障影响可以继续运行。基础云资源（CVM/云盘）是所有云厂商的提供服务的&lt;strong&gt;最大公约数&lt;/strong&gt;，只用资源有利于用户在不同公有云、以及本地自建中间择优而选。不过，很难想象在公有云上却不用对象存储 —— 在 CVM 和天价云盘 上用 MinIO 自建对象存储服务并不是真正可行的选项，这涉及到公有云商业模式的核心秘密：&lt;a href=&#34;/zh/blog/cloud/s3&#34;&gt;廉价S3获客&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;天价EBS杀猪&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;自建是掌握自身命运的终极道路&lt;/strong&gt;：如果用户想真正掌握自己的命运，最终恐怕早晚会走上自建这条路。互联网先辈们平地起高楼创建了这些服务，而现在做这件事只会容易得多：IDC 2.0 解决硬件资源问题，开源平替解决软件问题，大裁员释放出的专家解决了人力问题。短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择。稍微有点规模的用户&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;下云省下的钱&lt;/a&gt;，可以换几个从大厂出来的资深SRE 还能盈余不少。更重要的是，自家人出问题你可以进行奖惩激励督促其改进，但是云出问题能赔给你几毛钱的代金券？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;明确云厂商的 SLA 是营销工具，而非战绩承诺&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在云计算的世界里，&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;&lt;strong&gt;服务等级协议&lt;/strong&gt;&lt;/a&gt;（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 云SLA是不是安慰剂？</title>
+      <link>/zh/blog/cloud/sla/</link>
+      <pubDate>Mon, 12 Jun 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/sla/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/sla/featured_huf589a6d84a628f3b947c59e314e7776e_1472125_640x0_resize_catmullrom_3.png" width="640" height="640"/>]]>
+        
+        &lt;p&gt;在云计算的世界里，服务等级协议（SLA）被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些 SLA 时，会发现它们并不能像期望的那样“兜底”：你以为给自己的数据库上了保险可以高枕无忧，但其实白花花的银子买的是提供情绪价值的安慰剂。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/sla/featured.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;保险单还是安慰剂&#34;&gt;保险单还是安慰剂？&lt;/h2&gt;
+&lt;p&gt;许多用户购买云服务的一个原因是“兜底”，而问他们所谓“兜底”到底指的是什么，很多人会回答“&lt;strong&gt;SLA&lt;/strong&gt;”。云专家将购买云服务比作购买保险：一些故障可能在许多公司的整个生命周期中都不会出现，但一旦遇到，后果可能就是毁灭性的。在这种情况下，云服务提供商的 SLA 就是兜底保险。然而，当我们实际查看这些 SLA 时，会发现这份“保单”并不像想象中那样有用。&lt;/p&gt;
+&lt;p&gt;数据是许多企业的生命线，云盘是公有云上几乎所有数据存储的基石，所以让我们以云盘服务为例。许多云服务提供商在其产品介绍中都会宣称他们的云盘服务具有 9个9 的&lt;strong&gt;数据可靠性&lt;/strong&gt;【1】。然而当查看其 SLA 时，就会发现这些最为重要的承诺压根没有写入 SLA 【2】。&lt;/p&gt;
+&lt;p&gt;写入 SLA 的通常只有服务的&lt;strong&gt;可用性&lt;/strong&gt;。而且这种可用性的承诺也流于表面，相比真实世界的核心业务可靠性指标极其逊色，赔偿方案相比常见停机损失来说约等于没有。&lt;strong&gt;比起保险单，SLA 更像是提供情绪价值的安慰剂。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;拉胯的可用性&#34;&gt;拉胯的可用性&lt;/h2&gt;
+&lt;p&gt;云 SLA 中使用的关键指标是可用性。云服务可用性通常表示为：可以从外部访问该资源的时间占比，通常使用一个月作为衡量周期。如果由于云厂商的问题，导致用户无法通过 Internet 访问该资源，则该资源将被视为不可用（Unavailable / Down）。&lt;/p&gt;
+&lt;p&gt;以业界标杆 AWS 为例，AWS 大部分服务使用类似的 SLA 模板3。AWS 上的单个虚拟机提供以下 SLA【4】。这意味着在最好情况下，如果 AWS 上EC2 一个月内不可用时间在 21 分钟内（99.9%），AWS 一分钱不赔。在最坏情况下，只有当不可用时间超过36小时（95%），您才能获得 100% 的代金券返还。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/sla/sla-1.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;对于一些互联网公司来说，15分钟的服务故障就足以让奖金泡汤，30分钟的故障足够让领导下课。绝大多数时间实际运行的核心系统可用性可能有5个9，6个9，甚至无穷多个9。从互联网大厂孵化出来的云厂商使用如此逊色的可用性指标，实在是让人看了摇头。&lt;/p&gt;
+&lt;p&gt;更过分的是，当故障发生后，这些补偿也不是自动提供给你的。用户需要在时效（&lt;strong&gt;通常是两个月&lt;/strong&gt;）内，自己负责衡量停机时间，提出申诉举证，并要求赔偿才会有。这要求用户去收集监控指标与日志证据和云厂商扯皮，换回来的也不是现金，而是代金券/时长补偿 —— &lt;strong&gt;对云厂商而言可以说没有任何实质损失，对用户来说没有任何实际意义，几乎没有可能弥补服务中断产生的实际损失。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;兜底有意义吗&#34;&gt;“兜底”有意义吗？&lt;/h2&gt;
+&lt;p&gt;对于企业来说，&lt;strong&gt;兜底&lt;/strong&gt;意味着在故障发生后如何尽可能减少损失。不幸的是，SLA 在这里帮不上什么忙。&lt;/p&gt;
+&lt;p&gt;服务不可用对业务造成的影响因行业、时间、长度而异。几秒钟几分钟的短暂的故障，可能对一般行业影响不大，&lt;strong&gt;然而长时间（几个小时到几十个小时）的故障会严重影响收入与声誉&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;在 Uptime Institute 2021年数据中心调查中【5】，几场最严重停机故障给受访者造成的平均成本近100万美元，最惨重的 2% 不在其中，他们遭受的损失超过 4000 万美元。&lt;/p&gt;
+&lt;p&gt;然而，SLA 补偿对于这些业务损失来说是杯水车薪。以 &lt;code&gt;us-east-1&lt;/code&gt; 区域的 &lt;code&gt;t4g.nano&lt;/code&gt; 虚拟机实例为例，价格约为每月 3 美元。如果不可用时间少于 7 小时 18 分钟（月可用性 99%），AWS 将支付该虚拟机每月成本的 10%，总补偿为 30 美分。如果虚拟机不可用时间少于 36 小时（一个月内 95% 的可用性），补偿仅为 30% —— 不到 1 美元。&lt;strong&gt;如果不可用时间超过一天半，用户才能收到当月的全额退款 —— 3美元&lt;/strong&gt;。即使是补偿个成千上万台，与损失相比也可基本忽略不计。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/sla/sla-2.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;相比之下，传统的保险行业是实打实地为客户兜底。例如，顺丰快递的保价费用为物品价值 1%，但如果物品丢失，他们会全额赔偿。同样，每年几万商业医保，出问题真能兜底几百万。“保险”这个行业也是一分钱一分货的。&lt;/p&gt;
+&lt;p&gt;云服务提供商收取了远超BOM的昂贵服务费（参见：《公有云是不是杀猪盘》【7】），但当服务出现问题时，他们提供的补偿所谓的“兜底”却只是一些代金券，这显然是有失公平的。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;消失的可靠性&#34;&gt;消失的可靠性&lt;/h2&gt;
+&lt;p&gt;有些人使用云服务是为了“&lt;strong&gt;甩锅&lt;/strong&gt;”，推卸自己的责任。有一些重要的责任是无法推卸给外部 IT 供应商的。比如&lt;strong&gt;数据安全&lt;/strong&gt;。用户可以忍受一段时间的服务不可用，但数据丢乱错带来的伤害往往是无法接受的。&lt;strong&gt;轻信浮夸承诺的后果实在是太过严重，以至于对于一个创业公司就是生与死的区别。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在各家云厂商的存储类产品中，经常能看到“承诺 99.9999999%” 9个9的可靠性【1】，可以理解为，使用云盘出现数据丢失的概率是十亿分之一。考察云厂商硬盘故障率的实际报告【6】，非常让人怀疑这个数字是拍脑袋想出来的。但只要敢说敢赔敢作敢当，那就没问题。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/sla/sla-3.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;然而翻开各家云厂商的 SLA 就会发现，这一条“承诺”消失了！【2】&lt;/p&gt;
+&lt;p&gt;在2018年轰动的《腾讯云给一家创业公司带来的灾难！》 【8】案例中，这家创业公司就相信了云厂商的承诺，把数据放在服务器硬盘上，结果遇到了所谓“硬盘静默错误”：“几年来积累的数据全部丢失，造成近千万元的损失”。腾讯云向该公司表达歉意，愿意赔偿该公司在腾讯云产生的实际消费共计3569元，本着帮助用户迅速恢复业务的目的，承诺为该公司提供13.29万元现金或云资源的额外补偿。达到其消费金额的 37 倍！多么慷慨，多么仁慈，但这对于用户来说能弥补损失哪怕是零头吗？不行。&lt;/p&gt;
+&lt;p&gt;如果您是企业主或IT负责人，会觉得这样的甩锅有意义吗？&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/sla/sla-4.png&#34;&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;sla-到底是什么&#34;&gt;SLA 到底是什么&lt;/h2&gt;
+&lt;p&gt;话都讲到这里，云服务的鼓吹者会祭出最后一招：虽然出了故障后的兜底是个摆设，但是用户需要的是尽可能不出故障，按照 SLA 中的承诺，我们有 99.99% 的概率不出故障，这才是对用户最有价值的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;然而，SLA 被有意地与服务的真实可靠性相混淆&lt;/strong&gt; ：&lt;strong&gt;用户不应该将 SLA 视作来服务可用性的可靠预测指标 —— 甚至是过去可用性水平的真实记录&lt;/strong&gt;。&lt;strong&gt;对于厂家来说，SLA 并不是真正的可靠性承诺或历史战绩，而是一种营销工具，旨在让买家相信云厂商可以托管关键业务应用。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;UPTIME INSTITUTE 发布的年度数据中心故障分析报告表明，很多云服务的真实表现低于其发布的 SLA 。对 2022 年故障分析发现：行业遏制故障频率的努力落空，故障成本和后果正在不断恶化【9】。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/sla/sla-5.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”&lt;/strong&gt;。&lt;strong&gt;惩罚的威慑取决于惩罚的确定性及惩罚的严重性&lt;/strong&gt;。月消的时长/代金券赔付对云厂商来说并没有什么实际成本，所以惩罚的&lt;strong&gt;严重性&lt;/strong&gt;趋近于零；赔付还需要需要用户自己举证主张并得到云厂商的批准，这意味着&lt;strong&gt;确定性&lt;/strong&gt;也不会很高。&lt;/p&gt;
+&lt;p&gt;比起会因为故障丢掉奖金与工作的专家工程师来说，SLA的惩罚对于云厂商属于是自罚三杯，不痛不痒。如果惩罚没有意义，那么云厂商也没有动力会提供更好的服务质量。用户遇到问题时只能提供单等死，服务态度比起自建/三方服务公司可谓天差地别，对小客户更是趾高气扬。&lt;/p&gt;
+&lt;p&gt;更微妙的是，云厂商对于 SLA协议具有绝对的权力：云厂商有权单方调整修订SLA并告知用户生效，用户只有&lt;strong&gt;选择不用&lt;/strong&gt;的权利，没有任何参与权和选择权。作为默认签署无法拒绝的“霸王条款”，堵死了用户进行真正有意义赔偿追索的可能性。&lt;/p&gt;
+&lt;p&gt;所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是吃不了兜着走的哑巴亏。在最好的情况下，它才是提供情绪价值的安慰剂。因此，当我们选择云服务时，我们需要擦亮双眼，清楚地了解其 SLA 的内容，以便做出明智的决策。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;reference&#34;&gt;Reference&lt;/h2&gt;
+&lt;p&gt;【1】&lt;a href=&#34;https://help.aliyun.com/document_detail/122389.html&#34;&gt;阿里云 ESSD云盘&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【2】&lt;a href=&#34;https://help.aliyun.com/document_detail/56773.htm&#34;&gt;阿里云 SLA 汇总页&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【3】&lt;a href=&#34;https://aws.amazon.com/cn/legal/service-level-agreements/&#34;&gt;AWS SLA 汇总页&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【4】&lt;a href=&#34;https://d1.awsstatic.com/legal/AmazonComputeServiceLevelAgreement/Amazon_Compute_Service_Level_Agreement_Chinese_Simplfied_(CN)2022-05-25.pdf&#34;&gt;AWS EC2 SLA 样例&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【5】&lt;a href=&#34;https://journal.uptimeinstitute.com/cloud-slas-punish-not-compensate/&#34;&gt;云SLA更像是惩罚用户而不是补偿用户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【6】&lt;a href=&#34;https://www.usenix.org/system/files/atc22-lu.pdf&#34;&gt;NVMe SSD失效率统计&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【7】&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;公有云是不是杀猪盘&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【8】&lt;a href=&#34;https://www.doit.com.cn/p/312087.html&#34;&gt;腾讯云给一家创业公司带来的灾难！&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【9】&lt;a href=&#34;https://www.businesswire.com/news/home/20220608005265/en/Uptime-Institute%E2%80%99s-2022-Outage-Analysis-Finds-Downtime-Costs-and-Consequences-Worsening-as-Industry-Efforts-to-Curb-Outage-Frequency-Fall-Short&#34;&gt;Uptime Institute 2022 故障分析&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 垃圾腾讯云CDN：从入门到放弃？</title>
+      <link>/zh/blog/cloud/cdn/</link>
+      <pubDate>Wed, 08 Mar 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/cdn/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/cdn/featured_hued8d72b4bcf2f4ef1f4b399130fba255_352651_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;我和 瑞典马工虽然在 &lt;a href=&#34;/zh/blog/cloud/rds&#34;&gt;云数据库&lt;/a&gt; VS &lt;a href=&#34;https://mp.weixin.qq.com/s/Gk9bG_EOIv0IAkim41XRHg&#34;&gt;&lt;strong&gt;DBA&lt;/strong&gt;&lt;/a&gt; 这个议题上针锋相对，但在一点上能达成共识：至少&lt;strong&gt;国内的公有云厂商做的是真垃圾&lt;/strong&gt;。用马工的话来说就是：“&lt;strong&gt;阿里云是个工程质量差劲的正经云，但腾讯云是一群业余销售加业务码农玩游戏&lt;/strong&gt;”。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/featured.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;前因后果&#34;&gt;前因后果&lt;/h2&gt;
+&lt;p&gt;我有个软件托管在 &lt;strong&gt;GitHub&lt;/strong&gt; 上，提供了 &lt;strong&gt;1MB&lt;/strong&gt; 的源码包和 &lt;strong&gt;1GB&lt;/strong&gt; 的离线软件包下载。大陆用户因为 在境内 没法从 &lt;strong&gt;GitHub&lt;/strong&gt; 下载，因此需要有一个境内的下载地址，于是我就用了腾讯云的 &lt;strong&gt;COS&lt;/strong&gt;（对象存储） 与 &lt;strong&gt;CDN&lt;/strong&gt;（内容分发网络）服务。&lt;/p&gt;
+&lt;p&gt;用 &lt;strong&gt;CDN&lt;/strong&gt; 的初衷不外乎：1. 加速，2. 省钱。互联网流量费通常是 8毛钱1GB，使用 &lt;strong&gt;CDN&lt;/strong&gt; 流量包可以节省不少流量费打对折。当然，因为 CDN 就是给境内用户专用的。所以我也只买了境内的流量包。一直以来也用的还算可以，直到 2月底，我突然发现，怎么冒出来几笔异常费用。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-1.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;点进去一看，CDN 收了&lt;strong&gt;几百块钱&lt;/strong&gt;，我还想，难道是哪里渠道带火了下载？于是进入 数据统计分析界面一看，这段时间里，总共软件包也就是 &lt;strong&gt;100GB&lt;/strong&gt; 不到的下载流量，撑死了几十块钱，怎么会我收几百块呢？&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-2.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;点看分析一看好家伙，1TB的访问流量，全是 “&lt;strong&gt;境外其他&lt;/strong&gt;”，什么鬼？&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-3.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-1.jpeg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;于是，呼出腾讯云客服来：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-4.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;甩锅 x 1，我们这个 TOP不准，要看日志哈&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-5.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;那我就下载一份日志来看看，究竟是谁吃饱了撑着来爆破。结果，里面一大堆请求连客户端 IP 地址都没有。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;甩锅 x 2 ，客服说，这种大概率是被&lt;/strong&gt;攻击&lt;strong&gt;了！好怕怕啊！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-6.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;这种话术还想忽悠我？&lt;strong&gt;不懂行的用户一听”攻击“，说不定就被拐带着跑去买公有云厂商的”高防服务“了。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;绕了一圈又等了半个小时，终于告知了我真正的原因，&lt;strong&gt;流量费是“预热”扣除的&lt;/strong&gt;。所以这些没有 “来源IP”的请求终于真相大白了：&lt;strong&gt;原来是“监守自盗，贼喊捉贼”，你们自己的系统跑过来爆破俺的流量啊！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-7.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;工程师电话沟通告知说：我们的 CDN 预热是这样的，所有的 CDN 节点都会来回源请求，所以才有的这两万次请求与 &lt;strong&gt;1TB&lt;/strong&gt; 流量。&lt;/p&gt;
+&lt;p&gt;听到这样的解释，我都要笑喷了。&lt;strong&gt;我为什么买CDN？因为要省对象存储的流量钱。CDN 去刷新预热，这是云厂商自己系统内部的流量，为啥要挂在用户身上付费？&lt;strong&gt;但是&lt;/strong&gt;你刷新预热一下，一下花掉了我直接走对象存储下载一年都用不了的钱。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;好吧，就算我们退一万步讲预热要付费，一个合乎工程逻辑的做法是，每个大区域来对象存储回源一次，然后再下发同步到每个终端节点上。付个几倍流量费，我也不会介意的。&lt;strong&gt;1GB&lt;/strong&gt; 的软件花个 &lt;strong&gt;10GB&lt;/strong&gt; 预热一下，客户也不会说什么。&lt;/p&gt;
+&lt;p&gt;腾讯云 CDN则不然，一个1MB/1GB的软件包预热，每个终端节点直接来请求，产生 &lt;strong&gt;1TB&lt;/strong&gt; 的“预热流量”。八毛钱&lt;strong&gt;1GB&lt;/strong&gt; 流量费，几百块就没了。更滑稽的是，我 CDN 是给大陆用户使用的，墙外用户根本用不着，直接 Github 下载就好了，而这些流量全都跑到“境外”去了，&lt;strong&gt;事先买好境内的流量包压根不能抵扣&lt;/strong&gt;。而腾讯云的文档上也压根没有提及，这些 “预热” 究竟有多大的量和来自哪里。我认为，这已经构成了事实上的欺诈与恶意引导杀猪盘。比 《&lt;a href=&#34;/zh/blog/cloud/rds/&#34;&gt;云数据库是不是智商税&lt;/a&gt;》还要恶劣的多。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;所以，一个简简单单的 1MB / 1GB 的软件包要走 CDN 分发，本来可能一天也没几块钱的东西，点一下按钮，大几百块就没了&lt;/strong&gt;。&lt;strong&gt;在监控图表上，把内部的流量藏的好好的；在计费逻辑上，把本应免费的内部流量硬塞到用户头上。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cdn/cdn-8.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;CDN预热内部流量也好意思向用户收钱？&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;几百块钱的成本对我来说不痛不痒，但我作为用户，感觉到智商受到了羞辱。腾讯云提议退一半钱给你好不好？全退给你好不好？&lt;strong&gt;我也一分没要，我就是要写一篇文章告诉大家，这个产品做的有多烂多傻逼&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;阿里云不管怎么样，起码在某些方面我还会表示一下敬意。而腾讯云的表现，实实在在是彻底丢了中国公有云的脸，这么大一厂商，这点事儿都弄不明白就出来做云。也难怪别人会说：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;中国没有云计算，有的只是 IDC 2.0&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;就这个样子出来卖，还是早点洗洗睡吧。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩展阅读&#34;&gt;扩展阅读&lt;/h2&gt;
+&lt;p&gt;更多腾讯云的精彩表现，可以欣赏云计算霰弹枪的往期文章：&lt;/p&gt;
+&lt;p&gt;[1] &lt;a href=&#34;https://mp.weixin.qq.com/s/tuyv9nGQPaQRWD_q4EXpMw&#34;&gt;腾讯云团队为什么用阿里云的服务名？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[2] &lt;a href=&#34;https://mp.weixin.qq.com/s/aP5FgFQ39u-UKC9mE4HKug&#34;&gt;究竟是客户差劲，还是腾讯云差劲？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[3] &lt;a href=&#34;https://mp.weixin.qq.com/s/JnK3sIPozZqe2kFoFO1mJg&#34;&gt;腾讯云：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[4] &lt;a href=&#34;https://mp.weixin.qq.com/s/mMvDiTiMOt6eiTTYbHvbbQ&#34;&gt;腾讯云阿里云做的真的是云计算吗?&amp;ndash;从客户成功案例的视角&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[5] &lt;a href=&#34;https://mp.weixin.qq.com/s/_eiZPNfz8OUP5iHBJ-oxJA&#34;&gt;本土云厂家究竟在服务谁？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[6] &lt;a href=&#34;https://mp.weixin.qq.com/s/wGuGrtzmfDj9gIFUGNJ30g&#34;&gt;云计算厂商们，你们辜负了中国的用户&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

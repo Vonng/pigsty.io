@@ -1,0 +1,1161 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – 阿里云</title>
+    <link>/zh/tags/%E9%98%BF%E9%87%8C%E4%BA%91/</link>
+    <description>Recent content in 阿里云 on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    <lastBuildDate>Tue, 17 Sep 2024 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="/zh/tags/%E9%98%BF%E9%87%8C%E4%BA%91/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Blog: 阿里云：高可用容灾神话破灭</title>
+      <link>/zh/blog/cloud/aliyun-ha/</link>
+      <pubDate>Tue, 17 Sep 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/aliyun-ha/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/aliyun-ha/featured_hu02aa61ae1d9de35cbe238d2676170cb9_676376_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;2024年9月10日，阿里云新加坡可用区C数据中心因锂电池爆炸导致火灾，到现在已经过去一周了，仍未完全恢复。
+按照月度 SLA 定义的可用性计算规则（7天+/30天≈75%），&lt;strong&gt;服务可用性别说几个9了，连一个8都不剩了&lt;/strong&gt;，而且还在进一步下降中。
+当然，可用性八八九九已经是小问题了 —— 真正的问题是，放在单可用区里的数据还能不能找回来？&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://status.aliyun.com/#/?region=ap-southeast-1&#34;&gt;&lt;img alt=&#34;status.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/status.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;截止至 09-17，关键服务如 ECS, OSS, EBS, NAS, RDS 等仍然处于异常状态&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;通常来说，如果只是机房小范围失火的话，问题并不会特别大，因为电源和UPS通常放在单独房间内，与服务器机房隔离开。
+但一旦触发了消防淋水，问题就大条了：一旦服务器整体性断电，恢复时间基本上要以天计；
+如果泡水，那就不只是什么可用性的问题了，要考虑的是数据还能不能找回 —— &lt;strong&gt;数据完整性&lt;/strong&gt; 的问题了。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=21&#34;&gt;&lt;img alt=&#34;event.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/event.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;目前公告上的说法是，14号晚上已经拖出来一批服务器，正在干燥、一直到16号都没干燥完。从这个“干燥”说法来看，有很大概率是泡水了。
+虽然在任何官方公告出来前，我们无法断言事实如何，但根据常理判断，出现数据一致性受损是大概率事件，只是丢多丢少的问题。
+所以目测这次新加坡火灾大故障的影响，基本与 2022 年底 &lt;a href=&#34;https://help.aliyun.com/noticelist/articleid/1061819219.html&#34;&gt;香港盈科机房大故障&lt;/a&gt; 与2023年&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;双十一全球不可用&lt;/a&gt; 故障在一个量级甚至更大。&lt;/p&gt;
+&lt;p&gt;天有不测风云，人有旦夕祸福。故障的发生概率不会降为零，重要的是我们从中故障能学到什么经验与教训？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;容灾实战战绩&#34;&gt;容灾实战战绩&lt;/h2&gt;
+&lt;p&gt;整个数据中心着火是一件很倒霉的事，绝大多数用户除了靠异地冷备份逃生外，通常也只能自认倒霉。我们可以讨论锂电池还是铅酸电池更好，UPS电源应该怎么布局这类问题，但因为这些责备阿里云也没什么意义。&lt;/p&gt;
+&lt;p&gt;但有意义的是，在这次 &lt;strong&gt;可用区级故障中&lt;/strong&gt;，标称自己为 “&lt;strong&gt;跨可用区容灾高可用&lt;/strong&gt;” 的产品，例如云数据库 RDS，到底表现如何？&lt;strong&gt;故障给了我们一次用真实战绩来检验这些产品容灾能力的机会。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;容灾的核心指标是 &lt;strong&gt;RTO&lt;/strong&gt; （恢复耗时）与 &lt;strong&gt;RPO&lt;/strong&gt;（数据损失），而不是什么几个9的可用性 —— 道理很简单，你可以单凭运气做到不出故障，实现 100% 的可用性。但真正检验容灾能力的，是灾难出现后的恢复速度与恢复效果。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;配置策略&lt;/th&gt;
+&lt;th&gt;RTO&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;RPO&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-music text-danger&#34;&gt;&lt;/i&gt; 什么也不做&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;数据永久丢失，无法恢复&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fas fa-circle-xmark text-danger&#34;&gt;&lt;/i&gt; &lt;strong&gt;数据全部丢失&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-copy text-secondary&#34;&gt;&lt;/i&gt; 基础备份&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; 取决于备份大小与带宽（几小时）&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-secondary&#34;&gt;&lt;/i&gt; 丢失上一次备份后的数据（几个小时到几天）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;单机 + &lt;i class=&#34;fa-solid fa-copy text-primary&#34;&gt;&lt;/i&gt; 基础备份 + &lt;i class=&#34;fa-solid fa-clock-rotate-left text-primary&#34;&gt;&lt;/i&gt; WAL归档&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; 取决于备份大小与带宽（几小时）&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt; 丢失最后尚未归档的数据（几十MB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-wrench text-secondary&#34;&gt;&lt;/i&gt; 手工故障切换&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-triangle-exclamation text-primary&#34;&gt;&lt;/i&gt;  十分钟&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 丢失复制延迟中的数据（约百KB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; 自动故障切换&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 一分钟内&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-primary&#34;&gt;&lt;/i&gt; 丢失复制延迟中的数据（约百KB）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;主从 + &lt;i class=&#34;fa-solid fa-infinity text-primary&#34;&gt;&lt;/i&gt; 自动故障切换 + &lt;i class=&#34;fa-solid fa-rotate text-success&#34;&gt;&lt;/i&gt; 同步提交&lt;/td&gt;
+&lt;td&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; 一分钟内&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;i class=&#34;fa-solid fa-circle-check text-success&#34;&gt;&lt;/i&gt; 无数据丢失&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;毕竟，&lt;a href=&#34;/zh/blog/cloud/sla&#34;&gt;&lt;strong&gt;SLA&lt;/strong&gt;&lt;/a&gt; 中的规定的几个9 可用性指标&lt;strong&gt;并非真实历史战绩&lt;/strong&gt;，而是达不到此水平就补偿月消费XX元代金券的承诺。要想考察产品真正的容灾能力，还是要靠演练或真实灾难下的实际战绩表现。&lt;/p&gt;
+&lt;p&gt;然而实际战绩如何呢？在这次在这次新加坡火灾中，整个可用区 RDS 服务的切换用了多长时间 —— 多AZ高可用的 RDS 服务在 11:30 左右完成切换，&lt;strong&gt;耗时 70 分钟&lt;/strong&gt;（10:20 故障开始），也就是 &lt;strong&gt;RTO &amp;lt; 70分&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这个指标相比 2022 年香港C可用区故障 RDS 切换的的 &lt;strong&gt;133&lt;/strong&gt; 分钟，有进步。但和阿里云自己标注的指标（&lt;strong&gt;RTO &amp;lt; 30秒&lt;/strong&gt;）还是差了两个数量级。&lt;/p&gt;
+&lt;p&gt;至于单可用区的基础版 RDS 服务，官方文档上说 &lt;strong&gt;RTO &amp;lt; 15分&lt;/strong&gt;，实际情况是：单可用区的RDS都要过头七了。&lt;strong&gt;RTO &amp;gt; 7天&lt;/strong&gt;，至于 RTO 和 RPO 会不会变成 &lt;strong&gt;无穷大 ∞&lt;/strong&gt; （彻底丢完无法恢复），我们还是等官方消息吧。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;如实标注容灾指标&#34;&gt;如实标注容灾指标&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/zh/rds/product-overview/competitive-advantages-of-apsaradb-rds-instances-over-self-managed-databases&#34;&gt;阿里云官方文档&lt;/a&gt; 宣称：RDS 服务提供多可用区容灾， “&lt;em&gt;高可用系列和集群系列提供自研高可用系统，实现&lt;strong&gt;30秒&lt;/strong&gt;内故障恢复。基础系列约&lt;strong&gt;15分钟&lt;/strong&gt;即可完成故障转移&lt;/em&gt;。”
+也就是高可用版 RDS 的 RTO &amp;lt; 30s，基础单机版的 RTO &amp;lt; 15min，中规中矩的指标，没啥问题。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/zh/rds/product-overview/competitive-advantages-of-apsaradb-rds-instances-over-self-managed-databases&#34;&gt;&lt;img alt=&#34;rds.jpg&#34; src=&#34;/zh/blog/cloud/aliyun-ha/rds.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;我相信在单个集群的主实例出现单机硬件故障时，阿里云 RDS 是可以实现上面的容灾指标的 —— 但既然这里声称的是 “&lt;strong&gt;多可用区容灾&lt;/strong&gt;”，那么用户的合理期待是当整个可用区故障时，RDS 故障切换也可以做到这一点。&lt;/p&gt;
+&lt;p&gt;可用区容灾是一个合理需求，特别是考虑到阿里云在最近短短一年内出现过好几次整个可用区范围的故障（**&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;甚至还有一次全球/全服务级别的故障&lt;/a&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;2024-09-10 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=21&#34;&gt;&lt;strong&gt;新加坡可用区C机房火灾&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-07-02 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=20&#34;&gt;&lt;strong&gt;上海可用区N网络访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-04-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=19&#34;&gt;浙江地域访问其他地域或其他地域访问杭州地域的OSS、SLS服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2024-04-25 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=18&#34;&gt;&lt;strong&gt;新加坡地域可用区C部分云产品服务异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-11-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=17&#34;&gt;&lt;strong&gt;阿里云部分地域云数据库控制台访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-11-12 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=16&#34;&gt;&lt;strong&gt;阿里云云产品控制台服务异常&lt;/strong&gt;&lt;/a&gt; （&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;全球大故障&lt;/a&gt;）&lt;/p&gt;
+&lt;p&gt;2023-11-09 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=15&#34;&gt;中国内地访问中国香港、新加坡地域部分EIP无法访问&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-10-12 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=14&#34;&gt;阿里云杭州地域可用区J、杭州地域金融云可用区J网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-07-31 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=13&#34;&gt;暴雨影响北京房山地域NO190机房&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-21 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=12&#34;&gt;&lt;strong&gt;阿里云北京地域可用区I网络访问异常&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-20 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=11&#34;&gt;部分地域电信网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-16 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=10&#34;&gt;移动网络访问异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-13 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=9&#34;&gt;阿里云广州地域访问公网网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-06-05 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=8&#34;&gt;中国香港可用区D某机房机柜异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-05-31 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=7&#34;&gt;阿里云访问江苏移动地域网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-05-18 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=6&#34;&gt;阿里云杭州地域云服务器ECS控制台服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-04-27 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=5&#34;&gt;部分北京移动(原中国铁通) 用户网络访问存在丢包现象&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-04-26 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=4&#34;&gt;杭州地域容器镜像服务ACR服务异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-03-01 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=3&#34;&gt;深圳可用区A部分ECS访问Local DNS异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2023-02-18 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=2&#34;&gt;阿里云广州地域网络异常&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;2022-12-25 &lt;a href=&#34;https://status.aliyun.com/#/eventDetail?eventId=1&#34;&gt;&lt;strong&gt;阿里云香港地域电讯盈科机房制冷设备故障&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;那么，为什么在实战中，单个RDS集群故障可以做到的指标，在可用区级故障时就做不到了呢？&lt;strong&gt;从历史的故障中我们不难&lt;/strong&gt;推断&lt;/strong&gt; —— 数据库高可用依赖的基础设施本身，很可能就是单AZ部署的。包括在先前&lt;a href=&#34;https://www.aliyun.com/noticelist/articleid/1061819219.html&#34;&gt;香港盈科机房故障&lt;/a&gt;中展现出来的 ：单可用区的故障很快蔓延到了整个 Region —— &lt;strong&gt;因为管控平面本身不是多可用区容灾的&lt;/strong&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;12月18日10:17开始，阿里云香港Region可用区C部分RDS实例出现不可用的报警。随着该可用区受故障影响的主机范围扩大，出现服务异常的实例数量随之增加，工程师启动数据库应急切换预案流程。截至12:30，RDS MySQL与Redis、MongoDB、DTS等大部分跨可用区实例完成跨可用区切换。部分单可用区实例以及单可用区高可用实例，由于依赖单可用区的数据备份，仅少量实例实现有效迁移。少量支持跨可用区切换的RDS实例没有及时完成切换。&lt;strong&gt;经排查是由于这部分RDS实例依赖了部署在香港Region可用区C的代理服务&lt;/strong&gt;，由于代理服务不可用，无法通过代理地址访问RDS实例。我们协助相关客户通过临时切换到使用RDS主实例的地址访问来进行恢复。随着机房制冷设备恢复，21:30左右绝大部分数据库实例恢复正常。对于受故障影响的单机版实例及主备均在香港Region可用区C的高可用版实例，我们提供了克隆实例、实例迁移等临时性恢复方案，但由于底层服务资源的限制，部分实例的迁移恢复过程遇到一些异常情况，需要花费较长的时间来处理解决。&lt;/p&gt;
+&lt;p&gt;ECS管控系统为B、C可用区双机房容灾，C可用区故障后由B可用区对外提供服务，由于大量可用区C的客户在香港其他可用区新购实例，同时可用区C的ECS实例拉起恢复动作引入的流量，导致可用区 B 管控服务资源不足。新扩容的ECS管控系统启动时依赖的中间件服务部署在可用区C机房，导致较长时间内无法扩容。ECS管控依赖的自定义镜像数据服务，&lt;strong&gt;依赖可用区C的单AZ冗余版本的OSS服务&lt;/strong&gt;，导致客户新购实例后出现启动失败的现象。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;我建议在包括 RDS 在内的云产品应当实事求是，如实标注历史故障案例里的 RTO 和 RPO 战绩，以及真实可用区灾难下的实际表现。不要笼统地宣称 “&lt;em&gt;&lt;strong&gt;30秒/15分钟恢复，不丢数据，多可用区容灾&lt;/strong&gt;&lt;/em&gt;”，承诺一些自己做不到的事情。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;阿里云的可用区到底是什么&#34;&gt;阿里云的可用区到底是什么？&lt;/h2&gt;
+&lt;p&gt;在这次新加坡C可用区故障，包括之前香港C可用区故障中，阿里云表现出来的一个问题就是，单个数据中心的故障扩散蔓延到了整个可用区中，而单个可用区的故障又会影响整个区域。&lt;/p&gt;
+&lt;p&gt;在云计算中， &lt;strong&gt;区域（Region）&lt;/strong&gt; 与 &lt;strong&gt;可用区（AZ）&lt;/strong&gt; 是一个非常基本的概念，熟悉 AWS 的用户肯定不会感到陌生。
+按照 &lt;a href=&#34;https://aws.amazon.com/cn/about-aws/global-infrastructure/regions_az&#34;&gt;AWS的说法&lt;/a&gt; ：一个 &lt;strong&gt;区域&lt;/strong&gt; 包含多个可用区，每个可用区是一个或多个独立的数据中心。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;aws-az-region.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/aws-az-region.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;对于 AWS 来说，并没有特别多的 Region，比如美国也就四个区域，但每个区域里 &lt;a href=&#34;https://gist.github.com/karstenmueller/98381c897178a260be8c08f98ffe2c3e&#34;&gt;两三个可用区&lt;/a&gt;，而一个可用区（AZ）通常对应着多个数据中心（DC）。
+AWS 的实践是一个 DC 规模控制在八万台主机，DC之间距离在 70 ～ 100 公里。这样构成了一个 Region - AZ - DC 的三级关系。&lt;/p&gt;
+&lt;p&gt;不过 &lt;a href=&#34;https://help.aliyun.com/document_detail/40654.html&#34;&gt;阿里云&lt;/a&gt; 上似乎不是这样的，它们缺少了一个关键的 &lt;strong&gt;数据中心（DC）&lt;/strong&gt; 的概念。
+因此 &lt;strong&gt;可用区（AZ）&lt;/strong&gt; 似乎就是一个数据中心，而 &lt;strong&gt;区域（Region）&lt;/strong&gt; 与 AWS 的上一层 &lt;strong&gt;可用区（AZ）概念&lt;/strong&gt; 对应。&lt;/p&gt;
+&lt;p&gt;把原本的 AZ 拔高成了 Region，把原本的 DC （或者DC的一部分，一层楼？）拔高成了可用区。&lt;/p&gt;
+&lt;p&gt;我们不好说阿里云这么设计的动机，一种可能的猜测是：本来可能阿里云国内搞个华北，华东，华南，西部几个区域就行，但为了汇报起来带劲（你看AWS美国才4个Region，我们国内有14个！），就搞成了现在这个样子。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云厂商有责任推广最佳实践&#34;&gt;云厂商有责任推广最佳实践&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;提供单az对象存储服务的云，可不可以评价为：不是傻就是坏？&lt;/p&gt;
+&lt;p&gt;云厂商有责任推广好的实践，不然出了问题，也还是“都是云的问题”&lt;/p&gt;
+&lt;p&gt;你给别人默认用的就是本地三副本冗余，绝大多数用户就会选择你默认的这个。&lt;/p&gt;
+&lt;p&gt;看有没有告知,没告知，那就是坏，告知了，长尾用户能不能看懂？但其实很多人不懂的。&lt;/p&gt;
+&lt;p&gt;你都已经三副本存储了，为什么不把一个副本放在另一个 DC 或者另一个 AZ ？
+你都已经在存储上收取了上百倍的溢价了，为什么就不不愿意多花一点点钱去做同城冗余，难道是扣数据跨 AZ 复制的那点流量费吗？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;做健康状态页请认真一点&#34;&gt;做健康状态页请认真一点&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;我听说过天气预报，但从未听说过故障预报。但阿里云健康看板为我们提供了这一神奇的能力 —— 你可以选择未来的日期，而且未来日期里还有服务健康状态数据。例如，你可以查看20年后的服务健康状态 ——&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;2044.png&#34; src=&#34;/zh/blog/cloud/aliyun-ha/2044.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;未来的 “故障预报” 数据看上去是用当前状态填充的。所以当前处于故障状态的服务在未来的状态还是异常。如果你选择 20 年后，你依然可以看到当前新加坡大故障的健康状态为“异常”。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;也许&lt;/strong&gt; 阿里云是想用这种隐晦的方式告诉用户：&lt;em&gt;&lt;strong&gt;新加坡区域单可用区里的数据已经泡汤了，Gone Forever, 乃们还是不要指望找回了&lt;/strong&gt;&lt;/em&gt;。当然，更合理推断是：这不是什么故障预报，这个健康看板是实习生做的。完全没有设计 Review，没有 QA 测试，不考虑边际条件，拍拍脑袋拍拍屁股就上线了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云是新的故障单点那怎么办&#34;&gt;云是新的故障单点，那怎么办？&lt;/h2&gt;
+&lt;p&gt;TBD&lt;/p&gt;
+&lt;p&gt;信息安全三要素 CIA：机密性，完整性，可用性，最近阿里都遇上了大翻车。&lt;/p&gt;
+&lt;p&gt;前有 &lt;a href=&#34;https://mp.weixin.qq.com/s/C7XGgGmzvMjKJGbBGVmrzw&#34;&gt;阿里云盘灾难级BUG&lt;/a&gt; 泄漏隐私照片破坏机密性；&lt;/p&gt;
+&lt;p&gt;后有这次可用区故障故障，击穿多可用区/单可用区可用性神话，甚至威胁到了命根子 —— 数据完整性。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/odyssey/&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;FinOps的终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/profit/&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/rds/&#34;&gt;云数据库是不是智商税？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/paradigm/&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cdn/&#34;&gt;腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908#rd&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486438&amp;idx=1&amp;sn=b2c489675134d4e84fbc249089777cb4&amp;chksm=fe4b3e3dc93cb72b5d0d90ef61011dda5a09e5f08d96c8cca87148706451c859777162bd18da#rd&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;chksm=fe4b3e68c93cb77ed5b627c8caf78666cab9deafc18dacf528e51411682e616b4df1deab87f9&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483770&amp;idx=1&amp;sn=723c865ff27fd0ceace1d8fb2c76ddca&amp;chksm=c0ca8db0f7bd04a63f79aba185e093bbb0ab5763b1f91f58cfc86551daf7e47bd6627dd8c73b#rd&#34;&gt;阿里云的故障在其他云也可能发生,并且可能丢数据&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483764&amp;idx=1&amp;sn=8aebb4053257fac48f71b75a957153ad&amp;chksm=c0ca8dbef7bd04a816feba238a2232abdc02b5ccdb405f32217455dc3bf3a1811bd4ff8815af#rd&#34;&gt;中国云服务走向全球？先把 Status Page 搞定&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483759&amp;idx=1&amp;sn=eb12dfe4df37c22aadd120676391f4cb&amp;chksm=c0ca8da5f7bd04b3a024111b5c3be9f273c70087cc986937e72e12d7a0fe496753a88568afe9#rd&#34;&gt;我们可以信任阿里云的故障处理吗?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483762&amp;idx=1&amp;sn=903405e0b64037f1b7d44b23f0c9b08d&amp;chksm=c0ca8db8f7bd04ae55f719df891d811d05269dac3a8e0a894d23292e06674058c943712672f5#rd&#34;&gt;给阿里云的一封公开信&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484048&amp;idx=1&amp;sn=b57839c9dc85fe3dc6eaac01ff37b995&amp;chksm=c0ca8e5af7bd074ca5221de40c47b82378a8ca20f348ab1c80de7d244679733ee80e29cb3381#rd&#34;&gt;平台软件应该像数学一样严谨 &amp;mdash; 和阿里云RAM团队商榷&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484025&amp;idx=1&amp;sn=5c6f1b0035b7f9a657a5d24d68699943&amp;chksm=c0ca8eb3f7bd07a550325dd691c5761cbf99a9b4644d14c9bbb512dc9ecd27033622bb83e58e#rd&#34;&gt;被医药业吊打的中国软件从业者&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484019&amp;idx=1&amp;sn=5dbe25e5c8d39a67bf9e9573ba2e9b98&amp;chksm=c0ca8eb9f7bd07af03f6d1228d73153fc37479a132a697c310851bfbffcf997ce991a7c2f010#rd&#34;&gt;腾讯的错别字文化&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484064&amp;idx=1&amp;sn=cedf630065c88b936133001f84690c75&amp;chksm=c0ca8e6af7bd077c417aae032cc91281808e8768ea4f103dd1c71039986079c49bbd0aa03507#rd&#34;&gt;云为什么留不住客户 — 以腾讯云 CAM 为例&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483883&amp;idx=1&amp;sn=f2644e9ff54790b319d63a1ffb26e717&amp;chksm=c0ca8d21f7bd0437b3be51f1d093ff45fac4e36552cdbf8b27c8d0ec5470e85ac46dd7f136a3#rd&#34;&gt;腾讯云团队为什么用阿里云的服务名？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483846&amp;idx=1&amp;sn=9a2f3cd59147d2444b7432ecf50af9ba&amp;chksm=c0ca8d0cf7bd041a3f56fcf0bb4adbde8434d81818009f9906c0fa3d1121017996f572b0237e#rd&#34;&gt;究竟是客户差劲，还是腾讯云差劲？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483694&amp;idx=1&amp;sn=618a3aa4f196c30eb9e89969643b06e9&amp;chksm=c0ca8de4f7bd04f25b277942fb41da2092c073f3db55fb92020ba66f21e14522e823a8a3346c#rd&#34;&gt;百度腾讯阿里真的是高科技企业吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483663&amp;idx=1&amp;sn=27f37af0dc4e755d7a64f341de6d8aad&amp;chksm=c0ca8dc5f7bd04d3f4a4437a63958eb93be56722ed32c43385bf41631c86a869bdeada35af04#rd&#34;&gt;云计算厂商们，你们辜负了中国的用户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483712&amp;idx=1&amp;sn=acdb5adf0d588d9617ed72b5ffca8dd3&amp;chksm=c0ca8d8af7bd049c0a69cfebb950c07f599a807876a5d0748122e9a0b0528d216a8d5d968197#rd&#34;&gt;除了打折虚拟机, 云计算用户究竟在用什么高阶云服务?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483743&amp;idx=1&amp;sn=9f329de1649fac75f69e57270978d047&amp;chksm=c0ca8d95f7bd0483d6af4940ca342e2544135e9de0b56fa1a6f299c887800aae04c11b0551bd#rd&#34;&gt;腾讯云阿里云做的真的是云计算吗?&amp;ndash;从客户成功案例的视角&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483828&amp;idx=1&amp;sn=e03403d98876700134be4d1127371fe2&amp;chksm=c0ca8d7ef7bd0468677fc02cc47c530cdad242ac56ee485cb7b16667afafabc2339af0a995c6#rd&#34;&gt;本土云厂家究竟在服务谁？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 罗永浩救不了牙膏云？</title>
+      <link>/zh/blog/cloud/luo-live/</link>
+      <pubDate>Mon, 01 Apr 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/luo-live/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/luo-live/featured_hu02aa61ae1d9de35cbe238d2676170cb9_533872_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;老罗曾是一位很牛B的数码产品经理，算与 IT 行业沾边。但隔行如隔山，老罗卖云，就好像同时卖肉菜蛋奶和 Office 光盘的路边摊。事实也是如此 —— 老罗直播间先铺垫卖了半个小时的扫地机器人，接着姗姗来迟的老罗照本宣科念台词卖了四十分钟”云计算“ —— 然后马不停蹄地卖起了 高露洁无水酵素牙膏 —— 留下在云计算与牙膏间迷惑凌乱的观众。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/luo-live/luo-live-1.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这牙膏确实还不错，但这云服务器嘛…&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云计算可以2c吗&#34;&gt;云计算可以2C吗？&lt;/h2&gt;
+&lt;p&gt;云计算是 ToB 业务，行业翘楚 AWS 的服务对象和营销焦点，显然是面向企业级开发者的。尽管一些个人站长，博主，学生或初创企业可能会因为低价而在直播间拍板购买云服务器，但这显然非常滑稽。更滑稽的是直播间的云服务器也没有更便宜 ——  99 块钱的云服务器活动&lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;从去年双十一就开始并持续至今&lt;/a&gt;……&lt;/p&gt;
+&lt;p&gt;把云服务器卖给个人用户这种滑稽想法，可能源于最近爆火的《幻兽帕鲁》自建服务器需求。我的朋友 SealOS 的创始人方海涛写了一篇《&lt;a href=&#34;https://mp.weixin.qq.com/s/Org8pee_cxGkzOYsMFu6sA&#34;&gt;自建幻兽帕鲁私服的教程&lt;/a&gt;》，尝到了泼天富贵 SaaS 的美味。然后各家公有云厂商也快速跟进卷了起来 —— 一路从3分钟开服到30秒到3秒种开服。正如 《&lt;a href=&#34;/zh/&#34;&gt;国内云：有大厂，没大哥&lt;/a&gt;》一文形容地那样，丝毫不顾颜面，撸起袖子下场，干起了浩方对战平台应该干的事情。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/luo-live/luo-live-2.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;另一种 ToC 的典型场景是学生和个人站长。在以前，个人站长拿个 2C 2G 3M带宽的小虚拟机弄个网站还是挺不错的 —— 但是自从有了赛博佛祖 Cloudflare，别说 99 块钱的云服务器了，9块9 都不香了 —— &lt;strong&gt;再便宜能便宜过免费吗？&lt;/strong&gt;  —— 何况用 CF 建站的体验比云服务器要好太多了 —— 都不用说各种Free Plan，就凭流量免费这一点，就足以让“送的几兆带宽”都统统变垃圾……&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/luo-live/luo-live-3.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在 IT 规模光谱的一侧 —— 个人站长与小微企业上，新一代云服务/SaaS（CF，Neon，Vercel，Supabase），赛博菩萨们的免费套餐，对公有云产生了明显的替代与冲击；在光谱的另一侧 —— 中大型企业组织中，新出现的 IDC 2.0 与开源管控软件替代合流，短路掉公有云这个中间商，利用好&lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;硬件摩尔定律&lt;/a&gt;的累积优势，成为&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;终极FinOps实践&lt;/a&gt;，实现极为&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;惊人的降本增效能力&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;公有云冥灯亮起&#34;&gt;公有云冥灯亮起&lt;/h2&gt;
+&lt;p&gt;任何行业的发展基本都遵从：技术主导 → 产品主导→ 运营主导的脉络。而在当下，除了大模型之外，公有云几乎没有什么独一无二的技术，不可替代的产品了。虚拟机、对象存储、云数据库成为了各家都有售的标品大锅饭，开源的云管控软件比如 SealOS 与 Pigsty 也将自建的能力普及。行业卷成了一片血海，大家从拼技术、拼产品的阶段走向了终局 —— 拼运营，也就是&lt;a href=&#34;https://mp.weixin.qq.com/s/2w0bLJI7TvUNp1tzLYbvsA&#34;&gt;拼销售、打价格战&lt;/a&gt;的阶段。&lt;/p&gt;
+&lt;p&gt;对云计算来说，ToC 这种生意只能算蚊子腿。我们可以简单假设估算一下 —— 帕鲁爆卖了两千万份，十分之一中国玩家；作为单机游戏假设又有十分之一的用户有联机需求；这百分之几的本土联机用户一个月内玩腻，最后能产生个十几万核·月的云服务需求，分别从 A、B、C、D 等诸家云厂商采购 —— 每家分到个小几百万的市场规模。听上去不少，够养活一个创业公司了 —— 但随便一个云上 KA 企业客户年消，或者几个程序员工资就这个数了 —— 这显然不是云厂商应该干的事情。&lt;/p&gt;
+&lt;p&gt;公有云行业的增长已经到顶，原来看不上的蚊子腿，现在也变成了香饽饽 —— 各家云厂商的营收增速已经从原来的几十下降到了个位数，勉强靠着租GPU和大模型续了一口。但原本主营业务的增量市场没有了，市场萎缩，进入了零和博弈与斗兽厮杀阶段。营销也用出了各种荒腔走板草台班子的招数 —— 比如，&lt;a href=&#34;https://www.bilibili.com/video/BV1kp4y1o7mP&#34;&gt;女大学生第一次买服务器&lt;/a&gt;这种没品噱头，买数据库送天猫超市购物券这种滑稽戏，以及新出现的淘宝直播卖云服务器的新节目。&lt;/p&gt;
+&lt;p&gt;实际上，罗老师在 &lt;a href=&#34;https://mp.weixin.qq.com/s/fxOFHBrgqIbu1Sl_cJhwxA&#34;&gt;行业晴雨表的能力上有着出色的的声誉&lt;/a&gt;  —— 冥灯为谁而亮，丧钟为谁而鸣？这种行为艺术有着一语成谶的潜力。牙膏云逐渐从代表先进生产力的本土云计算领头羊，变成了只能够打价格战的计算资源提供商，&lt;a href=&#34;https://mp.weixin.qq.com/s/BYu8nZjqAQbWc2yT8K_pFQ&#34;&gt;&lt;strong&gt;自己把自己玩坏了&lt;/strong&gt;&lt;/a&gt;，确实不禁让人嘘唏。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 扒皮云对象存储：从降本到杀猪</title>
+      <link>/zh/blog/cloud/s3/</link>
+      <pubDate>Tue, 26 Dec 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/s3/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/s3/featured_hu672d98350274fb6e142b5287d665ab3d_210168_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="640"/>]]>
+        
+        &lt;p&gt;对象存储是云计算的定义性服务，曾被视为云上降本的典范。不幸的是随着硬件的发展，资源云（Cloudflare R2）与开源平替（MinIO）的出现，曾经“物美价廉”的对象存储服务失去了性价比，和EBS一样成为了杀猪盘。我们在《云计算泥石流》系列中已经深入剖析过云上 EC2 算力，EBS 磁盘，RDS 数据库的成本构成，今天我们就来审视一下云服务之锚 —— 对象存储。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/s3/featured.webp&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;从降本到杀猪&#34;&gt;从降本到杀猪&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;对像存储&lt;/strong&gt;，又称简单存储服务（Simple Storage Service，缩写为 &lt;strong&gt;S3&lt;/strong&gt;，以下用S3代指）， 曾经是云上“物美价廉”的拳头产品。&lt;/p&gt;
+&lt;p&gt;在十几年前，硬件的价格高昂；能够用一堆几百GB的机械硬盘，三副本搭建可靠的存储服务，并设计实现一套优雅的 HTTP API，还是一件颇有门槛的事情；因此相对于那些“企业级IT”存储方案，物美价廉的 S3 显得很有吸引力。&lt;/p&gt;
+&lt;p&gt;但是计算机硬件这个领域非常特殊 —— 有着一个价格每两年减半的摩尔定律。在 AWS S3 的历史上的确有过几次降价，下面的表格里整理了几次主要降价后的 S3 标准档存储单价，也整理了对应年份企业级 HDD/SSD 的参考单位价格。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Date&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;$/GB·月&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;¥/TB·5年&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;HDD ¥/TB&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;SSD ¥/TB&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://aws.amazon.com/cn/blogs/aws/amazon_s3/&#34;&gt;2006&lt;/a&gt;.03&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.150&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;63000&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2800&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2010/11/what-can-i-say-another-amazon-s3-price-reduction.html&#34;&gt;2010&lt;/a&gt;.11&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.140&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;58800&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1680&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2012/11/amazon-s3-price-reduction-december-1-2012.html&#34;&gt;2012&lt;/a&gt;.12&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.095&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;39900&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;420&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;15400&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2014/03/aws-price-reduction-42-ec2-s3-rds-elasticache-and-elastic-mapreduce.html&#34;&gt;2014&lt;/a&gt;.04&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.030&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;12600&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;371&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;9051&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://aws.amazon.com/ru/blogs/aws/aws-storage-update-s3-glacier-price-reductions/&#34;&gt;2016&lt;/a&gt;.12&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.023&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;9660&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;245&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3766&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://aws.amazon.com/cn/s3/pricing&#34;&gt;2023&lt;/a&gt;.12&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.023&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;9660&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;105&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;280&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;其他参考价&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;高性能存储&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;顶配底折价&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;与采购NVMe SSD&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;价格参考&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;S3 Express&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.160&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;67200&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;DHH 12T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1400&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EBS io2&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;0.125 + IOPS&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;114000&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Shannon 3.2T&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;900&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;不难看出，S3 标准档的单价从 2006 年的 &lt;strong&gt;0.15 $/GB·月&lt;/strong&gt; 到 2023 年的 &lt;strong&gt;0.023 $/GB·月&lt;/strong&gt; ，降到原来的 &lt;strong&gt;15%&lt;/strong&gt;，便宜了 &lt;strong&gt;6&lt;/strong&gt; 倍，听上去不错；然而当你考虑到 S3 底层 HDD 的价格从降到原来的 &lt;strong&gt;3.7%&lt;/strong&gt; ，便宜了整整 &lt;strong&gt;26&lt;/strong&gt; 倍时，就能发现这里面的猫腻了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;S3 的资源溢价倍数从 2006 年的 7 倍增长到了当下的 30 倍！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在2023年当下，当我们重新进行成本核算时，不难看出 S3 / EBS 这类存储服务的性价比早已今非昔比 —— 云上的算力 EC2 相比自建服务器有着 5 ～ 10 倍的溢价，而云上的块存储 EBS 相对本地SSD有着几十倍到一两百倍的溢价。云上的 S3 相对普通HDD也有着三十倍左右的资源溢价。而作为云服务之锚的 S3 / EBS / EC2 价格，又会传导到几乎所有的云服务上去 —— 这让云服务的性价比彻底丧失吸引力。&lt;/p&gt;
+&lt;p&gt;这里的核心问题是：&lt;strong&gt;硬件资源的价格随着摩尔定律以指数规律下降，但节省的成本并没有穿透云厂商这个中间层，传导到终端用户的服务价格上&lt;/strong&gt;。 &lt;strong&gt;逆水行舟，不进则退，降价速度跟不上摩尔定律就是其实就是变相涨价&lt;/strong&gt;。以S3为例，在过去十几年里，云厂商S3虽然名义上降价6倍，但硬件资源却便宜了 26 倍，所以这个价格又该怎么说呢？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;成本性能吞吐&#34;&gt;成本、性能、吞吐&lt;/h2&gt;
+&lt;p&gt;尽管云服务有着高昂的溢价，但如果它是不可替代的&lt;strong&gt;最优选&lt;/strong&gt;，那么即使溢价高性价比低，也不影响价格钝感的高价值头部客户使用。然而不仅仅是成本，存储硬件的性能也遵循摩尔定律，随着时间累积，自建S3的性能也开始出现显著优势。&lt;/p&gt;
+&lt;p&gt;S3 的性能主要体现在&lt;strong&gt;吞吐&lt;/strong&gt;量上，AWS S3 的 100 Gb/s 网络提供了高达 12.5 GB/s 的访问带宽，这一点确实值得称道。这样的吞吐量放在十年前毫无疑问是让人震撼的，然而在今天，一块两万块不到的企业级 12 TB NVMe SSD ，单卡就可以达到 14 GB/s 的读写带宽，100Gb的交换机和网卡也已经非常普及，想做到这一点并不复杂。&lt;/p&gt;
+&lt;p&gt;在另一个关键性能指标“延迟”上，S3也被本地磁盘吊打。S3 标准档的&lt;a href=&#34;https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html&#34;&gt;首字节延迟相当拉垮&lt;/a&gt;，根据文档说明在  &lt;strong&gt;100～200ms&lt;/strong&gt; 百毫秒的范围。当然 AWS 也刚刚在 2023 Re:Invent 上新发布了 “高性能S3” —— &lt;strong&gt;S3 Express One Zone&lt;/strong&gt; ，能够达到单毫秒级的延迟，弥补了这个短板。但是和 4K随机读/写延迟 &lt;strong&gt;55µs/9µs&lt;/strong&gt; 十微秒量级的NVMe 还是相距甚远。&lt;/p&gt;
+&lt;p&gt;S3 Express 的毫秒级延迟听上去很不错，但是当我们将其与 NVMe SSD + MinIO 自建对比时，这种“毫秒级”性能就只能自惭形秽了 —— 当代的 NVMe SSD 的4K随机读/写延迟已经达到了 55µs/9µs ，套上一层薄薄的MinIO转发，首字节输出延迟要比 S3 Express 好至少一个数量级。如果用标准档 S3 对比，性能的差距会进一步拉大到三个数量级。&lt;/p&gt;
+&lt;p&gt;性能的差距仅仅是一方面，更重要的是成本。标准档的 S3 价格自 2016 年至今都没变过，一直是 0.023 $/GB月，每TB·月的人民币价格是 &lt;strong&gt;161&lt;/strong&gt; 元。高级货色 S3 Express One Zone 的价格比标准档高了一个数量级，达到每月·GB &lt;strong&gt;$0.16&lt;/strong&gt;，每TB·月的人民币价格为 &lt;strong&gt;1120&lt;/strong&gt; 元。作为参考，我们可以引用《&lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;》和 《&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;云盘是不是杀猪盘&lt;/a&gt;》中的数据进行对比：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;strong&gt;因素&lt;/strong&gt;&lt;/th&gt;
+&lt;th&gt;&lt;strong&gt;本地&lt;/strong&gt; &lt;strong&gt;PCI-E NVME SSD&lt;/strong&gt;&lt;/th&gt;
+&lt;th&gt;&lt;strong&gt;Aliyun ESSD PL3&lt;/strong&gt;&lt;/th&gt;
+&lt;th&gt;&lt;strong&gt;AWS io2 Block Express&lt;/strong&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;成本&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;14.5 ¥/TB·月&lt;/strong&gt; ( 5年均摊 / 3.2T MLC ) 5 年质保，¥3000 零售&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;3200¥/TB·月&lt;/strong&gt; （原价 6400¥，包月4000¥） 3年预付整体打5折才有此价格&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;1900 ¥/TB·月&lt;/strong&gt; 使用最大规格 65536GB 256K IOPS 最优惠状态&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;容量&lt;/td&gt;
+&lt;td&gt;32TB&lt;/td&gt;
+&lt;td&gt;32 TB&lt;/td&gt;
+&lt;td&gt;64 TB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;IOPS&lt;/td&gt;
+&lt;td&gt;4K随机读：600K ~ 1.1M 4K随机写 200K ~ 350K&lt;/td&gt;
+&lt;td&gt;4K随机读：最大 1M&lt;/td&gt;
+&lt;td&gt;16K随机IOPS： 256K&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;延迟&lt;/td&gt;
+&lt;td&gt;4K随机读：75µs 4K随机写：15µs&lt;/td&gt;
+&lt;td&gt;4K 随机读： 200µs&lt;/td&gt;
+&lt;td&gt;随机IO：500µs 上下文推断为16K&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;可靠&lt;/td&gt;
+&lt;td&gt;UBER &amp;lt; 1e-18，折合18个9 MTBF: 200万小时 5DWPD，持续三年&lt;/td&gt;
+&lt;td&gt;数据可靠性 9个9 &lt;a href=&#34;https://help.aliyun.com/document_detail/476273.html&#34;&gt;存储与数据可靠性&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;持久性&lt;/strong&gt;：99.999%，5个9 （0.001% 年故障率） &lt;a href=&#34;https://aws.amazon.com/cn/blogs/storage/achieve-higher-database-performance-using-amazon-ebs-io2-block-express-volumes/&#34;&gt;io2 说明&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SLA&lt;/td&gt;
+&lt;td&gt;5年质保 出问题直接换新&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://terms.aliyun.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud201910310944_35008.html?spm=a2c4g.11186623.0.0.270e6e37n8Exh5&#34;&gt;Aliyun RDS SLA&lt;/a&gt; 可用性 99.99%: 月费 15% 99%: 月费 30% 95%: 月费 100%&lt;/td&gt;
+&lt;td&gt;&lt;a href=&#34;https://d1.awsstatic.com/legal/amazonrdsservice/Amazon-RDS-Service-Level-Agreement-Chinese.pdf&#34;&gt;Amazon RDS SLA&lt;/a&gt; 可用性 99.95%: 月费 15% 99%: 月费 25% 95%: 月费 100%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;这里本地 NVMe SSD 使用的例子是 Shannon DirectIO G5i 3.2TB MLC颗粒企业级SSD，是我们自己大规模使用的SSD卡。全新拆机零售件价 ¥2788 （闲鱼都有！），按5年60个月折算的每TB·月的人民币价格为 14.5 元。咱们退一步将按浪潮列表价 ¥4388 核算，TB·月价也就是 22.8。如果这个例子还不够，我们可以参考《&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算吗&lt;/a&gt;》里面 DHH 下云采购的 12 TB Gen4 NVMe 企业级 SSD，2390$ 一块，TB·月价也正好是 &lt;strong&gt;23&lt;/strong&gt; 块钱。&lt;/p&gt;
+&lt;p&gt;那么问题就来了，性能好几个数量级的 NVMe SSD，为什么单价比 S3 标准档还要便宜一个数量级（161 vs 23），比 S3 Express 便宜了两个数量级（1120 vs 23 x3 ）？如果我用这样的硬件（就算上三副本） + 开源软件自建一个对象存储服务，是不是可以实现三个数量级的性价比提升？（这还没提 SSD 在可靠性相对于 HDD 的优势）&lt;/p&gt;
+&lt;p&gt;特别值得一提的，上面对比的还单纯是存储空间的费用，流入流出对象存储的流量费通常也是一笔非常可观的支出，有的档位收费靠的不是存储费用，而是取回流量费。还有 SSD 相对 HDD 可靠性的问题，云上数据自主可控的问题，这里就不再深入展开了。&lt;/p&gt;
+&lt;p&gt;当然云厂商也会辩解——说我们这个 S3 啊，可不是纯粹的存储硬件资源，而是一个开箱即用的&lt;strong&gt;服务&lt;/strong&gt;。里面还包含了软件的知识产权，人力的维护成本；而自建故障率高，自建更危险，自建运维人力开销大等等等等，可惜，这套说辞放在 2006 年或者 2013 年还可以说得通，放在今天就显得有些滑稽了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;开源自建对象存储&#34;&gt;开源自建对象存储&lt;/h2&gt;
+&lt;p&gt;在十几年前，绝大多数用户都缺乏IT自建能力，S3也没有足够成熟的开源替代品。用户可以容忍接受这样的高科技溢价。然而当各家云厂商、IDC都开始提供对象存储，甚至都出现了开源免费的对象存储方案（MinIO）后，卖方市场变成了买方市场，价值定价逻辑转变为成本定价逻辑后，不降反涨的资源溢价自然就会面临用户的拷问 —— 它到底给我带来了什么额外价值，以至于要收这种巨额费用。&lt;/p&gt;
+&lt;p&gt;云的倡导者声称，上云相比自建更便宜，更简单，更快捷。对于个人站长，中小互联网企业这些云适用光谱内的用户来说，这么说肯定是没问题的。如果你的数据规模只有几十个GB，或者有一些中小规模的出海业务和CDN需求，我并不会推荐你凑热闹自建什么对象存储，你应该出门左转去 Cloudflare 用 R2 —— 这也许就是最优解。&lt;/p&gt;
+&lt;p&gt;然而对于真正贡献营收大头的高价值中大规模客户来说，这些价值主张就不一定成立了。如果你主要是在本地存储使用 TB/PB 规模的数据，那么确实应当认真考虑一下自建对象存储服务的成本与收益 —— 现在用开源软件自建已经非常简单、稳定与成熟了。存储服务的可靠性主要取决于磁盘冗余：除了零星的硬盘故障 （HDD AFR 1%，SSD 2～3‰）需要你（请代维服务商）换上备件，并不会有多少额外的负担。&lt;/p&gt;
+&lt;p&gt;如果说混合了EBS/S3能力的开源 Ceph 还能算有不少运维复杂度，功能也没有完全拉齐；那么完全兼容 S3 的对象存储服务开源替代 &lt;strong&gt;MinIO&lt;/strong&gt; 可以说是开箱即用了 —— 一个没有额外依赖的纯二进制，不需要几个配置参数就可以快速拉起，把服务器上的磁盘阵列转变为一个标准的本地 S3 兼容服务，甚至还集成了了 AWS 的 AK/SK/IAM 兼容实现！&lt;/p&gt;
+&lt;p&gt;从运维管理的角度看，Redis 的运维复杂度比 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485685&amp;idx=1&amp;sn=688f6d6d0f4128d7f77d710f04ff9024&amp;chksm=fe4b3d2ec93cb438665b7e0d554511674091b2e486a70b8a3eb7e2c7a53681fb9834a08cb3c3&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;PostgreSQL&lt;/strong&gt;&lt;/a&gt; 低一个数量级，而 MinIO 的运维复杂度又比 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247484821&amp;idx=1&amp;sn=56e34b33f37b2555336591ad532ac7e7&amp;chksm=fe4b304ec93cb9589c2bca821e5aaa1034c7dd5b9c580dec4b09ebe3b1ed20bb48df9dfd29ce&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;Redis&lt;/strong&gt;&lt;/a&gt; 还要再低一个数量级。它简单到这样一种程度：我一个人可以花个一周不到时间把 MinIO 的部署/监控作为添头放到我们开源的 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;PostgreSQL RDS&lt;/strong&gt;&lt;/a&gt; 方案里来，用作可选的中央备份存储仓库。&lt;/p&gt;
+&lt;p&gt;我在探探时，有几个 MinIO 集群就是这么搭建维护的：放了 &lt;strong&gt;25PB&lt;/strong&gt; 数据，可能是国内先前最大规模的 MinIO 部署。用了多少人来维护呢？抽调了一个运维工程师 1/10 不到的工作时间来兼职罢了，而自建整体综合成本在云列表价 0.5 折浮动。实践出真知，如果有人骗你说对象存储自建很难很贵，你确实可以自己动手试试 —— 要不了几个钟头，这些销售 FUD 话术就会不攻自破。&lt;/p&gt;
+&lt;p&gt;对于对像存储服务来说，云的三点核心价值主张：“&lt;strong&gt;更便宜，更简单，更快捷&lt;/strong&gt;” ，&lt;strong&gt;更简单&lt;/strong&gt;这条说不上，&lt;strong&gt;更便宜&lt;/strong&gt;走向了反面，恐怕只剩下最后一点&lt;strong&gt;更快捷&lt;/strong&gt;了 —— 在这一点上确实没有谁能比过云，你确实可以在云上用1分钟不到在全世界所有区域申请PB级的存储服务，Which is Amazing！只不过你也要为这个鸡肋特权付出几十倍的高昂溢价。&lt;/p&gt;
+&lt;p&gt;因此对于对像存储服务来说，云的三点核心价值主张：“更便宜，更简单，更快捷” 中，更简单这条说不上，更便宜走向了反面，恐怕只剩下最后一点快捷了 —— 在这一点上确实没有谁能比过云，你确实可以在云上用1分钟不到在全世界所有区域申请PB级的存储服务，Which is Amazing！只不过你也要为这个特权掏十几倍到几十倍的高昂溢价就是了。而对于有一定规模的企业而言，比起翻几番的运营成本来说，等个两周或者多掏点一次性资本投入根本不算个事。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;小结&#34;&gt;小结&lt;/h2&gt;
+&lt;p&gt;记得在 2019年4月1日，国内增值税正式从 16% 下调到 13% ，苹果官网随即全面降价，单品最高降价幅度达8% —— iPhone的几个典型产品都降了500元，把税点返还给了用户。但也有许多厂商选择装聋作哑维持原价，自己吃下这个福利 —— 白花花的银子怎么能随便散给别人呢？&lt;/p&gt;
+&lt;p&gt;类似的事情就发生在云计算领域 —— &lt;strong&gt;硬件成本的指数下降，并没有在云厂商的服务价格上充分反映出来，而这一点，让公有云逐渐从普惠基础设施变成了垄断集中杀猪盘&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;然而事情正在起变化，硬件重新变得有趣起来，而云厂商没有办法把这部分红利永远掩藏遮盖下去 —— &lt;strong&gt;聪明的人开始计算数字，勇敢的人已经采取行动&lt;/strong&gt; 。像马斯克和 &lt;a href=&#34;/zh/blog/cloud/odyssey&#34;&gt;&lt;strong&gt;DHH&lt;/strong&gt;&lt;/a&gt; 。越来越多的人会同样意识到这一点，追随先驱者做出明智的选择，拿回属于自己的硬件红利。&lt;/p&gt;
+&lt;h3 id=&#34;references&#34;&gt;References&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;[1]&lt;/code&gt; 2006: &lt;em&gt;&lt;a href=&#34;https://aws.amazon.com/cn/blogs/aws/amazon_s3/&#34;&gt;https://aws.amazon.com/cn/blogs/aws/amazon_s3/&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[2]&lt;/code&gt; 2010: &lt;em&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2010/11/what-can-i-say-another-amazon-s3-price-reduction.html&#34;&gt;http://aws.typepad.com/aws/2010/11/what-can-i-say-another-amazon-s3-price-reduction.html&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[3]&lt;/code&gt; 2012: &lt;em&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2012/11/amazon-s3-price-reduction-december-1-2012.html&#34;&gt;http://aws.typepad.com/aws/2012/11/amazon-s3-price-reduction-december-1-2012.html&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[4]&lt;/code&gt; 2014: &lt;em&gt;&lt;a href=&#34;http://aws.typepad.com/aws/2014/03/aws-price-reduction-42-ec2-s3-rds-elasticache-and-elastic-mapreduce.html&#34;&gt;http://aws.typepad.com/aws/2014/03/aws-price-reduction-42-ec2-s3-rds-elasticache-and-elastic-mapreduce.html&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[5]&lt;/code&gt; 2016: &lt;em&gt;&lt;a href=&#34;https://aws.amazon.com/ru/blogs/aws/aws-storage-update-s3-glacier-price-reductions/&#34;&gt;https://aws.amazon.com/ru/blogs/aws/aws-storage-update-s3-glacier-price-reductions/&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[6]&lt;/code&gt; 2023: &lt;em&gt;&lt;a href=&#34;https://aws.amazon.com/cn/s3/pricing&#34;&gt;https://aws.amazon.com/cn/s3/pricing&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[7]&lt;/code&gt; 首字节延迟相当拉垮: &lt;em&gt;&lt;a href=&#34;https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html&#34;&gt;https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[8]&lt;/code&gt; 存储与数据可靠性: &lt;em&gt;&lt;a href=&#34;https://help.aliyun.com/document_detail/476273.html&#34;&gt;https://help.aliyun.com/document_detail/476273.html&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[9]&lt;/code&gt; io2 说明: &lt;em&gt;&lt;a href=&#34;https://aws.amazon.com/cn/blogs/storage/achieve-higher-database-performance-using-amazon-ebs-io2-block-express-volumes/&#34;&gt;https://aws.amazon.com/cn/blogs/storage/achieve-higher-database-performance-using-amazon-ebs-io2-block-express-volumes/&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[10]&lt;/code&gt; Aliyun RDS SLA: &lt;em&gt;&lt;a href=&#34;https://terms.aliyun.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud201910310944_35008.html?spm=a2c4g.11186623.0.0.270e6e37n8Exh5&#34;&gt;https://terms.aliyun.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud201910310944_35008.html?spm=a2c4g.11186623.0.0.270e6e37n8Exh5&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;[11]&lt;/code&gt; Amazon RDS SLA: &lt;em&gt;&lt;a href=&#34;https://d1.awsstatic.com/legal/amazonrdsservice/Amazon-RDS-Service-Level-Agreement-Chinese.pdf&#34;&gt;https://d1.awsstatic.com/legal/amazonrdsservice/Amazon-RDS-Service-Level-Agreement-Chinese.pdf&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 从降本增笑到真的降本增效</title>
+      <link>/zh/blog/cloud/smile/</link>
+      <pubDate>Wed, 29 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/smile/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/smile/featured_hu6223e3c0619909b9bbc2fcb72636f074_373130_640x0_resize_catmullrom_3.png" width="640" height="476"/>]]>
+        
+        &lt;p&gt;年底正是冲绩效的时间，互联网大厂大事故却是一波接一波。硬生生把降本增效搞成了“&lt;strong&gt;降本增笑&lt;/strong&gt;” —— 这已经不仅仅是梗了，而是来自官方的自嘲。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;smile.png&#34; src=&#34;/zh/blog/cloud/smile/featured.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;双十一刚过，阿里云就出了打破行业纪录的 &lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;&lt;strong&gt;全球史诗级大翻车&lt;/strong&gt;&lt;/a&gt;，然后开始了11月连环炸模式，在几次小故障后，又来了一场&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486512&amp;idx=1&amp;sn=43d6340fce93bfbf5439cc2cd8e3b8dd&amp;chksm=fe4b39ebc93cb0fd192c69d9f589ccd36f1c1eb5d34fffc357cf0b8177c746c4b3445ea5f63a&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;云数据库管控面&lt;/strong&gt;&lt;/a&gt;跨国俩小时大故障—— 从月爆到周爆再到日爆。&lt;/p&gt;
+&lt;p&gt;但话音未落，&lt;strong&gt;滴滴&lt;/strong&gt;又出现了一场超过12小时的大失效，资损&lt;strong&gt;几个亿&lt;/strong&gt; —— 替代品阿里旗下的高德打车直接爆单赚翻，堪称失之桑榆，收之东隅。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;didi.png&#34; src=&#34;/zh/blog/cloud/smile/smile-didi.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;我已经替装死的阿里云做过&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;复盘&lt;/strong&gt;&lt;/a&gt;了《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;》：Auth因为配置失当挂了，推测根因是 OSS/Auth 循环依赖，一改错黑白名单就死锁了。&lt;/p&gt;
+&lt;p&gt;滴滴的问题，据说是 &lt;strong&gt;Kubernetes&lt;/strong&gt; 升级大翻车。这种惊人的恢复时长通常会与存储/数据库有关，合理推测根因是：不小心降级了 k8s master ，还一口气跳了多个版本 ——  etcd 中的元数据被污染，最后节点全都挂掉，而且无法快速回滚。&lt;/p&gt;
+&lt;p&gt;故障是难以避免的，无论是硬件缺陷，软件Bug，还是人为操作失误，发生的概率都不可能降为零。然而&lt;strong&gt;可靠的系统&lt;/strong&gt;应当具有&lt;strong&gt;容错韧性&lt;/strong&gt; —— 能够预料并应对这些故障，并将冲击降低至最小程度，尽可能缩短整体失效时间。&lt;/p&gt;
+&lt;p&gt;不幸的是在这一点上，这些互联网大厂的表现都远远有失水准 —— 至少实际表现与其声称的 “&lt;em&gt;&lt;strong&gt;1分钟发现、5分钟处置、10分钟恢复&lt;/strong&gt;&lt;/em&gt;” 相距甚远。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降本增笑&#34;&gt;降本增笑&lt;/h2&gt;
+&lt;p&gt;根据&lt;strong&gt;海因法则&lt;/strong&gt;，一起重大故障背后有着29次事故，300次未遂事故以及数千条事故隐患。在民航行业如果出现类似的事情 —— 甚至不需要出现真正造成任何后果的事故，只是连续出现两起事故征候 —— 甚至都还不是事故，那么可怕严厉的行业安全整顿马上就会全面展开。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;prymaid.jpg&#34; src=&#34;/zh/blog/cloud/smile/smile-prymaid.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;可靠性很重要，不仅仅是对于空中交管/飞行控制系统这类关键服务而言，我们也期望更多平凡的服务与应用能够可靠地运行 —— 云厂商的全局不可用故障几乎等同于停电停水，出行平台宕机意味着交通运力网络部分瘫痪，电商平台与支付工具的不可用则会导致收入和声誉的巨大损失。&lt;/p&gt;
+&lt;p&gt;互联网已经深入至我们生活的各个层面，然而针对互联网平台的有效监管还没有建立起来。行业领导者在面对危机时选择躺尸装死 —— 甚至都没人出来做一个坦率的危机公关与故障复盘。没有人来回答；这些故障为什么会出现？它们还会继续出现吗？其他互联网平台为此做了自纠自查了吗？它们确认自己的备用方案依然有效了吗？&lt;/p&gt;
+&lt;p&gt;这些问题的答案，我们不得而知。但可以确定的是，毫无节制堆积复杂度与大规模裁员的恶果开始显现，服务故障失效会越来越频繁以至于成为一种新常态 —— 谁都随时可能会成为下一个惹人笑话的“倒霉蛋”。想要摆脱这种暗淡的前景命运，我们需要的是真正的“降本增效”&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降本增效&#34;&gt;降本增效&lt;/h2&gt;
+&lt;p&gt;当故障出现时，都会经过一个 &lt;strong&gt;感知问题，分析定位，解决处理&lt;/strong&gt; 的过程。所有的这些事情都需要系统的研发/运维人员投入脑力进行处理，而在这个过程中有一条基本经验法则：&lt;/p&gt;
+&lt;p&gt;处理故障的耗时 &lt;strong&gt;t&lt;/strong&gt; =&lt;/p&gt;
+&lt;p&gt;系统与问题复杂度 &lt;strong&gt;W&lt;/strong&gt; / 在线可用的智力功率 &lt;strong&gt;P&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;故障处理的优化的目标是尽可能缩短故障恢复时间 &lt;code&gt;t&lt;/code&gt; ，例如阿里喜欢讲的 “1-5-10” 稳定性指标：1 分钟发现、5 分钟处置、10 分钟恢复，就是设置了一个时间硬指标。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;time-limit.png&#34; src=&#34;/zh/blog/cloud/smile/smile-time-limit.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在时间限制死的情况下，要么降本，要么增效。只不过，&lt;strong&gt;降本要降的不是人员成本，而是系统的复杂度成本；增效不是增加汇报的谈资笑料，而是在线可用的智力功率与管理的有效性&lt;/strong&gt;。很不幸的是，很多公司这两件事都没做好，活生生地把降本增效搞成了降本增笑。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;降低复杂度成本&#34;&gt;降低复杂度成本&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;复杂度&lt;/strong&gt;有着各种别名 —— 技术债，屎山代码，泥潭沼泽，架构杂耍体操。症状可能表现为：状态空间激增、模块间紧密耦合、纠结的依赖关系、不一致的命名和术语、解决性能问题的 Hack、需要绕开的特例等等。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;复杂度是一种成本&lt;/strong&gt;，因而&lt;strong&gt;简单性&lt;/strong&gt;应该是构建系统时的一个关键目标。然而很多技术团队在制定方案时并不会将其纳入考虑，反而是怎么复杂怎么来：能用几个服务解决的任务，非要用微服务理念拆分成几十个服务；没多少机器，却非要上一套 Kubernetes 玩弹性杂耍；单一关系型数据库就能解决的任务，非要拆给几种不同的组件或者倒腾个分布式数据库。&lt;/p&gt;
+&lt;p&gt;这些行为都会引入大量的&lt;strong&gt;额外复杂度&lt;/strong&gt; —— 即由具体实现中涌现，而非问题本身固有的复杂度。一个最典型的例子，就是许多公司不管需要不需要，都喜欢把什么东西都往 K8S 上怼，etcd / Prometheus / CMDB / 数据库，一旦出现问题就循环依赖大翻车，一次大挂就彻底起不来了。&lt;/p&gt;
+&lt;p&gt;再比如应该支付复杂度成本的地方，很多公司又不愿意支付了：一个机房就放一个特大号 K8S ，而不是多个小集群灰度验证，蓝绿部署，滚动升级。一个版本一个版本的兼容性升级嫌麻烦，非要一次性跳几个版本。&lt;/p&gt;
+&lt;p&gt;在畸形的工程师文化中，不少工程师都会以傻大黑粗的无聊规模与高空走钢丝的架构杂耍为荣 —— 而这些折腾出来欠下的技术债都会在故障的时候变为业报回来算账。&lt;/p&gt;
+&lt;p&gt;“&lt;strong&gt;智力功率&lt;/strong&gt;” 则是另一个重要的问题。&lt;strong&gt;智力功率很难在空间上累加&lt;/strong&gt; —— 团队的智力功率往往取决于最资深几个灵魂人物的水平以及他们的沟通成本。比如，当数据库出现问题时需要数据库专家来解决；当 Kubernetes 出现问题时需要 K8S 专家来看问题；&lt;/p&gt;
+&lt;p&gt;然而当你把数据库放入 Kubernetes 时，单独的数据库专家和 K8S 专家的智力带宽是很难叠加的 —— 你需要一个双料专家才能解决问题。认证服务和对象存储循环依赖也同理 —— 你需要同时熟悉两者的工程师。使用两个独立专家不是不可以，但他们之间的协同增益很容易就会被平方增长的沟通成本拉低到负收益，故障时人一多就变傻就是这个道理。&lt;/p&gt;
+&lt;p&gt;当系统的复杂度成本超出团队的智力功率时，就很容易出现翻车性的灾难。然而这一点在平时很难看出来：因为调试分析解决一个出问题的服务的复杂度，远远高于将服务拉起运行的复杂度。平时好像这里裁两个人，那里裁三个，系统还是能正常跑的嘛。&lt;/p&gt;
+&lt;p&gt;然而组织的默会知识随着老司机离开而流失，流失到一定程度后，这个系统就已经是期货死人了 —— 只差某一个契机被推倒引爆。在废墟之中，新一代年轻嫩驴又逐渐变为老司机，随即丧失性价比被开掉，并在上面的循环中不断轮回。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;增加管理效能&#34;&gt;增加管理效能&lt;/h2&gt;
+&lt;p&gt;阿里云和滴滴招不到足够优秀的工程师吗？并不是，&lt;strong&gt;而是其的管理水平与理念低劣，用不好这些工程师&lt;/strong&gt;。我自己在阿里工作过，也在探探这种北欧风格的创业公司和苹果这样的外企待过，对其中管理水平的差距深有体会。我可以举几个简单的例子：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第一点是值班OnCall&lt;/strong&gt;，在 Apple 时，我们的团队有十几号人分布在三个时区：欧洲柏林，中国上海，美国加州，工作时间首尾衔接。每一个地方的工程师都有着完整处理各种问题的脑力功率，保证任一时刻都有在工作时间待命OnCall的能力，同时也不会影响各自的生活质量。&lt;/p&gt;
+&lt;p&gt;而在阿里时，OnCall 通常变成了研发需要兼任的职责，24小时随时可能有惊喜，即使是半夜告警轰炸也屡见不鲜。本土大厂在真正可以砸人的地方，反而又吝啬起来：等研发睡眼惺忪爬起来打开电脑连上 VPN，可能已经过去好几分钟了。在真正可以砸人砸资源解决问题的地方反而不砸了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第二点是体系建设&lt;/strong&gt;，比如从故障处理的报告看，核心基础设施服务变更如果没测试，没监控，没告警，没校验，没灰度，没回滚，架构循环依赖没过脑袋，那确实配得上草台班子的称号。还是说一个具体的例子：&lt;strong&gt;监控系统&lt;/strong&gt;。设计良好的监控系统可以极大缩短故障的判定时间 —— 这种本质上是对服务器指标/日志提前进行了数据分析，而这一部分往往是最需要直觉、灵感与洞察力，最耗费时间的步骤。&lt;/p&gt;
+&lt;p&gt;定位不到根因这件事，就是反映出可观测性建设和故障预案不到位。拿数据库举个例子吧，我做 PostgreSQL DBA 的时候做了这个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485827&amp;idx=1&amp;sn=9b13273b559fa63e96d4ac77268bd00a&amp;chksm=fe4b3c58c93cb54e87b062c6db4b3a712037e25dbfbe69aa50ad9b79abf2c97967b625fe1a7f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;监控系统&lt;/strong&gt;&lt;/a&gt; (&lt;a href=&#34;https://demo.pigsty.cc&#34;&gt;https://demo.pigsty.cc&lt;/a&gt;[1])，如左图，几十个Dashboard 紧密组织，任何PG故障用鼠标点点下钻两三层，1分钟不用就能立即定位各种问题，然后迅速按照预案处理恢复。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;monitor-1.png&#34; src=&#34;/zh/blog/cloud/smile/smile-monitor-1.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;monitor-2.png&#34; src=&#34;/zh/blog/cloud/smile/smile-monitor-2.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;再看一下阿里云 RDS for PostgreSQL 与 PolarDB 云数据库用的监控系统，所有的东西就这可怜巴巴的一页图，如果他们是拿这个玩意来分析定位故障，那也怪不得别人要几十分钟了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第三点是管理理念与洞察力&lt;/strong&gt;，比如，稳定性建设需要投入一千万，总会有机会主义的草台班子跳出来说：我们只要五百万或者更少 —— 然后可能什么都不做，就&lt;strong&gt;赌&lt;/strong&gt;不会出现问题，赌赢了就白赚，赌输了就走人。但也有可能，这个团队有真本事用技术降低成本，可是又有多少坐在领导位置上的人有足够的洞察力可以真正分辨这一点呢？&lt;/p&gt;
+&lt;p&gt;再比如，高级的故障经验对于工程师和公司来说其实是一笔非常宝贵的财富 —— 这是用真金白银喂出来的教训。然而很多管理者出了问题第一时间想到的就是要“开个程序员/运维祭天”，把这笔财富白送给下家公司。这样的环境自然而然就会产生甩锅文化、不做不错、苟且偷安的现象。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第四点是以人为本&lt;/strong&gt;。以我自己为例，我在探探将自己作为 DBA 的数据库管理工作几乎全自动化了。我会做这件事的原因：首先是我自己能享受到技术进步带来的红利 —— 自动化自己的工作，我就可以有大把时间喝茶看报；公司也不会因为我搞自动化每天喝茶看报就把我开了，所以没有安全感的问题，就可以自由探索，一个人搞出一整套完整的 &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485518&amp;idx=1&amp;sn=3d5f3c753facc829b2300a15df50d237&amp;chksm=fe4b3d95c93cb4833b8e80433cff46a893f939154be60a2a24ee96598f96b32271301abfda1f&amp;scene=21#wechat_redirect&#34;&gt;开源 RDS&lt;/a&gt; 出来。&lt;/p&gt;
+&lt;p&gt;但这样的事在类似阿里这样的环境中可能会发生吗？—— “&lt;em&gt;今天最好的表现是明天最低的要求&lt;/em&gt;” ，好的，你做了自动化对不对？结果工作时间不饱和，管理者就要找一些垃圾活或者垃圾会议给你填满；更有甚者，你幸幸苦苦的建立好了体系，把自己的不可替代性打掉了，立即面临狡兔死走狗烹的结果，最后被干写PPT出嘴的人摘了桃子。那么最后的博弈优势策略当然是能打的出去单干，能演的坐在列车上摇晃身体假装前进直到大翻车。&lt;/p&gt;
+&lt;p&gt;最可怕的是，本土大厂讲究人都是可替换的螺丝钉，是35岁就“开采完”的人矿，末位淘汰大裁员也不鲜见。如果 &lt;strong&gt;Job Security&lt;/strong&gt; 成为迫在眉睫的问题，谁还能安下心来踏实做事呢？&lt;/p&gt;
+&lt;p&gt;孟子曰：“&lt;strong&gt;君之视臣如手足，则臣视君如腹心；君之视臣如犬马，则臣视君如国人；君之视臣如土芥，则臣视君如寇仇&lt;/strong&gt;”。这种落后的管理水平才是很多公司真正应该增效的地方。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 我们能从阿里云全球故障中学到什么?</title>
+      <link>/zh/blog/cloud/aliyun/</link>
+      <pubDate>Mon, 13 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/aliyun/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/aliyun/featured_hu6f68b510db9e8d11f7c0b144e7aeacbe_322615_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;时隔一年阿里云又出大故障，并创造了云计算行业闻所未闻的新记录 —— 全球所有区域/所有服务同时异常。阿里云不愿意发布故障复盘报告，那我就来替他复盘 —— 我们应当如何看待这一史诗级故障案例，以及，能从中学习到什么经验与教训？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#事实是什么&#34;&gt;事实是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#原因是什么&#34;&gt;原因是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#影响是什么&#34;&gt;影响是什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#评论与观点&#34;&gt;评论与观点？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/cloud/aliyun/#能学到什么&#34;&gt;能学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/featured.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;事实是什么&#34;&gt;事实是什么？&lt;/h2&gt;
+&lt;p&gt;2023年11月12日，双十一后第一天，阿里云出了一场&lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;史诗级大翻车&lt;/a&gt;。&lt;strong&gt;全球所有区域同时出现故障&lt;/strong&gt;，创造了闻所未闻的行业新记录。
+根据阿里云官方的&lt;a href=&#34;https://status.aliyun.com/#/&#34;&gt;服务状态页&lt;/a&gt;，全球所有区域/可用区 ✖️ 所有服务全部出现异常，时间范围从 17:44 到 21: 11 ，共计三个半小时。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;status-page.jpg&#34; src=&#34;/zh/blog/cloud/aliyun/status-page.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云 &lt;strong&gt;Status Page&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://help.aliyun.com/noticelist/articleid/1064981333.html&#34;&gt;阿里云公告&lt;/a&gt;称：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“云产品控制台、管控API等功能受到影响，OSS、OTS、SLS、MNS等产品的服务受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响”。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/announce.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;大量依赖阿里云服务的应用 APP，包括阿里系自己的一系列应用：淘宝，钉钉，闲鱼，…… 都出现了问题。产生了显著的外部影响，APP崩了的新闻组团冲上了热搜。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;yunpan.png&#34; src=&#34;/zh/blog/cloud/aliyun/yunpan.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;淘宝刷不出聊天图片，闪送上传不了接单凭据，充电桩用不了，原神发不出验证码，饿了么下不了单，骑手进不了系统，点不了外卖、停车场不抬杆、超市无法结账。甚至有的学校因此无法用智能公共洗衣机和开水机。无数在周末休息中的研发与运维人员被喊起来加班排障……&lt;/p&gt;
+&lt;p&gt;包括金融云、政务云在内的区域也没有幸免。阿里云应该感到万幸：故障不是发生在双十一当天，也不在衙门与钱庄的工作时间段，否则大家说不定能上电视看故障复盘了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;原因是什么&#34;&gt;原因是什么？&lt;/h2&gt;
+&lt;p&gt;尽管阿里云至今仍未给出一份事后故障复盘报告，但老司机根据爆炸半径，就足以判断出问题在哪里了 —— &lt;strong&gt;Auth&lt;/strong&gt; （认证 / 鉴权 / RAM）。&lt;/p&gt;
+&lt;p&gt;存储计算硬件故障、机房断电这些问题最多影响单个可用区（AZ），网络故障最多影响一个区域（Region），能让全球所有区域同时出问题的肯定不会是这些问题，而是跨区域共用的云基础设施组件。 —— 极大概率是 &lt;strong&gt;Auth&lt;/strong&gt;，低概率是其他诸如计量付费之类的全局性服务。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/notice.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云的事件进展公告：出问题的是某个底层服务组件，而不是网络、机房硬件的问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;根因出在 &lt;strong&gt;Auth&lt;/strong&gt; 上的可能性最大，最直接的证明就是：深度与 &lt;strong&gt;Auth&lt;/strong&gt; 集成的云服务：对象存储 &lt;strong&gt;OSS&lt;/strong&gt; （类 S3），表格存储 &lt;strong&gt;OTS&lt;/strong&gt; （类 DynamoDB），以及其他深度依赖 &lt;strong&gt;Auth&lt;/strong&gt; 的服务本身可用性直接受到影响。而本身运行不依赖 &lt;strong&gt;Auth&lt;/strong&gt; 的云资源，比如云服务器 &lt;strong&gt;ECS&lt;/strong&gt; / 云数据库 &lt;strong&gt;RDS&lt;/strong&gt; 以及网络仍然可以“正常”运行，用户只是无法通过控制台与API对其进行管理与变更。此外，一个可以排除的&lt;strong&gt;计量付费&lt;/strong&gt;服务出问题的现象是：故障期间还有用户成功付款&lt;a href=&#34;/zh/blog/cloud/aliyun-ecs-pigsty/&#34;&gt;薅下了ECS的羊毛&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;尽管上面的分析过程只是一种推断，但它与流传出来的内部消息相吻合：&lt;strong&gt;认证&lt;/strong&gt;挂了导致所有服务异常。至于认证服务本身到底是怎么挂的，在尸检报告出来前我们也只能猜测：&lt;strong&gt;人为配置失误&lt;/strong&gt;的可能性最大 —— 因为故障不在常规变更发布窗口中，也没有灰度生效，不太像是代码/二进制发布。但具体是哪里配置失误：证书，黑白名单，循环依赖死锁，还是什么其他东西，就不知道了。&lt;/p&gt;
+&lt;p&gt;关于根因的小道消息也漫天飞舞，比如，有人说 ”权限系统推了个黑名单规则，黑名单规则维护在OSS上，访问OSS叉需要访问权限系统，然后权限系统又要访问OSS，就尬住了“。”。还有人说 “这次双11期间，技术人员连续一周加班加点，双11一过，大家都松懈了。有个新手写了一段代码，更新了组件，导致了本次的断网“，还有人说：”阿里云所有服务用的都是同一个通配符证书，证书换错了“。&lt;/p&gt;
+&lt;p&gt;如果是因为这些原因导致 &lt;strong&gt;Auth&lt;/strong&gt; 挂掉，那可真是&lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;草台班子&lt;/a&gt;到家了。尽管听上去很离谱，但这样的先例并不少。再次强调，这些路边社消息仅供参考，具体事故原因请以阿里云官方给出的复盘分析报告为准。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;影响是什么&#34;&gt;影响是什么？&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;认证/鉴权&lt;/strong&gt;是服务的基石，像这样的基础性组件一旦出现问题，影响是&lt;strong&gt;全局性&lt;/strong&gt;、&lt;strong&gt;灾难性&lt;/strong&gt;的。这会导致整个&lt;strong&gt;云管控面&lt;/strong&gt;不可用，伤害会直接冲击控制台，API，以及深度依赖 &lt;strong&gt;Auth&lt;/strong&gt; 基础设施的服务 —— 比如公有云上的另一个基石性服务，对象存储 &lt;strong&gt;OSS&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;从阿里云公告上来看，好像只有 “&lt;em&gt;几个服务（ &lt;strong&gt;OSS、OTS、SLS、MNS&lt;/strong&gt;）受到影响，大部分产品如ECS、RDS、网络等的实际运行不受影响&lt;/em&gt; ”。但对象存储 &lt;strong&gt;OSS&lt;/strong&gt; 这样的基石性服务出了问题，带来的爆炸半径是难以想象的，绝非“个别服务受到影响” 就能敷衍过去 —— 这就像汽车的油箱都着火了，说发动机和轮子仍然在转是没有意义的。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/auth.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;对象存储 &lt;strong&gt;OSS&lt;/strong&gt; 这样的服务是通过云厂商包装的 HTTP API 对外提供服务的，因此必然深度依赖认证组件：你需要AK/SK/IAM 签名才能使用这些 HTTP API，而 Auth 故障将导致这类服务本身不可用。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;对象存储 OSS 实在是太重要了&lt;/strong&gt;，可以说是云计算的“定义性服务”，也许是唯一能在所有云上基本达成共识标准的服务。云厂商的各种“上层”服务或多或少都直接/间接地依赖 OSS，例如 ECS/ RDS 虽然可以运行，但 ECS 快照和 RDS 备份显然是深度依赖 OSS 的，CDN 回源是依赖 OSS 的，各个服务的日志往往也是写入 OSS 的。&lt;/p&gt;
+&lt;p&gt;从现象上看，核心功能跟 OSS 深度绑定的阿里云盘就挂的很惨烈，核心功能跟 OSS 关系不大的服务，比如高德地图就没听说有什么大影响。大部分相关应用的状态是，主体可以正常打开运行，但是和图片展示，文件上传/下载文件这类有关的功能就不可用了。&lt;/p&gt;
+&lt;p&gt;有一些实践减轻了对 OSS 的冲击：比如通常被认为是不安全的 —— 不走认证的 Public 存储桶就不受影响；CDN 的使用也缓释了 OSS 的问题：淘宝商品图片走 CDN 缓存还可以正常看到，但是买家聊天记录里实时发送的图片直接走 OSS 就挂了。&lt;/p&gt;
+&lt;p&gt;不仅仅是 OSS，其他深度集成依赖 Auth 的云服务也会有这样的问题，比如 &lt;strong&gt;OTS，SLS，MNS&lt;/strong&gt; 等等。例如对标 DynamoDB 的表格存储服务 &lt;strong&gt;OTS&lt;/strong&gt; 同样出现了问题。这里有一个非常鲜明的对比，像 &lt;strong&gt;RDS&lt;/strong&gt; for PostgreSQL / MySQL 这样的云数据库服务使用的是数据库自身的认证机制，所以不受云厂商 Auth 服务故障影响。然而 OTS 没有自己的权限系统，而是直接使用 IAM/RAM，与云厂商的 Auth 深度绑定，因此受到了冲击。&lt;/p&gt;
+&lt;p&gt;技术上的影响是一方面，更重要的是业务影响。根据阿里云的 &lt;strong&gt;服务等级协议（SLA）&lt;/strong&gt;，3个半小时的故障使得当月各服务可用性指标降至 99.5%。落入绝大多数服务赔偿标准的中间档位上，也就是赔偿用户月度服务费用 25% ~ 30% 的&lt;strong&gt;代金券&lt;/strong&gt;。特殊的是这一次故障的区域范围和服务范围是&lt;strong&gt;全部&lt;/strong&gt;！&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/aliyun/oss-sla.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;阿里云 OSS SLA&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;当然阿里云也可以主张说虽然 &lt;strong&gt;OSS / OTS&lt;/strong&gt; 这些服务挂了，但他们的 &lt;strong&gt;ECS&lt;/strong&gt;/&lt;strong&gt;RDS&lt;/strong&gt; 只挂了&lt;strong&gt;管控面&lt;/strong&gt;，不影响正在运行的服务,所以不影响 SLA。不过这种补偿即便真的全部落地也没几个钱，更像是一种安抚性的姿态：&lt;strong&gt;毕竟&lt;/strong&gt;和用户的业务损失比，赔个服务月消 25%代金券简直就是一种&lt;strong&gt;羞辱&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;比起用户信任、技术声望以及商誉折损而言，赔的那点代金券真的算不上三瓜两枣。这次事件如果处理不当，会成为&lt;strong&gt;公有云拐点级别的标志性事件&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;评论与观点&#34;&gt;评论与观点？&lt;/h2&gt;
+&lt;p&gt;马斯克的推特 X 和 DHH 的 37 Signal &lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;通过下云省下了千万美元真金白银&lt;/a&gt;，创造了降本增效的“奇迹”，让下云开始成为一种潮流。云上的用户在对着账单犹豫着是否要下云，未上云的用户更是内心纠结。在这样的背景下，作为本土云领导者的阿里云发生如此重大故障，对于犹豫观望者的信心无疑是沉重的打击。恐怕此次故障会成为公有云&lt;strong&gt;拐点级别的标志性事件&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;阿里云一向以安全稳定高可用自居，上周还刚在云栖大会上吹极致稳定性之类的牛逼。但是无数所谓的的灾备，高可用，多活，多中心，降级方案，被一次性全部击穿，打破了N个9神话。如此大范围、长时间、影响面如此广的故障，更是创下了云计算行业的历史记录。&lt;/p&gt;
+&lt;p&gt;这次故障揭示出关键基础设施的巨大风险，大量依托于公有云的网络服务&lt;strong&gt;缺乏最基本的自主可控&lt;/strong&gt;能力：当故障发生时没有任何自救能力，除了等死做不了别的事情。甚至包括金融云和政务云在内也同样出现了服务不可用。同时，它也反映出了&lt;strong&gt;垄断中心化基础设施的脆弱性&lt;/strong&gt;：互联网这个&lt;strong&gt;去中心化&lt;/strong&gt;的世界奇观现在主要是在少数几个大公司/云厂商拥有的服务器上运行 —— 某个云厂商本身成为了最大的业务单点，这可不是互联网设计的初衷！&lt;/p&gt;
+&lt;p&gt;更为严峻的挑战恐怕还在后面，全球用户追索赔钱事还小，真正要命的是在各个国家都在强调&lt;strong&gt;数据主权&lt;/strong&gt;的时候，如果因为在中国境内的某个控制中心配置失当导致全球故障的话，（即：你真的卡了别人的脖子）很多海外客户会立即采取行动迁移到别的云供应商上：&lt;strong&gt;这关乎合规性，与可用性无关&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;根据海恩法则，一次严重故障的背后有几十次轻微事故，几百起未遂先兆，以及上千条事故隐患。去年十二月阿里云香港机房的大故障已经暴露出来许多问题，然而一年后又给了用户一个更大的惊喜（吓！）。这样的事故对于阿里云的品牌形象绝对是致命打击，甚至&lt;strong&gt;对整个行业的声誉都有严重的损害&lt;/strong&gt;。阿里云应该尽快给用户一个解释与交代，发布详细的故障复盘报告，讲清楚后续改进措施，挽回用户的信任。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;cf-post-moterm.png&#34; src=&#34;/zh/blog/cloud/aliyun/cf-post-moterm.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;毕竟这种规模的故障，不是“找个临时工背锅，杀个程序员祭天” 能解决的事，CEO 得亲自出面道歉解决。Cloudflare 月初的管控面故障后，CEO 立即撰写了详细的&lt;a href=&#34;https://blog.cloudflare.com/post-mortem-on-cloudflare-control-plane-and-analytics-outage/&#34;&gt;事后复盘分析&lt;/a&gt;，挽回了一些声誉。可不幸的是，阿里云经过了几轮裁员，一年连换三轮 CEO ，恐怕已经难有能出来扛事背责的人了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;能学到什么&#34;&gt;能学到什么？&lt;/h2&gt;
+&lt;p&gt;往者不可留，逝者不可追，比起哀悼无法挽回的损失，更重要的是从损失中吸取教训 —— 要是能从别人的损失中吸取教训那就更好了。所以，我们能从阿里云这场史诗级故障中学到什么？&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;不要把鸡蛋放在同一个篮子里&lt;/strong&gt;，准备好 PlanB，比如，业务域名解析一定要套一层 CNAME，且 CNAME 域名用不同服务商的解析服务。这个中间层对于阿里云这样的故障非常重要，用另外一个 DNS 供应商，至少可以给你一个把流量切到别的地方去的选择，而不是干坐在屏幕前等死，毫无自救能力。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;区域优先使用杭州与北京&lt;/strong&gt;，阿里云故障恢复明显有优先级，阿里云总部所在地的杭州（华东1）和北京（华北2）故障修复的速度明显要比其他区域快很多，别的可用区故障恢复用了三个小时，这两个可用区一个小时就修复了。这两个区域可以考虑优先使用，虽然同样是吃故障，但你可以和阿里自家业务享受同种婆罗门待遇。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用需要云认证的服务&lt;/strong&gt;：Auth 是云服务的基石，大家都期待它可以始终正常工作 —— 然而越是人们感觉不可能出现故障的东西，真的出现故障时产生的杀伤力就越是毁天灭地。如无必要，勿增实体，更多的依赖意味着更多的失效点，更低的可靠性：正如在这次故障中，使用自身认证机制的 ECS/RDS 本身就没有受到直接冲击。深度使用云厂商提供的 AK/SK/IAM 不仅会让自己陷入供应商锁定，更是将自己暴露在公用基础设施的单点风险里。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;谨慎使用云服务，优先使用纯资源&lt;/strong&gt;。在本次故障中，&lt;strong&gt;云服务&lt;/strong&gt;受到影响，但&lt;strong&gt;云资源&lt;/strong&gt;仍然可用。类似 ECS/ESSD 这样的&lt;strong&gt;纯资源&lt;/strong&gt;，以及单纯使用这两者的 RDS，可以不受管控面故障影响可以继续运行。基础云资源（ECS/EBS）是所有云厂商的提供服务的&lt;strong&gt;最大公约数&lt;/strong&gt;，只用资源有利于用户在不同公有云、以及本地自建中间择优而选。不过，很难想象在公有云上却不用对象存储 —— 在 ECS 和天价 ESSD 上用 MinIO 自建对象存储服务并不是真正可行的选项，这涉及到公有云商业模式的核心秘密：&lt;a href=&#34;/zh/blog/cloud/s3&#34;&gt;廉价S3获客&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;天价EBS杀猪&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;自建是掌握自身命运的终极道路&lt;/strong&gt;：如果用户想真正掌握自己的命运，最终恐怕早晚会走上自建这条路。互联网先辈们平地起高楼创建了这些服务，而现在做这件事只会容易得多：IDC 2.0 解决硬件资源问题，开源平替解决软件问题，大裁员释放出的专家解决了人力问题。短路掉公有云这个中间商，直接与 IDC 合作显然是一个更经济实惠的选择。稍微有点规模的用户&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;下云省下的钱&lt;/a&gt;，可以换几个从大厂出来的资深SRE 还能盈余不少。更重要的是，自家人出问题你可以进行奖惩激励督促其改进，但是云出问题能赔给你几毛代金券？ —— &lt;em&gt;“你算老几能让高P舔你？”&lt;/em&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;明确云厂商的 SLA 是营销工具，而非战绩承诺&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在云计算的世界里，&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;&lt;strong&gt;服务等级协议&lt;/strong&gt;&lt;/a&gt;（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;最后，尊重技术，善待工程师&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;阿里云这两年在大力搞“降本增效”：学人家马斯克推特大裁员，人裁几千你裁几万。但人家推挂来挂去用户捏着鼻子继续凑合用，ToB 业务跟着连环裁员连环挂，企业用户可忍得了这个？队伍动荡，人心不稳，稳定性自然会受到影响。&lt;/p&gt;
+&lt;p&gt;很难说这跟企业文化没有关系：996 修福报，大把时间内耗在无穷的会议汇报上。领导不懂技术，负责汇总周报写PPT 吹牛逼，P9 出嘴；P8 带队，真正干活的都是567，晋升没指望，裁员先找你；真正能打的顶尖人才根本不吃这一套 PUA 窝囊气，成批成批地出来创业单干 —— 环境盐碱地化：学历门槛越来越高，人才密度却越来越低。&lt;/p&gt;
+&lt;p&gt;我亲自见证的例子是，一个独立开源贡献者单人搞的 &lt;a href=&#34;https://mp.weixin.qq.com/s/-E_-HZ7LvOze5lmzy3QbQA&#34;&gt;&lt;strong&gt;开源 RDS&lt;/strong&gt;&lt;/a&gt; for PostgreSQL，可以&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;&lt;strong&gt;骑脸输出&lt;/strong&gt;&lt;/a&gt;几十人 RDS 团队的产品，而对方团队甚至连发声辩白反驳的勇气都没有 —— 阿里云确实不缺足够优秀的产品经理和工程师，但请问这种事情为什么可能会发生呢？这是应该反思的问题。&lt;/p&gt;
+&lt;p&gt;阿里云作为本土公有云中的领导者，应当是一面旗帜 —— 所以它可以做的更好，而不应该是现在这幅样子。作为曾经的阿里人，我希望阿里云能吸取这次故障的教训，尊重技术，踏实做事，善待工程师。更不要沉迷于&lt;a href=&#34;/zh/blog/cloud/profit&#34;&gt;&lt;strong&gt;杀猪盘快钱&lt;/strong&gt;&lt;/a&gt;而忘记了自己的初心愿景 —— &lt;strong&gt;提供物美价廉的公共计算服务，让存算资源像水电一样普及&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id=&#34;参考阅读&#34;&gt;参考阅读&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cloud-exit/&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/odyssey/&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/finops/&#34;&gt;FinOps的终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/profit/&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/rds/&#34;&gt;云数据库是不是智商税？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/paradigm/&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/blog/cloud/cdn/&#34;&gt;腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486452&amp;idx=1&amp;sn=29cff4ee30b90483bd0a4f0963876f28&amp;chksm=fe4b3e2fc93cb739af6ce49cffa4fa3d010781190d99d3052b4dbfa87d28c0386f44667e4908#rd&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486438&amp;idx=1&amp;sn=b2c489675134d4e84fbc249089777cb4&amp;chksm=fe4b3e3dc93cb72b5d0d90ef61011dda5a09e5f08d96c8cca87148706451c859777162bd18da#rd&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486387&amp;idx=1&amp;sn=20ac92e33ed5a6b8e3120e99aefaf1cc&amp;chksm=fe4b3e68c93cb77ed5b627c8caf78666cab9deafc18dacf528e51411682e616b4df1deab87f9&amp;scene=21#wechat_redirect&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483770&amp;idx=1&amp;sn=723c865ff27fd0ceace1d8fb2c76ddca&amp;chksm=c0ca8db0f7bd04a63f79aba185e093bbb0ab5763b1f91f58cfc86551daf7e47bd6627dd8c73b#rd&#34;&gt;阿里云的故障在其他云也可能发生,并且可能丢数据&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483764&amp;idx=1&amp;sn=8aebb4053257fac48f71b75a957153ad&amp;chksm=c0ca8dbef7bd04a816feba238a2232abdc02b5ccdb405f32217455dc3bf3a1811bd4ff8815af#rd&#34;&gt;中国云服务走向全球？先把 Status Page 搞定&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483759&amp;idx=1&amp;sn=eb12dfe4df37c22aadd120676391f4cb&amp;chksm=c0ca8da5f7bd04b3a024111b5c3be9f273c70087cc986937e72e12d7a0fe496753a88568afe9#rd&#34;&gt;我们可以信任阿里云的故障处理吗?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483762&amp;idx=1&amp;sn=903405e0b64037f1b7d44b23f0c9b08d&amp;chksm=c0ca8db8f7bd04ae55f719df891d811d05269dac3a8e0a894d23292e06674058c943712672f5#rd&#34;&gt;给阿里云的一封公开信&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484048&amp;idx=1&amp;sn=b57839c9dc85fe3dc6eaac01ff37b995&amp;chksm=c0ca8e5af7bd074ca5221de40c47b82378a8ca20f348ab1c80de7d244679733ee80e29cb3381#rd&#34;&gt;平台软件应该像数学一样严谨 &amp;mdash; 和阿里云RAM团队商榷&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484025&amp;idx=1&amp;sn=5c6f1b0035b7f9a657a5d24d68699943&amp;chksm=c0ca8eb3f7bd07a550325dd691c5761cbf99a9b4644d14c9bbb512dc9ecd27033622bb83e58e#rd&#34;&gt;被医药业吊打的中国软件从业者&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484019&amp;idx=1&amp;sn=5dbe25e5c8d39a67bf9e9573ba2e9b98&amp;chksm=c0ca8eb9f7bd07af03f6d1228d73153fc37479a132a697c310851bfbffcf997ce991a7c2f010#rd&#34;&gt;腾讯的错别字文化&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247484064&amp;idx=1&amp;sn=cedf630065c88b936133001f84690c75&amp;chksm=c0ca8e6af7bd077c417aae032cc91281808e8768ea4f103dd1c71039986079c49bbd0aa03507#rd&#34;&gt;云为什么留不住客户 — 以腾讯云 CAM 为例&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483883&amp;idx=1&amp;sn=f2644e9ff54790b319d63a1ffb26e717&amp;chksm=c0ca8d21f7bd0437b3be51f1d093ff45fac4e36552cdbf8b27c8d0ec5470e85ac46dd7f136a3#rd&#34;&gt;腾讯云团队为什么用阿里云的服务名？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483846&amp;idx=1&amp;sn=9a2f3cd59147d2444b7432ecf50af9ba&amp;chksm=c0ca8d0cf7bd041a3f56fcf0bb4adbde8434d81818009f9906c0fa3d1121017996f572b0237e#rd&#34;&gt;究竟是客户差劲，还是腾讯云差劲？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483694&amp;idx=1&amp;sn=618a3aa4f196c30eb9e89969643b06e9&amp;chksm=c0ca8de4f7bd04f25b277942fb41da2092c073f3db55fb92020ba66f21e14522e823a8a3346c#rd&#34;&gt;百度腾讯阿里真的是高科技企业吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483663&amp;idx=1&amp;sn=27f37af0dc4e755d7a64f341de6d8aad&amp;chksm=c0ca8dc5f7bd04d3f4a4437a63958eb93be56722ed32c43385bf41631c86a869bdeada35af04#rd&#34;&gt;云计算厂商们，你们辜负了中国的用户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483712&amp;idx=1&amp;sn=acdb5adf0d588d9617ed72b5ffca8dd3&amp;chksm=c0ca8d8af7bd049c0a69cfebb950c07f599a807876a5d0748122e9a0b0528d216a8d5d968197#rd&#34;&gt;除了打折虚拟机, 云计算用户究竟在用什么高阶云服务?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483743&amp;idx=1&amp;sn=9f329de1649fac75f69e57270978d047&amp;chksm=c0ca8d95f7bd0483d6af4940ca342e2544135e9de0b56fa1a6f299c887800aae04c11b0551bd#rd&#34;&gt;腾讯云阿里云做的真的是云计算吗?&amp;ndash;从客户成功案例的视角&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzkwODMyMDE2NQ==&amp;mid=2247483828&amp;idx=1&amp;sn=e03403d98876700134be4d1127371fe2&amp;chksm=c0ca8d7ef7bd0468677fc02cc47c530cdad242ac56ee485cb7b16667afafabc2339af0a995c6#rd&#34;&gt;本土云厂家究竟在服务谁？&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 薅阿里云羊毛，打造数字家园</title>
+      <link>/zh/blog/cloud/cheap-ecs/</link>
+      <pubDate>Wed, 08 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/cheap-ecs/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/cheap-ecs/featured_hu2b0bf836dd3f8e0450a86f3a83393d4c_420162_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;阿里云双十一提供了一个不错的福利，列表价 &lt;strong&gt;¥1500/年&lt;/strong&gt; 的 2C/2G/3M ECS服务器，一年 &lt;strong&gt;¥99&lt;/strong&gt; 给用三年（99¥ 每年可续费到2026），据说还要给中国所有大学生每人免费送一台。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;ecs-price-1.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-ecs-price-1.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;虽然我经常揶揄公有云是&lt;strong&gt;杀猪盘&lt;/strong&gt;，但那是针对我们这种体量的用户。对于个人开发者而言，这种价格真的可以说是很厚道的福利了。2C/2G 倒是不值几个钱，但这个 3M 带宽和公网IP 还是很给力的。新老用户都可以买，截止到双11，我建议所有开发者都薅了这个羊毛，用来建设一个 DevBox。&lt;/p&gt;
+&lt;p&gt;弄了 ECS 可以干啥用呢？你可以把它当成跳板机，临时文件中转站，搭建一个静态网站，个人博客，运行一些定时脚本跑一些服务，搭个梯子，打造自己的 Git 仓库，软件源，Wiki站点，搭建私有部署的论坛/社交媒体站点。&lt;/p&gt;
+&lt;p&gt;学生可以用来学习 Linux，构建一个软件编译环境，学习各种数据库：PostgreSQL，Redis，MinIO，用 SQL 和 Python 搞搞数据分析，用 Grafana 和 Echarts 玩玩数据可视化。&lt;/p&gt;
+&lt;p&gt;Pigsty 为这些需求提供了一个一键安装，开箱即用的底座，让您立刻在 ECS 上拥有一个生产级的 DevBox。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/cheap-ecs/featured.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;然后呢&#34;&gt;然后呢？&lt;/h3&gt;
+&lt;p&gt;Pigsty 提供了开箱即用的主机/数据库监控系统，开箱即用的 Nginx Web 服务器承用于对外服务，一个功能完备，插件齐全的 PostgreSQL 数据库可以用于支持各种上层软件。在 Pigsty 的基础上，你可以很轻松的搭建一个静态网站 / 动态服务。安装完 Pigsty 后，你可以自行探索一下监控系统（Demo： &lt;a href=&#34;https://demo.pigsty.cc&#34;&gt;https://demo.pigsty.cc&lt;/a&gt; ），它展示了你的主机详情和数据库的完整监控。&lt;/p&gt;
+&lt;p&gt;我们也会在后续介绍一系列有趣的主题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://vonng.com/cn/blog/note/isd/&#34;&gt;样例应用：ISD，对全球天气数据进行分析与可视化&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;数据库101：快速上手数据库全能王：PostgreSQL&lt;/li&gt;
+&lt;li&gt;可视化快速上手，用 Grafana 画图进行数据分析&lt;/li&gt;
+&lt;li&gt;静态网站：使用 hugo 打造你自己的静态个人网站&lt;/li&gt;
+&lt;li&gt;跳板机：如何将这台 ECS 作为跳板，访问家中的电脑？&lt;/li&gt;
+&lt;li&gt;站点发布：如何让用户通过域名访问你的个人网站&lt;/li&gt;
+&lt;li&gt;SSL证书：如何使用 Let&amp;rsquo;s Encrypt 免费证书加密&lt;/li&gt;
+&lt;li&gt;Python环境：如何在 Pigsty 配置 Python 开发环境&lt;/li&gt;
+&lt;li&gt;Docker环境：如何在 Pigsty 中启用 Docker 开发环境&lt;/li&gt;
+&lt;li&gt;MinIO：如何将这台 ECS 作为你的文件中转站并与他人分享？&lt;/li&gt;
+&lt;li&gt;Git仓库：如何使用 Gitea + PostgreSQL 搭建自己的 Git 仓库？&lt;/li&gt;
+&lt;li&gt;Wiki站点：如何使用 Wiki.js + PostgreSQL 搭建自己的 Wiki 知识库？&lt;/li&gt;
+&lt;li&gt;社交网络：如何使用快速搭建 Mastodon 与 Discourse？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;购买配置ecs&#34;&gt;购买配置ECS&lt;/h2&gt;
+&lt;p&gt;作为资深 IaC 用户，我早已习惯了&lt;a href=&#34;https://pigsty.io/zh/doc/provision&#34;&gt;一键拉起&lt;/a&gt;所需的云资源，置备好所有东西。在控制台上用鼠标点点点这种活儿对我已经非常陌生了。不过我相信也有不少读者其实还并不熟悉云上的操作，所以我们尽可能详尽的展示这里的操作。如果你已经是老司机了，请直接跳过这一部分，进入 Pigsty 配置部分。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;购买活动虚拟机&#34;&gt;购买活动虚拟机&lt;/h3&gt;
+&lt;p&gt;没有阿里云账号可以用手机号注册一个，然后用支付宝扫码实名认证完事。进入活动页面，立即购买。地区选一个离你位置最近的，可用区可以选字母序大一点的。操作系统网络无所谓用默认的就行后面再改，选好之后勾选最下面的：我已阅读并同意&lt;a href=&#34;http://terms.aliyun.com/legal-agreement/terms/suit_bu1_ali_cloud/suit_bu1_ali_cloud201912232014_30443.html&#34;&gt;云服务器ECS-包年包月服务协议&lt;/a&gt;。点击“立即购买”，支付宝付钱，完工。&lt;/p&gt;
+&lt;p&gt;不差钱的话我建议直接充个三百块，锁定 99¥ 续费一年先，剩下的零钱可以花个几十块钱买个域名，补充点零用的 OSS/ESSD/流量费啥的。毕竟如果你想使用按需付费的东西，还是需要一百块抵押在里面的。&lt;/p&gt;
+&lt;p&gt;直接在实例页面点 “续费”，续费1年目前的价格是 &lt;strong&gt;99¥&lt;/strong&gt; ，可以直接续上锁定下一年的优惠。当然第三年阿里云只是说到时候你可以继续用 &lt;strong&gt;99¥&lt;/strong&gt; 的价格继续续费一年到 2026，现在还操作不了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;重装系统与密钥&#34;&gt;重装系统与密钥&lt;/h3&gt;
+&lt;p&gt;购买完云服务器后，点击控制台。或者左上角 Logo 边上的菜单图标进入 ECS 控制台，然后就能看到你买的实例已经运行了。我们可以在这里进一步配置网络、操作系统，以及密码密钥。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;instance-summary.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-instance-summary.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;直接点实例边上的  “停止”，点击实例名称链接进入详情页，选择“更换操作系统”。然后选择“公共镜像”，选择你想用的操作系统镜像就好了。Pigsty 支持 EL 7/8/9 以及兼容操作系统，Ubuntu 22.04/22.04 ，Debian 12/11。&lt;/p&gt;
+&lt;p&gt;这里我们推荐使用 &lt;strong&gt;RockyLinux 8.8 64位&lt;/strong&gt;，这是目前主流的企业级操作系统，在稳定性和软件新鲜度上取得了一个均衡。 &lt;strong&gt;OpenAnolis 8.8 RHCK&lt;/strong&gt;， &lt;strong&gt;RockyLinux 9.2&lt;/strong&gt; ，或者 &lt;strong&gt;Ubuntu 22.04&lt;/strong&gt; 也是不错的选择，不过我们后面演示用的都是 &lt;strong&gt;Rocky 8.8&lt;/strong&gt;，初学者最好还是不要在这里过多折腾为妙。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;《EL系统兼容性哪家强？》&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在安全设置中，你可以设置 &lt;code&gt;root&lt;/code&gt; 用户密码/密钥。如果你没有 SSH 密钥，可以使用 &lt;code&gt;ssh-keygen&lt;/code&gt; 生成一对，或者直接填一个文本密码，这里我们方便起见随便设置一个。设置好了之后，你就可以使用 &lt;code&gt;ssh root@&amp;lt;ip&amp;gt;&lt;/code&gt; 的方式登陆该服务器了（SSH客户端这种问题就不在这儿展开了，iTerm, putty, xshell, secureCRT 都行）&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ssh-keygen              &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果你没有 SSH 密钥对，生成一对。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ssh-copy-id  root@&amp;lt;ip&amp;gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将你的ssh密钥添加到服务器上（输入密码）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;配置域名与dns&#34;&gt;配置域名与DNS&lt;/h3&gt;
+&lt;p&gt;域名现在非常便宜了，一年也就十几块钱。我非常建议整一个，能够带来很大的便利。主要是你可以用不同的子域名来区分不同的服务，让 Nginx 把流量转发到不同的上游去，一机多用。当然，喜欢用 IP 地址 + 端口号直接访问不同服务也无所谓。主要是一来比较土鳖，二来端口开的太多也会有更多安全隐患。&lt;/p&gt;
+&lt;p&gt;比如这里，我花了十几块钱在阿里云上买了个 &lt;code&gt;pdata.cc&lt;/code&gt; 的域名，然后在阿里云DNS控制台上就可以去添加域名的解析了，指向刚申请服务器的 IP 地址。一条 &lt;code&gt;@&lt;/code&gt; 记录，一条 &lt;code&gt;*&lt;/code&gt; 通配记录，A 记录，指向 ECS 实例的&lt;strong&gt;公网IP地址&lt;/strong&gt;就行。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;dns-resolv.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-dns-resolv.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;有了域名之后，你就可以用 &lt;code&gt;ssh root@pdata.cc&lt;/code&gt; 的方式登陆，不用再记 IP 地址了。你也可以在这里配置更多的子域名，指向不同的地址。如果域名是拿来建站的，在中国大陆还需要申请备案，反正阿里云也有一条龙的服务。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;配置安全组规则&#34;&gt;配置安全组规则&lt;/h3&gt;
+&lt;p&gt;新创建的云服务器带有默认的安全组规则，只允许 SSH 服务也就是 22 端口访问。所以为了访问这台服务器上的 Web 服务你还需要打开 80/443 端口。如果你懒得折腾域名想用 IP + 端口直接访问相应服务，而不是通过域名走 Nginx 的 80/443 端口，那么 Grafana 监控界面的 3000 端口也应该打开。最后，如果你想从本地访问 PostgreSQL 数据库，也可以考虑打开 &lt;code&gt;5432&lt;/code&gt; 端口。&lt;/p&gt;
+&lt;p&gt;如果你想偷懒，确实可以添加一条开放所有端口的规则，但云服务器不比自己的笔记本，你也不想自己的 ECS 被人黑了拿去干坏事被封号吧。所以这里我们还是按规矩来。实例详情页里点击安全组，然后点击那个具体的安全组进入详情页进行配置：&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;security-group.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-security-group.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在默认的 “入方向” 上添加一条“允许”规则，协议选择 &lt;code&gt;TCP&lt;/code&gt;，端口范围填入 &lt;code&gt;80/443/3000/5432&lt;/code&gt;，从 &lt;code&gt;0.0.0.0/0&lt;/code&gt; 任意地址都可以访问这些端口。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;security-group-rule.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-security-group-rule.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;上面这些操作属于 Linux 101 基础知识老生常谈，对老司机来说，使用 Terraform 模板一行命令就完成了。但很多初学者确实不知道如何去弄。&lt;/p&gt;
+&lt;p&gt;总之，折腾完上面的步骤之后，你就有一台准备就绪的云服务器了！你可以在任意有网络的地方使用域名登陆/访问这台服务器。接下来，我们就可以在开始建设数字家园了：安装 Pigsty。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;安装配置pigsty&#34;&gt;安装配置Pigsty&lt;/h2&gt;
+&lt;p&gt;现在，你已经可以使用 root 用户，通过 SSH 登陆这台服务器了，接下来就可以下载、安装、配置 Pigsty 了。&lt;/p&gt;
+&lt;p&gt;尽管使用 &lt;code&gt;root&lt;/code&gt; 用户并非生产最佳实践，但对于个人 DevBox 来说没啥关系，我们就不折腾新建管理用户这摊子事儿了。直接使用 &lt;code&gt;root&lt;/code&gt; 用户开干：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.io/get &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; bash  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下载 Pigsty 并解压到 ~/pigsty 目录&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; ~/pigsty      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进入 Pigsty 源码目录，完成后续 准备、配置、安装 三个步骤即可&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./bootstrap      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 确保 Ansible 正常安装，如果存在 /tmp/pkg.tgz 离线软件包，便使用它。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./configure      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 执行环境检测，并生成相应的推荐配置文件，如果你知道如何配置 Pigsty 可以跳过&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./install.yml    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据生成的配置文件开始在当前节点上执行安装，使用离线安装包大概需要10分钟完成&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Pigsty 官方文档提供了详细的安装配置教程：https://pigsty.cc/doc/#/zh/INSTALL&lt;/p&gt;
+&lt;p&gt;安装完成后，您可以通过域名或&lt;code&gt;80/443&lt;/code&gt;端口通过 Nginx 访问 WEB 界面，通过 &lt;code&gt;5432&lt;/code&gt; 端口访问默认的 PostgreSQL 数据库服务，通过 &lt;code&gt;3000&lt;/code&gt; 端口登陆 Grafana。&lt;/p&gt;
+&lt;p&gt;在浏览器中输入 &lt;code&gt;http://&amp;lt;公网IP&amp;gt;:3000&lt;/code&gt;，即可访问 Pigsty 的 Grafana 监控系统。 ECS 的 3M 带宽小水管会在初次加载 Grafana 时费点功夫。 您可以匿名访问，也可以使用默认的用户名密码 &lt;code&gt;admin&lt;/code&gt; / &lt;code&gt;pigsty&lt;/code&gt; 登陆。请务必修改这个默认密码，避免别人随便从这里进入搞破坏。&lt;/p&gt;
+&lt;p&gt;上面这个教程看上去真的很简单对吧？对的。作为一台随时可以销毁重建的开发机，这么搞毫无问题。但如果你想把它作为一个承载个人数字家园的环境，请最好参考下面的 &lt;strong&gt;配置详情&lt;/strong&gt;  和 &lt;strong&gt;安全加固&lt;/strong&gt; 部分再进行动手。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;配置详情&#34;&gt;配置详情&lt;/h3&gt;
+&lt;p&gt;当您安装 Pigsty 运行 &lt;code&gt;configure&lt;/code&gt; 这一步时，Pigsty 会根据您的机器环境，生成一个单机安装的配置文件：&lt;code&gt;pigsty.yml&lt;/code&gt;。默认的配置文件可以直接用，但你可以进一步进行定制修改，来增强其安全性与便利性。&lt;/p&gt;
+&lt;p&gt;下面是一个推荐的配置文件样例，它应当默认在 &lt;code&gt;/root/pigsty/pigsty.yml&lt;/code&gt; 这里，描述你需要的数据库。Pigsty 提供了 280+ 定制参数，但你只需要关注几个进行微调即可。你的机器内网IP地址，可选的公网域名，以及各种密码。域名是可选的，但我们建议你最好用一个。其他的密码你懒得修改也就算了，&lt;code&gt;pg_admin_password&lt;/code&gt; 请务必修改一个。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;---&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;all&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;children&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 这里的 10.10.10.10 都应该是你 ECS 的内网 IP 地址，用于安装 Infra/Etcd 模块&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;infra&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;infra_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq: 1 } }, vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 定义一个单节点的 PostgreSQL 数据库实例&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_databases&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: meta ,baseline: cmdb.sql ,schemas&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pigsty ] }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_users&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 最好把这里的两个样例用户的密码也修改一下&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: dbuser_meta ,password: DBUser.Meta   ,roles&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;dbrole_admin ] }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: dbuser_view ,password: DBUser.Viewer ,roles&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;dbrole_readonly ] }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_conf&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;tiny.yml  &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 2C/2G 的云服务器，使用微型数据库配置模板&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;node_tune&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;tiny    &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 2C/2G 的云服务器，使用微型主机节点参数优化模板&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgbackrest_enabled&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 这么点磁盘空间，就别搞数据库物理备份了&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_default_version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;13&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 用 PostgreSQL 13&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;version&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;v2.5.0&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;region&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;china&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;admin_ip&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 这个 IP 地址应该是你 ECS 的内网IP地址&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;infra_portal&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果你有自己的 DNS 域名，这里面的域名后缀 pigsty 换成你自己的 DNS 域名&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;home&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;h.pigsty }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;grafana&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: g.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:3000&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;, websocket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;prometheus&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: p.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9090&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alertmanager&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: a.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9093&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;minio&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: sss.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9001&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;,scheme: https ,websocket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;postgrest&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: api.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:8884&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgadmin&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: adm.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:8885&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgweb&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: cli.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:8886&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;bytebase&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: ddl.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:8887&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;gitea&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: git.pigsty  ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:8889&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;wiki&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: wiki.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:9002&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;noco&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: noco.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;127.0.0.1:9003&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;supa&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;domain: supa.pigsty ,endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.10:8000&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;, websocket&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;blackbox&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:9115&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;loki&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;endpoint&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;${admin_ip}:3100&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 把这里的密码都改掉！你也不想别人随便来串门对吧！&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_admin_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;DBUser.DBA&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_monitor_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;DBUser.Monitor&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_replication_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;DBUser.Replicator&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;patroni_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;Patroni.API&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;haproxy_admin_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pigsty&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;grafana_admin_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pigsty&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;...&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 &lt;code&gt;configure&lt;/code&gt; 生成的配置文件中，所有 &lt;code&gt;10.10.10.10&lt;/code&gt; 这个 IP 地址都会被替换为你的 ECS 实例的首要内网 IP 地址。注意：&lt;strong&gt;不要在这里使用公网 IP 地址&lt;/strong&gt;。在 &lt;code&gt;infra_portal&lt;/code&gt; 参数中，你可以把所有的 &lt;code&gt;.pigsty&lt;/code&gt;  域名后缀换成你新申请的域名，比如 &lt;code&gt;pdata.cc&lt;/code&gt; ，这样 Pigsty 会允许您通过 Nginx 使用不同域名来访问不同的上游服务。后面如果您希望添加几个个人网站，也可以在这个配置里直接修改并应用。&lt;/p&gt;
+&lt;p&gt;修改好配置文件 &lt;code&gt;pigsty.yml&lt;/code&gt; 之后，运行 &lt;code&gt;./install.yml&lt;/code&gt; 即可开始安装。&lt;/p&gt;
+&lt;h3 id=&#34;安全加固&#34;&gt;安全加固&lt;/h3&gt;
+&lt;p&gt;大多数人可能都不在乎安全这个事，但我还是必须要说一下。只要你改了默认密码，ECS 和 Pigsty 的默认配置对大多数场景已经足够安全了。这里有一些安全加固的小建议：https://pigsty.cc/doc/#/zh/SECURITY&lt;/p&gt;
+&lt;p&gt;第一个要点是，出于安全考虑：除非你真的很想偷懒从本地直接访问远程数据库，一般不建议对公网开放 5432 端口，很多数据库工具都提供了 SSH Tunel 功能 —— 先 SSH 到服务器再本地连接数据库。（顺带一提，Intellij 自带的 Database Tool 是我用过最好用的数据库客户端工具）&lt;/p&gt;
+&lt;p&gt;如果你真的很想从本地直连远程数据库，Pigsty 默认规则也允许您使用默认的超级用户 &lt;code&gt;dbuser_dba&lt;/code&gt; 使用 SSL / 密码认证从任何地方访问，请确保你改了 &lt;code&gt;pg_admin_password&lt;/code&gt; 参数，并开放了 5432 端口。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;ssh-tunel.jpg&#34; src=&#34;/zh/blog/cloud/cheap-ecs/aliyun-ssh-tunel.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;第二个要点是使用域名而非 IP 地址访问，就要求你做一些额外的工作：域名可以在云厂商那里买，也可以使用本地 &lt;code&gt;/etc/hosts&lt;/code&gt; 的静态解析记录作为下位替代。如果您实在懒得折腾，IP 地址 + 端口直连也不是不行。&lt;/p&gt;
+&lt;p&gt;第三个要点是使用 HTTPS， SSL 可以使用各家云厂商或 Let&amp;rsquo;s Encrypt 提供的免费证书，使用 Pigsty 默认的自签名 CA 颁发的证书作为下位替代。&lt;/p&gt;
+&lt;p&gt;Pigsty默认使用自动生成的自签名的CA证书为Nginx启用SSL，如果您希望使用 HTTPS 访问这些页面，而不弹窗提示&amp;quot;不安全&amp;quot;，通常有三个选择：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在您的浏览器或操作系统中信任Pigsty自签名的CA证书： &lt;code&gt;files/pki/ca/ca.crt&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;如果您使用 Chrome，可以在提示不安全的窗口键入 &lt;code&gt;thisisunsafe&lt;/code&gt; 跳过提示&lt;/li&gt;
+&lt;li&gt;您可以考虑使用 Let&amp;rsquo;s Encrypt 或其他免费的CA证书服务，为 Pigsty Nginx 生成正式的CA证书&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们会在后面的教程中详细介绍这些细节，你也可以参考 Pigsty 的文档进行自行配置。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 云数据库是不是智商税</title>
+      <link>/zh/blog/cloud/rds/</link>
+      <pubDate>Mon, 30 Jan 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/rds/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/rds/featured_hu02aa61ae1d9de35cbe238d2676170cb9_178789_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;寒冬来袭，大厂纷纷开始裁员，进入降本增效模式，作为公有云杀猪刀一哥的云数据库，故事还能再讲下去吗？&lt;/p&gt;
+&lt;p&gt;近日，Basecamp &amp;amp; HEY 联合创始人 DHH 的一篇文章【1,2】引起热议，主要内容可以概括为一句话：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“我们每年在云数据库（RDS/ES）上花50万美元，你知道50万美元可以买多少牛逼的服务器吗？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;我们要下云，拜拜了您呐！“&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;所以，50 万美元可以买多少牛逼的服务器 ？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/YKqH324Qtg0mj6WfSMb66w&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/rds/featured.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;荒谬定价&#34;&gt;荒谬定价&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;磨刀霍霍向猪羊&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;我们可以换一种问法，服务器和RDS都卖多少钱？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;以我们自己数据库大量使用的物理机型为例：Dell R730， 64核384GB内存，加装一块 3.2 TB MLC的NVME SSD。像这样的一台服务器部署标准的生产级 PostgreSQL，单机可以承载十几万的TPS，只读点查询可以干到四五十万。要多钱呢？算上电费网费IDC托管代维费用，按照5年报废均摊，整个生命周期成本七万五千上下，合每年一万五。当然，如果要在生产中使用，高可用是必须的，所以通常一组数据库集群需要两到三台物理机，也就是每年3万到4.5万。&lt;/p&gt;
+&lt;p&gt;这里没有算入DBA费用：两三个人管几万核真没多少。&lt;/p&gt;
+&lt;p&gt;如果您直接购买这样规格的云数据库，则费用几何呢？让我们看看国内阿里云的收费【3】。因为基础版（乞丐版）实在是没法生产实用（请参考：《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485093&amp;idx=1&amp;sn=5815f71f1d832101d35a75f5aa4acd3c&amp;chksm=fe4b337ec93cba68fbf30eb0ed50d052c6e8972d42cf506051b5016668f4555edaa0756688dc&amp;scene=21#wechat_redirect&#34;&gt;云数据库：删库到跑路&lt;/a&gt;》），我们选用高可用版，通常底下是两到三个实例。包年包月，引擎 PostgreSQL 15 on x86，华东1默认可用区，独享的64核256GB实例：pg.x4m.8xlarge.2c，并加装一块3.2TB的ESSD PL3云盘。每年的费用在25万（3年）到75万（按需）不等，其中存储费用约占1/3。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-1.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;让我们再来看看公有云一哥AWS【4】【5】。AWS上与此最接近的是 db.m5.16xlarge ，也是64核256GB多可用区部署，同理，我们加装一块最大8万IOPS，3.2TB的 io1 SSD磁盘，查询AWS全球与国区的报价，总体在每年160 ～ 217万元不等，存储费用约占一半，整体成本如下表所示：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;付费模式&lt;/th&gt;
+&lt;th&gt;价格&lt;/th&gt;
+&lt;th&gt;折合每年（万¥）&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;IDC自建（单物理机）&lt;/td&gt;
+&lt;td&gt;¥7.5w / 5年&lt;/td&gt;
+&lt;td&gt;1.5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;IDC自建（2～3台组HA）&lt;/td&gt;
+&lt;td&gt;¥15w / 5年&lt;/td&gt;
+&lt;td&gt;3.0 ~ 4.5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 RDS 按需&lt;/td&gt;
+&lt;td&gt;¥87.36/时&lt;/td&gt;
+&lt;td&gt;76.5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 RDS 月付（基准）&lt;/td&gt;
+&lt;td&gt;¥4.2w / 月&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 RDS 年付（85折）&lt;/td&gt;
+&lt;td&gt;¥425095 / 年&lt;/td&gt;
+&lt;td&gt;42.5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 RDS 3年付（5折）&lt;/td&gt;
+&lt;td&gt;¥750168 / 3年&lt;/td&gt;
+&lt;td&gt;25&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 按需&lt;/td&gt;
+&lt;td&gt;$25,817 / 月&lt;/td&gt;
+&lt;td&gt;217&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 1年不预付&lt;/td&gt;
+&lt;td&gt;$22,827 / 月&lt;/td&gt;
+&lt;td&gt;191.7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 3年全预付&lt;/td&gt;
+&lt;td&gt;12w$ + 17.5k$/月&lt;/td&gt;
+&lt;td&gt;175&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 中国/宁夏按需&lt;/td&gt;
+&lt;td&gt;¥197,489 / 月&lt;/td&gt;
+&lt;td&gt;237&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 中国/宁夏1年不预付&lt;/td&gt;
+&lt;td&gt;¥143,176 / 月&lt;/td&gt;
+&lt;td&gt;171&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS 中国/宁夏3年全预付&lt;/td&gt;
+&lt;td&gt;¥647k + 116k/月&lt;/td&gt;
+&lt;td&gt;160.6&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;我们可以对比一下自建与云数据库的成本差异：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;方式&lt;/th&gt;
+&lt;th&gt;折合每年（万元）&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;IDC托管服务器 64C / 384G / 3.2TB NVME SSD 660K IOPS (2～3台)&lt;/td&gt;
+&lt;td&gt;3.0 ~ 4.5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;阿里云 RDS PG 高可用版 pg.x4m.8xlarge.2c, 64C / 256GB / 3.2TB ESSD PL3&lt;/td&gt;
+&lt;td&gt;25 ～ 50&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;AWS RDS PG 高可用版 db.m5.16xlarge, 64C / 256GB / 3.2TB io1 x 80k IOPS&lt;/td&gt;
+&lt;td&gt;160 ～ 217&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;所以问题来了，&lt;strong&gt;如果你用云数据库1年的钱，就够你买几台甚至十几台性能更好的服务器，那么使用云数据库的意义到底在哪里&lt;/strong&gt;？当然，公有云的大客户通常可以有商务折扣，但再怎么打折，数量级上的差距也是没法弥补的吧？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;用云数据库到底是不是在交智商税？&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;适用场景&#34;&gt;适用场景&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;没有银弹&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;数据库是数据密集型应用的核心&lt;/strong&gt;，应用跟着数据库走，所以数据库选型需要非常审慎。而评价一款数据库需要从许多维度出发：可靠性，安全性，简单性，可伸缩性，可扩展性，可观测性，可维护性，成本性价比，等等等等。甲方真正在意的是这些属性，而不是虚头巴脑的技术炒作：存算分离，Serverless，HTAP，云原生，超融合……，这些必须翻译成工程的语言：&lt;strong&gt;牺牲了什么换来了什么&lt;/strong&gt;，才有实际意义。&lt;/p&gt;
+&lt;p&gt;公有云的鼓吹者很喜欢往给它脸上贴金：节约成本，灵活弹性，安全可靠，是企业数字化转型的万灵药，是汽车对马车的革命，又好又快还便宜，诸如此类，可惜没几条是实事求是的。绕开这些虚头巴脑的东西，云数据库相比专业的数据库服务真正有优势的属性只有一条：&lt;strong&gt;弹性&lt;/strong&gt;。具体来说是两点：&lt;strong&gt;启用成本低，可伸缩性强&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;启动成本低&lt;/strong&gt;，意味着用户不需要进行机房建设，人员招聘培训，服务器采购就可以开始用；&lt;strong&gt;可伸缩性强&lt;/strong&gt;，指的是各种配置升降配，扩缩容比较容易；因此公有云真正适用的场景核心就是这两种：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;起步阶段，流量极小的简单应用&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;毫无规律可循，大起大落的负载&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;前者主要包括简单网站，个人博客，小程序小工具，演示/PoC，Demo，后者主要包括低频的的数据分析/模型训练，突发的秒杀抢票，明星并发出轨等特殊场景。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;公有云的商业模型就是租赁&lt;/strong&gt;：租服务器，租带宽，租存储，租专家。它和租房，租车，租充电宝没有本质区别。当然，租服务器和运维外包实在是不怎么中听，所以有了云这个名字，听起来更有赛博地主的感觉。而租赁这种模式的特点，就是弹性。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;租赁模型有租赁的好处&lt;/strong&gt;，出门在外，共享充电宝可以解决临时应急性的小规模充电需求。但对于大量日常从家到单位两点一线的人来说，每天用共享充电宝给手机电脑充电，毫无疑问是非常荒谬的，何况共享充电宝租一个小时4块钱，租几个小时的钱，就够你把它直接买下来了。租车可以很好的满足临时的、突发的、一次性用车需求：外地出差旅游，临时拉一批货。但如果你的出行需求是频繁的，本地性，那么购置一辆自动驾驶的车也许是最省事省钱的选择。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;问题的关键还是在于租售比&lt;/strong&gt;，房子的租售比几十年，汽车的租售几年，而公有云服务器的租售比通常只有几个月。如果你的业务能够稳定活几个月以上，为什么要租，而不是直接买呢？&lt;/p&gt;
+&lt;p&gt;所以，云厂商赚的钱，要么来自VC砸钱求爆发增长的科技创企，要么来自灰色寻租空间比云溢价还高的特殊单位，要么是人傻钱多的狗大户，要么是零零散散的站长/学生/VPN个人用户。聪明的高净值企业客户，谁会放着便宜舒适的大House不住，跑去挤着租住方舱医院人才公寓呢？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;如果您的业务符合公有云的适用光谱，那是最好不过；但为了不需要的灵活性与弹性支付几倍乃至十几倍溢价，那是纯交智商税&lt;/strong&gt;**。**&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;成本刺客&#34;&gt;成本刺客&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;任何信息不对称都可以构成盈利空间，但你无法永远欺骗所有人。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;公有云的弹性就是针对其商业模式设计的：&lt;strong&gt;启动成本极低，维持成本极高&lt;/strong&gt;。低启动成本吸引用户上云，而且良好的弹性可以随时适配业务增长，可是业务稳定后形成供应商锁定，尾大不掉，极高的维持成本就会让用户痛不欲生了。这种模式有一个俗称 —— &lt;strong&gt;杀猪盘&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-2.gif&#34;&gt;&lt;/p&gt;
+&lt;p&gt;在我职业生涯的第一站中，就有这样一次杀猪经历让我记忆犹新。作为前几个被逼上A云的内部BU，A云直接出工程师加入手把手提供上云服务。用ODPS全家桶换掉了自建的大数据/数据库全家桶。应该说，服务确实不错，只不过，每年的存储计算开销从千万出头飙升到接近一亿，利润几乎都转移到A云了，堪称终极成本刺客。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-3.jpeg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;后来在下一站，情况则完全不同。我们管理着两万五千核规模，450W QPS的 PostgreSQL 与 Redis 数据库集群。像这种规格的数据库，如果按AWS RCU/WCU 计费，每年几个亿就出去了；即使全买长期包年包月再加个大商务折扣，至少五六千万是肯定是少不了的。而我们总共两三个DBA，几百台服务器，人力+资产均摊每年统共不到一千万。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-31.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;这里我们可以用一种简单的方式来核算单位成本：一核算力（含mem/disk）使用一个月的综合成本，简称&lt;strong&gt;核·月&lt;/strong&gt;。我们核算过自建各机型的成本，以及云厂商给出的报价，大致结果如下：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;硬件算力&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;单价&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;IDC自建机房（独占物理机 A1: 64C384G）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;19&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;IDC自建机房（独占物理机 B1: 40C64G）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;26&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;IDC自建机房（独占物理机 C2: 8C16G）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;38&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;IDC自建机房（容器，超卖200%）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;17&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;IDC自建机房（容器，超卖500%）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;UCloud 弹性虚拟机（8C16G，有超卖）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;25&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 弹性服务器 2x内存（独占无超卖）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;107&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 弹性服务器 4x内存（独占无超卖）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;138&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 弹性服务器 8x内存（独占无超卖）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;180&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS C5D.METAL 96C 200G (按月无预付)&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;100&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS C5D.METAL 96C 200G(预付3年)&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;80&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;数据库&lt;/strong&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS RDS PostgreSQL db.T2 (4x)&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;440&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS RDS PostgreSQL db.M5 (4x)&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;611&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS RDS PostgreSQL db.R6G (8x)&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;786&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;AWS RDS PostgreSQL db.M5 24xlarge&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;1328&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 RDS PG 2x内存（独占）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;260&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 RDS PG 4x内存（独占）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;320&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;阿里云 RDS PG 8x内存（独占）&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;410&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ORACLE数据库授权&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;10000&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;所以这里问题就来了，单价二十块的服务器硬件，为什么可以卖出上百块，而且装上云数据库软件还可以再翻几番？&lt;strong&gt;运维是金子做的，还是服务器是金子做的？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;常用的回应话术是：&lt;em&gt;&lt;strong&gt;数据库是基础软件里的皇冠明珠，凝聚着无数无形知识产权BlahBlah&lt;/strong&gt;&lt;/em&gt;。因此软件的价格远超硬件非常合理。如果是 Oracle 这样的顶尖商业数据库，或者索尼任天堂的主机游戏，这么说也过得去。&lt;/p&gt;
+&lt;p&gt;但公有云上的云数据库（RDS for PostgreSQL/MySQL/&amp;hellip;.），本质上是开源数据库内核换皮魔改封装，加上自己管控软件和共享DBA人头服务。那这种溢价率就非常荒谬了：数据库内核是免费的呀，&lt;strong&gt;你家管控软件是金子做的，还是DBA是金子做的？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/gold-rds.gif&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;公有云的秘密就在这里：&lt;strong&gt;&lt;strong&gt;用廉价的存算资源获客，用云数据库杀猪&lt;/strong&gt;&lt;/strong&gt;。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;尽管国内公有云 IaaS （存储、计算、网络）的收入占营收接近一半，但毛利率只有 15% ～ 20%，而公有云 PaaS 的营收虽然不如 IaaS，但 PaaS 的毛利率可以达到 50%，完爆卖资源吃饭的 IaaS 。&lt;strong&gt;而 PaaS 中最具代表性的，就是云数据库&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;正常来说，如果不是把公有云单纯当作一个 IDC 2.0 或者 CDN供应商来用，最费钱的服务就是数据库。公有云上的存储、计算、网络资源贵吗？严格来说不算特别离谱。IDC托管物理机代维的核月成本大约为二三十块，而公有云上一核 CPU 算力用一个月的价格，大概在七八十块到一两百块，考虑到各种折扣与活动，以及弹性溢价，勉强处在可以接受的合理范围。&lt;/p&gt;
+&lt;p&gt;但云数据库就非常离谱了，同样是一核算力用一个月，云数据库价格比起对应规格的硬件可以翻几倍乃至十几倍。便宜一些阿里云，核月单价两百到四百，贵一些的 AWS，核月单价可以七八百甚至上千。&lt;/p&gt;
+&lt;p&gt;如果说您只有一两核的 RDS ，那也别折腾了，交点税就交点吧。但如果您的业务上了量还不赶紧从云上下来，那可真的是在交智商税了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;足够好吗&#34;&gt;足够好吗？&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;不要误会，云数据库只是及格品大锅饭。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;关于云数据库/云服务器的成本，如果您能跟销售聊到这儿，话术就该变成：&lt;em&gt;&lt;strong&gt;虽然我们贵，但是我们好呀！&lt;/strong&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;但是，云数据库真的好吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;应该说，对于玩具应用，小微网站，个人托管，以及土法野路子自建数据库来，毫无技术认知的甲方来说，RDS也许足够好了。但在高净值客户与数据库专家看来，RDS不过是及格线上的大锅饭产品罢了。&lt;/p&gt;
+&lt;p&gt;说到底，公有云源于大厂内部的运维能力外溢，大厂人自己厂里技术啥样门儿清，大可不必有啥莫名的崇拜。（Google也许算个例外）。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-4.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;以 &lt;strong&gt;性能&lt;/strong&gt; 为例，性能的核心指标是 &lt;strong&gt;延迟 / 响应时间&lt;/strong&gt;，特别是长尾延迟，会直接影响用户体验：没有人愿意等着划一下屏幕转几秒圈圈。而在这一点上，&lt;strong&gt;磁盘&lt;/strong&gt;起到决定性作用。&lt;/p&gt;
+&lt;p&gt;我们生产环境数据库中使用的是本地 NVME SSD，典型4K写延迟为15µs，读延迟94µs。因而，PostgreSQL简单查询的响应时间通常为 100 ~ 300µs，应用侧的查询响应时间通常为 200 ~ 600µs；对于简单查询，我们的 SLO 是命中1ms内，未命中10ms内，超过10ms算慢查询，要打回去优化。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-41.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;而 AWS 提供的EBS服务用fio实测性能极其拉垮【6】，默认的gp3读写延迟为 40ms，io1 读写延迟为10ms，整整差了近三个数量级，而且IOPS最大也只有八万。RDS使用的存储就是EBS，如果连一次磁盘访问都需要10ms，那这就根本没法整了。io2 倒是使用了自建同款 NVMe SSD，然而远程块存储相比本地磁盘延迟直接翻倍。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-5.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;确实，有时候云厂商会提供性能足够好的本地的NVME SSD，但都会非常鸡贼的设定各种限制条件，来避免用户来使用EC2来自建数据库。AWS的限制方式是只有NVME SSD Ephemeral Storage，这种盘一旦遇上EC2重启就自动抹干净了，根本没法用。阿里云的限制方式是给你卖天价，相比直接采购硬件，&lt;strong&gt;阿里云的 ESSD PL3 则高达 200 倍&lt;/strong&gt;。以 3.2TB 规格的企业级 PCI-E SSD 卡为参照基准，AWS 上售租比为 1个月，阿里云上为 9 天，租用此时长即可买下整块磁盘。若在阿里云以采购三年最大优惠五折计算，租用三年的时间可购买 123 块同款硬盘近 400TB 永久所有权。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;再以&lt;/strong&gt; &lt;strong&gt;可观测性&lt;/strong&gt; &lt;strong&gt;为例，没有一家RDS的监控能称得上是“好”&lt;/strong&gt;。就以监控指标数量来说吧，虽然说知道服务死了还是活着只需要几个指标，但如果想进行故障根因分析，需要越多越好的监控指标来构建良好的Context。而大多数RDS都只是做了一些基本的监控指标，和简陋到可怜的监控面板。以阿里云RDS PG为例【7】，所谓的“增强监控”，里面只有这么点可怜的指标 ， AWS里和PG数据库相关的指标也差不多不到100个，而我们自己的监控系统里主机指标有800多类，PGSQL数据库指标610类，REDIS指标257类，整个大约三千类指标，在数量上完爆这些RDS。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-6.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/pigsty/dashboard.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;公开 &lt;a href=&#34;https://demo.pigsty.cc&#34;&gt;Demo&lt;/a&gt;：https://demo.pigsty.cc&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;至于&lt;strong&gt;可靠性&lt;/strong&gt;，以前我对RDS的可靠性还抱有基本的信任，直到一个月前A云香港机房那场丑闻。租的机房，服务器喷水消防，OSS故障，大量RDS不可用也切不了；然后A云自己整个Region的管控服务竟然因为一个单AZ的故障自己挂点了，&lt;strong&gt;连自己的管控API都做不到异地容灾，那做云数据库异地容灾岂不是天大的笑话&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;当然，并不是说自建就不会出现这些问题，只是稍微靠谱点的IDC托管都不至于犯这么离谱的错误。安全性也不用多说，最近闹的出过的几次大笑话，比如著名的SHGA；一堆样例代码里硬编码AK/SK，云RDS更安全吗？别搞笑啦，经典架构起码还有VPN堡垒机扛着一层，而公网上暴露端口弱密码裸奔的数据库简直不要太多，攻击面肯定是更大了无疑。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;云数据库另一个广为人所诟病的是其可扩展性&lt;/strong&gt;。RDS是不给用户 dbsu 权限的，这也意味着用户是不能在数据库中安装扩展插件，而 PostgreSQL 的插件恰恰就是其醍醐味，没有扩展的PostgreSQL就像可乐不加冰，酸奶不加糖一样。更严重的问题是&lt;strong&gt;在一些故障出现时，用户甚至都丧失了自我救助的能力&lt;/strong&gt;，参见《&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485093&amp;idx=1&amp;sn=5815f71f1d832101d35a75f5aa4acd3c&amp;chksm=fe4b337ec93cba68fbf30eb0ed50d052c6e8972d42cf506051b5016668f4555edaa0756688dc&amp;scene=21#wechat_redirect&#34;&gt;云数据库：从删库到跑路&lt;/a&gt;》中的真实案例：WAL归档与PITR这么基础性的功能，在RDS中竟然是一个付费的升级功能。至于可维护性，有些人说云数据库可以点点鼠标就创建销毁多方便呀，说这话的人肯定没经历过重启每个数据库都要收手机短信验证码的山炮场景。&lt;strong&gt;有 Database as Code 式的管理工具，真正的工程师绝对不会用这种“ClickOps”&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;不过任何事物存在都有其道理，云数据库也不是一无是处，在&lt;strong&gt;可伸缩性&lt;/strong&gt;上，云数据库确实卷出了新高度，比如各种 Serverless 的花活，但这也是给云厂商自己省钱超卖用的，对用户来说确实没有太大意义。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;淘汰dba&#34;&gt;淘汰DBA？&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;被云厂商垄断，想招都找不到，还淘汰？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;云数据库的另一种鼓吹思路是，用了RDS，你就不用DBA啦！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;例如这篇知名点炮文《&lt;a href=&#34;https://mp.weixin.qq.com/s/DtRFnh8LgtfesCNMNl3eNw&#34;&gt;你怎么还在招聘DBA&lt;/a&gt;》【8】里说：我们有数据库自治服务！RDS和DAS能帮你解决这些数据库相关的问题，DBA都要下岗了，哈哈哈哈。我相信任何认真看过这些所谓“自治服务”，“AI4DB”官方文档【9】【10】的人都不会相信这种鬼话：&lt;strong&gt;连一个足够好用的监控系统都算不上的小模块，能让数据库自治起来，这不是在说梦话？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;DBA，Database Administrator，数据库管理员，以前也叫做数据库协调员、数据库程序员。DBA是一个横跨于研发团队与运维团队的广博角色，涉及DA、SA、Dev、Ops、以及SRE的多种职责，负责各种与数据与数据库有关的问题：设置管理策略与运维标准，规划软硬件架构，协调管理数据库，验证表模式设计，优化SQL查询，分析执行计划，乃至于处理紧急故障以及抢救数据。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;DBA的第一点价值在于安全兜底&lt;/strong&gt;：&lt;strong&gt;他是企业核心数据资产的守护者，也是可以轻易对企业造成致命伤害的人&lt;/strong&gt;。在蚂蚁金服有个段子，能搞死支付宝的，除了监管就是DBA了。高管们通常也很难意识到 DBA 对于公司的重要性，直到出了数据库事故，一堆CXO紧张地站在DBA背后观看救火修复过程时…。比起避免一场数据库故障所造成的损失，例如：全美停航，Youtube宕机，工厂停产一天，雇佣DBA的成本显得微不足道。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;DBA的第二点价值在于模型设计与优化&lt;/strong&gt;。许多公司并不在乎他们的查询是纯狗屎，他们只是觉得“硬件很便宜”，砸钱买硬件就好了。然而问题在于，一个调整不当的查询/SQL或设计不当的数据模型与表结构，可以对性能产生几个数量级的影响。总会在某一个规模，堆硬件的成本相比雇佣一个靠谱DBA的成本高得令人望而却步。实话说，&lt;strong&gt;我认为大多数公司在IT软硬件开销中花费最大的是：开发人员没有正确使用数据库&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;DBA的基本功是管理DB，但灵魂在于A&lt;/strong&gt;：Administration ，如何管住研发人员创造的熵，需要的可不仅仅是技术。“自治数据库”也许可以帮助你分析负载创建索引，但没有任何可能帮你理解业务需求，去Push业务去优化表结构，而这一点在未来的二三十年里，都看不到任何被云替代的可能。&lt;/p&gt;
+&lt;p&gt;无论是公有云厂商，还是以Kubernetes为代表的云原生/私有云，或者是类似 Pigsty 【11】这样的本地开源RDS替代，&lt;strong&gt;其核心价值都在于****尽可能多地使用软件，而不是人来应对系统复杂度&lt;/strong&gt;。那么，&lt;strong&gt;云软件会革了运维与DBA的命吗&lt;/strong&gt;？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;云并不是什么都不用管的运维外包魔法&lt;/strong&gt;。根据复杂度守恒定律，无论是系统管理员还是数据库管理员，管理员这个岗位消失的唯一方式是，它们被重命名为“DevOps Engineer”或SRE。&lt;strong&gt;好的云软件可以帮你屏蔽运维杂活，解决70%的日常高频问题，然而总是会有那么一些复杂问题只有人才能处理&lt;/strong&gt;。你可能需要更少的人手来打理这些云软件，但总归还是需要人来管理【12】。毕竟，&lt;strong&gt;你也需要懂行的人来协调处理，才不至于被云厂商嘎嘎割韭菜当傻逼。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;在大型组织中，一个好的DBA是至关重要的&lt;/strong&gt;。然而优秀的DBA相当稀有，供不应求，以至于这个角色在大多数组织中只能外包：包给专业的数据库服务公司，包给云数据库RDS服务团队。找不到DBA供应的组织只能将这个职责 &lt;strong&gt;内包&lt;/strong&gt; 给自己的研发/运维人员，直到公司的规模足够大，或者吃到足够的苦头之后，一些Dev/Ops才会培养出相应的能力来。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;DBA不会被淘汰，只会被集中到云厂商中垄断提供服务。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;垄断阴影&#34;&gt;垄断阴影&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;在2020年，计算自由的敌人是云计算软件。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;比起“淘汰DBA”，云的出现蕴含着更大的威胁&lt;/strong&gt;。我们需要担心的是这样一幅图景：公有云（或果子云）坐大，控制硬件与运营商上下游，垄断计算，存储，网络，顶尖专家资源，形成事实标准。假如所有顶级DBA都被挖到云厂商去集中提供共享专家服务，普通的企业组织就彻底失去了用好数据库的能力，最终只能选择被公有云收税杀猪。最终，所有IT资源集中于云厂商，只要控制住这几个关键少数，就可以控制整个互联网。这毫无疑问与互联网诞生的初衷相悖。&lt;/p&gt;
+&lt;p&gt;引用 DDIA 作者 Martin Kelppmann 的一段话【13】来说：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;在2020年，计算自由的敌人是云计算软件&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;—— 即主要在供应商的服务器上运行的软件，而你的所有数据也存储在这些服务器上。这些“云软件”也许有一个客户端组件（手机App，网页App，跑在你浏览器中的JavaScript），但它们只能与供应商的服务端共同工作。而云软件存在很多问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果提供云软件的公司倒闭，或决定停产，软件就没法工作了，而你用这些软件创造的文档与数据就被锁死了。对于初创公司编写的软件来说，这是一个很常见的问题：这些公司可能会被大公司收购，而大公司没有兴趣继续维护这些初创公司的产品。&lt;/li&gt;
+&lt;li&gt;谷歌和其他云服务可能在没有任何警告和追索手段的情况下，突然暂停你的账户。例如，您可能在完全无辜的情况下，被自动化系统判定为违反服务条款：其他人可能入侵了你的账户，并在你不知情的情况下使用它来发送恶意软件或钓鱼邮件，触发违背服务条款。因而，你可能会突然发现自己用Google Docs或其它App创建的文档全部都被永久锁死，无法访问了。&lt;/li&gt;
+&lt;li&gt;而那些运行在你自己的电脑上的软件，即使软件供应商破产了，它也可以继续运行，直到永远。（如果软件不再与你的操作系统兼容，你也可以在虚拟机和模拟器中运行它，当然前提是它不需要联络服务器来检查许可证）。例如，互联网档案馆有一个超过10万个历史软件的软件集锦，你可以在浏览器中的模拟器里运行！相比之下，如果云软件被关闭，你没有办法保存它，因为你从来就没有服务端软件的副本，无论是源代码还是编译后的形式。&lt;/li&gt;
+&lt;li&gt;20世纪90年代，无法定制或扩展你所使用的软件的问题，在云软件中进一步加剧。对于在你自己的电脑上运行的闭源软件，至少有人可以对它的数据文件格式进行逆向工程，这样你还可以把它加载到其他的替代软件里（例如OOXML之前的微软Office文件格式，或者规范发布前的Photoshop文件）。有了云软件，甚至连这个都做不到了，因为数据只存储在云端，而不是你自己电脑上的文件。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;如果所有的软件都是免费和开源的，这些问题就都解决了&lt;/strong&gt;。然而，开源实际上并不是解决云软件问题的必要条件；即使是闭源软件也可以避免上述问题，只要它运行在你自己的电脑上，而不是供应商的云服务器上。请注意，互联网档案馆能够在没有源代码的情况下维持历史软件的正常运行：如果只是出于存档的目的，在模拟器中运行编译后的机器代码就够了。也许拥有源码会让事情更容易一些，但这并不是关键，&lt;strong&gt;最重要的事情，还是要有一份软件的副本&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;我和我的合作者们以前曾主张过&lt;strong&gt;本地优先软件&lt;/strong&gt;的概念，这是对云软件的这些问题的一种回应。本地优先的软件在你自己的电脑上运行，将其数据存储在你的本地硬盘上，同时也保留了云计算软件的便利性，比如，实时协作，和在你所有的设备上同步数据。开源的本地优先的软件当然非常好，但这并不是必须的，本地优先软件90%的优点同样适用于闭源的软件。云软件，而不是闭源软件，才是对软件自由的真正威胁，原因在于：&lt;strong&gt;云厂商能够突然心血来潮随心所欲地锁定你的所有数据，其危害要比无法查看和修改你的软件源码的危害大得多&lt;/strong&gt;。因此，普及本地优先的软件显得更为重要和紧迫。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;有力就会有反作用力，与云软件相对应的本地优先软件开始如雨后春笋一般出现。例如，以Kubernetes为代表的 Cloud Native 运动就是一例。“Cloud Native”，云厂商将 Native 解释 “原生”：“原生诞生在公有云环境里的软件”；而其真正的含义应为 “本地”，即与 Cloud 相对应的 “Local” —— 本地云 / 私有云 / 专有云 / 原生云，叫什么不重要，重要的是它运行在用户想运行的任何地方（包括云服务器），而不是仅仅是公有云所独有！&lt;/p&gt;
+&lt;p&gt;以 K8S为代表的开源项目，将原本公有云才有的资源调度/智能运维能力普及到所有企业中，让企业在本地也可以运行起‘云’一样的能力。对于无状态的应用来说，它已经是一个足够好的 “云操作系统” 内核。Ceph/Minio也提供了 S3 对象存储的开源替代，只有一个问题仍然没有答案，有状态的，生产级的数据库服务如何管理与部署？&lt;/p&gt;
+&lt;p&gt;时代在呼唤 RDS 的开源替代物。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;解决方案&#34;&gt;解决方案&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Pigsty —— 开源免费，开箱即用，更好的 RDS PG 替代&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;我希望，未来的世界人人都有自由使用优秀服务的事实权利，而不是只能被圈养在几个公有云厂商提供的猪圈（Pigsty）里吃粑粑。这就是我要做 Pigsty 的原因 —— &lt;strong&gt;一个更好的，开源免费的 PostgreSQL RDS替代&lt;/strong&gt;。让用户能够在任何地方（包括云服务器）上，一键拉起有比云RDS更好的数据库服务。&lt;/p&gt;
+&lt;p&gt;Pigsty 是是对 PostgreSQL 的彻底补完，&lt;strong&gt;更是对云数据库的辛辣嘲讽&lt;/strong&gt;。它本意是“猪圈”，但更是 Postgres In Great STYle 的缩写，即“&lt;strong&gt;全盛状态下的 PostgreSQL&lt;/strong&gt;”。它是一个完全基于开源软件的，可以运行在任何地方的，浓缩了 PostgreSQL 使用管理最佳实践的 Me-Better  RDS 开源替代。用真实世界的大规模，高标准 PostgreSQL 集群打磨而来的解决方案，它是为了满足探探自己管理数据库的需求而生，在八个维度上进行了许多有价值的工作：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-7.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可观测性（Observability）是天；天行健君子以自强不息&lt;/strong&gt;；Pigsty使用现代可观测性技术栈为 PostgreSQL 打造了一款无与伦比的监控系统，从全局大盘概览到单个表/索引/函数等对象的秒极历史详情指标一览无遗，让用户对系统能够做到洞若观火，进而掌控一切。此外，Pigsty的监控系统还可以独立使用，监控第三方数据库实例。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可控制性（Controllability）是地；地势坤君子以厚德载物&lt;/strong&gt;；Pigsty提供Database as Code的能力：使用表现力丰富的声明式接口描述数据库集群的状态，并使用幂等的剧本进行部署与调整。让用户拥有精细定制的能力的同时又无需操心实现细节，解放心智负担，让数据库操作与管理的门槛从专家级降低到新手级。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可伸缩性（Scalability）是水；水洊至习坎君子以常德行&lt;/strong&gt;；Pigsty提供预制通用调参模板（OLTP / OLAP / CRIT / TINY），自动优化系统参数，并可通过级联复制无限扩展只读能力，也使用Pgbouncer连接池优化海量并发连接；Pigsty确保 PostgreSQL 的性能可以在现代硬件条件下充分发挥：单机可达数万并发连接/百万级单点查询QPS/十万级单条写入TPS。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可维护性（Maintainability）是火；明两作离大人以继明照于四方&lt;/strong&gt;；Pigsty 允许在线摘除添加实例以扩缩容，Switchover/滚动升级进行升降配，提供基于逻辑复制的不停机迁移方案，将维护窗口压缩至亚秒级，让系统整体的可演化性，可用性，可维护性提高到一个新的水准。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;安全性（Security）是雷；洊雷震君子以恐惧修省&lt;/strong&gt;；Pigsty提供了一套遵循最小权限原则的访问控制模型，并带有各种安全特性开关：流复制同步提交防丢失，数据目录校验和防腐败，网络流量SSL加密防监听，远程备份AES-256防泄漏。只要物理硬件与密码安全，用户无需担心数据库的安全性。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;简单性（Simplicity）是风；随风巽君子以申命行事&lt;/strong&gt;；使用Pigsty的难度不会超过任何云数据库，它旨在以最小的复杂度成本交付完整的RDS功能，模块化设计允许用户自行组合选用所需的功能。Pigsty提供基于Vagrant的本地开发测试沙箱，与Terraform的云端IaC一键部署模板，让您在任意新EL节点上一键完成离线安装，完整复刻环境。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可靠性（Reliability）是山；兼山艮君子以思不出其位&lt;/strong&gt;；Pigsty提供了故障自愈的高可用架构应对硬件问题，也提供开箱即用的PITR时间点恢复为人为删库与软件缺陷兜底，并通过长时间、大规模的生产环境运行与高可用演练验证其可靠性。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;可扩展性（Extensibility）是泽：丽泽兑君子以朋友讲习&lt;/strong&gt;；Pigsty深度整合PostgreSQL生态核心扩展PostGIS、TimescaleDB、Citus 、PGVector、以及大量扩展插件；Pigsty提供模块化设计的Prometheus/Grafana可观测性技术栈，以及MINIO，ETCD，Redis、Greenplum 等组件的监控与高可用部署与PostgreSQL 组合使用；&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-8.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;更重要的是，Pigsty是完全开源免费的自由软件&lt;/strong&gt;，采用 AGPL v3.0 协议。我们用爱发电，而您可以用几十块核·月的纯硬件成本，跑起运行功能完备甚至更好的RDS服务。无论你是初心者还是资深DBA，无论你管理着上万核的大集群还是1核2G的小水管，无论你已经用了RDS还是在本地搭建过数据库，只要你是 PostgreSQL 用户，Pigsty都会对您有所帮助，完全免费。&lt;strong&gt;您可以专注于业务中最有趣或最有价值的部分，将杂活丢给软件来解决&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;尽管Pigsty 本身旨在用数据库自动驾驶软件替代人肉数据库运维，但正如上所述，再好的软件也没法解决 100% 的问题。总会有一些的冷门低频疑难杂症需要专家介入处理。我们提供免费的社区答疑，如果您觉得安装使用维护有困难，需要下云迁移或者疑难杂症兜底，我们也提供顶尖的数据库专家咨询服务，性价比相对公有云数据库的&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;工单/SLA&lt;/a&gt;极有竞争力。Pigsty帮助用户用好 PostgreSQL，而我们帮助用户用好 Pigsty。&lt;/p&gt;
+&lt;p&gt;Pigsty简单易用，人力成本与复杂度RDS持平，但资源成本差异确是天翻地覆。且不说自建机房的20块和几百块的云数据库怎么比，考虑到 RDS 对比同规格 EC2 都有几倍的溢价，您完全可以折中：使用云服务器部署 Pigsty RDS，既保留了云的弹性，又可以原地省掉五六成开销。如果是IDC自建或者代维，成本砍掉90%都不一定打得住。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/rds/rds-9.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;RDS成本与规模成本曲线&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Pigsty 允许您践行最终极的 FinOps 理念 —— 用几乎接近于纯资源的价格，在任何地方（ECS，资源云，机房服务器甚至本地笔记本虚拟机）运行生产级的 PostgreSQL RDS 数据库服务。&lt;strong&gt;让云数据库的能力成本，从正比于资源的边际成本，变为约等于0的固定学习成本&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;如果您可以用几分之一的成本来使用更好的 RDS 服务，那么再用云数据库就真的是纯纯的智商税了。&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;reference&#34;&gt;Reference&lt;/h2&gt;
+&lt;p&gt;【1】&lt;a href=&#34;https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0&#34;&gt;为什么我们要离开云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【2】&lt;a href=&#34;https://www.infoq.cn/article/qoq3v6jfenwwzmpg4fre&#34;&gt;上云“被坑”十年终放弃，寒冬里第一轮“下云潮”要来了？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【3】&lt;a href=&#34;https://rdsbuy.console.aliyun.com/create/rds/PostgreSQL&#34;&gt;阿里云RDS for PostgreSQL定价&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【4】&lt;a href=&#34;https://calculator.aws/#/addService/RDSPostgreSQL&#34;&gt;AWS Pricing Calculator&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【5】 &lt;a href=&#34;https://calculator.amazonaws.cn/#/?trk=pricing-ban&#34;&gt;AWS Pricing Calculator&lt;/a&gt; （中国宁夏）&lt;/p&gt;
+&lt;p&gt;【6】&lt;a href=&#34;https://github.com/Vonng/pgtpc/blob/master/fio/aws-ebs-bench.md&#34;&gt;FIO 测试 AWS EBS性能&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【7】&lt;a href=&#34;https://help.aliyun.com/document_detail/299200.html&#34;&gt;阿里云RDS PG 增强监控&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【8】&lt;a href=&#34;https://mp.weixin.qq.com/s/DtRFnh8LgtfesCNMNl3eNw&#34;&gt;你为什么还在招DBA&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【9】&lt;a href=&#34;https://help.aliyun.com/document_detail/159166.html&#34;&gt;阿里云RDS PG 数据库自治服务&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【10】&lt;a href=&#34;https://docs.opengauss.org/zh/docs/3.0.0/docs/Developerguide/AI4DB-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%87%AA%E6%B2%BB%E8%BF%90%E7%BB%B4.html&#34;&gt;OpenGauss AI for DB&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【11】&lt;a href=&#34;https://pigsty.cc/&#34;&gt;Me-Better RDS PostgreSQL 替代 Pigsty&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【12】&lt;a href=&#34;https://mp.weixin.qq.com/s/9lceZdyUZU9AzsqlAcpjTA&#34;&gt;Pigsty v2 正式发布：更好的RDS PG开源替代&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【13】&lt;a href=&#34;https://mp.weixin.qq.com/s/DJsDRO18saZaxe3oyzzYrA&#34;&gt;是时候和GPL说再见了&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【14】&lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【15】&lt;a href=&#34;https://mp.weixin.qq.com/s/rtx4UWkuvrKf7gtd6pFr-A&#34;&gt;大厂裁员轰轰烈烈，哪个技术岗位可以独善其身？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【16】&lt;a href=&#34;https://mp.weixin.qq.com/s/UZVoQxFYbG7WlJ1JC-gclQ&#34;&gt;蹭个热度&amp;ndash;要不要DBA和云数据库&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【17】&lt;a href=&#34;https://mp.weixin.qq.com/s/LFnWliDxPQnVePkDWsIVag&#34;&gt;你怎么不招DBA&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【18】&lt;a href=&#34;https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA&#34;&gt;DBA还是一份好工作吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;【19】&lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,210 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Provision</title>
+    <link>/zh/tags/provision/</link>
+    <description>Recent content in Provision on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    
+	  <atom:link href="/zh/tags/provision/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: 置备机器</title>
+      <link>/zh/docs/setup/provision/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/setup/provision/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 在节点上运行，这些节点可以是裸机或虚拟机。您可以手工置备它们，或使用 terraform 和 vagrant 这样的工具在云端或本地进行自动配置。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;沙箱环境&#34;&gt;沙箱环境&lt;/h2&gt;
+&lt;p&gt;Pigsty 带有一个演示沙箱，所谓沙箱，就是专门用来演示/测试的环境：IP地址和其他标识符都预先固定配置好，便于复现各种演示用例。&lt;/p&gt;
+&lt;p&gt;默认的沙箱环境由4个节点组成，配置文件请参考 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/conf/full.yml&#34;&gt;&lt;code&gt;full.yml&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;沙箱的 4 个节点有着固定的 IP 地址：&lt;code&gt;10.10.10.10&lt;/code&gt;、&lt;code&gt;10.10.10.11&lt;/code&gt;、&lt;code&gt;10.10.10.12&lt;/code&gt;、&lt;code&gt;10.10.10.13&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;沙箱带有一个位于 &lt;code&gt;meta&lt;/code&gt; 节点上的单实例 PostgreSQL 集群：&lt;code&gt;pg-meta&lt;/code&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;meta    10.10.10.10  pg-meta pg-meta-1&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;沙箱中还有一个由三个实例组成的 PostgreSQL 高可用集群：&lt;code&gt;pg-test&lt;/code&gt;，部署在另外三个节点上：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;node-1  10.10.10.11  pg-test.pg-test-1&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;node-2  10.10.10.12  pg-test.pg-test-2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;node-3  10.10.10.13  pg-test.pg-test-3&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;两个可选的 L2 VIP 分别绑定在 &lt;code&gt;pg-meta&lt;/code&gt; 和 &lt;code&gt;pg-test&lt;/code&gt; 集群的主实例上：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;10.10.10.2  pg-meta&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;10.10.10.3  pg-test&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在 &lt;code&gt;meta&lt;/code&gt; 节点上，还有一个单实例的 &lt;code&gt;etcd&lt;/code&gt; “集群”和一个单实例的 &lt;code&gt;minio&lt;/code&gt; “集群”。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty-sandbox.jpg&#34; src=&#34;/img/pigsty/sandbox.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;您可以在本地虚拟机或云虚拟机上运行沙箱。Pigsty 提供基于 Vagrant 的本地沙箱（使用 Virtualbox/libvirt 启动本地虚拟机）以及基于 Terraform 的云沙箱（使用云供应商 API 创建虚拟机）。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;本地沙箱可以在您的 Mac/PC 上免费运行。运行完整的4节点沙箱，您的 Mac/PC 应至少拥有 4C/8G。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;云沙箱可以轻松创建和共享，单需要一个公有云帐户才行。云上虚拟机可以按需创建/一键销毁，对于快速测试来说非常便宜省事。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;此外，Pigsty 还提供了一个 42节点 的生产仿真环境沙箱 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/conf/prod.yml&#34;&gt;&lt;code&gt;prod.yml&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.vagrantup.com/&#34;&gt;Vagrant&lt;/a&gt; 可以按照声明式的方式创建本地虚拟机。请查看 &lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/vagrant/README.md&#34;&gt;Vagrant 模板介绍&lt;/a&gt; 以获取详情。&lt;/p&gt;
+&lt;h3 id=&#34;安装&#34;&gt;安装&lt;/h3&gt;
+&lt;p&gt;确保您的操作系统中已经安装并可以使用 &lt;a href=&#34;https://www.vagrantup.com/&#34;&gt;Vagrant&lt;/a&gt; 和 &lt;a href=&#34;https://www.virtualbox.org/&#34;&gt;Virtualbox&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;如果您使用的是 macOS，您可以使用 &lt;code&gt;homebrew&lt;/code&gt; 一键命令安装它们，注意安装 Virtualbox 后需要重启系统。&lt;/p&gt;
+&lt;p&gt;如果你用的是 Linux，可以使用 virtualbox，也可以考虑使用 KVM: &lt;a href=&#34;https://vagrant-libvirt.github.io/vagrant-libvirt/&#34;&gt;vagrant-libvirt&lt;/a&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/bin/bash -c &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;$(&lt;/span&gt;curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;brew install vagrant virtualbox ansible   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 MacOS 中可以轻松一键安装，但只有 x86_64 Intel 芯片的可以 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;配置&#34;&gt;配置&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/Vagrantfile&#34;&gt;&lt;code&gt;vagarnt/Vagranfile&lt;/code&gt;&lt;/a&gt; 是一个 Ruby 脚本文件，用来描述 Vagrant 要创建的虚拟机节点。Pigsty 提供了一些默认的配置模板：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;模板&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;快捷方式&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;规格&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;注释&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/meta.rb&#34;&gt;meta.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v1&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;4C8G x 1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;单一 Meta 节点&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/full.rb&#34;&gt;full.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v4&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;完整的4节点沙盒示例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el7.rb&#34;&gt;el7.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v7&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL7 3-节点测试环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el8.rb&#34;&gt;el8.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v8&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL8 3-节点测试环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el9.rb&#34;&gt;el9.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v9&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL9 3-节点测试环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/build.rb&#34;&gt;build.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vb&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3-节点 EL7,8,9 构建环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/check.rb&#34;&gt;check.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vc&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 30&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;30 EL7-9, PG12-16 测试环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/minio.rb&#34;&gt;minio.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vm&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 3 + Disk&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3-节点 MinIO/etcd 测试环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/prod.rb&#34;&gt;prod.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vp&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 42&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;42节点的生产模拟环境&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;每个规格文件包含一个描述虚拟机节点的 &lt;code&gt;Specs&lt;/code&gt; 变量。例如，&lt;code&gt;full.rb&lt;/code&gt; 包含4节点沙盒规格的描述：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;Specs&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;meta&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;   &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.10&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;4096&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.11&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-2&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.12&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-3&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.13&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;您可以使用 &lt;code&gt;vagrant/switch&lt;/code&gt; 脚本切换 Vagrant 配置文件，它会根据规格以及虚拟机软件类型，渲染生成最终的 &lt;code&gt;Vagrantfile&lt;/code&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; ~/pigsty
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch &amp;lt;spec&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch meta     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# singleton meta        | 别名：`make v1`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch full     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 4-node sandbox        | 别名：`make v4`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el7      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el7 test       | 别名：`make v7`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el8      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el8 test       | 别名：`make v8`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el9      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el9 test       | 别名：`make v9`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch prod     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# prod simulation       | 别名：`make vp`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch build    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# building environment  | 别名：`make vd`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch minio    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node minio env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch check    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 30-node check env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;虚拟机管理&#34;&gt;虚拟机管理&lt;/h3&gt;
+&lt;p&gt;当您使用 &lt;code&gt;vagrant/Vagrantfile&lt;/code&gt; 描述了所需的虚拟机后，你可以使用&lt;code&gt;vagrant up&lt;/code&gt;命令创建这些虚拟机。&lt;/p&gt;
+&lt;p&gt;Pigsty 模板默认会使用你的 &lt;code&gt;~/.ssh/id_rsa[.pub]&lt;/code&gt; 作为这些虚拟机的默认ssh凭证。&lt;/p&gt;
+&lt;p&gt;在开始之前，请确保你有一个有效的ssh密钥对，你可以通过以下方式生成一对：&lt;code&gt;ssh-keygen -t rsa -b 2048&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;此外，还有一些 &lt;code&gt;makefile&lt;/code&gt; 快捷方式包装了 vagrant 命令，你可以使用它们来管理虚拟机。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 等于 make start&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make new     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 销毁现有虚拟机，根据规格创建新的&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make ssh     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 SSH 配置写入到 ~/.ssh/ 中 （新虚拟机拉起后必须完成这一步）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make dns     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 虚拟机 DNS 记录写入到 /etc/hosts 中 （如果想使用名称访问虚拟机)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make start   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 等于先执行 up ，再执行 ssh &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make up      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据配置拉起虚拟机，或启动现有虚拟机&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make halt    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 关停现有虚拟机 (down,dw)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make clean   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 销毁现有虚拟机 (clean/del/destroy)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make status  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 显示虚拟机状态 (st)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make pause   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 暂停虚拟机运行 (suspend,pause)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make resume  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 恢复虚拟机运行 (resume)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make nuke    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 virsh 销毁所有虚拟机 (仅libvirt可用) &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;快捷方式&#34;&gt;快捷方式&lt;/h3&gt;
+&lt;p&gt;你可以使用以下的 Makefile 快捷方式使用 vagrant 拉起虚拟机环境。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make meta     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 单个元节点&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make full     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 4-节点沙箱&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el7      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-节点 el7 测试环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el8      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-节点 el8 测试环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el9      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-节点 el9 测试环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make prod     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 42 节点生产仿真环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make build    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-节点 EL7,8,9 构建环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make check    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 30-节点构建校验测试环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make minio    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-节点 MinIO 测试环境&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make meta  install  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进行完整的单机安装&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make full  install  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进行4节点沙箱安装&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make prod  install  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进行42节点生产仿真环境安装&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make check install  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进行30节点本地测试环境安装&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;terraform&#34;&gt;Terraform&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.terraform.io/&#34;&gt;Terraform&lt;/a&gt;是一个开源的实践“基础设施即代码”的工具：描述你想要的云资源，然后一键创建它们。&lt;/p&gt;
+&lt;p&gt;Pigsty 提供了 AWS，阿里云，腾讯云的 Terraform 模板，您可以使用它们在云上一键创建虚拟机。&lt;/p&gt;
+&lt;p&gt;在 MacOS 上，Terraform 可以使用 homebrew 一键安装：&lt;code&gt;brew install terraform&lt;/code&gt;。你需要创建一个云帐户，获取 AccessKey 和 AccessSecret 凭证来继续下面的操作。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;terraform/&lt;/code&gt;目录包含两个示例模板：一个 AWS 模板，一个阿里云模板，你可以按需调整它们，或者作为其他云厂商配置文件的参考，让我们用阿里云为例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; terraform                         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 进入 Terraform 模板目录&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cp spec/alicloud.tf terraform.tf     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用 阿里云 Terraform 模板&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在执行 &lt;code&gt;terraform apply&lt;/code&gt; 拉起虚拟机之前，你要执行一次 &lt;code&gt;terraform init&lt;/code&gt; 安装相应云厂商的插件。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;terraform init      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 terraform 云供应商插件：例如默认的 aliyun 插件 (第一次使用时安装即可)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;terraform apply     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 生成执行计划，显示会创建的云资源：虚拟机，网络，安全组，等等等等……&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;运行 &lt;code&gt;apply&lt;/code&gt; 子命令并按提示回答 &lt;code&gt;yes&lt;/code&gt; 后，Terraform 将为你创建虚拟机以及其他云资源（网络，安全组，以及其他各种玩意）。&lt;/p&gt;
+&lt;p&gt;执行结束时，管理员节点的IP地址将被打印出来，你可以登录并开始完成 Pigsty 本身的&lt;a href=&#34;/zh/docs/setup/install&#34;&gt;安装&lt;/a&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

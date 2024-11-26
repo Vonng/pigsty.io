@@ -1,0 +1,601 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – 安装使用</title>
+    <link>/zh/docs/pgext/usage/</link>
+    <description>Recent content in 安装使用 on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    
+	  <atom:link href="/zh/docs/pgext/usage/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: 快速上手</title>
+      <link>/zh/docs/pgext/usage/intro/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/intro/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 让您可以直接在 &lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;strong&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 集群中，通过声明式的方式启用 PostgreSQL 插件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;概览&#34;&gt;概览&lt;/h2&gt;
+&lt;p&gt;通常想要在一套 PostgreSQL 集群中使用插件，涉及到 &lt;a href=&#34;/zh/docs/pgext/usage/download/&#34;&gt;&lt;strong&gt;下载&lt;/strong&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgext/usage/install/&#34;&gt;&lt;strong&gt;安装&lt;/strong&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgext/usage/load/&#34;&gt;&lt;strong&gt;加载&lt;/strong&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgext/usage/create/&#34;&gt;&lt;strong&gt;启用&lt;/strong&gt;&lt;/a&gt; 四个核心问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgext/usage/download/&#34;&gt;&lt;strong&gt;怎样下载扩展&lt;/strong&gt;&lt;/a&gt;：&lt;a href=&#34;/zh/docs/reference/param#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; &amp;amp; &lt;a href=&#34;/zh/docs/reference/param#repo_pacakges&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_packages&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;在 Pigsty 默认在线安装时，已经默认下载了当前首要PG大版本（16）可用的所有扩展，如果不需要添加额外或者冷门扩展，通常都不需要您操心 &lt;code&gt;repo_upstream&lt;/code&gt; 与 &lt;code&gt;repo_packages&lt;/code&gt; 以及扩展下载相关的问题。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgext/usage/install/&#34;&gt;&lt;strong&gt;安装哪些扩展&lt;/strong&gt;&lt;/a&gt;：&lt;a href=&#34;/zh/docs/reference/param#pg_extensions&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_extensions&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; &amp;amp; &lt;a href=&#34;/zh/docs/reference/param#pg_packages&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_packages&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;在 Pigsty 配置模板中的样例集群中，已经提供了完整可用的扩展清单，您只需要将想要 &lt;strong&gt;安装&lt;/strong&gt; 的扩展，添加到 &lt;code&gt;pg_packages&lt;/code&gt; 与 &lt;code&gt;pg_extensions&lt;/code&gt; 中即可。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgext/usage/load/&#34;&gt;&lt;strong&gt;加载哪些扩展&lt;/strong&gt;&lt;/a&gt;：&lt;a href=&#34;/zh/docs/reference/param#pg_libs&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_libs&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;一小部分使用了 PostgreSQL HOOK 的扩展需要动态加载并重启数据库后才可以使用，您需要将这些扩展添加到 &lt;code&gt;pg_libs&lt;/code&gt; 中，并在重启加载后生效。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgext/usage/create/&#34;&gt;&lt;strong&gt;启用哪些扩展&lt;/strong&gt;&lt;/a&gt;：&lt;a href=&#34;/zh/docs/pgsql/db&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_databases.extensions&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;绝大多数扩展在安装之后，都需要执行 &lt;code&gt;CREATE EXTENSION&lt;/code&gt; DDL 语句，才会真实在具体的数据库中被创建并启用。您可以手工执行此 DDL，或者在 &lt;code&gt;pg_datbasese.extensions&lt;/code&gt; 中显式指定，则数据库会在初始化的时候自动启用这些扩展。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;开箱即用&#34;&gt;开箱即用&lt;/h2&gt;
+&lt;p&gt;Pigsty 为用户封装了扩展管理的复杂度，您不需要知道这些扩展的 RPM 包名，也不需要知道如何下载，安装，加载，启用这些扩展，只需要在配置文件中声明您需要的扩展即可。&lt;/p&gt;
+&lt;p&gt;例如，下面的配置文件片段声明了一个 PostgreSQL 集群，&lt;a href=&#34;/zh/docs/pgext/usage/install/&#34;&gt;安装&lt;/a&gt; 了所有可用的扩展插件，动态 &lt;a href=&#34;/zh/docs/pgext/usage/load/&#34;&gt;&lt;strong&gt;加载&lt;/strong&gt;&lt;/a&gt; 了三个扩展，并 &lt;a href=&#34;/zh/docs/pgext/usage/create/&#34;&gt;&lt;strong&gt;启用&lt;/strong&gt;&lt;/a&gt; 了三个扩展。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_databases&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;postgis     }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;timescaledb }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;vector      }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_libs&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;timescaledb, pg_stat_statements, auto_explain&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;timescaledb periods temporal_tables emaj table_version pg_cron pg_later pg_background pg_timetable                        &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[TIME]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;postgis pgrouting pointcloud pg_h3 q3c ogr_fdw geoip                                                                       &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[GIS]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pgvector pgvectorscale pg_vectorize pg_similarity pg_tiktoken pgml                                                         &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[RAG]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_search pg_bigm zhparser hunspell                                                                                        &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[FTS]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;hydra pg_lakehouse duckdb_fdw pg_fkpart pg_partman plproxy #citus pg_strom                                                &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[OLAP]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;age hll rum pg_graphql pg_jsonschema jsquery pg_hint_plan hypopg imgsmlr pg_ivm pgmq pgq                                  &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[FEAT]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_tle plv8 pllua plprql pldebugger plpgsql_check plprofiler plsh pljava #plr faker pgtap                                 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[LANG]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;prefix semver pgmp pguint pgunit roaringbitmap md5hash asn1oid numeral pg_rational ip4r pgsphere pgfaceting timestamp9     #[TYPE]# #[FUNC]# #[ADMIN]# #[STAT]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[SEC]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_gzip pg_http topn pg_net pgjwt shacrypt pgsql_tweaks pg_extra_time count_distinct extra_window_functions first_last_agg tdigest pgpcre icu_ext pg_idkit pg_hashids pg_uuidv7 permuteseq sequential_uuids&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_repack pg_squeeze pg_dirtyread pgfincore pgdd ddlx pg_prioritize pg_checksums pg_readonly safeupdate pg_permissions pg_auto_failover preprepare pg_catcheck&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pg_profile pg_show_plans pg_stat_kcache pg_stat_monitor pg_qualstats pg_store_plans pg_track_settings pg_wait_sampling system_stats bgw_replstatus pg_sqlog powa pgmeminfo toastinfo&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;passwordcheck supautils pgsodium pg_vault anonymizer pg_tde pgsmcrypto pgaudit pgauditlogtofile pg_auth_mon credcheck pgcryptokey pg_jobmon logerrors login_hook set_user tablelog pg_snakeoil pgextwlist&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;wrappers multicorn mongo_fdw mysql_fdw tds_fdw sqlite_fdw hdfs_fdw pgbouncer_fdw firebird_fdw #oracle_fdw db2_fdw          &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[FDW]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;mysqlcompat pgmemcache pgtt orafce pg_statement_rollback pg_dbms_lock pg_dbms_metadata #pg_dbms_job babelfish              &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[SIM]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;pglogical pgl_ddl_deploy decoderbufs wal2json wal2mongo pg_failover_slots mimeo pg_fact_loader pg_bulkload #repmgr slony   &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[ETL]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;gis-stack rag-stack fdw-stack fts-stack etl-stack feat-stack olap-stack supa-stack stat-stack json-stack                 &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#[STACK]#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;您可能注意到这里的扩展名称既非 RPM / DEB 包名，而是由 Pigsty 封装简化过的 &lt;strong&gt;标准扩展名（Alias）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;在不同的操作系统发行版中，Pigsty 将标准扩展名翻译为对应 PG 大版本的 RPM / DEB 包名，这样您就无需关心不同操作系统发行版的扩展包名差异了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el8.yml&#34;&gt;&lt;strong&gt;EL8 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el9.yml&#34;&gt;&lt;strong&gt;EL9 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/d12.yml&#34;&gt;&lt;strong&gt;D12 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u22.yml&#34;&gt;&lt;strong&gt;U22 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u24.yml&#34;&gt;&lt;strong&gt;U24 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在 Pigsty &lt;a href=&#34;/zh/docs/setup/install#%E9%85%8D%E7%BD%AE&#34;&gt;&lt;code&gt;configure&lt;/code&gt;&lt;/a&gt; 过程中，针对特定操作系统发行版生成的默认配置里已经带有上述清单。
+要安装这些扩展，您只需要根据自己的需求，在配置文件中将需要的扩展取消注释即可。&lt;/p&gt;
+&lt;p&gt;请注意，您依然可以在这里直接使用操作系统特定的 RPM/DEB 包名称。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;预定义的扩展集合&#34;&gt;预定义的扩展集合&lt;/h2&gt;
+&lt;p&gt;如果您不清楚应该安装哪些扩展，Pigsty 为您提供了一些预定义的扩展集合（Stack），您可以根据自己的需求场景，选择其中一个集合与任意组合，将其添加到 &lt;code&gt;pg_extensions&lt;/code&gt; 中即可。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;gis-stack&lt;/code&gt;: 地理空间扩展集合，包括：&lt;code&gt;postgis&lt;/code&gt;, &lt;code&gt;pgrouting&lt;/code&gt;, &lt;code&gt;pointcloud&lt;/code&gt;, &lt;code&gt;h3&lt;/code&gt;, &lt;code&gt;q3c&lt;/code&gt;, &lt;code&gt;ogr_fdw&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;rag-stack&lt;/code&gt;: 向量检索扩展集合，包括：&lt;code&gt;pgvector&lt;/code&gt;, &lt;code&gt;pgvectorscale&lt;/code&gt;, &lt;code&gt;pg_vectorize&lt;/code&gt;, &lt;code&gt;pg_similarity&lt;/code&gt;, &lt;code&gt;pg_tiktoken&lt;/code&gt;, &lt;code&gt;pgml&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fts-stack&lt;/code&gt;: 全文检索扩展集合，包括：&lt;code&gt;pg_search&lt;/code&gt;, &lt;code&gt;pg_bigm&lt;/code&gt;, &lt;code&gt;zhparser&lt;/code&gt;, &lt;code&gt;hunspell&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fdw-stack&lt;/code&gt;: 外部数据扩展集合，包括：&lt;code&gt;wrappers&lt;/code&gt;, &lt;code&gt;mysql_fdw&lt;/code&gt;, &lt;code&gt;tds_fdw&lt;/code&gt;, &lt;code&gt;sqlite_fdw&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etl-stack&lt;/code&gt;: 数据ETL/CDC集合，包括：&lt;code&gt;pglogical&lt;/code&gt;, &lt;code&gt;pgl_ddl_deploy&lt;/code&gt;, &lt;code&gt;wal2json&lt;/code&gt;, &lt;code&gt;wal2mongo&lt;/code&gt;, &lt;code&gt;decoderbufs&lt;/code&gt;, &lt;code&gt;pg_fact_loader&lt;/code&gt;, &lt;code&gt;pg_bulkload&lt;/code&gt;, &lt;code&gt;pgloader&lt;/code&gt;, &lt;code&gt;pgcopydb&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;feat-stack&lt;/code&gt;: 类型函数扩展集合，包括：&lt;code&gt;age&lt;/code&gt;, &lt;code&gt;hll&lt;/code&gt;, &lt;code&gt;rum&lt;/code&gt;, &lt;code&gt;pg_graphql&lt;/code&gt;, &lt;code&gt;pg_jsonschema&lt;/code&gt;, &lt;code&gt;jsquery&lt;/code&gt;, &lt;code&gt;pg_ivm&lt;/code&gt;, &lt;code&gt;pgq3&lt;/code&gt;, &lt;code&gt;gzip&lt;/code&gt;, &lt;code&gt;http&lt;/code&gt;, &lt;code&gt;topn&lt;/code&gt;, &lt;code&gt;pgjwt&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;olap-stack&lt;/code&gt;: 数据仓库OLAP集合，包括：&lt;code&gt;duckdb&lt;/code&gt;, &lt;code&gt;duckdb_fdw&lt;/code&gt;, &lt;code&gt;pg-lakehouse&lt;/code&gt;, &lt;code&gt;hydra&lt;/code&gt;, &lt;code&gt;timescaledb&lt;/code&gt;, &lt;code&gt;pg-fkpart&lt;/code&gt;, &lt;code&gt;pg-partman&lt;/code&gt;, &lt;code&gt;plproxy&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;supa-stack&lt;/code&gt;: Supabase扩展集合，包括：&lt;code&gt;pg-graphql&lt;/code&gt;, &lt;code&gt;pg-jsonschema&lt;/code&gt;, &lt;code&gt;wrappers&lt;/code&gt;, &lt;code&gt;pgvector&lt;/code&gt;, &lt;code&gt;cron&lt;/code&gt;, &lt;code&gt;supautils&lt;/code&gt;, &lt;code&gt;pgsodium&lt;/code&gt;, &lt;code&gt;vault&lt;/code&gt;, &lt;code&gt;pgjwt&lt;/code&gt;, &lt;code&gt;http&lt;/code&gt;, &lt;code&gt;pg-net&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;stat-stack&lt;/code&gt;: 统计监控扩展集合，包括：&lt;code&gt;show-plans&lt;/code&gt;, &lt;code&gt;pg-stat-kcache&lt;/code&gt;, &lt;code&gt;pg-qualstats&lt;/code&gt;, &lt;code&gt;pg-track-settings&lt;/code&gt;, &lt;code&gt;pg-wait-sampling&lt;/code&gt;, &lt;code&gt;pg-sqlog&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;json-stack&lt;/code&gt;: JSON处理扩展集合，包括：&lt;code&gt;plv8&lt;/code&gt;, &lt;code&gt;pg-jsonschema&lt;/code&gt;, &lt;code&gt;pgjwt&lt;/code&gt;, &lt;code&gt;jsquery&lt;/code&gt;, &lt;code&gt;pg-graphql&lt;/code&gt;, &lt;code&gt;ferretdb&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当您在 &lt;code&gt;pg_extensions&lt;/code&gt; 或 &lt;code&gt;pg_packages&lt;/code&gt; 中指定了这些扩展集合时，Pigsty 会自动翻译，展开并安装其中的所有扩展插件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;安装加载与启用&#34;&gt;安装、加载与启用&lt;/h2&gt;
+&lt;p&gt;Pigsty 不仅允许您在配置文件中声明需要安装的扩展，还允许您在配置文件中直接声明需要加载的扩展，以及需要启用的扩展。&lt;/p&gt;
+&lt;p&gt;下面是一个具体的例子：&lt;a href=&#34;https://supabase.com/&#34;&gt;&lt;strong&gt;Supabase&lt;/strong&gt;&lt;/a&gt;。
+Supabase 是一个封装 PostgreSQL 作为底层存储的“上层抽象数据库”，它深度使用了 PostgreSQL 的扩展机制。
+以下是使用 Pigsty 创建一套 Supabase 所需 PostgreSQL 集群的样例配置文件：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# supabase example cluster: pg-meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# this cluster needs to be migrated with app/supabase/migration.sql :&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# psql postgres://supabase_admin:DBUser.Supa@10.10.10.10:5432/supa -v ON_ERROR_STOP=1 --no-psqlrc -f ~pigsty/app/supabase/migration.sql&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-meta&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_users&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: supabase_admin ,password: &amp;#39;DBUser.Supa&amp;#39; ,pgbouncer: true ,inherit: true   ,superuser: true ,replication: true ,createdb: true ,createrole: true ,bypassrls&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_databases&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;supa&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;baseline: supa.sql    # the init-scripts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;https://github.com/supabase/postgres/tree/develop/migrations/db/init-scripts&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;owner&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;supabase_admin&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;comment&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;supabase postgres database&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;schemas&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;extensions ,auth ,realtime ,storage ,graphql_public ,supabase_functions ,_analytics ,_realtime ]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pgcrypto  ,schema: extensions  } # 1.3   &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;cryptographic functions&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pg_net    ,schema: extensions  } # 0.9.2 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;async HTTP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pgjwt     ,schema: extensions  } # 0.2.0 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;json web token API for postgres&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: uuid-ossp ,schema: extensions  } # 1.1   &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;generate universally unique identifiers (UUIDs)&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pgsodium        }                # 3.1.9 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pgsodium is a modern cryptography library for Postgres.&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: supabase_vault  }                # 0.2.8 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;Supabase Vault Extension&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pg_graphql      }                # 1.5.7 : pg_graphql&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;GraphQL support&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: pg_jsonschema   }                # 0.3.1 : pg_jsonschema&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;Validate json schema&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: wrappers        }                # 0.4.1 : wrappers&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;FDW collections&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: http            }                # 1.6   : http&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;allows web page retrieval inside the database.&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;          &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg_cron         }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# supabase required extensions&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_libs&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;pg_net, pg_cron, pg_stat_statements, auto_explain&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# add pg_net to shared_preload_libraries&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;wal2json pg_repack&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;supa-stack&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pgvector pg_cron pgsodium pg_graphql pg_jsonschema wrappers pgjwt pgsql_http pg_net supautils&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_parameters&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;cron.database_name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;supa&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pgsodium.enable_event_trigger&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;off&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_hba_rules&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# supabase hba rules, require access from docker network&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;user: all ,db: supa ,addr: intra       ,auth: pwd ,title&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;allow supa database access from intranet&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;user: all ,db: supa ,addr: 172.0.0.0/8 ,auth: pwd ,title&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;allow supa database access from docker network&amp;#39;&lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;user: all ,db: supa ,addr: all         ,auth: pwd ,title&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;allow supa database access from entire world&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# not safe!&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在这里，我们声明了一个名为 &lt;code&gt;pg-meta&lt;/code&gt; 的 PostgreSQL 集群，它包含了一个名为 &lt;code&gt;supa&lt;/code&gt; 的数据库，以及一系列的扩展插件。&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;pg_extensions&lt;/code&gt; 中定义的 &lt;code&gt;supa-stack&lt;/code&gt; 被翻译为 &lt;code&gt;pgvector pg_cron pgsodium pg_graphql pg_jsonschema wrappers pgjwt pgsql_http pg_net supautils&lt;/code&gt;，并自动安装。
+与此同时，&lt;code&gt;pg_libs&lt;/code&gt; 指定了两个需要动态加载的扩展： &lt;code&gt;pg_net&lt;/code&gt; 与 &lt;code&gt;pg_cron&lt;/code&gt;；此外，&lt;code&gt;pgsodium&lt;/code&gt; 与 &lt;code&gt;pg_cron&lt;/code&gt; 扩展所必须的配置参数，也通过 &lt;code&gt;pg_parameters&lt;/code&gt; 预先指定；
+接下来，这些扩展在 &lt;code&gt;pg_databases.extensions&lt;/code&gt; 中被依次创建到指定的/或默认的 Schema 中，正式启用。&lt;/p&gt;
+&lt;p&gt;最后，这样一个开箱即用，可以直接供无状态 Supabase 容器使用的高可用 PostgreSQL 集群，就能在一行 &lt;code&gt;./pgsql.yml&lt;/code&gt; 命令中被完整拉起，开箱即用。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 下载扩展</title>
+      <link>/zh/docs/pgext/usage/download/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/download/</guid>
+      <description>
+        
+        
+        &lt;p&gt;在 Pigsty 默认安装模式中，扩展插件的下载与安装是分离的。在 &lt;a href=&#34;/zh/docs/pgext/usage/install/&#34;&gt;&lt;strong&gt;安装扩展&lt;/strong&gt;&lt;/a&gt;前 ，您需要确保目标节点上已经添加了相应的软件源，否则安装过程会因为找不到软件包而失败。&lt;/p&gt;
+&lt;p&gt;Pigsty 在安装过程中会下载当前首要PG大版本（16）可用的所有扩展至 &lt;strong&gt;INFRA节点&lt;/strong&gt; ，并构建一个 &lt;strong&gt;本地软件仓库&lt;/strong&gt;，供包括本机在内的所有节点使用。
+这样做可以加速安装，避免重复下载，减少网络流量消耗，提高交付可靠性性，并解决重复安装版本不一致的风险。&lt;/p&gt;
+&lt;p&gt;您也可以选择使用另一种方式：直接在 Pigsty 纳管的目标节点上添加上游 PostgreSQL 软件仓库及其依赖仓库（操作系统软件源）。
+然后直接从互联网上游进行安装，这样做可以方便地将插件更新至最新版本，但要求环境有互联网访问或 HTTP 代理，同时可能会受网络条件影响，并有潜在的安装版本不一致风险。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;软件仓库&#34;&gt;软件仓库&lt;/h2&gt;
+&lt;p&gt;在首次安装过程中，Pigsty 会从 &lt;a href=&#34;/zh/docs/reference/param#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 指定的上游软件仓库中下载 &lt;a href=&#34;/zh/docs/reference/param#repo_pacakges&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_packages&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 指定的软件包。
+EL 系统与 Debian/Ubuntu 系统的软件包名称有所不同，完整列表请参考以下地址：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el8.yml&#34;&gt;&lt;strong&gt;EL8 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el9.yml&#34;&gt;&lt;strong&gt;EL9 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/d12.yml&#34;&gt;&lt;strong&gt;D12 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u22.yml&#34;&gt;&lt;strong&gt;U22 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u24.yml&#34;&gt;&lt;strong&gt;U24 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;极个别插件因为各种原因被排除在外，默认没有下载。如果您需要使用这些扩展，请参考扩展列表里的 RPM / DEB 包名，将其加入到 &lt;a href=&#34;/zh/docs/reference/param#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 中后下载。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;依赖过重：&lt;code&gt;pljava&lt;/code&gt;, &lt;code&gt;plr&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;生态位重叠：&lt;code&gt;repmgr&lt;/code&gt;, &lt;code&gt;pgexporterext&lt;/code&gt;, &lt;code&gt;pgpool&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;EL9 独占：&lt;code&gt;pljava&lt;/code&gt;, &lt;code&gt;sequential_uuids&lt;/code&gt;, &lt;code&gt;firebird_fdw&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;下载扩展&#34;&gt;下载扩展&lt;/h2&gt;
+&lt;p&gt;要想下载新的扩展插件，您可以将其添加至 &lt;a href=&#34;/zh/docs/reference/param#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 中，并执行以下任务更新本地软件仓库，并刷新所有节点的软件源缓存：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./infra.yml -t repo       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新下载指定的软件包至本地软件仓库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./node.yml  -t node_repo  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 刷新所有节点的本地软件仓库元数据缓存 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Pigsty 默认使用位于 &lt;strong&gt;INFRA节点&lt;/strong&gt; 上的本地软件源，如果您不想将这些扩展下载至本地软件源，而是直接使用在线软件仓库进行安装，那么可以直接将上游软件源添加到节点上：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;./node.yml -t node_repo -e node_repo_modules=node,pgsql &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加 Postgres 插件仓库与操作系统软件源（依赖）&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;完成这些任务后，您就可以通过标准操作系统包管理器（yum/apt）的方式，安装 PostgreSQL 扩展插件了。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 扩展仓库</title>
+      <link>/zh/docs/pgext/usage/repo/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/repo/</guid>
+      <description>
+        
+        
+        &lt;hr&gt;
+&lt;h2 id=&#34;yum仓库&#34;&gt;YUM仓库&lt;/h2&gt;
+&lt;p&gt;Pigsty 目前针对 EL 系统提供了补充插件仓库，在官方 PGDG YUM 仓库的基础上提供了 &lt;strong&gt;65&lt;/strong&gt; 个额外的 RPM 插件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Pigsty YUM 仓库: &lt;a href=&#34;https://repo.pigsty.io/yum/&#34;&gt;https://repo.pigsty.io/yum/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PGDG YUM 仓库: &lt;a href=&#34;https://download.postgresql.org/pub/repos/yum/&#34;&gt;https://download.postgresql.org/pub/repos/yum/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pigsty Yum 仓库只收录那些 &lt;strong&gt;不存在于 PGDG Yum 仓库的扩展&lt;/strong&gt;，一旦某个扩展进入 PGDG YUM 仓库，Pigsty Yum 仓库将移除此扩展或与 PGDG 仓库保持一致。&lt;/p&gt;
+&lt;p&gt;对于 EL 7/8/9 及其兼容系统，使用以下命令依次添加 Pigsty 仓库的 GPG 公钥与上游仓库文件：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.io/key      &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty &amp;gt;/dev/null  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加公钥&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.io/yum/repo &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo tee /etc/yum.repos.d/pigsty.repo        &amp;gt;/dev/null  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加仓库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;中国大陆地区的用户，可以使用国内 CDN 镜像 YUM 仓库：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.cc/key      &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo tee /etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty &amp;gt;/dev/null  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加公钥&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.cc/yum/repo &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo tee /etc/yum.repos.d/pigsty.repo        &amp;gt;/dev/null  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加仓库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;所有的 RPM 包都使用指纹为 &lt;code&gt;9592A7BC7A682E7333376E09E7935D8DB9BD8B20&lt;/code&gt; (&lt;code&gt;B9BD8B20&lt;/code&gt;) 的 GPG 密钥进行签名。&lt;/p&gt;
+&lt;details&gt;&lt;summary&gt;手工写入Repo文件&lt;/summary&gt;&lt;br&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo tee /etc/yum.repos.d/pigsty-io.repo &amp;gt; /dev/null &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;-&amp;#39;EOF&amp;#39;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;[pigsty-infra]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name=Pigsty Infra for $basearch
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;baseurl=https://repo.pigsty.io/yum/infra/$basearch
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;skip_if_unavailable = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;enabled = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;priority = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;gpgcheck = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;module_hotfixes=1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;[pigsty-pgsql]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;name=Pigsty PGSQL For el$releasever.$basearch
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;baseurl=https://repo.pigsty.io/yum/pgsql/el$releasever.$basearch
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;skip_if_unavailable = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;enabled = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;priority = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;gpgcheck = 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-pigsty
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;module_hotfixes=1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo yum makecache&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;apt仓库&#34;&gt;APT仓库&lt;/h2&gt;
+&lt;p&gt;Pigsty 目前针对 Debian / Ubuntu 系统提供了补充插件仓库，在官方 PGDG YUM 仓库的基础上提供了 &lt;strong&gt;77&lt;/strong&gt; 个额外的 DEB 插件包。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Pigsty APT 仓库: &lt;a href=&#34;https://repo.pigsty.io/apt/&#34;&gt;https://repo.pigsty.io/apt/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PGDG APT 仓库: &lt;a href=&#34;http://apt.postgresql.org/pub/repos/apt/&#34;&gt;http://apt.postgresql.org/pub/repos/apt/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pigsty APT 仓库只收录那些 &lt;strong&gt;不存在于 PGDG ATP 仓库的扩展&lt;/strong&gt;：一旦某个扩展进入 PGDG APT 仓库，Pigsty APT 仓库将移除此扩展或与 PGDG 仓库保持一致。&lt;/p&gt;
+&lt;p&gt;对于 Debian / Ubuntu 及其兼容系统，使用以下命令依次添加 Pigsty 仓库的 GPG 公钥与上游仓库文件：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 pigsty 的 gpg 公钥添加到你的系统钥匙链中，从而验证软件包签名&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.io/key &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo gpg --dearmor -o /etc/apt/keyrings/pigsty.gpg      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加公钥&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 获取 Debian 发行版代号，distro_codename=jammy, focal, bullseye, bookworm，并将对应上游仓库地址写入 APT List 文件&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;distro_codename&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;$(&lt;/span&gt;lsb_release -cs&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo tee /etc/apt/sources.list.d/pigsty-io.list &amp;gt; /dev/null &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.io/apt/infra generic main 
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.io/apt/pgsql ${distro_codename} main
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 刷新 APT 仓库缓存&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo apt update
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;中国大陆地区的用户，可以使用国内 CDN 镜像 APT 仓库：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将 pigsty 的 gpg 公钥添加到你的系统钥匙链中，从而验证软件包签名&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;curl -fsSL https://repo.pigsty.cc/key &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; sudo gpg --dearmor -o /etc/apt/keyrings/pigsty.gpg      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 添加公钥&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 获取 Debian 发行版代号，distro_codename=jammy, focal, bullseye, bookworm，并将对应上游仓库地址写入 APT List 文件&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;distro_codename&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;$(&lt;/span&gt;lsb_release -cs&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo tee /etc/apt/sources.list.d/pigsty-io.list &amp;gt; /dev/null &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;lt;&amp;lt;EOF
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.cc/apt/infra generic main 
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.cc/apt/pgsql/${distro_codename} ${distro_codename} main
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;EOF&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 刷新 APT 仓库缓存&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo apt update
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;所有的 DEB 包都使用指纹为 &lt;code&gt;9592A7BC7A682E7333376E09E7935D8DB9BD8B20&lt;/code&gt; (&lt;code&gt;B9BD8B20&lt;/code&gt;) 的 GPG 密钥进行签名。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩展安装&#34;&gt;扩展安装&lt;/h2&gt;
+&lt;p&gt;Pigsty 目前针对 EL 系统提供了补充插件仓库，在官方 PGDG YUM 仓库的基础上提供了 &lt;strong&gt;65&lt;/strong&gt; 个额外的 RPM 插件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Pigsty YUM 仓库: &lt;a href=&#34;https://repo.pigsty.io/yum/&#34;&gt;https://repo.pigsty.io/yum/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PGDG YUM 仓库: &lt;a href=&#34;https://download.postgresql.org/pub/repos/yum/&#34;&gt;https://download.postgresql.org/pub/repos/yum/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pigsty Yum 仓库只收录那些 &lt;strong&gt;不存在于 PGDG Yum 仓库的扩展&lt;/strong&gt;，一旦某个扩展进入 PGDG YUM 仓库，Pigsty Yum 仓库将移除此扩展或与 PGDG 仓库保持一致。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 安装扩展</title>
+      <link>/zh/docs/pgext/usage/install/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/install/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 使用操作系统标准的包管理器（yum/apt）来安装 PostgreSQL 扩展插件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;扩展安装相关参数&#34;&gt;扩展安装相关参数&lt;/h2&gt;
+&lt;p&gt;您可以在以下变量中指定要安装哪些扩展，两者的效果基本相同：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/reference/param#pg_packages&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_packages&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/reference/param#pg_extensions&#34;&gt;&lt;strong&gt;&lt;code&gt;pg_extensions&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;通常 &lt;code&gt;pg_packages&lt;/code&gt; 用于在全局指定整个环境中所有 PostgreSQL 集群都需要统一安装的软件包：
+例如 PostgreSQL 内核，高可用组建 Patroni，连接池 pgBouncer，监控 pgExporter 等。
+Pigsty 默认也会在这里指定安装两个必选扩展： &lt;code&gt;pg_repack&lt;/code&gt; 和 &lt;code&gt;wal2json&lt;/code&gt; 用于膨胀治理和 CDC 变更抽取。&lt;/p&gt;
+&lt;p&gt;而 &lt;code&gt;pg_extensions&lt;/code&gt; 则通常用于在特定集群中，指定本集群需要安装的扩展插件。
+Pigsty 默认安装三个PG生态的重要扩展：&lt;code&gt;postgis&lt;/code&gt;, &lt;code&gt;timescaledb&lt;/code&gt;, &lt;code&gt;pgvector&lt;/code&gt;，您可以在这里指定需要安装的其他扩展插件。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_packages&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                      &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg packages to be installed, alias can be used&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;postgresql&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;patroni pgbouncer pgbackrest pg_exporter pgbadger vip-manager wal2json pg_repack&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_extensions&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pg extensions to be installed, alias can be used&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- &lt;span style=&#34;color:#000&#34;&gt;postgis timescaledb pgvector&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;另一个重要区别是：&lt;code&gt;pg_packages&lt;/code&gt; 安装的软件包只确保存在，而 &lt;code&gt;pg_extensions&lt;/code&gt; 安装的软件包会默认升级到最新可用版本。
+当使用本地软件源时，这并不是一个问题。当您直接使用互联网上游软件源时，请充分考虑这一点，并将不希望升级的扩展插件转移到 &lt;code&gt;pg_packages&lt;/code&gt; 中。&lt;/p&gt;
+&lt;p&gt;在 PGSQL 集群初始化时，Pigsty 会自动安装 &lt;code&gt;pg_packages&lt;/code&gt; 和 &lt;code&gt;pg_extensions&lt;/code&gt; 中指定的扩展插件。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;在已有集群上安装扩展&#34;&gt;在已有集群上安装扩展&lt;/h2&gt;
+&lt;p&gt;对于一个已经完成置备初始化的 PostgreSQL 集群，您可以首先将所需的扩展添加至 &lt;code&gt;pg_packages&lt;/code&gt; 或 &lt;code&gt;pg_extensions&lt;/code&gt; 中，然后通过以下命令安装扩展：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_extension  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 pg_extensions 中指定的扩展插件&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;扩展名翻译机制&#34;&gt;扩展名翻译机制&lt;/h2&gt;
+&lt;p&gt;在 Pigsty 中，您可以在 &lt;code&gt;pg_packages&lt;/code&gt; 和 &lt;code&gt;pg_extensions&lt;/code&gt; 中使用：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;原始的操作系统包名&lt;/li&gt;
+&lt;li&gt;标准扩展名（Alias）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;例如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;postgis                    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装当前 PG 大版本对应的 PostGIS 包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;postgis34_&lt;span style=&#34;color:#000&#34;&gt;$v&lt;/span&gt;*              &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装当前 PG 大版本对应的 PostGIS RPM 包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;postgis34_15*              &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 PG 15 大版本对应的 PostGIS RPM 包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;postgresql-&lt;span style=&#34;color:#000&#34;&gt;$v&lt;/span&gt;-postgis-3*   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装当前 PG 大版本对应的 PostGIS DEB 包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;postgresql-14-postgis-3*   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 安装 PG 14 大版本对应的 PostGIS DEB 包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我们建议使用 Pigsty 提供的标准化扩展名（Alias），在不同的操作系统发行版中，Pigsty 将标准扩展名翻译为对应 PG 大版本的 RPM / DEB 包名，这样用户可以无需关心不同操作系统发行版的扩展包名差异：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el8.yml&#34;&gt;&lt;strong&gt;EL8 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/el9.yml&#34;&gt;&lt;strong&gt;EL9 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/d12.yml&#34;&gt;&lt;strong&gt;D12 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u22.yml&#34;&gt;&lt;strong&gt;U22 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/node_id/vars/u24.yml&#34;&gt;&lt;strong&gt;U24 扩展列表&lt;/strong&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pigsty 尽最大努力对齐 EL 操作系统与 Debian 操作系统生态的 PostgreSQL 扩展，但仍有少量扩展因为各种原因难以/尚未移植，
+请参考 &lt;a href=&#34;/zh/docs/pgext/list/rpm&#34;&gt;RPM扩展列表&lt;/a&gt; 与 &lt;a href=&#34;/zh/docs/pgext/list/deb&#34;&gt;DEB扩展列表&lt;/a&gt; 了解更多信息。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 加载扩展</title>
+      <link>/zh/docs/pgext/usage/load/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/load/</guid>
+      <description>
+        
+        
+        &lt;p&gt;安装 PostgreSQL 扩展后，您便可以在 PostgreSQL 的 &lt;code&gt;pg_available_extensions&lt;/code&gt; 视图中看到它们。&lt;/p&gt;
+&lt;p&gt;除了纯 SQL 编写的扩展外，绝大多数扩展都会提供一个 &lt;code&gt;.so&lt;/code&gt; 文件，这是一个动态连接库文件。&lt;/p&gt;
+&lt;p&gt;大部分扩展并不需要显式加载，只需要通过 &lt;code&gt;CREATE EXTENSION&lt;/code&gt; 启用即可。
+但一小部分扩展使用 PostgreSQL 的 Hook 机制，这些扩展必须通过 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 参数预先加载，并重启 PostgreSQL 后才能生效。
+如果您在未加载/重启生效的情况下直接执行 &lt;code&gt;CREATE EXTENSION&lt;/code&gt; 会报错。&lt;/p&gt;
+&lt;p&gt;在 Pigsty 中，您可以在集群的 &lt;a href=&#34;/zh/docs/reference/param#pg_libs&#34;&gt;&lt;code&gt;pg_libs&lt;/code&gt;&lt;/a&gt; 参数中预先指定集群需要加载的扩展，或者在集群初始化后 &lt;a href=&#34;/zh/docs/pgsql/admin#%E9%85%8D%E7%BD%AE%E9%9B%86%E7%BE%A4&#34;&gt;&lt;strong&gt;修改集群配置&lt;/strong&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;需要加载的扩展&#34;&gt;需要加载的扩展&lt;/h2&gt;
+&lt;p&gt;在 &lt;a href=&#34;/zh/docs/pgext/list&#34;&gt;扩展列表&lt;/a&gt; 中，带有 &lt;code&gt;LOAD&lt;/code&gt; 标记的扩展，即为需要动态加载并重启的扩展，包括：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;扩展名&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;标准名&lt;/th&gt;
+&lt;th style=&#34;text-align:left&#34;&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/timescale/timescaledb&#34;&gt;&lt;code&gt;timescaledb&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/time/timescaledb&#34;&gt;timescaledb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;时序数据库扩展插件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/postgresml/postgresml&#34;&gt;&lt;code&gt;pgml&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/rag/pgml&#34;&gt;pgml&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;PostgresML：用SQL运行机器学习算法并训练模型&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/citusdata/citus&#34;&gt;&lt;code&gt;citus&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/olap/citus&#34;&gt;citus&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;Citus 分布式数据库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/cybertec-postgresql/pg_squeeze&#34;&gt;&lt;code&gt;pg_squeeze&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/admin/pg_squeeze&#34;&gt;pg_squeeze&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;从关系中删除未使用空间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/hapostgres/pg_auto_failover&#34;&gt;&lt;code&gt;pgautofailover&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/admin/pgautofailover&#34;&gt;pgautofailover&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;PG 自动故障迁移&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/pgprewarm.html&#34;&gt;&lt;code&gt;pg_prewarm&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/admin/pg_prewarm&#34;&gt;pg_prewarm&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;预热关系数据&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/powa-team/pg_stat_kcache&#34;&gt;&lt;code&gt;pg_stat_kcache&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/stat/pg_stat_kcache&#34;&gt;pg_stat_kcache&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;内核统计信息收集&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/mhagander/bgw_replstatus&#34;&gt;&lt;code&gt;bgw_replstatus&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/stat/bgw_replstatus&#34;&gt;bgw_replstatus&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;用于汇报本机主从状态的后台工作进程&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/auto-explain.html&#34;&gt;&lt;code&gt;auto_explain&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/stat/auto_explain&#34;&gt;auto_explain&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;提供一种自动记录执行计划的手段&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/pgstatstatements.html&#34;&gt;&lt;code&gt;pg_stat_statements&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/stat/pg_stat_statements&#34;&gt;pg_stat_statements&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;跟踪所有执行的 SQL 语句的计划和执行统计信息&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/devrimgunduz/passwordcheck_cracklib&#34;&gt;&lt;code&gt;passwordcheck_cracklib&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/passwordcheck&#34;&gt;passwordcheck&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;使用cracklib加固PG用户密码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/supabase/supautils&#34;&gt;&lt;code&gt;supautils&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/supautils&#34;&gt;supautils&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;用于在云环境中确保数据库集群的安全&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/Percona-Lab/pg_tde&#34;&gt;&lt;code&gt;pg_tde&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/pg_tde&#34;&gt;pg_tde&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;试点性质的加密存储引擎&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/pgaudit/pgaudit&#34;&gt;&lt;code&gt;pgaudit&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/pgaudit&#34;&gt;pgaudit&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;提供审计功能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/credativ/pg_snakeoil&#34;&gt;&lt;code&gt;pg_snakeoil&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/pg_snakeoil&#34;&gt;pg_snakeoil&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;PostgreSQL动态链接库反病毒功能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/dimitri/pgextwlist&#34;&gt;&lt;code&gt;pgextwlist&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/pgextwlist&#34;&gt;pgextwlist&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;PostgreSQL扩展白名单功能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/sepgsql.html&#34;&gt;&lt;code&gt;sepgsql&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/sepgsql&#34;&gt;sepgsql&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;基于SELinux标签的强制访问控制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/auth-delay.html&#34;&gt;&lt;code&gt;auth_delay&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/auth_delay&#34;&gt;auth_delay&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;在返回认证失败前暂停一会，避免爆破&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://www.postgresql.org/docs/current/passwordcheck.html&#34;&gt;&lt;code&gt;passwordcheck&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sec/passwordcheck&#34;&gt;passwordcheck&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;用于强制拒绝修改弱密码的扩展&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://github.com/lzlabs/pg_statement_rollback&#34;&gt;&lt;code&gt;pg_statement_rollback&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sim/pg_statement_rollback&#34;&gt;pg_statement_rollback&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;在服务端提供类似Oracle/DB2的语句级回滚能力&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;https://babelfishpg.org/&#34;&gt;&lt;code&gt;babelfishpg_tsql&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;&lt;a href=&#34;/zh/docs/pgext/sim/babelfishpg_tsql&#34;&gt;babelfishpg_tsql&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:left&#34;&gt;SQL Server SQL语法兼容性扩展&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;加载顺序&#34;&gt;加载顺序&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 中，如果有多个扩展插件需要加载，可以使用逗号分隔，例如：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;&#39;timescaledb, pg_stat_statements, auto_explain&#39;&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;请注意，Citus 和 TimescaleDB 这两个扩展显式提出要求，要在 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 中预先加载，也就是放在最前面。&lt;/p&gt;
+&lt;p&gt;虽然同时使用 Citus 与 TimescaleDB 的情况非常罕见，但在这种情况中，建议将 &lt;code&gt;citus&lt;/code&gt; 放在 &lt;code&gt;timescaledb&lt;/code&gt; 之前。&lt;/p&gt;
+&lt;p&gt;Pigsty 默认会加载两个扩展：&lt;code&gt;pg_stat_statements&lt;/code&gt; 与 &lt;code&gt;auto_explain&lt;/code&gt;，这两个扩展对于优化数据库性能非常实用，强烈建议安装。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 启用扩展</title>
+      <link>/zh/docs/pgext/usage/create/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/create/</guid>
+      <description>
+        
+        
+        &lt;hr&gt;
+&lt;h2 id=&#34;列出可用扩展&#34;&gt;列出可用扩展&lt;/h2&gt;
+&lt;p&gt;安装 PostgreSQL 扩展后，您可以在 PostgreSQL 的 &lt;code&gt;pg_available_extensions&lt;/code&gt; 视图中看到它们。但想要实际启用扩展，通常还需要额外的步骤：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;一部分扩展要求被添加到 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 中动态加载，例如 &lt;code&gt;timescaledb&lt;/code&gt;，&lt;code&gt;citus&lt;/code&gt; 等。&lt;/li&gt;
+&lt;li&gt;大部分扩展都需要通过 SQL 语句：&lt;code&gt;CREATE EXTENSION &amp;lt;name&amp;gt;;&lt;/code&gt; 启用，极少量扩展不需要，例如 &lt;code&gt;wal2json&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;修改 &lt;code&gt;shared_preload_libraries&lt;/code&gt;：
+&lt;ul&gt;
+&lt;li&gt;在数据库集群初始化前，可以通过 &lt;a href=&#34;/zh/docs/reference/param#pg_libs&#34;&gt;&lt;code&gt;pg_libs&lt;/code&gt;&lt;/a&gt; 参数手工预先指定；&lt;/li&gt;
+&lt;li&gt;当数据库已经初始化完毕后，您可以修改&lt;a href=&#34;/zh/docs/pgsql/admin#%E9%85%8D%E7%BD%AE%E9%9B%86%E7%BE%A4&#34;&gt;集群配置&lt;/a&gt;，直接修改 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 参数并应用（无需重启）。&lt;/li&gt;
+&lt;li&gt;需要动态加载的典型插件：&lt;code&gt;citus&lt;/code&gt;, &lt;code&gt;timescaledb&lt;/code&gt;, &lt;code&gt;pg_cron&lt;/code&gt;, &lt;code&gt;pg_net&lt;/code&gt;, &lt;code&gt;pg_tle&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;执行 &lt;code&gt;CREATE EXTENSION&lt;/code&gt;：
+&lt;ul&gt;
+&lt;li&gt;在数据库集群初始化前，可以在 &lt;a href=&#34;/zh/docs/reference/param#pg_databases&#34;&gt;&lt;code&gt;pg_databases&lt;/code&gt;&lt;/a&gt;.&lt;code&gt;extensions&lt;/code&gt; 列表中指定。&lt;/li&gt;
+&lt;li&gt;当数据库已经初始化完毕后，您可以直接连接数据库执行此 SQL 命令，或使用其他模式变更工具管理扩展。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;从原理上讲：PostgreSQL 的扩展通常由 Control文件（元数据，一定存在），SQL文件（SQL语句，可选），So文件（二进制动态连接库，可选）三部分组成。
+提供 &lt;code&gt;.so&lt;/code&gt; 文件的扩展有可能需要添加到 &lt;code&gt;shared_preload_libraries&lt;/code&gt; 才能生效，例如 &lt;code&gt;citus&lt;/code&gt; 与 &lt;code&gt;timescaledb&lt;/code&gt;，但也有许多扩展不用，例如 &lt;code&gt;postgis&lt;/code&gt;，&lt;code&gt;pgvector&lt;/code&gt;。
+不通过 SQL 接口对外服务的扩展不需要执行 &lt;code&gt;CREATE EXTENSION&lt;/code&gt;，例如提供 CDC 抽取能力的 &lt;code&gt;wal2json&lt;/code&gt; 扩展。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在您希望启用扩展的数据库中执行 &lt;code&gt;CREATE EXTENSION&lt;/code&gt; SQL 语句，即可完成扩展的创建：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;vector&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- 安装向量数据库扩展
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;hydra&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;-- 安装列存数据库扩展
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 更新扩展</title>
+      <link>/zh/docs/pgext/usage/update/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/update/</guid>
+      <description>
+        
+        
+        
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 卸载扩展</title>
+      <link>/zh/docs/pgext/usage/remove/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/remove/</guid>
+      <description>
+        
+        
+        &lt;p&gt;要卸载某个扩展，通常需要执行以下步骤：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DROP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&amp;lt;extname&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，如果有其他扩展，或者使用此扩展的数据库对象依赖，您需要首先卸载/删除这些依赖，然后再卸载此扩展；&lt;/p&gt;
+&lt;p&gt;或者，也可以使用以下语句一次性强制卸载扩展及其依赖：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;DROP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&amp;lt;extname&amp;gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CASCADE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;注意：&lt;code&gt;CASCADE&lt;/code&gt; 选项会删除依赖于此扩展的所有对象，包括数据库对象、函数、视图等，慎用！&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;如果您希望移除扩展的软件包，可以操作系统的包管理器进行卸载：&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 预定义扩展栈</title>
+      <link>/zh/docs/pgext/usage/stack/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/pgext/usage/stack/</guid>
+      <description>
+        
+        
+        
+      </description>
+    </item>
+    
+  </channel>
+</rss>

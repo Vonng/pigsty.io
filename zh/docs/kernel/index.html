@@ -1,0 +1,1378 @@
+<!doctype html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh" class="no-js">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="alternate" type="application/rss&#43;xml" href="/zh/docs/kernel/index.xml">
+<link rel="alternate" type="text/html" href="/zh/docs/kernel/_print/">
+<meta name="robots" content="index, follow">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>内核：PGSQL | Pigsty</title>
+<meta name="description" content="如何在 Pigsty 中使用其他 PostgreSQL 内核分支？例如 Citus， Babelfish，IvorySQL， PolarDB 与 Neon">
+<meta property="og:title" content="内核：PGSQL" />
+<meta property="og:description" content="如何在 Pigsty 中使用其他 PostgreSQL 内核分支？例如 Citus， Babelfish，IvorySQL， PolarDB 与 Neon" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="/zh/docs/kernel/" />
+
+<meta itemprop="name" content="内核：PGSQL">
+<meta itemprop="description" content="如何在 Pigsty 中使用其他 PostgreSQL 内核分支？例如 Citus， Babelfish，IvorySQL， PolarDB 与 Neon"><meta name="twitter:card" content="summary"/><meta name="twitter:title" content="内核：PGSQL"/>
+<meta name="twitter:description" content="如何在 Pigsty 中使用其他 PostgreSQL 内核分支？例如 Citus， Babelfish，IvorySQL， PolarDB 与 Neon"/>
+
+
+
+
+<link rel="preload" href="/scss/main.min.194607c777ee31a481a26dfc3d1c65134dfc8eb296a0aae9d353b3bd5be6a683.css" as="style">
+<link href="/scss/main.min.194607c777ee31a481a26dfc3d1c65134dfc8eb296a0aae9d353b3bd5be6a683.css" rel="stylesheet" integrity="">
+
+<script
+  src="/js/jquery-3.6.3.min.js"
+  integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
+  crossorigin="anonymous"></script>
+<script defer
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-LG1V9WTKGE"></script>
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
+	gtag('config', 'G-LG1V9WTKGE');
+}
+</script>
+  </head>
+  <body class="td-section">
+    <header>
+      <nav class="td-navbar navbar-dark js-navbar-scroll">
+<div class="container-fluid flex-column flex-md-row">
+  <a class="navbar-brand" href="/zh/"><span class="navbar-brand__logo navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="navbar-brand__name">Pigsty</span></a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link active" href="/zh/docs/"><i class='fa-solid fa-book'></i><span>文档</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="/zh/blog/"><i class="fas fa-blog"></i><span>博客</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" rel="noopener"><i class='fab fa-github'></i><span>GitHub</span></a>
+      </li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Link</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/">v3 Docs</a></li>
+    <li><a class="dropdown-item" href="https://demo.pigsty.cc">Public Demo</a></li>
+    <li><a class="dropdown-item" href="https://ext.pigsty.io">Extension Repo</a></li>
+    <li><a class="dropdown-item" href="https://pigsty.cc/zh/docs">pigsty.cc</a></li>
+    <li><a class="dropdown-item" href="https://pigsty.cc/zh/blog">ZH Blog</a></li>
+    </ul>
+</div></li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/kernel/">English</a></li>
+    </ul>
+</div>
+</li>
+      </ul>
+  </div>
+  <div class="d-none d-lg-block">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.e20cef2c1fb59d65c1649f8d99b8930d.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+  </div>
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <aside class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            <div id="td-sidebar-menu" class="td-sidebar__inner">
+  <form class="td-sidebar__search d-flex align-items-center">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.e20cef2c1fb59d65c1649f8d99b8930d.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  <nav class="td-sidebar-nav collapse foldable-nav" id="td-section-nav">
+    <div class="td-sidebar-nav__section nav-item dropdown d-block d-lg-none">
+      <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/docs/kernel/">English</a></li>
+    </ul>
+</div>
+
+    </div>
+    <ul class="td-sidebar-nav__section pe-md-3 ul-0">
+      <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhdocs-li">
+  <a href="/zh/docs/" title="Pigsty 中文文档 v3.1" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhdocs"><span class="">文档</span></a>
+  <ul class="ul-1">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocssetup-li">
+  <input type="checkbox" id="m-zhdocssetup-check"/>
+  <label for="m-zhdocssetup-check"><a href="/zh/docs/setup/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocssetup"><i class="fas fa-rocket"></i><span class="">快速开始</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupinstall-li">
+  <input type="checkbox" id="m-zhdocssetupinstall-check"/>
+  <label for="m-zhdocssetupinstall-check"><a href="/zh/docs/setup/install/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupinstall"><i class="fa-solid fa-cloud-arrow-down"></i><span class="">安装部署</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupoffline-li">
+  <input type="checkbox" id="m-zhdocssetupoffline-check"/>
+  <label for="m-zhdocssetupoffline-check"><a href="/zh/docs/setup/offline/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupoffline"><i class="fa-solid fa-download"></i><span class="">离线安装</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupslim-li">
+  <input type="checkbox" id="m-zhdocssetupslim-check"/>
+  <label for="m-zhdocssetupslim-check"><a href="/zh/docs/setup/slim/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupslim"><i class="fa-solid fa-minimize"></i><span class="">精简安装</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupconfig-li">
+  <input type="checkbox" id="m-zhdocssetupconfig-check"/>
+  <label for="m-zhdocssetupconfig-check"><a href="/zh/docs/setup/config/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupconfig"><i class="fa-solid fa-code"></i><span class="">声明配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupprepare-li">
+  <input type="checkbox" id="m-zhdocssetupprepare-check"/>
+  <label for="m-zhdocssetupprepare-check"><a href="/zh/docs/setup/prepare/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupprepare"><i class="fa-solid fa-calculator"></i><span class="">准备工作</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupplaybook-li">
+  <input type="checkbox" id="m-zhdocssetupplaybook-check"/>
+  <label for="m-zhdocssetupplaybook-check"><a href="/zh/docs/setup/playbook/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupplaybook"><i class="fa-solid fa-scroll"></i><span class="">执行剧本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupprovision-li">
+  <input type="checkbox" id="m-zhdocssetupprovision-check"/>
+  <label for="m-zhdocssetupprovision-check"><a href="/zh/docs/setup/provision/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupprovision"><i class="fa-solid fa-server"></i><span class="">置备机器</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupsecurity-li">
+  <input type="checkbox" id="m-zhdocssetupsecurity-check"/>
+  <label for="m-zhdocssetupsecurity-check"><a href="/zh/docs/setup/security/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupsecurity"><i class="fas fa-shield-halved"></i><span class="">安全考量</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssetupfaq-li">
+  <input type="checkbox" id="m-zhdocssetupfaq-check"/>
+  <label for="m-zhdocssetupfaq-check"><a href="/zh/docs/setup/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssetupfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsabout-li">
+  <input type="checkbox" id="m-zhdocsabout-check"/>
+  <label for="m-zhdocsabout-check"><a href="/zh/docs/about/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsabout"><i class="fa-solid fa-circle-info"></i><span class="">关于Pigsty</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutfeature-li">
+  <input type="checkbox" id="m-zhdocsaboutfeature-check"/>
+  <label for="m-zhdocsaboutfeature-check"><a href="/zh/docs/about/feature/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutfeature"><i class="fa-solid fa-wand-magic-sparkles"></i><span class="">亮点特性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutmodule-li">
+  <input type="checkbox" id="m-zhdocsaboutmodule-check"/>
+  <label for="m-zhdocsaboutmodule-check"><a href="/zh/docs/about/module/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutmodule"><i class="fa-solid fa-boxes-stacked"></i><span class="">模块列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutroadmap-li">
+  <input type="checkbox" id="m-zhdocsaboutroadmap-check"/>
+  <label for="m-zhdocsaboutroadmap-check"><a href="/zh/docs/about/roadmap/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutroadmap"><i class="fas fa-map"></i><span class="">发展规划</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsabouthistory-li">
+  <input type="checkbox" id="m-zhdocsabouthistory-check"/>
+  <label for="m-zhdocsabouthistory-check"><a href="/zh/docs/about/history/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsabouthistory"><i class="fa-solid fa-clock-rotate-left"></i><span class="">历史沿革</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutevent-li">
+  <input type="checkbox" id="m-zhdocsaboutevent-check"/>
+  <label for="m-zhdocsaboutevent-check"><a href="/zh/docs/about/event/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutevent"><i class="fa-regular fa-newspaper"></i><span class="">活动新闻</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutcommunity-li">
+  <input type="checkbox" id="m-zhdocsaboutcommunity-check"/>
+  <label for="m-zhdocsaboutcommunity-check"><a href="/zh/docs/about/community/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutcommunity"><i class="fas fa-user-group"></i><span class="">加入社区</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutprivacy-li">
+  <input type="checkbox" id="m-zhdocsaboutprivacy-check"/>
+  <label for="m-zhdocsaboutprivacy-check"><a href="/zh/docs/about/privacy/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutprivacy"><i class="fas fa-fingerprint"></i><span class="">隐私政策</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutlicense-li">
+  <input type="checkbox" id="m-zhdocsaboutlicense-check"/>
+  <label for="m-zhdocsaboutlicense-check"><a href="/zh/docs/about/license/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutlicense"><i class="fas fa-balance-scale"></i><span class="">开源协议</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutsponsor-li">
+  <input type="checkbox" id="m-zhdocsaboutsponsor-check"/>
+  <label for="m-zhdocsaboutsponsor-check"><a href="/zh/docs/about/sponsor/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutsponsor"><i class="fas fa-heart"></i><span class="">赞助我们</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsaboutservice-li">
+  <input type="checkbox" id="m-zhdocsaboutservice-check"/>
+  <label for="m-zhdocsaboutservice-check"><a href="/zh/docs/about/service/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsaboutservice"><i class="fas fa-briefcase"></i><span class="">订阅服务</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsconcept-li">
+  <input type="checkbox" id="m-zhdocsconcept-check"/>
+  <label for="m-zhdocsconcept-check"><a href="/zh/docs/concept/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsconcept"><i class="fa-solid fa-compass"></i><span class="">核心概念</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptarch-li">
+  <input type="checkbox" id="m-zhdocsconceptarch-check"/>
+  <label for="m-zhdocsconceptarch-check"><a href="/zh/docs/concept/arch/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptarch"><i class="fa-solid fa-archway"></i><span class="">系统架构</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptmodel-li">
+  <input type="checkbox" id="m-zhdocsconceptmodel-check"/>
+  <label for="m-zhdocsconceptmodel-check"><a href="/zh/docs/concept/model/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptmodel"><i class="fa-solid fa-coins"></i><span class="">集群模型</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptca-li">
+  <input type="checkbox" id="m-zhdocsconceptca-check"/>
+  <label for="m-zhdocsconceptca-check"><a href="/zh/docs/concept/ca/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptca"><i class="fa-solid fa-bank"></i><span class="">本地 CA</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptiac-li">
+  <input type="checkbox" id="m-zhdocsconceptiac-check"/>
+  <label for="m-zhdocsconceptiac-check"><a href="/zh/docs/concept/iac/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptiac"><i class="fa-solid fa-file-code"></i><span class="">基础设施即代码</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptha-li">
+  <input type="checkbox" id="m-zhdocsconceptha-check"/>
+  <label for="m-zhdocsconceptha-check"><a href="/zh/docs/concept/ha/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptha"><i class="fa-solid fa-infinity"></i><span class="">数据库高可用</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptpitr-li">
+  <input type="checkbox" id="m-zhdocsconceptpitr-check"/>
+  <label for="m-zhdocsconceptpitr-check"><a href="/zh/docs/concept/pitr/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptpitr"><i class="fa-solid fa-clock-rotate-left"></i><span class="">时间点恢复</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptsvc-li">
+  <input type="checkbox" id="m-zhdocsconceptsvc-check"/>
+  <label for="m-zhdocsconceptsvc-check"><a href="/zh/docs/concept/svc/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptsvc"><i class="fa-solid fa-arrow-down-up-across-line"></i><span class="">服务接入</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconceptac-li">
+  <input type="checkbox" id="m-zhdocsconceptac-check"/>
+  <label for="m-zhdocsconceptac-check"><a href="/zh/docs/concept/ac/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconceptac"><i class="fa-solid fa-lock"></i><span class="">访问控制</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsconf-li">
+  <input type="checkbox" id="m-zhdocsconf-check"/>
+  <label for="m-zhdocsconf-check"><a href="/zh/docs/conf/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsconf"><i class="fa-solid fa-sliders"></i><span class="">配置模板</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfoverview-li">
+  <input type="checkbox" id="m-zhdocsconfoverview-check"/>
+  <label for="m-zhdocsconfoverview-check"><a href="/zh/docs/conf/overview/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfoverview"><i class="fa-solid fa-sliders"></i><span class="">配置总览</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfmeta-li">
+  <input type="checkbox" id="m-zhdocsconfmeta-check"/>
+  <label for="m-zhdocsconfmeta-check"><a href="/zh/docs/conf/meta/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfmeta"><i class="fa-solid fa-dice-one"></i><span class="">单节点：meta</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfrich-li">
+  <input type="checkbox" id="m-zhdocsconfrich-check"/>
+  <label for="m-zhdocsconfrich-check"><a href="/zh/docs/conf/rich/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfrich"><i class="fa-solid fa-dice-one"></i><span class="">单节点：rich</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfpitr-li">
+  <input type="checkbox" id="m-zhdocsconfpitr-check"/>
+  <label for="m-zhdocsconfpitr-check"><a href="/zh/docs/conf/pitr/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfpitr"><i class="fa-solid fa-dice-one"></i><span class="">单节点：pitr</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfdemo-li">
+  <input type="checkbox" id="m-zhdocsconfdemo-check"/>
+  <label for="m-zhdocsconfdemo-check"><a href="/zh/docs/conf/demo/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfdemo"><i class="fa-solid fa-dice-one"></i><span class="">单节点：demo</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfsupa-li">
+  <input type="checkbox" id="m-zhdocsconfsupa-check"/>
+  <label for="m-zhdocsconfsupa-check"><a href="/zh/docs/conf/supa/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfsupa"><i class="fa-solid fa-dice-one"></i><span class="">单节点：supa</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfbare-li">
+  <input type="checkbox" id="m-zhdocsconfbare-check"/>
+  <label for="m-zhdocsconfbare-check"><a href="/zh/docs/conf/bare/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfbare"><i class="fa-solid fa-dice-one"></i><span class="">单节点：bare</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconffull-li">
+  <input type="checkbox" id="m-zhdocsconffull-check"/>
+  <label for="m-zhdocsconffull-check"><a href="/zh/docs/conf/full/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconffull"><i class="fa-solid fa-dice-four"></i><span class="">四节点：full</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfsafe-li">
+  <input type="checkbox" id="m-zhdocsconfsafe-check"/>
+  <label for="m-zhdocsconfsafe-check"><a href="/zh/docs/conf/safe/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfsafe"><i class="fa-solid fa-dice-four"></i><span class="">四节点：safe</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfmssql-li">
+  <input type="checkbox" id="m-zhdocsconfmssql-check"/>
+  <label for="m-zhdocsconfmssql-check"><a href="/zh/docs/conf/mssql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfmssql"><i class="fa-solid fa-dice-four"></i><span class="">四节点：mssql</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfpolar-li">
+  <input type="checkbox" id="m-zhdocsconfpolar-check"/>
+  <label for="m-zhdocsconfpolar-check"><a href="/zh/docs/conf/polar/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfpolar"><i class="fa-solid fa-dice-four"></i><span class="">四节点：polar</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfivory-li">
+  <input type="checkbox" id="m-zhdocsconfivory-check"/>
+  <label for="m-zhdocsconfivory-check"><a href="/zh/docs/conf/ivory/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfivory"><i class="fa-solid fa-dice-four"></i><span class="">四节点：ivory</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfminio-li">
+  <input type="checkbox" id="m-zhdocsconfminio-check"/>
+  <label for="m-zhdocsconfminio-check"><a href="/zh/docs/conf/minio/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfminio"><i class="fa-solid fa-dice-four"></i><span class="">四节点：minio</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfdual-li">
+  <input type="checkbox" id="m-zhdocsconfdual-check"/>
+  <label for="m-zhdocsconfdual-check"><a href="/zh/docs/conf/dual/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfdual"><i class="fa-solid fa-dice-two"></i><span class="">双节点：dual</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfslim-li">
+  <input type="checkbox" id="m-zhdocsconfslim-check"/>
+  <label for="m-zhdocsconfslim-check"><a href="/zh/docs/conf/slim/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfslim"><i class="fa-solid fa-dice-two"></i><span class="">双节点：slim</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconftrio-li">
+  <input type="checkbox" id="m-zhdocsconftrio-check"/>
+  <label for="m-zhdocsconftrio-check"><a href="/zh/docs/conf/trio/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconftrio"><i class="fa-solid fa-dice-three"></i><span class="">三节点：trio</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfoss-li">
+  <input type="checkbox" id="m-zhdocsconfoss-check"/>
+  <label for="m-zhdocsconfoss-check"><a href="/zh/docs/conf/oss/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfoss"><i class="fa-solid fa-dice-five"></i><span class="">五节点：oss</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfext-li">
+  <input type="checkbox" id="m-zhdocsconfext-check"/>
+  <label for="m-zhdocsconfext-check"><a href="/zh/docs/conf/ext/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfext"><i class="fa-solid fa-dice-five"></i><span class="">五节点：ext</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsconfprod-li">
+  <input type="checkbox" id="m-zhdocsconfprod-check"/>
+  <label for="m-zhdocsconfprod-check"><a href="/zh/docs/conf/prod/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsconfprod"><i class="fa-solid fa-dice-four"></i><span class="">36节点：prod</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsreference-li">
+  <input type="checkbox" id="m-zhdocsreference-check"/>
+  <label for="m-zhdocsreference-check"><a href="/zh/docs/reference/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsreference"><i class="fas fa-map"></i><span class="">参考信息</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferencecompatibility-li">
+  <input type="checkbox" id="m-zhdocsreferencecompatibility-check"/>
+  <label for="m-zhdocsreferencecompatibility-check"><a href="/zh/docs/reference/compatibility/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferencecompatibility"><i class="fa-brands fa-redhat"></i><span class="">OS兼容性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferenceparam-li">
+  <input type="checkbox" id="m-zhdocsreferenceparam-check"/>
+  <label for="m-zhdocsreferenceparam-check"><a href="/zh/docs/reference/param/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferenceparam"><i class="fa-solid fa-terminal"></i><span class="">参数列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferenceextension-li">
+  <input type="checkbox" id="m-zhdocsreferenceextension-check"/>
+  <label for="m-zhdocsreferenceextension-check"><a href="/zh/docs/reference/extension/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferenceextension"><i class="fa-brands fa-usb"></i><span class="">扩展列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferencefhs-li">
+  <input type="checkbox" id="m-zhdocsreferencefhs-check"/>
+  <label for="m-zhdocsreferencefhs-check"><a href="/zh/docs/reference/fhs/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferencefhs"><i class="fa-solid fa-folder-tree"></i><span class="">文件结构</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferencecompare-li">
+  <input type="checkbox" id="m-zhdocsreferencecompare-check"/>
+  <label for="m-zhdocsreferencecompare-check"><a href="/zh/docs/reference/compare/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferencecompare"><i class="fa-solid fa-circle-half-stroke"></i><span class="">同类对比</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferencecost-li">
+  <input type="checkbox" id="m-zhdocsreferencecost-check"/>
+  <label for="m-zhdocsreferencecost-check"><a href="/zh/docs/reference/cost/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferencecost"><i class="fa-solid fa-sack-dollar"></i><span class="">成本参考</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreferenceglossary-li">
+  <input type="checkbox" id="m-zhdocsreferenceglossary-check"/>
+  <label for="m-zhdocsreferenceglossary-check"><a href="/zh/docs/reference/glossary/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreferenceglossary"><i class="fa-solid fa-list-ul"></i><span class="">术语列表</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprice-li">
+  <input type="checkbox" id="m-zhdocsprice-check"/>
+  <label for="m-zhdocsprice-check"><a href="/zh/docs/price/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprice"><i class="fas fa-dollar-sign"></i><span class="">服务定价</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspgsql-li">
+  <input type="checkbox" id="m-zhdocspgsql-check"/>
+  <label for="m-zhdocspgsql-check"><a href="/zh/docs/pgsql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspgsql"><i class="fas fa-database"></i><span class="">模块：PGSQL</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlconcept-li">
+  <input type="checkbox" id="m-zhdocspgsqlconcept-check"/>
+  <label for="m-zhdocspgsqlconcept-check"><a href="/zh/docs/pgsql/concept/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlconcept"><i class="fa-solid fa-brain"></i><span class="">概念</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlarch-li">
+  <input type="checkbox" id="m-zhdocspgsqlarch-check"/>
+  <label for="m-zhdocspgsqlarch-check"><a href="/zh/docs/pgsql/arch/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlarch"><i class="fa-solid fa-archway"></i><span class="">架构</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqluser-li">
+  <input type="checkbox" id="m-zhdocspgsqluser-check"/>
+  <label for="m-zhdocspgsqluser-check"><a href="/zh/docs/pgsql/user/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqluser"><i class="fa-solid fa-users"></i><span class="">用户/角色</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqldb-li">
+  <input type="checkbox" id="m-zhdocspgsqldb-check"/>
+  <label for="m-zhdocspgsqldb-check"><a href="/zh/docs/pgsql/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqldb"><i class="fa-solid fa-coins"></i><span class="">数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlsvc-li">
+  <input type="checkbox" id="m-zhdocspgsqlsvc-check"/>
+  <label for="m-zhdocspgsqlsvc-check"><a href="/zh/docs/pgsql/svc/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlsvc"><i class="fa-solid fa-arrow-down-up-across-line"></i><span class="">服务/接入</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlextension-li">
+  <input type="checkbox" id="m-zhdocspgsqlextension-check"/>
+  <label for="m-zhdocspgsqlextension-check"><a href="/zh/docs/pgsql/extension/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlextension"><i class="fa-brands fa-usb"></i><span class="">扩展插件</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlhba-li">
+  <input type="checkbox" id="m-zhdocspgsqlhba-check"/>
+  <label for="m-zhdocspgsqlhba-check"><a href="/zh/docs/pgsql/hba/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlhba"><i class="fa-solid fa-key"></i><span class="">认证 / HBA</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlconfig-li">
+  <input type="checkbox" id="m-zhdocspgsqlconfig-check"/>
+  <label for="m-zhdocspgsqlconfig-check"><a href="/zh/docs/pgsql/config/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlconfig"><i class="fa-solid fa-code"></i><span class="">集群配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlplaybook-li">
+  <input type="checkbox" id="m-zhdocspgsqlplaybook-check"/>
+  <label for="m-zhdocspgsqlplaybook-check"><a href="/zh/docs/pgsql/playbook/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlplaybook"><i class="fa-solid fa-scroll"></i><span class="">剧本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqladmin-li">
+  <input type="checkbox" id="m-zhdocspgsqladmin-check"/>
+  <label for="m-zhdocspgsqladmin-check"><a href="/zh/docs/pgsql/admin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqladmin"><i class="fa-solid fa-building-columns"></i><span class="">管理预案</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlacl-li">
+  <input type="checkbox" id="m-zhdocspgsqlacl-check"/>
+  <label for="m-zhdocspgsqlacl-check"><a href="/zh/docs/pgsql/acl/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlacl"><i class="fa-solid fa-lock"></i><span class="">访问控制</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlpitr-li">
+  <input type="checkbox" id="m-zhdocspgsqlpitr-check"/>
+  <label for="m-zhdocspgsqlpitr-check"><a href="/zh/docs/pgsql/pitr/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlpitr"><i class="fa-solid fa-clock-rotate-left"></i><span class="">备份与PITR</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlmigration-li">
+  <input type="checkbox" id="m-zhdocspgsqlmigration-check"/>
+  <label for="m-zhdocspgsqlmigration-check"><a href="/zh/docs/pgsql/migration/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlmigration"><i class="fa-solid fa-truck-moving"></i><span class="">迁移</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlmonitor-li">
+  <input type="checkbox" id="m-zhdocspgsqlmonitor-check"/>
+  <label for="m-zhdocspgsqlmonitor-check"><a href="/zh/docs/pgsql/monitor/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlmonitor"><i class="fa-solid fa-binoculars"></i><span class="">监控接入</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqldashboard-li">
+  <input type="checkbox" id="m-zhdocspgsqldashboard-check"/>
+  <label for="m-zhdocspgsqldashboard-check"><a href="/zh/docs/pgsql/dashboard/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqldashboard"><i class="fa-solid fa-gauge-simple-high"></i><span class="">监控面板</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlmetric-li">
+  <input type="checkbox" id="m-zhdocspgsqlmetric-check"/>
+  <label for="m-zhdocspgsqlmetric-check"><a href="/zh/docs/pgsql/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlmetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgsqlfaq-li">
+  <input type="checkbox" id="m-zhdocspgsqlfaq-check"/>
+  <label for="m-zhdocspgsqlfaq-check"><a href="/zh/docs/pgsql/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgsqlfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhdocskernel-li">
+  <input type="checkbox" id="m-zhdocskernel-check" checked/>
+  <label for="m-zhdocskernel-check"><a href="/zh/docs/kernel/" class="align-left ps-0  active td-sidebar-link td-sidebar-link__section" id="m-zhdocskernel"><i class="fas fa-gear"></i><span class="td-sidebar-nav-active-item">内核：PGSQL</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelcitus-li">
+  <input type="checkbox" id="m-zhdocskernelcitus-check"/>
+  <label for="m-zhdocskernelcitus-check"><a href="/zh/docs/kernel/citus/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelcitus"><i class="fas fa-lemon"></i><span class="">Citus (Distributive)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelbabelfish-li">
+  <input type="checkbox" id="m-zhdocskernelbabelfish-check"/>
+  <label for="m-zhdocskernelbabelfish-check"><a href="/zh/docs/kernel/babelfish/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelbabelfish"><i class="fab fa-microsoft"></i><span class="">Babelfish (MSSQL)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelivorysql-li">
+  <input type="checkbox" id="m-zhdocskernelivorysql-check"/>
+  <label for="m-zhdocskernelivorysql-check"><a href="/zh/docs/kernel/ivorysql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelivorysql"><i class="fas fa-server"></i><span class="">IvorySQL (Oracle)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelpolardb-li">
+  <input type="checkbox" id="m-zhdocskernelpolardb-check"/>
+  <label for="m-zhdocskernelpolardb-check"><a href="/zh/docs/kernel/polardb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelpolardb"><i class="fas fa-paw"></i><span class="">PolarDB PG (RAC)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelpolardb-o-li">
+  <input type="checkbox" id="m-zhdocskernelpolardb-o-check"/>
+  <label for="m-zhdocskernelpolardb-o-check"><a href="/zh/docs/kernel/polardb-o/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelpolardb-o"><i class="fas fa-paw"></i><span class="">PolarDB O(racle)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelpgml-li">
+  <input type="checkbox" id="m-zhdocskernelpgml-check"/>
+  <label for="m-zhdocskernelpgml-check"><a href="/zh/docs/kernel/pgml/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelpgml"><i class="fas fa-bolt"></i><span class="">PostgresML (AI/ML)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelsupabase-li">
+  <input type="checkbox" id="m-zhdocskernelsupabase-check"/>
+  <label for="m-zhdocskernelsupabase-check"><a href="/zh/docs/kernel/supabase/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelsupabase"><i class="fas fa-bolt"></i><span class="">Supabase (Firebase)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelgreenplum-li">
+  <input type="checkbox" id="m-zhdocskernelgreenplum-check"/>
+  <label for="m-zhdocskernelgreenplum-check"><a href="/zh/docs/kernel/greenplum/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelgreenplum"><i class="fas fa-leaf"></i><span class="">Greenplum (MPP)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelcloudberry-li">
+  <input type="checkbox" id="m-zhdocskernelcloudberry-check"/>
+  <label for="m-zhdocskernelcloudberry-check"><a href="/zh/docs/kernel/cloudberry/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelcloudberry"><i class="fas fa-leaf"></i><span class="">Cloudberry (MPP)</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocskernelneon-li">
+  <input type="checkbox" id="m-zhdocskernelneon-check"/>
+  <label for="m-zhdocskernelneon-check"><a href="/zh/docs/kernel/neon/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocskernelneon"><i class="fab fa-neos"></i><span class="">Neon (Serverless)</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspgext-li">
+  <input type="checkbox" id="m-zhdocspgext-check"/>
+  <label for="m-zhdocspgext-check"><a href="/zh/docs/pgext/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspgext"><i class="fa-brands fa-usb"></i><span class="">扩展：PGSQL</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspgextusage-li">
+  <input type="checkbox" id="m-zhdocspgextusage-check"/>
+  <label for="m-zhdocspgextusage-check"><a href="/zh/docs/pgext/usage/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspgextusage"><i class="fas fa-cloud-arrow-down"></i><span class="">安装使用</span></a></label>
+  
+  <ul class="ul-3 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusageintro-li">
+  <input type="checkbox" id="m-zhdocspgextusageintro-check"/>
+  <label for="m-zhdocspgextusageintro-check"><a href="/zh/docs/pgext/usage/intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusageintro"><i class="fas fa-boxes-stacked"></i><span class="">快速上手</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusagedownload-li">
+  <input type="checkbox" id="m-zhdocspgextusagedownload-check"/>
+  <label for="m-zhdocspgextusagedownload-check"><a href="/zh/docs/pgext/usage/download/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusagedownload"><i class="fas fa-boxes-stacked"></i><span class="">下载扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusagerepo-li">
+  <input type="checkbox" id="m-zhdocspgextusagerepo-check"/>
+  <label for="m-zhdocspgextusagerepo-check"><a href="/zh/docs/pgext/usage/repo/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusagerepo"><i class="fas fa-boxes-stacked"></i><span class="">扩展仓库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusageinstall-li">
+  <input type="checkbox" id="m-zhdocspgextusageinstall-check"/>
+  <label for="m-zhdocspgextusageinstall-check"><a href="/zh/docs/pgext/usage/install/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusageinstall"><i class="fas fa-boxes-stacked"></i><span class="">安装扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusageload-li">
+  <input type="checkbox" id="m-zhdocspgextusageload-check"/>
+  <label for="m-zhdocspgextusageload-check"><a href="/zh/docs/pgext/usage/load/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusageload"><i class="fas fa-boxes-stacked"></i><span class="">加载扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusagecreate-li">
+  <input type="checkbox" id="m-zhdocspgextusagecreate-check"/>
+  <label for="m-zhdocspgextusagecreate-check"><a href="/zh/docs/pgext/usage/create/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusagecreate"><i class="fas fa-boxes-stacked"></i><span class="">启用扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusageupdate-li">
+  <input type="checkbox" id="m-zhdocspgextusageupdate-check"/>
+  <label for="m-zhdocspgextusageupdate-check"><a href="/zh/docs/pgext/usage/update/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusageupdate"><i class="fas fa-boxes-stacked"></i><span class="">更新扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusageremove-li">
+  <input type="checkbox" id="m-zhdocspgextusageremove-check"/>
+  <label for="m-zhdocspgextusageremove-check"><a href="/zh/docs/pgext/usage/remove/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusageremove"><i class="fas fa-boxes-stacked"></i><span class="">卸载扩展</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextusagestack-li">
+  <input type="checkbox" id="m-zhdocspgextusagestack-check"/>
+  <label for="m-zhdocspgextusagestack-check"><a href="/zh/docs/pgext/usage/stack/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextusagestack"><i class="fab fa-stack-overflow"></i><span class="">预定义扩展栈</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspgextlist-li">
+  <input type="checkbox" id="m-zhdocspgextlist-check"/>
+  <label for="m-zhdocspgextlist-check"><a href="/zh/docs/pgext/list/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspgextlist"><i class="fa-solid fa-earth-asia"></i><span class="">扩展清单</span></a></label>
+  
+  <ul class="ul-3 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextlistmeta-li">
+  <input type="checkbox" id="m-zhdocspgextlistmeta-check"/>
+  <label for="m-zhdocspgextlistmeta-check"><a href="/zh/docs/pgext/list/meta/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextlistmeta"><i class="fas fa-tags"></i><span class="">扩展元数据</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextlistrpm-li">
+  <input type="checkbox" id="m-zhdocspgextlistrpm-check"/>
+  <label for="m-zhdocspgextlistrpm-check"><a href="/zh/docs/pgext/list/rpm/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextlistrpm"><i class="fab fa-redhat"></i><span class="">RPM 扩展清单</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextlistdeb-li">
+  <input type="checkbox" id="m-zhdocspgextlistdeb-check"/>
+  <label for="m-zhdocspgextlistdeb-check"><a href="/zh/docs/pgext/list/deb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextlistdeb"><i class="fab fa-debian"></i><span class="">DEB 扩展清单</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextlistcontrib-li">
+  <input type="checkbox" id="m-zhdocspgextlistcontrib-check"/>
+  <label for="m-zhdocspgextlistcontrib-check"><a href="/zh/docs/pgext/list/contrib/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextlistcontrib"><i class="fas fa-database"></i><span class="">Contrib 扩展清单</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspgextbuild-li">
+  <input type="checkbox" id="m-zhdocspgextbuild-check"/>
+  <label for="m-zhdocspgextbuild-check"><a href="/zh/docs/pgext/build/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspgextbuild"><i class="fas fa-screwdriver-wrench"></i><span class="">构建打包</span></a></label>
+  
+  <ul class="ul-3 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildenv-li">
+  <input type="checkbox" id="m-zhdocspgextbuildenv-check"/>
+  <label for="m-zhdocspgextbuildenv-check"><a href="/zh/docs/pgext/build/env/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildenv"><span class="">虚拟机构建环境</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildrust-li">
+  <input type="checkbox" id="m-zhdocspgextbuildrust-check"/>
+  <label for="m-zhdocspgextbuildrust-check"><a href="/zh/docs/pgext/build/rust/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildrust"><span class="">准备 rust 与 pgrx</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildpgml-li">
+  <input type="checkbox" id="m-zhdocspgextbuildpgml-check"/>
+  <label for="m-zhdocspgextbuildpgml-check"><a href="/zh/docs/pgext/build/pgml/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildpgml"><span class="">PGML 构建指南</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildplv8-li">
+  <input type="checkbox" id="m-zhdocspgextbuildplv8-check"/>
+  <label for="m-zhdocspgextbuildplv8-check"><a href="/zh/docs/pgext/build/plv8/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildplv8"><span class="">PLv8 构建指南</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildparadedb-li">
+  <input type="checkbox" id="m-zhdocspgextbuildparadedb-check"/>
+  <label for="m-zhdocspgextbuildparadedb-check"><a href="/zh/docs/pgext/build/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildparadedb"><span class="">ParadeDB 构建指南</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildduckdb_fdw-li">
+  <input type="checkbox" id="m-zhdocspgextbuildduckdb_fdw-check"/>
+  <label for="m-zhdocspgextbuildduckdb_fdw-check"><a href="/zh/docs/pgext/build/duckdb_fdw/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildduckdb_fdw"><span class="">DuckDB FDW 构建指南</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspgextbuildparquet_s3_fdw-li">
+  <input type="checkbox" id="m-zhdocspgextbuildparquet_s3_fdw-check"/>
+  <label for="m-zhdocspgextbuildparquet_s3_fdw-check"><a href="/zh/docs/pgext/build/parquet_s3_fdw/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocspgextbuildparquet_s3_fdw"><span class="">Parquet S3 FDW 构建指南</span></a></label>
+  
+</li>
+  </ul>
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsinfra-li">
+  <input type="checkbox" id="m-zhdocsinfra-check"/>
+  <label for="m-zhdocsinfra-check"><a href="/zh/docs/infra/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsinfra"><i class="fas fa-bank"></i><span class="">模块：INFRA</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsinframetric-li">
+  <input type="checkbox" id="m-zhdocsinframetric-check"/>
+  <label for="m-zhdocsinframetric-check"><a href="/zh/docs/infra/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsinframetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsinfrafaq-li">
+  <input type="checkbox" id="m-zhdocsinfrafaq-check"/>
+  <label for="m-zhdocsinfrafaq-check"><a href="/zh/docs/infra/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsinfrafaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsnode-li">
+  <input type="checkbox" id="m-zhdocsnode-check"/>
+  <label for="m-zhdocsnode-check"><a href="/zh/docs/node/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsnode"><i class="fas fa-server"></i><span class="">模块：NODE</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsnodemetric-li">
+  <input type="checkbox" id="m-zhdocsnodemetric-check"/>
+  <label for="m-zhdocsnodemetric-check"><a href="/zh/docs/node/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsnodemetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsnodefaq-li">
+  <input type="checkbox" id="m-zhdocsnodefaq-check"/>
+  <label for="m-zhdocsnodefaq-check"><a href="/zh/docs/node/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsnodefaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsetcd-li">
+  <input type="checkbox" id="m-zhdocsetcd-check"/>
+  <label for="m-zhdocsetcd-check"><a href="/zh/docs/etcd/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsetcd"><i class="fas fa-gears"></i><span class="">模块：ETCD</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdconfig-li">
+  <input type="checkbox" id="m-zhdocsetcdconfig-check"/>
+  <label for="m-zhdocsetcdconfig-check"><a href="/zh/docs/etcd/config/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdconfig"><i class="fa-solid fa-code"></i><span class="">集群配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdparam-li">
+  <input type="checkbox" id="m-zhdocsetcdparam-check"/>
+  <label for="m-zhdocsetcdparam-check"><a href="/zh/docs/etcd/param/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdparam"><i class="fa-solid fa-terminal"></i><span class="">参数列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdplaybook-li">
+  <input type="checkbox" id="m-zhdocsetcdplaybook-check"/>
+  <label for="m-zhdocsetcdplaybook-check"><a href="/zh/docs/etcd/playbook/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdplaybook"><i class="fa-solid fa-scroll"></i><span class="">预置剧本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdadmin-li">
+  <input type="checkbox" id="m-zhdocsetcdadmin-check"/>
+  <label for="m-zhdocsetcdadmin-check"><a href="/zh/docs/etcd/admin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdadmin"><i class="fa-solid fa-building-columns"></i><span class="">管理预案</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdmonitor-li">
+  <input type="checkbox" id="m-zhdocsetcdmonitor-check"/>
+  <label for="m-zhdocsetcdmonitor-check"><a href="/zh/docs/etcd/monitor/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdmonitor"><i class="fa-solid fa-binoculars"></i><span class="">监控告警</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdmetric-li">
+  <input type="checkbox" id="m-zhdocsetcdmetric-check"/>
+  <label for="m-zhdocsetcdmetric-check"><a href="/zh/docs/etcd/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdmetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsetcdfaq-li">
+  <input type="checkbox" id="m-zhdocsetcdfaq-check"/>
+  <label for="m-zhdocsetcdfaq-check"><a href="/zh/docs/etcd/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsetcdfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsminio-li">
+  <input type="checkbox" id="m-zhdocsminio-check"/>
+  <label for="m-zhdocsminio-check"><a href="/zh/docs/minio/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsminio"><i class="fas fa-boxes-stacked"></i><span class="">模块：MINIO</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminiousage-li">
+  <input type="checkbox" id="m-zhdocsminiousage-check"/>
+  <label for="m-zhdocsminiousage-check"><a href="/zh/docs/minio/usage/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminiousage"><i class="fa-solid fa-bell-concierge"></i><span class="">使用方法</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminioconfig-li">
+  <input type="checkbox" id="m-zhdocsminioconfig-check"/>
+  <label for="m-zhdocsminioconfig-check"><a href="/zh/docs/minio/config/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminioconfig"><i class="fa-solid fa-code"></i><span class="">集群配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminioparam-li">
+  <input type="checkbox" id="m-zhdocsminioparam-check"/>
+  <label for="m-zhdocsminioparam-check"><a href="/zh/docs/minio/param/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminioparam"><i class="fa-solid fa-terminal"></i><span class="">参数列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminioplaybook-li">
+  <input type="checkbox" id="m-zhdocsminioplaybook-check"/>
+  <label for="m-zhdocsminioplaybook-check"><a href="/zh/docs/minio/playbook/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminioplaybook"><i class="fa-solid fa-scroll"></i><span class="">预置剧本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminioadmin-li">
+  <input type="checkbox" id="m-zhdocsminioadmin-check"/>
+  <label for="m-zhdocsminioadmin-check"><a href="/zh/docs/minio/admin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminioadmin"><i class="fa-solid fa-building-columns"></i><span class="">管理预案</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminiomonitor-li">
+  <input type="checkbox" id="m-zhdocsminiomonitor-check"/>
+  <label for="m-zhdocsminiomonitor-check"><a href="/zh/docs/minio/monitor/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminiomonitor"><i class="fa-solid fa-binoculars"></i><span class="">监控告警</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminiometric-li">
+  <input type="checkbox" id="m-zhdocsminiometric-check"/>
+  <label for="m-zhdocsminiometric-check"><a href="/zh/docs/minio/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminiometric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsminiofaq-li">
+  <input type="checkbox" id="m-zhdocsminiofaq-check"/>
+  <label for="m-zhdocsminiofaq-check"><a href="/zh/docs/minio/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsminiofaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsredis-li">
+  <input type="checkbox" id="m-zhdocsredis-check"/>
+  <label for="m-zhdocsredis-check"><a href="/zh/docs/redis/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsredis"><i class="fas fa-layer-group"></i><span class="">模块：REDIS</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsredismetric-li">
+  <input type="checkbox" id="m-zhdocsredismetric-check"/>
+  <label for="m-zhdocsredismetric-check"><a href="/zh/docs/redis/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsredismetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsredisfaq-li">
+  <input type="checkbox" id="m-zhdocsredisfaq-check"/>
+  <label for="m-zhdocsredisfaq-check"><a href="/zh/docs/redis/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsredisfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsferret-li">
+  <input type="checkbox" id="m-zhdocsferret-check"/>
+  <label for="m-zhdocsferret-check"><a href="/zh/docs/ferret/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsferret"><i class="fas fa-leaf"></i><span class="">模块：FERRET</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsferretmetric-li">
+  <input type="checkbox" id="m-zhdocsferretmetric-check"/>
+  <label for="m-zhdocsferretmetric-check"><a href="/zh/docs/ferret/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsferretmetric"><i class="fa-solid fa-list-check"></i><span class="">指标列表</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsferretfaq-li">
+  <input type="checkbox" id="m-zhdocsferretfaq-check"/>
+  <label for="m-zhdocsferretfaq-check"><a href="/zh/docs/ferret/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsferretfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsdocker-li">
+  <input type="checkbox" id="m-zhdocsdocker-check"/>
+  <label for="m-zhdocsdocker-check"><a href="/zh/docs/docker/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsdocker"><i class="fa-brands fa-docker"></i><span class="">模块：DOCKER</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsdockermetric-li">
+  <input type="checkbox" id="m-zhdocsdockermetric-check"/>
+  <label for="m-zhdocsdockermetric-check"><a href="/zh/docs/docker/metric/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsdockermetric"><i class="fa-solid fa-list-check"></i><span class="">指标</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsdockerfaq-li">
+  <input type="checkbox" id="m-zhdocsdockerfaq-check"/>
+  <label for="m-zhdocsdockerfaq-check"><a href="/zh/docs/docker/faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsdockerfaq"><i class="fa-solid fa-circle-question"></i><span class="">常见问题</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocspro-li">
+  <input type="checkbox" id="m-zhdocspro-check"/>
+  <label for="m-zhdocspro-check"><a href="/zh/docs/pro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspro"><i class="fas fa-flask-vial"></i><span class="">模块：专业/试点</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocspromysql-li">
+  <input type="checkbox" id="m-zhdocspromysql-check"/>
+  <label for="m-zhdocspromysql-check"><a href="/zh/docs/pro/mysql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocspromysql"><i class="fas fa-fish"></i><span class="">模块：MySQL</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprokafka-li">
+  <input type="checkbox" id="m-zhdocsprokafka-check"/>
+  <label for="m-zhdocsprokafka-check"><a href="/zh/docs/pro/kafka/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprokafka"><i class="fas fa-share-nodes"></i><span class="">模块：Kafka</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsproduckdb-li">
+  <input type="checkbox" id="m-zhdocsproduckdb-check"/>
+  <label for="m-zhdocsproduckdb-check"><a href="/zh/docs/pro/duckdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsproduckdb"><i class="fas fa-crow"></i><span class="">模块：DuckDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprotigerbeetle-li">
+  <input type="checkbox" id="m-zhdocsprotigerbeetle-check"/>
+  <label for="m-zhdocsprotigerbeetle-check"><a href="/zh/docs/pro/tigerbeetle/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprotigerbeetle"><i class="fas fa-bug"></i><span class="">模块：TigerBeetle</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprokube-li">
+  <input type="checkbox" id="m-zhdocsprokube-check"/>
+  <label for="m-zhdocsprokube-check"><a href="/zh/docs/pro/kube/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprokube"><i class="fas fa-dharmachakra"></i><span class="">模块：Kubernetes</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsproconsul-li">
+  <input type="checkbox" id="m-zhdocsproconsul-check"/>
+  <label for="m-zhdocsproconsul-check"><a href="/zh/docs/pro/consul/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsproconsul"><i class="fas fa-c"></i><span class="">模块：Consul</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprovictoria-li">
+  <input type="checkbox" id="m-zhdocsprovictoria-check"/>
+  <label for="m-zhdocsprovictoria-check"><a href="/zh/docs/pro/victoria/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprovictoria"><i class="fas fa-layer-group"></i><span class="">模块：Victoria</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsprojupyter-li">
+  <input type="checkbox" id="m-zhdocsprojupyter-check"/>
+  <label for="m-zhdocsprojupyter-check"><a href="/zh/docs/pro/jupyter/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsprojupyter"><i class="fab fa-python"></i><span class="">模块：Jupyter</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocstasks-li">
+  <input type="checkbox" id="m-zhdocstasks-check"/>
+  <label for="m-zhdocstasks-check"><a href="/zh/docs/tasks/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocstasks"><i class="fas fa-tasks"></i><span class="">任务与教程</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstasksnginx-li">
+  <input type="checkbox" id="m-zhdocstasksnginx-check"/>
+  <label for="m-zhdocstasksnginx-check"><a href="/zh/docs/tasks/nginx/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstasksnginx"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="">Nginx：向外代理暴露Web服务</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstasksdocker-li">
+  <input type="checkbox" id="m-zhdocstasksdocker-check"/>
+  <label for="m-zhdocstasksdocker-check"><a href="/zh/docs/tasks/docker/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstasksdocker"><i class="fa-brands fa-docker"></i><span class="">Docker：启用容器支持与配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstasksansible-li">
+  <input type="checkbox" id="m-zhdocstasksansible-check"/>
+  <label for="m-zhdocstasksansible-check"><a href="/zh/docs/tasks/ansible/" title="使用 PostgreSQL 作为 Ansible 的配置清单与 CMDB" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstasksansible"><i class="fa-solid fa-database"></i><span class="">Ansible：使用PG作为配置源</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstasksnode-vip-li">
+  <input type="checkbox" id="m-zhdocstasksnode-vip-check"/>
+  <label for="m-zhdocstasksnode-vip-check"><a href="/zh/docs/tasks/node-vip/" title="使用 Keepalived 为 Pigsty 节点集群配置二层 VIP" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstasksnode-vip"><i class="fa-solid fa-share-nodes"></i><span class="">Node VIP：为节点集群绑定VIP</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstaskspg-vip-li">
+  <input type="checkbox" id="m-zhdocstaskspg-vip-check"/>
+  <label for="m-zhdocstaskspg-vip-check"><a href="/zh/docs/tasks/pg-vip/" title="使用 VIP-Manager 为 PostgreSQL 集群配置二层 VIP" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstaskspg-vip"><i class="fa-solid fa-arrows-split-up-and-left"></i><span class="">PGSQL VIP：为PG集群绑定VIP</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstasksgrafana-li">
+  <input type="checkbox" id="m-zhdocstasksgrafana-check"/>
+  <label for="m-zhdocstasksgrafana-check"><a href="/zh/docs/tasks/grafana/" title="使用 PostgreSQL 作为 Grafana 后端数据库" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstasksgrafana"><i class="fa-solid fa-microscope"></i><span class="">Grafana：使用PG存储元数据</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocstaskspromscale-li">
+  <input type="checkbox" id="m-zhdocstaskspromscale-check"/>
+  <label for="m-zhdocstaskspromscale-check"><a href="/zh/docs/tasks/promscale/" title="使用 TimescaleDB &#43; Promscale 存储 Prometheus 时序指标数据" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocstaskspromscale"><i class="fa-solid fa-truck-moving"></i><span class="">Prometheus：使用PG存储指标</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocssoftware-li">
+  <input type="checkbox" id="m-zhdocssoftware-check"/>
+  <label for="m-zhdocssoftware-check"><a href="/zh/docs/software/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocssoftware"><i class="fa-brands fa-docker"></i><span class="">软件镜像模板</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwaredify-li">
+  <input type="checkbox" id="m-zhdocssoftwaredify-check"/>
+  <label for="m-zhdocssoftwaredify-check"><a href="/zh/docs/software/dify/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwaredify"><span class="">Dify：自建开源AI工作流编排平台</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwareodoo-li">
+  <input type="checkbox" id="m-zhdocssoftwareodoo-check"/>
+  <label for="m-zhdocssoftwareodoo-check"><a href="/zh/docs/software/odoo/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwareodoo"><span class="">Odoo：自建开源ERP系统</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarekong-li">
+  <input type="checkbox" id="m-zhdocssoftwarekong-check"/>
+  <label for="m-zhdocssoftwarekong-check"><a href="/zh/docs/software/kong/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarekong"><span class="">Kong：企业级开源 API 网关</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarejupyter-li">
+  <input type="checkbox" id="m-zhdocssoftwarejupyter-check"/>
+  <label for="m-zhdocssoftwarejupyter-check"><a href="/zh/docs/software/jupyter/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarejupyter"><span class="">Jupyter：数据分析笔记本与AI IDE</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwaregitea-li">
+  <input type="checkbox" id="m-zhdocssoftwaregitea-check"/>
+  <label for="m-zhdocssoftwaregitea-check"><a href="/zh/docs/software/gitea/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwaregitea"><span class="">Gitea：自建简易代码托管平台</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarewiki-li">
+  <input type="checkbox" id="m-zhdocssoftwarewiki-check"/>
+  <label for="m-zhdocssoftwarewiki-check"><a href="/zh/docs/software/wiki/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarewiki"><span class="">Wiki.js：搭建你自己的维基百科</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwareminio-li">
+  <input type="checkbox" id="m-zhdocssoftwareminio-check"/>
+  <label for="m-zhdocssoftwareminio-check"><a href="/zh/docs/software/minio/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwareminio"><span class="">Minio：开源S3，简单对象存储服务</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarebytebase-li">
+  <input type="checkbox" id="m-zhdocssoftwarebytebase-check"/>
+  <label for="m-zhdocssoftwarebytebase-check"><a href="/zh/docs/software/bytebase/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarebytebase"><span class="">ByteBase：PG模式迁移工具</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarepgadmin-li">
+  <input type="checkbox" id="m-zhdocssoftwarepgadmin-check"/>
+  <label for="m-zhdocssoftwarepgadmin-check"><a href="/zh/docs/software/pgadmin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarepgadmin"><span class="">PGAdmin4：用GUI管理PG数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarepostgrest-li">
+  <input type="checkbox" id="m-zhdocssoftwarepostgrest-check"/>
+  <label for="m-zhdocssoftwarepostgrest-check"><a href="/zh/docs/software/postgrest/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarepostgrest"><span class="">PostgREST：自动生成REST API</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwareschemaspy-li">
+  <input type="checkbox" id="m-zhdocssoftwareschemaspy-check"/>
+  <label for="m-zhdocssoftwareschemaspy-check"><a href="/zh/docs/software/schemaspy/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwareschemaspy"><span class="">SchemaSPY：PG模式可视化</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarepgweb-li">
+  <input type="checkbox" id="m-zhdocssoftwarepgweb-check"/>
+  <label for="m-zhdocssoftwarepgweb-check"><a href="/zh/docs/software/pgweb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarepgweb"><span class="">PGWeb：从浏览器访问PostgreSQL</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwarediscourse-li">
+  <input type="checkbox" id="m-zhdocssoftwarediscourse-check"/>
+  <label for="m-zhdocssoftwarediscourse-check"><a href="/zh/docs/software/discourse/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwarediscourse"><span class="">Discourse：开源技术论坛</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocssoftwaregitlab-li">
+  <input type="checkbox" id="m-zhdocssoftwaregitlab-check"/>
+  <label for="m-zhdocssoftwaregitlab-check"><a href="/zh/docs/software/gitlab/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocssoftwaregitlab"><span class="">GitLab：企业级开源代码托管平台</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhdocsapplet-li">
+  <input type="checkbox" id="m-zhdocsapplet-check"/>
+  <label for="m-zhdocsapplet-check"><a href="/zh/docs/applet/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhdocsapplet"><i class="fa-solid fa-chart-line"></i><span class="">数据分析应用</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletpglog-li">
+  <input type="checkbox" id="m-zhdocsappletpglog-check"/>
+  <label for="m-zhdocsappletpglog-check"><a href="/zh/docs/applet/pglog/" title="PGLOG：PG自带日志分析应用" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletpglog"><span class="">PGLOG CSV日志分析</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletisd-li">
+  <input type="checkbox" id="m-zhdocsappletisd-check"/>
+  <label for="m-zhdocsappletisd-check"><a href="/zh/docs/applet/isd/" title="NOAA ISD 全球气象站历史数据查询" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletisd"><span class="">ISD 全球气象数据查询</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletcovid-li">
+  <input type="checkbox" id="m-zhdocsappletcovid-check"/>
+  <label for="m-zhdocsappletcovid-check"><a href="/zh/docs/applet/covid/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletcovid"><span class="">WHO COVID-19 疫情大盘</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletcloud-li">
+  <input type="checkbox" id="m-zhdocsappletcloud-check"/>
+  <label for="m-zhdocsappletcloud-check"><a href="/zh/docs/applet/cloud/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletcloud"><span class="">AWS 阿里云 服务器价格</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletpoker24-li">
+  <input type="checkbox" id="m-zhdocsappletpoker24-check"/>
+  <label for="m-zhdocsappletpoker24-check"><a href="/zh/docs/applet/poker24/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletpoker24"><span class="">使用一条 SQL 计算扑克24点</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletdb-engine-li">
+  <input type="checkbox" id="m-zhdocsappletdb-engine-check"/>
+  <label for="m-zhdocsappletdb-engine-check"><a href="/zh/docs/applet/db-engine/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletdb-engine"><span class="">DB-Engine 数据库热度趋势分析</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsappletsf-survey-li">
+  <input type="checkbox" id="m-zhdocsappletsf-survey-check"/>
+  <label for="m-zhdocsappletsf-survey-check"><a href="/zh/docs/applet/sf-survey/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsappletsf-survey"><span class="">StackOverflow 全球开发者调研</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhdocsreleasenote-li">
+  <input type="checkbox" id="m-zhdocsreleasenote-check"/>
+  <label for="m-zhdocsreleasenote-check"><a href="/zh/docs/releasenote/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhdocsreleasenote"><i class="fa-regular fa-clipboard"></i><span class="">版本发布历史</span></a></label>
+  
+</li>
+  </ul>
+</li>
+    </ul>
+  </nav>
+</div>
+
+          </aside>
+          <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
+            <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
+<a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/docs/kernel/_index.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/docs/kernel/_index.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/docs/kernel?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e5%86%85%e6%a0%b8%ef%bc%9aPGSQL" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project td-page-meta__project-issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create project issue</a>
+  <a id="print" href="/zh/docs/kernel/_print/"><i class="fa-solid fa-print fa-fw"></i> Print entire section</a>
+
+</div>
+
+            
+            <div class="taxonomy taxonomy-terms-cloud taxo-module">
+      <h5 class="taxonomy-title">Modules</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="/zh/module/app/" data-taxonomy-term="app"><span class="taxonomy-label">APP</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/blog/" data-taxonomy-term="blog"><span class="taxonomy-label">BLOG</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/docker/" data-taxonomy-term="docker"><span class="taxonomy-label">DOCKER</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/etcd/" data-taxonomy-term="etcd"><span class="taxonomy-label">ETCD</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/infra/" data-taxonomy-term="infra"><span class="taxonomy-label">INFRA</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/jupyter/" data-taxonomy-term="jupyter"><span class="taxonomy-label">JUPYTER</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/kafka/" data-taxonomy-term="kafka"><span class="taxonomy-label">KAFKA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/minio/" data-taxonomy-term="minio"><span class="taxonomy-label">MINIO</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/mongo/" data-taxonomy-term="mongo"><span class="taxonomy-label">MONGO</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/mysql/" data-taxonomy-term="mysql"><span class="taxonomy-label">MYSQL</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/node/" data-taxonomy-term="node"><span class="taxonomy-label">NODE</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/pgsql/" data-taxonomy-term="pgsql"><span class="taxonomy-label">PGSQL</span><span class="taxonomy-count">62</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/pigsty/" data-taxonomy-term="pigsty"><span class="taxonomy-label">PIGSTY</span><span class="taxonomy-count">41</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/redis/" data-taxonomy-term="redis"><span class="taxonomy-label">REDIS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/software/" data-taxonomy-term="software"><span class="taxonomy-label">SOFTWARE</span><span class="taxonomy-count">16</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/tigerbeetle/" data-taxonomy-term="tigerbeetle"><span class="taxonomy-label">TigerBeetle</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/module/victoria/" data-taxonomy-term="victoria"><span class="taxonomy-label">VICTORIA</span><span class="taxonomy-count">1</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-categories">
+      <h5 class="taxonomy-title">Categories</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="/zh/categories/about/" data-taxonomy-term="about"><span class="taxonomy-label">About</span><span class="taxonomy-count">10</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">23</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/ai/" data-taxonomy-term="ai"><span class="taxonomy-label">AI</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/arch/" data-taxonomy-term="arch"><span class="taxonomy-label">Arch</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/business/" data-taxonomy-term="business"><span class="taxonomy-label">Business</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/concept/" data-taxonomy-term="concept"><span class="taxonomy-label">Concept</span><span class="taxonomy-count">12</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/config/" data-taxonomy-term="config"><span class="taxonomy-label">Config</span><span class="taxonomy-count">25</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/dashboard/" data-taxonomy-term="dashboard"><span class="taxonomy-label">Dashboard</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/develop/" data-taxonomy-term="develop"><span class="taxonomy-label">Develop</span><span class="taxonomy-count">11</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/enterprise/" data-taxonomy-term="enterprise"><span class="taxonomy-label">Enterprise</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/faq/" data-taxonomy-term="faq"><span class="taxonomy-label">FAQ</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/install/" data-taxonomy-term="install"><span class="taxonomy-label">Install</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/metrics/" data-taxonomy-term="metrics"><span class="taxonomy-label">Metrics</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/module/" data-taxonomy-term="module"><span class="taxonomy-label">Module</span><span class="taxonomy-count">16</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/monitor/" data-taxonomy-term="monitor"><span class="taxonomy-label">Monitor</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/overview/" data-taxonomy-term="overview"><span class="taxonomy-label">Overview</span><span class="taxonomy-count">19</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/param/" data-taxonomy-term="param"><span class="taxonomy-label">Param</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/playbook/" data-taxonomy-term="playbook"><span class="taxonomy-label">Playbook</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/price/" data-taxonomy-term="price"><span class="taxonomy-label">Price</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/reference/" data-taxonomy-term="reference"><span class="taxonomy-label">Reference</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/release/" data-taxonomy-term="release"><span class="taxonomy-label">Release</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/section/" data-taxonomy-term="section"><span class="taxonomy-label">Section</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/setup/" data-taxonomy-term="setup"><span class="taxonomy-label">Setup</span><span class="taxonomy-count">14</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/categories/usage/" data-taxonomy-term="usage"><span class="taxonomy-label">Usage</span><span class="taxonomy-count">1</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-tags">
+      <h5 class="taxonomy-title">Tags</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="/zh/tags/1-node/" data-taxonomy-term="1-node"><span class="taxonomy-label">1-Node</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/2-node/" data-taxonomy-term="2-node"><span class="taxonomy-label">2-Node</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/3-node/" data-taxonomy-term="3-node"><span class="taxonomy-label">3-Node</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/4-node/" data-taxonomy-term="4-node"><span class="taxonomy-label">4-Node</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/5-node/" data-taxonomy-term="5-node"><span class="taxonomy-label">5-Node</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/access/" data-taxonomy-term="access"><span class="taxonomy-label">Access</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/auth/" data-taxonomy-term="auth"><span class="taxonomy-label">Auth</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/aws/" data-taxonomy-term="aws"><span class="taxonomy-label">AWS</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/cdc/" data-taxonomy-term="cdc"><span class="taxonomy-label">CDC</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/cdn/" data-taxonomy-term="cdn"><span class="taxonomy-label">CDN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/citus/" data-taxonomy-term="citus"><span class="taxonomy-label">Citus</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/cloudberry/" data-taxonomy-term="cloudberry"><span class="taxonomy-label">Cloudberry</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/cloudflare/" data-taxonomy-term="cloudflare"><span class="taxonomy-label">Cloudflare</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/cost/" data-taxonomy-term="cost"><span class="taxonomy-label">Cost</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/dba/" data-taxonomy-term="dba"><span class="taxonomy-label">DBA</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/dhh/" data-taxonomy-term="dhh"><span class="taxonomy-label">DHH</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/docker/" data-taxonomy-term="docker"><span class="taxonomy-label">Docker</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/ebs/" data-taxonomy-term="ebs"><span class="taxonomy-label">EBS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/ecs/" data-taxonomy-term="ecs"><span class="taxonomy-label">ECS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">24</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/finops/" data-taxonomy-term="finops"><span class="taxonomy-label">FinOps</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/gin/" data-taxonomy-term="gin"><span class="taxonomy-label">GIN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/gis/" data-taxonomy-term="gis"><span class="taxonomy-label">GIS</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/go/" data-taxonomy-term="go"><span class="taxonomy-label">Go</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/greenplum/" data-taxonomy-term="greenplum"><span class="taxonomy-label">Greenplum</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/hba/" data-taxonomy-term="hba"><span class="taxonomy-label">HBA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/knn/" data-taxonomy-term="knn"><span class="taxonomy-label">KNN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/kubernetes/" data-taxonomy-term="kubernetes"><span class="taxonomy-label">Kubernetes</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/linux/" data-taxonomy-term="linux"><span class="taxonomy-label">Linux</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/migration/" data-taxonomy-term="migration"><span class="taxonomy-label">Migration</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/mongodb/" data-taxonomy-term="mongodb"><span class="taxonomy-label">MongoDB</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/mssql/" data-taxonomy-term="mssql"><span class="taxonomy-label">MSSQL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/mysql/" data-taxonomy-term="mysql"><span class="taxonomy-label">MySQL</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/neon/" data-taxonomy-term="neon"><span class="taxonomy-label">Neon</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/offline/" data-taxonomy-term="offline"><span class="taxonomy-label">Offline</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/oracle/" data-taxonomy-term="oracle"><span class="taxonomy-label">Oracle</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/os/" data-taxonomy-term="os"><span class="taxonomy-label">OS</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pg%E5%86%85%E6%A0%B8/" data-taxonomy-term="pg%E5%86%85%E6%A0%B8"><span class="taxonomy-label">PG内核</span><span class="taxonomy-count">14</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pg%E5%BC%80%E5%8F%91/" data-taxonomy-term="pg%E5%BC%80%E5%8F%91"><span class="taxonomy-label">PG开发</span><span class="taxonomy-count">20</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pg%E7%94%9F%E6%80%81/" data-taxonomy-term="pg%E7%94%9F%E6%80%81"><span class="taxonomy-label">PG生态</span><span class="taxonomy-count">18</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pg%E7%AE%A1%E7%90%86/" data-taxonomy-term="pg%E7%AE%A1%E7%90%86"><span class="taxonomy-label">PG管理</span><span class="taxonomy-count">40</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pigsty/" data-taxonomy-term="pigsty"><span class="taxonomy-label">Pigsty</span><span class="taxonomy-count">24</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pigstyapp/" data-taxonomy-term="pigstyapp"><span class="taxonomy-label">PigstyApp</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/pitr/" data-taxonomy-term="pitr"><span class="taxonomy-label">PITR</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/polardb/" data-taxonomy-term="polardb"><span class="taxonomy-label">PolarDB</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span><span class="taxonomy-count">101</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/provision/" data-taxonomy-term="provision"><span class="taxonomy-label">Provision</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/rds/" data-taxonomy-term="rds"><span class="taxonomy-label">RDS</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/redis/" data-taxonomy-term="redis"><span class="taxonomy-label">Redis</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/release/" data-taxonomy-term="release"><span class="taxonomy-label">Release</span><span class="taxonomy-count">23</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/rpm/" data-taxonomy-term="rpm"><span class="taxonomy-label">RPM</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/s3/" data-taxonomy-term="s3"><span class="taxonomy-label">S3</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/security/" data-taxonomy-term="security"><span class="taxonomy-label">Security</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/service/" data-taxonomy-term="service"><span class="taxonomy-label">Service</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/sla/" data-taxonomy-term="sla"><span class="taxonomy-label">SLA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/slim/" data-taxonomy-term="slim"><span class="taxonomy-label">Slim</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/sop/" data-taxonomy-term="sop"><span class="taxonomy-label">SOP</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/sponsor/" data-taxonomy-term="sponsor"><span class="taxonomy-label">Sponsor</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/sql/" data-taxonomy-term="sql"><span class="taxonomy-label">SQL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/user/" data-taxonomy-term="user"><span class="taxonomy-label">User</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/visualization/" data-taxonomy-term="visualization"><span class="taxonomy-label">Visualization</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/wal/" data-taxonomy-term="wal"><span class="taxonomy-label">WAL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E4%B8%8B%E4%BA%91/" data-taxonomy-term="%E4%B8%8B%E4%BA%91"><span class="taxonomy-label">下云</span><span class="taxonomy-count">34</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E4%BA%91%E6%95%85%E9%9A%9C/" data-taxonomy-term="%E4%BA%91%E6%95%85%E9%9A%9C"><span class="taxonomy-label">云故障</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E4%BA%91%E8%AE%A1%E7%AE%97/" data-taxonomy-term="%E4%BA%91%E8%AE%A1%E7%AE%97"><span class="taxonomy-label">云计算</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%85%A8%E6%96%87%E6%A3%80%E7%B4%A2/" data-taxonomy-term="%E5%85%A8%E6%96%87%E6%A3%80%E7%B4%A2"><span class="taxonomy-label">全文检索</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%87%BD%E6%95%B0/" data-taxonomy-term="%E5%87%BD%E6%95%B0"><span class="taxonomy-label">函数</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" data-taxonomy-term="%E5%88%86%E5%B8%83%E5%BC%8F"><span class="taxonomy-label">分布式</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%90%91%E9%87%8F/" data-taxonomy-term="%E5%90%91%E9%87%8F"><span class="taxonomy-label">向量</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">向量数据库</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%95%86%E4%B8%9A/" data-taxonomy-term="%E5%95%86%E4%B8%9A"><span class="taxonomy-label">商业</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%9B%BD%E4%BA%A7%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E5%9B%BD%E4%BA%A7%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">国产数据库</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%A4%87%E4%BB%BD/" data-taxonomy-term="%E5%A4%87%E4%BB%BD"><span class="taxonomy-label">备份</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%B7%A5%E5%85%B7/" data-taxonomy-term="%E5%B7%A5%E5%85%B7"><span class="taxonomy-label">工具</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E5%BC%80%E6%BA%90/" data-taxonomy-term="%E5%BC%80%E6%BA%90"><span class="taxonomy-label">开源</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%80%A7%E8%83%BD/" data-taxonomy-term="%E6%80%A7%E8%83%BD"><span class="taxonomy-label">性能</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%89%A9%E5%B1%95/" data-taxonomy-term="%E6%89%A9%E5%B1%95"><span class="taxonomy-label">扩展</span><span class="taxonomy-count">13</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%8C%87%E6%A0%87/" data-taxonomy-term="%E6%8C%87%E6%A0%87"><span class="taxonomy-label">指标</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/" data-taxonomy-term="%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F"><span class="taxonomy-label">推荐系统</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" data-taxonomy-term="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F"><span class="taxonomy-label">操作系统</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%95%85%E9%9A%9C/" data-taxonomy-term="%E6%95%85%E9%9A%9C"><span class="taxonomy-label">故障</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%95%85%E9%9A%9C%E6%A1%A3%E6%A1%88/" data-taxonomy-term="%E6%95%85%E9%9A%9C%E6%A1%A3%E6%A1%88"><span class="taxonomy-label">故障档案</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">数据库</span><span class="taxonomy-count">31</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%95%B0%E6%8D%AE%E6%8D%9F%E5%9D%8F/" data-taxonomy-term="%E6%95%B0%E6%8D%AE%E6%8D%9F%E5%9D%8F"><span class="taxonomy-label">数据损坏</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%97%A5%E5%BF%97/" data-taxonomy-term="%E6%97%A5%E5%BF%97"><span class="taxonomy-label">日志</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%9E%B6%E6%9E%84/" data-taxonomy-term="%E6%9E%B6%E6%9E%84"><span class="taxonomy-label">架构</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E6%BC%8F%E6%B4%9E/" data-taxonomy-term="%E6%BC%8F%E6%B4%9E"><span class="taxonomy-label">漏洞</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E7%9B%91%E6%8E%A7/" data-taxonomy-term="%E7%9B%91%E6%8E%A7"><span class="taxonomy-label">监控</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E7%A1%AC%E4%BB%B6/" data-taxonomy-term="%E7%A1%AC%E4%BB%B6"><span class="taxonomy-label">硬件</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E7%BC%96%E7%A0%81/" data-taxonomy-term="%E7%BC%96%E7%A0%81"><span class="taxonomy-label">编码</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E8%85%BE%E8%AE%AF%E4%BA%91/" data-taxonomy-term="%E8%85%BE%E8%AE%AF%E4%BA%91"><span class="taxonomy-label">腾讯云</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E8%A7%84%E7%BA%A6/" data-taxonomy-term="%E8%A7%84%E7%BA%A6"><span class="taxonomy-label">规约</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E8%A7%A6%E5%8F%91%E5%99%A8/" data-taxonomy-term="%E8%A7%A6%E5%8F%91%E5%99%A8"><span class="taxonomy-label">触发器</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E8%BF%81%E7%A7%BB/" data-taxonomy-term="%E8%BF%81%E7%A7%BB"><span class="taxonomy-label">迁移</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E8%BF%9E%E6%8E%A5%E6%B1%A0/" data-taxonomy-term="%E8%BF%9E%E6%8E%A5%E6%B1%A0"><span class="taxonomy-label">连接池</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E9%94%81/" data-taxonomy-term="%E9%94%81"><span class="taxonomy-label">锁</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="/zh/tags/%E9%98%BF%E9%87%8C%E4%BA%91/" data-taxonomy-term="%E9%98%BF%E9%87%8C%E4%BA%91"><span class="taxonomy-label">阿里云</span><span class="taxonomy-count">7</span></a></li>
+        </ul>
+    </div>
+  
+	
+          </aside>
+          <main class="col-12 col-md-9 col-xl-8 ps-md-5" role="main">
+            
+  
+
+            <nav aria-label="breadcrumb" class="td-breadcrumbs">
+  <ol class="breadcrumb">
+  <li class="breadcrumb-item">
+    <a href="/zh/docs/">文档</a></li>
+  <li class="breadcrumb-item active" aria-current="page">
+    内核：PGSQL</li>
+  </ol>
+</nav>
+            
+<div class="td-content">
+	<h1>内核：PGSQL</h1>
+  <div class="lead">如何在 Pigsty 中使用其他 PostgreSQL 内核分支？例如 Citus， Babelfish，IvorySQL， PolarDB 与 Neon</div>
+	<header class="article-meta">
+		<div class="taxonomy taxonomy-terms-article taxo-module">
+  <h5 class="taxonomy-title">Module:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="/zh/module/pgsql/" data-taxonomy-term="pgsql"><span class="taxonomy-label">PGSQL</span></a></li>
+    </ul>
+</div>
+<div class="taxonomy taxonomy-terms-article taxo-categories">
+  <h5 class="taxonomy-title">Categories:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="/zh/categories/module/" data-taxonomy-term="module"><span class="taxonomy-label">Module</span></a></li>
+    <li><a class="taxonomy-term" href="/zh/categories/overview/" data-taxonomy-term="overview"><span class="taxonomy-label">Overview</span></a></li>
+    </ul>
+</div>
+<div class="taxonomy taxonomy-terms-article taxo-tags">
+  <h5 class="taxonomy-title">Tags:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="/zh/tags/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span></a></li>
+    </ul>
+</div>
+
+  </header>
+	<p>在 Pigsty 中，您可以使用不同 “<strong>风味</strong>” 的 PostgreSQL 分支替换 “原生PG内核”，实现特殊的功能与效果。</p>
+
+  <div class="section-index">
+    
+    
+    <hr class="panel-line">
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/citus/">Citus (Distributive)</a>
+                </h5>
+                <p>使用 Pigsty 部署原生高可用的 Citus 水平分片集群，将 PostgreSQL 无缝伸缩到多套分片并加速 OLTP/OLAP 查询。</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/babelfish/">Babelfish (MSSQL)</a>
+                </h5>
+                <p>使用 WiltonDB 与 Babelfish 创建兼容 Microsoft SQL Server 的 PostgreSQL 数据库集群！（线缆协议级仿真）</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/ivorysql/">IvorySQL (Oracle)</a>
+                </h5>
+                <p>使用瀚高开源的 IvorySQL 内核，基于 PostgreSQL 集群实现 Oracle 语法/PLSQL 兼容性。</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/polardb/">PolarDB PG (RAC)</a>
+                </h5>
+                <p>使用阿里云开源的 PolarDB for PostgreSQL 内核提供国产信创资质支持，与类似 Oracle RAC 的使用体验。</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/polardb-o/">PolarDB O(racle)</a>
+                </h5>
+                <p>使用阿里云商业版本的 PolarDB for Oracle 内核（闭源，PG14，仅在特殊企业版定制中可用）</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/pgml/">PostgresML (AI/ML)</a>
+                </h5>
+                <p>如何使用 Pigsty 拉起 PostgresML，在数据库内进行机器学习，模型训练、推理与 Embedding，RAG。</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/supabase/">Supabase (Firebase)</a>
+                </h5>
+                <p>如何使用Pigsty自建Supabase，一键拉起开源Firebase替代，后端全栈全家桶。</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/greenplum/">Greenplum (MPP)</a>
+                </h5>
+                <p>使用 Pigsty 部署/监控 Greenplum 集群，构建大规模并行处理（MPP）的 PostgreSQL 数据仓库集群！</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/cloudberry/">Cloudberry (MPP)</a>
+                </h5>
+                <p>使用 Pigsty 部署/监控 Cloudberry 集群，一个由 Greenplum 分叉而来的 MPP 数据仓库集群！</p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/zh/docs/kernel/neon/">Neon (Serverless)</a>
+                </h5>
+                <p>使用 Neon 开源的 Serverless 版本 PostgreSQL 内核，自建灵活伸缩，Scale To Zero，灵活分叉的PG服务。</p>
+            </div>
+        </div>
+<style>
+  .feedback--answer {
+    display: inline-block;
+  }
+  .feedback--answer-no {
+    margin-left: 1em;
+  }
+  .feedback--response {
+    display: none;
+    margin-top: 1em;
+  }
+  .feedback--response__visible {
+    display: block;
+  }
+</style>
+<div class="d-print-none">
+<h2 class="feedback--title">Feedback</h2>
+<p class="feedback--question">Was this page helpful?</p>
+<button class="btn btn-primary mb-4 feedback--answer feedback--answer-yes">Yes</button>
+<button class="btn btn-primary mb-4 feedback--answer feedback--answer-no">No</button>
+<p class="feedback--response feedback--response-yes">
+  Glad to hear it! Please <a href="https://github.com/Vonng/pigsty/issues/new">tell us how we can improve</a>.
+</p>
+<p class="feedback--response feedback--response-no">
+  Sorry to hear that. Please <a href="https://github.com/Vonng/pigsty/issues/new">tell us how we can improve</a>.
+</p>
+</div>
+<script>
+  const yesButton = document.querySelector('.feedback--answer-yes');
+  const noButton = document.querySelector('.feedback--answer-no');
+  const yesResponse = document.querySelector('.feedback--response-yes');
+  const noResponse = document.querySelector('.feedback--response-no');
+  const disableButtons = () => {
+    yesButton.disabled = true;
+    noButton.disabled = true;
+  };
+  const sendFeedback = (value) => {
+    if (typeof gtag !== 'function') return;
+    gtag('event', 'page_helpful', {
+      'event_category': 'Helpful',
+      'event_label': window.location.pathname,
+      'value': value
+    });
+  };
+  yesButton.addEventListener('click', () => {
+    yesResponse.classList.add('feedback--response__visible');
+    disableButtons();
+    sendFeedback( 100 );
+  });
+  noButton.addEventListener('click', () => {
+    noResponse.classList.add('feedback--response__visible');
+    disableButtons();
+    sendFeedback(0);
+  });
+</script>
+<br />
+<div class="td-page-meta__lastmod">
+  Last modified 2024-08-13: <a href="https://github.com/Vonng/pigsty.cc/commit/4840b57fd54ff9f44ad0e563665bbe8fa29afe60">add kernel section (4840b57f)</a>
+</div>
+</div>
+
+          </main>
+        </div>
+      </div>
+      <footer class="td-footer row d-print-none">
+  <div class="container-fluid">
+    <div class="row mx-md-2">
+      <div class="td-footer__left col-6 col-sm-4 order-sm-1">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Mail" aria-label="Mail">
+    <a target="_blank" rel="noopener" href="mailto:rh@vonng.com" aria-label="Mail">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="GitHub" aria-label="GitHub">
+    <a target="_blank" rel="noopener" href="https://github.com/Vonng/pigsty" aria-label="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Twitter" aria-label="Twitter">
+    <a target="_blank" rel="noopener" href="https://twitter.com/GobeUncleWang" aria-label="Twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__right col-6 col-sm-4 order-sm-3">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="WeChat" aria-label="WeChat">
+    <a target="_blank" rel="noopener" href="/img/pigsty/pigsty-cc.jpg" aria-label="WeChat">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Discord" aria-label="Discord">
+    <a target="_blank" rel="noopener" href="https://discord.gg/wDzt5VyWEz" aria-label="Discord">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Telegram" aria-label="Telegram">
+    <a target="_blank" rel="noopener" href="https://t.me/joinchat/gV9zfZraNPM3YjFh" aria-label="Telegram">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__center col-12 col-sm-4 py-2 order-sm-2">
+        <span class="td-footer__copyright">&copy;
+    2018&ndash;2024
+    <span class="td-footer__authors">Ruohang Feng</span></span><span class="td-footer__all_rights_reserved">All Rights Reserved</span></span><span class="ms-2"><a href="https://vonng.com/en/" target="_blank" rel="noopener">@Vonng</a></span>
+<br><span>Pigsty® distributed under <a href="/docs/about/license" target="_blank" rel="noopener">AGPLv3</a></span>
+<br><span class="ms-2"><a href="/docs/about/privacy" target="_blank" rel="noopener">Privacy Policy</a></span>
+<span><a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备15016890号</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <script src="/js/main.min.248655eb216150e39da254c2f7aa5357805d0ec66bdb741b591cd35fb5f629ab.js" integrity="sha256-JIZV6yFhUOOdolTC96pTV4BdDsZr23QbWRzTX7X2Kas=" crossorigin="anonymous"></script>
+<script defer src="/js/click-to-copy.min.f724d3de49218995223b7316aa2e53e2b34bf42026bf399ebb21bb02212402d1.js" integrity="sha256-9yTT3kkhiZUiO3MWqi5T4rNL9CAmvzmeuyG7AiEkAtE=" crossorigin="anonymous"></script>
+<script src='/js/tabpane-persist.js'></script>
+
+  </body>
+</html>

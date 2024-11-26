@@ -1,0 +1,222 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Offline</title>
+    <link>/zh/tags/offline/</link>
+    <description>Recent content in Offline on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    
+	  <atom:link href="/zh/tags/offline/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: 离线安装</title>
+      <link>/zh/docs/setup/offline/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/setup/offline/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 默认的 &lt;a href=&#34;/zh/docs/setup/install&#34;&gt;&lt;strong&gt;标准安装&lt;/strong&gt;&lt;/a&gt; 流程需要访问互联网，然而生产环境的数据库服务器通常是与互联网隔离的。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，Pigsty 提供了离线安装的功能。通过使用&lt;a href=&#34;/zh/docs/setup/offline/#离线软件包&#34;&gt;&lt;strong&gt;离线软件包&lt;/strong&gt;&lt;/a&gt;，用户可以在没有互联网访问的环境中同样完成安装与部署。&lt;/p&gt;
+&lt;p&gt;离线软件包是本地软件源的快照与镜像，使用离线软件包可以避免重复的下载请求与流量消耗，显著加速安装速度，并提高安装交付过程的可靠性与一致性。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#构建本地软件源&#34;&gt;构建本地软件源&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#制作离线软件包&#34;&gt;制作离线软件包&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#使用离线软件包&#34;&gt;使用离线软件包&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#离线包兼容性须知&#34;&gt;离线包兼容性须知&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#下载离线软件包&#34;&gt;下载离线软件包&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/setup/offline/#bootstrap&#34;&gt;Bootstrap&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;构建本地软件源&#34;&gt;构建本地软件源&lt;/h2&gt;
+&lt;p&gt;Pigsty 会在安装过程中从互联网上游的 yum/apt 软件仓库，下载所需的 rpm/deb 包并构建一个本地软件源（默认位于 &lt;code&gt;/www/pigsty&lt;/code&gt;）。
+本地软件源由 Nginx 对外提供服务，后续无论是本机还是其他节点，都默认会使用本地软件源进行安装，而不再需要访问互联网&lt;/p&gt;
+&lt;p&gt;使用本地软件源有四个主要好处：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;本地软件源可以避免重复的下载请求与流量消耗，显著加速安装速度并提高安装过程的可靠性。&lt;/li&gt;
+&lt;li&gt;构建本地软件源会对当前可用软件版本取快照，确保部署环境内节点所安装软件版本的一致性。&lt;/li&gt;
+&lt;li&gt;使用本地快照可以避免上游依赖变化导致的依赖错漏与安装失败问题，只要首个节点成功，相同环境的节点就能成功。&lt;/li&gt;
+&lt;li&gt;构建好的本地软件源可以整体打包，复制到安装有相同操作系统的隔离环境中用于&lt;strong&gt;离线安装&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;在 Pigsty 中，本地软件源的默认位置是本机上的 &lt;code&gt;/www/pigsty&lt;/code&gt;目录（可以通过 &lt;a href=&#34;/zh/docs/reference/param#nginx_home&#34;&gt;&lt;code&gt;nginx_home&lt;/code&gt;&lt;/a&gt; &amp;amp; &lt;a href=&#34;/zh/docs/reference/param#repo_name&#34;&gt;&lt;code&gt;repo_name&lt;/code&gt;&lt;/a&gt; 参数进行配置）。
+这个本地软件源将使用 &lt;code&gt;createrepo_c&lt;/code&gt; (EL) 或 &lt;code&gt;dpkg-dev&lt;/code&gt; (Debian) 构建，本节点和其他节点可以通过 &lt;a href=&#34;/zh/docs/reference/param#repo_upstream&#34;&gt;&lt;strong&gt;&lt;code&gt;repo_upstream&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 中 &lt;code&gt;module=local&lt;/code&gt; 的仓库定义引用并使用该软件仓库。&lt;/p&gt;
+&lt;p&gt;您可以在安装完全相同操作系统的节点上执行标准安装，一旦构建完成，你可以将这个节点上的本地软件源目录，使用各种手段（&lt;code&gt;scp/rsync/ftp/usb&lt;/code&gt;）拷贝到另一台安装了完全相同操作系统的节点上，用于 &lt;strong&gt;离线安装&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;更为标准通用的做法是在安装完毕的节点上，将本地软件源打包制作为 &lt;strong&gt;离线软件包&lt;/strong&gt;，并将其拷贝至同环境的待安装隔离节点上使用。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;制作离线软件包&#34;&gt;制作离线软件包&lt;/h3&gt;
+&lt;p&gt;Pigsty 提供了 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/cache.yml&#34;&gt;&lt;strong&gt;&lt;code&gt;cache.yml&lt;/code&gt;&lt;/strong&gt;&lt;/a&gt; 剧本，用于制作离线软件包。
+例如以下命令会将 infra 节点上的 /www/pigsty 本地软件源，打包成离线软件包，并取回到本地 &lt;code&gt;dist/${version}&lt;/code&gt; 目录下。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./cache.yml -l infra  
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;您可以使用 &lt;code&gt;cache_pkg_dir&lt;/code&gt; 与 &lt;code&gt;cache_pkg_name&lt;/code&gt; 参数自定义离线软件包的输出目录与名称，例如，以下命令会将离线软件包生成至 &lt;code&gt;files/pkg.tgz&lt;/code&gt;。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./cache.yml -l infra -e &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;{&amp;#34;cache_pkg_dir&amp;#34;:&amp;#34;files&amp;#34;,&amp;#34;cache_pkg_name&amp;#34;:&amp;#34;pkg.tgz&amp;#34;}&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;使用离线软件包&#34;&gt;使用离线软件包&lt;/h3&gt;
+&lt;p&gt;离线软件包实际上是一个使用 &lt;code&gt;gzip&lt;/code&gt; 与 &lt;code&gt;tar&lt;/code&gt; 制作的压缩包，使用时解压到 &lt;code&gt;/www/pigsty&lt;/code&gt; 目录下即可。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;sudo rm -rf /www/pigsty ； sudo tar -xf /tmp/pkg.tgz -C /www 
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;更简单的做法是将离线软件包拷贝至待安装节点的 &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt; 路径下，然后 Pigsty 会在 &lt;a href=&#34;/zh/docs/setup/offline/#bootstrap&#34;&gt;&lt;code&gt;bootstrap&lt;/code&gt;&lt;/a&gt; 过程中会自动解包，并从本地软件源安装所需软件。&lt;/p&gt;
+&lt;p&gt;Pigsty 在构建本地软件源时会生成一个标记文件 &lt;code&gt;repo_complete&lt;/code&gt;，标记这是一个 Pigsty 本地软件源。
+当 Pigsty &lt;a href=&#34;/zh/docs/setup/install/#安装&#34;&gt;&lt;strong&gt;安装&lt;/strong&gt;&lt;/a&gt; 时，如果发现本地软件源已经存在，就会进入离线安装模式。
+在此模式下，Pigsty 将跳过从互联网下载并构建本地软件源的过程，使用本地软件源完成整个安装过程，期间无需互联网访问。&lt;/p&gt;
+
+
+&lt;div class=&#34;alert alert-secondary&#34; role=&#34;alert&#34;&gt;
+&lt;h4 class=&#34;alert-heading&#34;&gt;进入离线安装模式的判定标准&lt;/h4&gt;
+
+    &lt;p&gt;&lt;br&gt;判定本地软件源存在的标准是：默认位于 &lt;code&gt;/www/pigsty/repo_complete&lt;/code&gt; 的标记文件存在。&lt;/p&gt;
+&lt;p&gt;这个标记文件会在标准安装过程中，下载完成后自动生成，说明这是一个可用的本地软件源。&lt;/p&gt;
+&lt;p&gt;删除本地软件源的 &lt;code&gt;repo_complete&lt;/code&gt; 标记文件后，安装时将重新从上游下载 &lt;strong&gt;缺失的&lt;/strong&gt; 软件包。&lt;/p&gt;
+
+
+&lt;/div&gt;
+
+&lt;hr&gt;
+&lt;h3 id=&#34;离线包兼容性须知&#34;&gt;离线包兼容性须知&lt;/h3&gt;
+&lt;p&gt;离线软件包中的 RPM/DEB 包大体上可以分为三类：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;strong&gt;INFRA&lt;/strong&gt;&lt;/a&gt; 软件包：例如 Prometheus，Grafana，各种监控组件，通常在任何 Linux 发行版下都可以运行。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;strong&gt;PGSQL&lt;/strong&gt;&lt;/a&gt; 软件包：例如 PostgreSQL 内核与各种扩展插件，通常与 Linux 发行版 &lt;strong&gt;大版本&lt;/strong&gt; 绑定。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;strong&gt;NODE&lt;/strong&gt;&lt;/a&gt; 软件包：例如各种动态链接库与主机依赖，通常与 Linux 发行版 &lt;strong&gt;大小版本&lt;/strong&gt; 绑定&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;因此，离线软件包的适用性取决于操作系统的 &lt;strong&gt;大版本&lt;/strong&gt; 与 &lt;strong&gt;小版本&lt;/strong&gt;，因为它包含了上面三种软件包。&lt;/p&gt;
+&lt;p&gt;通常来说，离线软件包只能用于操作系统大小版本精准匹配的场景。
+如果大版本不匹配，INFRA 类软件包 通常可以成功安装，PGSQL 和 NODE 类软件包基本必定会出现依赖缺失或冲突。
+如果小版本不匹配，INFRA 类软件包和 PGSQL 软件包通常可以成功安装，而 NODE 类软件包有概率成功，也有概率失败。&lt;/p&gt;
+&lt;p&gt;例如，RockLinux 8.9 下制作的离线软件包，在 RockyLinux 8.10 环境中有较大的概率可以直接使用。
+而在 Ubuntu 22.04.3 下制作的离线软件，有极大概率会在 22.04.4 中出现依赖冲突问题。
+（是的没错，&lt;a href=&#34;https://wiki.ubuntu.com/Releases&#34;&gt;&lt;strong&gt;Ubuntu&lt;/strong&gt;&lt;/a&gt; 版本号里的 &lt;code&gt;.3&lt;/code&gt; 才是小版本号，&lt;code&gt;22.04&lt;/code&gt; 整个是 &lt;code&gt;jammy&lt;/code&gt; 大版本号！）&lt;/p&gt;
+&lt;p&gt;如果离线软件包的操作系统小版本不匹配，您可以采用一种折中策略进行安装，即在 &lt;a href=&#34;/zh/docs/setup/offline/#bootstrap&#34;&gt;&lt;strong&gt;bootstrap&lt;/strong&gt;&lt;/a&gt; 过程后，
+移除 &lt;code&gt;/www/pigsty/repo_complete&lt;/code&gt; 标记文件，让 Pigsty 重新在安装过程中从上游下载缺失的 NODE 软件包与相关依赖。
+这种方式可以有效解决使用离线软件包时的依赖冲突问题，并同时获得离线安装的全部优点。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;下载离线软件包&#34;&gt;下载离线软件包&lt;/h3&gt;
+&lt;p&gt;从 Pigsty v3 开始，Pigsty 不再公开提供预制的离线软件包，统一默认使用在线安装的方式。
+在线安装允许您从 Pigsty 提供的官方仓库与中国大陆 CDN 下载 INFRA / PGSQL 软件包，并由您操作系统的官方源与镜像下载 NODE 类软件包，从而最大程度的避免了 NODE 软件包小版本依赖冲突问题。&lt;/p&gt;
+&lt;p&gt;不过针对以下精确的操作系统版本，我们提供有偿制作的预制离线软件包，还额外包含了全部可用扩展插件，Docker 等组件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;RockyLinux 8.9 / 8.10 (x86_64)&lt;/li&gt;
+&lt;li&gt;RockyLinux 9.3 / 9.4 (x86_64, aarch64)&lt;/li&gt;
+&lt;li&gt;Ubuntu 24.04.1 (x86_64, arm64)&lt;/li&gt;
+&lt;li&gt;Ubuntu 22.04.5 (x86_64, arm64)&lt;/li&gt;
+&lt;li&gt;Debian 12.7 (x86_64, arm64)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Pigsty 的全套集成测试都针对于发布前预制的离线软件包快照进行，离线软件包能有效降低上游依赖变动导致的交付风险，省去您折腾的麻烦、与等待的时间。
+更能体现您对开源事业的支持，物美价廉，仅需 &lt;strong&gt;¥199&lt;/strong&gt;，请联系 &lt;a href=&#34;rh@vonng.com&#34;&gt;@Vonng&lt;/a&gt; 获取下载链接。&lt;/p&gt;
+&lt;p&gt;对于 Pigsty &lt;a href=&#34;/zh/docs/about/service&#34;&gt;专业版订阅&lt;/a&gt;，我们会针对您使用的具体操作系统大小版本，提供精确匹配，并经过集成测试后的离线软件包。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;bootstrap&#34;&gt;Bootstrap&lt;/h2&gt;
+&lt;p&gt;Pigsty 需要使用 Ansible 来运行剧本，因此 Ansible 本身不适合通过剧本进行安装。
+Bootstrap 脚本用于解决这一问题：它会尽最大努力用各种方式来确保 Ansible 在节点上安装成功。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./bootstrap       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 确保 ansible 正确安装（如果有离线包，优先使用离线安装并解包使用）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您&lt;a href=&#34;/zh/docs/setup/offline/#使用离线软件包&#34;&gt;&lt;strong&gt;使用离线软件包&lt;/strong&gt;&lt;/a&gt;进行安装，Bootstrap 过程会自动识别并处理位于 &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt; 的离线软件包，并优先从中安装 Ansible。
+如果没有使用离线软件包，但是有互联网访问，Bootstrap 会自动添加对应操作系统/对应区域镜像的软件源，并从中安装 Ansible。
+如果既没有网也没有离线包，Bootstrap 会交给用户自行处理此问题，用户需要自行保证当前节点配置的软件源包含可用的 Ansible。&lt;/p&gt;
+&lt;p&gt;Bootstrap 脚本有一些可选参数，例如您可以使用 &lt;code&gt;-p|--path&lt;/code&gt; 参数指定一个不同于 &lt;code&gt;/tmp/pkg.tgz&lt;/code&gt; 的离线软件包位置。
+您也可以使用 &lt;code&gt;-r|--region&lt;/code&gt; 指定一个区域，这样如果需要从互联网下载 Ansible，Pigsty 会添加对应区域的软件源（全球，中国，欧洲）。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./boostrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-r&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--region &amp;lt;region&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;default,china,europe&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-p&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--path &amp;lt;path&amp;gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;      specify another offline pkg path
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;   &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;-k&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;--keep&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;             keep existing upstream repo during bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;最后， bootstrap 过程中默认会备份（&lt;code&gt;/etc/yum.repos.d/backup&lt;/code&gt; / &lt;code&gt;/etc/apt/source.list.d/backup&lt;/code&gt;）并移除节点当前配置的软件源，从而最大程度避免软件源冲突问题。
+如果这不是你期待的行为，或者您已经配置了本地软件源，可以使用 &lt;code&gt;-k|--keep&lt;/code&gt; 参数，保留现有软件源。&lt;/p&gt;
+&lt;details&gt;&lt;summary&gt;例：使用离线软件包&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;在一台安装了 RockyLinux 8.9 的节点上使用离线软件包安装 Pigsty：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;vagrant@el8 pigsty&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;$ ls -alh /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;-rw-r--r--. &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; vagrant vagrant 1.4G Sep  &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; 10:20 /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;vagrant@el8 pigsty&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;$ ./bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.0.4 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; rpm,dnf
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; rocky &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Rocky Linux&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;8&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;8.9&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ssh&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant@127.0.0.1 ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; /tmp/pkg.tgz exists
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;repo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; extract from /tmp/pkg.tgz
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; old &lt;span style=&#34;color:#000&#34;&gt;repos&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; moved to /etc/yum.repos.d/backup
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; use /etc/yum.repos.d/pigsty-local.repo
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; rpm &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, may take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;pigsty &lt;span style=&#34;color:#204a87&#34;&gt;local&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;8&lt;/span&gt; - x86_64                                                                                                                               &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;49&lt;/span&gt; MB/s &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt; 1.3 MB     00:00
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Metadata cache created.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; created
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; install el8 utils
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Last metadata expiration check: 0:00:01 ago on Sun &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;01&lt;/span&gt; Sep &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2024&lt;/span&gt; 10:30:52 AM UTC.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Package wget-1.19.5-11.el8.x86_64 is already installed.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Package yum-utils-4.0.21-23.el8.noarch is already installed.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Dependencies resolved.
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;........
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Installed:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  createrepo_c-0.17.7-6.el8.x86_64        createrepo_c-libs-0.17.7-6.el8.x86_64 drpm-0.4.1-3.el8.x86_64   modulemd-tools-0.7-8.el8.noarch python3-createrepo_c-0.17.7-6.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3-libmodulemd-2.13.0-1.el8.x86_64 python3-pyyaml-3.12-12.el8.x86_64     sshpass-1.09-4.el8.x86_64 unzip-6.0-46.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  ansible-9.2.0-1.el8.noarch                 ansible-core-2.16.3-2.el8.x86_64              git-core-2.43.5-1.el8_10.x86_64                 mpdecimal-2.5.1-3.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3-cffi-1.11.5-6.el8.x86_64           python3-cryptography-3.2.1-7.el8_9.x86_64     python3-jmespath-0.9.0-11.el8.noarch            python3-pycparser-2.14-14.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-3.12.3-2.el8_10.x86_64          python3.12-cffi-1.16.0-2.el8.x86_64           python3.12-cryptography-41.0.7-1.el8.x86_64     python3.12-jmespath-1.0.1-1.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-libs-3.12.3-2.el8_10.x86_64     python3.12-pip-wheel-23.2.1-4.el8.noarch      python3.12-ply-3.11-2.el8.noarch                python3.12-pycparser-2.20-2.el8.noarch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  python3.12-pyyaml-6.0.1-2.el8.x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;Complete!
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;core 2.16.3&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+&lt;details&gt;&lt;summary&gt;例：不使用离线软件包，但是有互联网访问（Debian 12）&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;在一台有互联网访问的 Debian 12 节点上，用户不使用离线软件包，Bootstrap 会自动添加 Debian 12 的上游软件源，并安装 &lt;code&gt;ansible&lt;/code&gt; 与依赖：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant@d12:~/pigsty$ ./bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.1.0 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; deb,apt
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; debian &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Debian GNU/Linux&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;12&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;12&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ssh&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant@127.0.0.1 ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; old &lt;span style=&#34;color:#000&#34;&gt;repos&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; moved to /etc/apt/backup
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; add debian bookworm china upstream
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; apt &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, may take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;....... apt install output
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;core 2.14.16&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+&lt;details&gt;&lt;summary&gt;例：不使用离线软件包，也没有互联网访问（Ubuntu 22.04）&lt;/summary&gt;&lt;br&gt;
+&lt;p&gt;在一个没有互联网访问，也没有离线包的 Ubuntu 22.04 节点上进行 bootstrap。&lt;/p&gt;
+&lt;p&gt;我们假设用户已经通过各种方式解决这个问题，例如在当前的服务器上已经配置了 CD / FS 路径的本地软件源，或者内网中有可用的 YUM / APT 仓库。&lt;/p&gt;
+&lt;p&gt;您可以使用 &lt;code&gt;-k&lt;/code&gt; 参数显式保留当前的软件源配置，当然如果 Pigsty 检测到了没有互联网访问，也没有离线软件包，那么默认也会保留当前的软件源配置。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant@u22:~/pigsty$ ./bootstrap
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bootstrap pigsty v3.1.0 begin
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;region&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; china
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;kernel&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; Linux
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;machine&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; x86_64
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; deb,apt
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;vendor&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ubuntu &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;Ubuntu&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;version&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;22&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;22.04&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;sudo&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ssh&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; vagrant@127.0.0.1 ok
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; old &lt;span style=&#34;color:#000&#34;&gt;repos&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; moved to /etc/apt/backup
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;file&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; add ubuntu jammy china upstream
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;WARN&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; apt &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; updating, may take a &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;while&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; repo &lt;span style=&#34;color:#000&#34;&gt;cache&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; created
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;(&lt;/span&gt;apt update/install 输出&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;ansible&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; ansible 2.10.8
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt; OK &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt; boostrap pigsty &lt;span style=&#34;color:#204a87&#34;&gt;complete&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;proceed with ./configure
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/details&gt;&lt;br&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

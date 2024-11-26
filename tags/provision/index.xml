@@ -1,0 +1,209 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – Provision</title>
+    <link>/tags/provision/</link>
+    <description>Recent content in Provision on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    
+	  <atom:link href="/tags/provision/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Docs: Provisioning</title>
+      <link>/docs/setup/provision/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/docs/setup/provision/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty runs on nodes, which are Bare Metals or Virtual Machines. You can prepare them manually, or using terraform &amp;amp; vagrant for provisioning.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;sandbox&#34;&gt;Sandbox&lt;/h2&gt;
+&lt;p&gt;Pigsty has a sandbox, which is a 4-node deployment with fixed IP addresses and other identifiers.
+Check &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/conf/sandbox/full.yml&#34;&gt;&lt;code&gt;full.yml&lt;/code&gt;&lt;/a&gt; for details.&lt;/p&gt;
+&lt;p&gt;The sandbox consists of 4 nodes with fixed IP addresses: &lt;code&gt;10.10.10.10&lt;/code&gt;, &lt;code&gt;10.10.10.11&lt;/code&gt;, &lt;code&gt;10.10.10.12&lt;/code&gt;, &lt;code&gt;10.10.10.13&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;There&amp;rsquo;s a primary singleton PostgreSQL cluster: &lt;code&gt;pg-meta&lt;/code&gt; on the &lt;code&gt;meta&lt;/code&gt; node, which can be used alone if you don&amp;rsquo;t care about PostgreSQL high availability.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;meta    10.10.10.10  pg-meta pg-meta-1&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There are 3 additional nodes in the sandbox, form a 3-instance PostgreSQL HA cluster &lt;code&gt;pg-test&lt;/code&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;node-1  10.10.10.11  pg-test.pg-test-1&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;node-2  10.10.10.12  pg-test.pg-test-2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;node-3  10.10.10.13  pg-test.pg-test-3&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Two optional L2 VIP are bind on primary instances of cluster &lt;code&gt;pg-meta&lt;/code&gt;  and &lt;code&gt;pg-test&lt;/code&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;10.10.10.2  pg-meta&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;10.10.10.3  pg-test&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There&amp;rsquo;s also a 1-instance &lt;code&gt;etcd&lt;/code&gt; cluster, and 1-instance &lt;code&gt;minio&lt;/code&gt; cluster on the &lt;code&gt;meta&lt;/code&gt; node, too.&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;pigsty-sandbox.jpg&#34; src=&#34;/img/pigsty/sandbox.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;You can run sandbox on local VMs or cloud VMs. Pigsty offers a local sandbox based on &lt;a href=&#34;/docs/setup/provision/#vagrant&#34;&gt;Vagrant&lt;/a&gt; (pulling up local VMs using Virtualbox or libvirt), and a cloud sandbox based on Terraform (creating VMs using the cloud vendor API).&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Local sandbox can be run on your Mac/PC for free.  Your Mac/PC should have at least 4C/8G to run the full 4-node sandbox.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Cloud sandbox can be easily created and shared. You will have to create a cloud account for that. VMs are created on-demand and can be destroyed with one command, which is also very cheap for a quick glance.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;vagrant&#34;&gt;Vagrant&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.vagrantup.com/&#34;&gt;Vagrant&lt;/a&gt; can create local VMs according to specs in a declarative way.
+Check &lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/vagrant/README.md&#34;&gt;Vagrant Templates Intro&lt;/a&gt; for details&lt;/p&gt;
+&lt;p&gt;Vagrant will use  &lt;a href=&#34;https://www.virtualbox.org/&#34;&gt;VirtualBox&lt;/a&gt; as the default VM provider.
+however libvirt, docker, parallel desktop and vmware can also be used. We will use VirtualBox in this guide.&lt;/p&gt;
+&lt;h3 id=&#34;installation&#34;&gt;Installation&lt;/h3&gt;
+&lt;p&gt;Make sure &lt;a href=&#34;https://www.vagrantup.com/&#34;&gt;Vagrant&lt;/a&gt; and &lt;a href=&#34;https://www.virtualbox.org/&#34;&gt;Virtualbox&lt;/a&gt; are installed and available on your OS.&lt;/p&gt;
+&lt;p&gt;If you are using macOS, You can use &lt;code&gt;homebrew&lt;/code&gt; to install both of them with one command (reboot required). You can also use &lt;a href=&#34;https://vagrant-libvirt.github.io/vagrant-libvirt/&#34;&gt;vagrant-libvirt&lt;/a&gt; on Linux.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;/bin/bash -c &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;$(&lt;/span&gt;curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;brew install vagrant virtualbox ansible   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Run on MacOS with one command, but only works on x86_64 Intel chips&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;configuration&#34;&gt;Configuration&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/Vagrantfile&#34;&gt;&lt;code&gt;vagarnt/Vagranfile&lt;/code&gt;&lt;/a&gt; is a ruby script file describing VM nodes. Here are some default specs of Pigsty.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Templates&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Shortcut&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Spec&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;Comment&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/meta.rb&#34;&gt;meta.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v1&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;4C8G x 1&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Single Meta Node&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/full.rb&#34;&gt;full.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v4&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Full 4 Nodes Sandbox Demo&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el7.rb&#34;&gt;el7.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v7&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL7 3-node Testing Env&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el8.rb&#34;&gt;el8.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v8&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL8 3-node Testing Env&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/el9.rb&#34;&gt;el9.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;v9&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G + 1C2G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;EL9 3-node Testing Env&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/build.rb&#34;&gt;build.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vb&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 3&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3-Node EL7,8,9 Building Environment&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/check.rb&#34;&gt;check.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vc&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 30&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;30 Node EL7-EL9 PG 12-16 Env&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/minio.rb&#34;&gt;minio.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vm&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;2C4G x 3 + Disk&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;3-Node MinIO/etcd Testing Env&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/vagrant/spec/prod.rb&#34;&gt;prod.rb&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;&lt;code&gt;vp&lt;/code&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;45 nodes&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;Prod simulation with 45 Nodes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Each spec file contains a &lt;code&gt;Specs&lt;/code&gt; variable describe VM nodes. For example, the &lt;code&gt;full.rb&lt;/code&gt; contains the 4-node sandbox specs.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-ruby&#34; data-lang=&#34;ruby&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000&#34;&gt;Specs&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;[&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;meta&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;   &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.10&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;4096&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.11&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-2&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.12&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;node-3&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;ip&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10.10.10.13&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;cpu&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;1&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;  &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;mem&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;2048&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;image&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;generic/rocky9&amp;#34;&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You can switch specs with the &lt;code&gt;vagrant/switch&lt;/code&gt; script, it will render the final &lt;code&gt;Vagrantfile&lt;/code&gt; according to the spec.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; ~/pigsty
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch &amp;lt;spec&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch meta     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# singleton meta        | alias:  `make v1`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch full     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 4-node sandbox        | alias:  `make v4`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el7      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el7 test       | alias:  `make v7`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el8      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el8 test       | alias:  `make v8`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch el9      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el9 test       | alias:  `make v9`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch prod     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# prod simulation       | alias:  `make vp`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch build    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# building environment  | alias:  `make vd`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch minio    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node minio env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vagrant/switch check    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 30-node check env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;management&#34;&gt;Management&lt;/h3&gt;
+&lt;p&gt;After describing the VM nodes with specs and generate the &lt;code&gt;vagrant/Vagrantfile&lt;/code&gt;. you can create the VMs with &lt;code&gt;vagrant up&lt;/code&gt; command.&lt;/p&gt;
+&lt;p&gt;Pigsty templates will use your &lt;code&gt;~/.ssh/id_rsa[.pub]&lt;/code&gt; as the default ssh key for vagrant provisioning.&lt;/p&gt;
+&lt;p&gt;Make sure you have a valid ssh key pair before you start, you can generate one by: &lt;code&gt;ssh-keygen -t rsa -b 2048&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;There are some makefile shortcuts that wrap the vagrant commands, you can use them to manage the VMs.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# = make start&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make new     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# destroy existing vm and create new ones&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make ssh     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# write VM ssh config to ~/.ssh/     (required)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make dns     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# write VM DNS records to /etc/hosts (optional)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make start   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# launch VMs and write ssh config    (up + ssh) &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make up      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# launch VMs with vagrant up&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make halt    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# shutdown VMs (down,dw)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make clean   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# destroy VMs (clean/del/destroy)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make status  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# show VM status (st)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make pause   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pause VMs (suspend,pause)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make resume  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# pause VMs (resume)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make nuke    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# destroy all vm &amp;amp; volumes with virsh (if using libvirt) &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;shortcuts&#34;&gt;Shortcuts&lt;/h3&gt;
+&lt;p&gt;You can create VMs with the following shortcuts:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make meta     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# singleton meta&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make full     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 4-node sandbox&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el7      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el7 test&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el8      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el8 test&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make el9      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node el9 test&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make prod     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# prod simulation&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make build    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# building environment&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make minio    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 3-node minio env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make check    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 30-node check env&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make meta  install   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create and install pigsty on 1-node singleton meta&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make full  install   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create and install pigsty on 4-node sandbox&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make prod  install   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create and install pigsty on 42-node KVM libvirt environment&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make check install   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# create and install pigsty on 30-node testing &amp;amp; validating environment&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;terraform&#34;&gt;Terraform&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.terraform.io/&#34;&gt;Terraform&lt;/a&gt; is an open-source tool to practice &amp;lsquo;Infra as Code&amp;rsquo;. Describe the cloud resource you want and create them with one command.&lt;/p&gt;
+&lt;p&gt;Pigsty has terraform templates for AWS, Aliyun, and Tencent Cloud, you can use them to create VMs on the cloud for Pigsty Demo.&lt;/p&gt;
+&lt;p&gt;Terraform can be easily installed with homebrew, too: &lt;code&gt;brew install terraform&lt;/code&gt;. You will have to create a cloud account to obtain AccessKey and AccessSecret credentials to proceed.&lt;/p&gt;
+&lt;p&gt;The &lt;code&gt;terraform/&lt;/code&gt; dir have two example templates: one for AWS, and one for Aliyun, you can adjust them to fit your need, or modify them if you are using a different cloud vendor.&lt;/p&gt;
+&lt;p&gt;Take Aliyun as example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;cd&lt;/span&gt; terraform                          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# goto the terraform dir&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cp spec/aliyun.tf terraform.tf        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# use aliyun template&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;You have to perform &lt;code&gt;terraform init&lt;/code&gt; before &lt;code&gt;terraform apply&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;terraform init      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# install terraform provider: aliyun (required only for the first time)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;terraform apply     &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# generate execution plans: create VMs, virtual segments/switches/security groups&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;After running &lt;code&gt;apply&lt;/code&gt; and answering &lt;code&gt;yes&lt;/code&gt; to the prompt, Terraform will create the VMs and configure the network for you.&lt;/p&gt;
+&lt;p&gt;The admin node ip address will be printed out at the end of the execution, you can ssh login and start pigsty &lt;a href=&#34;/docs/setup/install/&#34;&gt;installation&lt;/a&gt;.&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>

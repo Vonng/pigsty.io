@@ -1,0 +1,168 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pigsty – 分布式</title>
+    <link>/zh/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</link>
+    <description>Recent content in 分布式 on Pigsty</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh</language>
+    <lastBuildDate>Sun, 07 May 2023 00:00:00 +0000</lastBuildDate>
+    
+	  <atom:link href="/zh/tags/%E5%88%86%E5%B8%83%E5%BC%8F/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+      
+        
+      
+    
+    
+    <item>
+      <title>Blog: 分布式数据库是不是伪需求？</title>
+      <link>/zh/blog/db/distributive-bullshit/</link>
+      <pubDate>Sun, 07 May 2023 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/db/distributive-bullshit/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/db/distributive-bullshit/featured_huff64b0b2507eaf0da6a19ab58defbda7_849203_640x0_resize_catmullrom_3.png" width="640" height="397"/>]]>
+        
+        &lt;p&gt;随着硬件技术的进步，单机数据库的容量和性能已达到了前所未有的高度。而分布式(TP)数据库在这种变革面前极为无力，和“数据中台”一样穿着皇帝的新衣，处于自欺欺人的状态里。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#太长不看&#34;&gt;太长不看&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#互联网的牵引&#34;&gt;互联网的牵引&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#分布式的权衡&#34;&gt;分布式的权衡&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#新硬件的冲击&#34;&gt;新硬件的冲击&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#伪需求的困境&#34;&gt;伪需求的困境&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#迷茫下的挣扎&#34;&gt;迷茫下的挣扎&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/blog/db/distributive-bullshit/#reference&#34;&gt;Reference&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;&lt;img src=&#34;featured.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;太长不看&#34;&gt;太长不看&lt;/h2&gt;
+&lt;p&gt;分布式数据库的核心权衡是：“&lt;strong&gt;以质换量&lt;/strong&gt;”，牺牲功能、性能、复杂度、可靠性，换取更大的数据容量与请求吞吐量。但分久必合，硬件变革让集中式数据库的容量与吞吐达到一个全新高度，使分布式(TP)数据库失去了存在意义。&lt;/p&gt;
+&lt;p&gt;以 NVMe SSD 为代表的硬件遵循摩尔定律以指数速度演进，十年间性能翻了几十倍，价格降了几十倍，&lt;strong&gt;性价比提高了三个数量级&lt;/strong&gt;。单卡 32TB+， 4K随机读写 IOPS 可达 1600K/600K，延时 70µs/10µs，价格不到 200 ¥/TB·年。跑集中式数据库单机能有一两百万的点写/点查 QPS。&lt;/p&gt;
+&lt;p&gt;真正需要分布式数据库的场景屈指可数，典型的中型互联网公司/银行请求数量级在几万到几十万QPS，不重复TP数据在百TB上下量级。&lt;strong&gt;真实世界中 99% 以上的场景用不上分布式数据库&lt;/strong&gt;，剩下1%也大概率可以通过经典的水平/垂直拆分等工程手段解决。&lt;/p&gt;
+&lt;p&gt;头部互联网公司可能有极少数真正的适用场景，然而此类公司没有任何付费意愿。市场根本无法养活如此之多的分布式数据库内核，能够成活的产品靠的也不见得是分布式这个卖点。HATP 、分布式单机一体化是迷茫分布式TP数据库厂商寻求转型的挣扎，但离 PMF 仍有不小距离。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;互联网的牵引&#34;&gt;互联网的牵引&lt;/h2&gt;
+&lt;p&gt;“分布式数据库” 并不是一个严格定义的术语。狭义上它与 NewSQL：cockroachdb / yugabytesdb / tidb / oceanbase / TDSQL 等数据库高度重合；广义上 Oracle / PostgreSQL / MySQL / SQL Server / PolarDB / Aurora 这种跨多个物理节点，使用主从复制或者共享存储的经典数据库也能归入其中。&lt;strong&gt;在本文语境中，分布式数据库指前者，且只涉及核心定位为事务处理型（OLTP）的分布式关系型数据库&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;分布式数据库的兴起源于互联网应用的快速发展和数据量的爆炸式增长。在那个时代，传统的关系型数据库在面对海量数据和高并发访问时，往往会出现性能瓶颈和可伸缩性问题。即使用 Oracle 与 Exadata，在面对海量 CRUD 时也有些无力，更别提每年以百千万计的高昂软硬件费用。&lt;/p&gt;
+&lt;p&gt;互联网公司走上了另一条路，用诸如 MySQL 这样免费的开源数据库自建。老研发/DBA可能还会记得那条 MySQL 经验规约：单表记录不要超过 2100万，否则性能会迅速劣化；与之对应的是，数据库分库分表开始成为大厂显学。&lt;/p&gt;
+&lt;p&gt;这里的基本想法是“三个臭皮匠，顶个诸葛亮”，用一堆便宜的 x86 服务器 + 大量分库分表开源数据库实例弄出一个海量 CRUD 简单数据存储。故而，&lt;strong&gt;分布式数据库往往诞生于互联网公司的场景，并沿着手工分库分表 → 分库分表中间件 → 分布式数据库这条路径发展进步&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;作为一个行业解决方案，分布式数据库成功满足了互联网公司的场景需求。但是如果想把它抽象沉淀成一个产品对外输出，还需要想清楚几个问题：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;十年前的利弊权衡，在今天是否依然成立？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;互联网公司的场景，对其他行业是否适用？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;分布式事务数据库，会不会是一个伪需求？&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;分布式的权衡&#34;&gt;分布式的权衡&lt;/h2&gt;
+&lt;p&gt;“&lt;strong&gt;分布式&lt;/strong&gt;” 同 “&lt;em&gt;HTAP&lt;/em&gt;”、 “&lt;em&gt;存算分离&lt;/em&gt;”、“&lt;em&gt;Serverless&lt;/em&gt;”、“&lt;em&gt;湖仓一体&lt;/em&gt;” 这样的Buzzword一样，对企业用户来说没有意义。务实的甲方关注的是实打实的属性与能力：功能性能、安全可靠、投入产出、成本效益。&lt;strong&gt;真正重要的是利弊权衡：分布式数据库相比经典集中式数据库，牺牲了什么换取了什么？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-1.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-1.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485399&amp;idx=1&amp;sn=0b7d5a7dc24295afcc56ec688b2c2d06&amp;chksm=fe4b320cc93cbb1a369f9c9a7c50811c6a4f784fd2dd070f6ce5b16378502b8e5c7c76b716e1&amp;scene=21#wechat_redirect&#34;&gt;数据库需求层次金字塔&lt;/a&gt;[1]&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;分布式数据库的核心Trade Off 可以概括为：“以质换量”：牺牲功能、性能、复杂度、可靠性，换取更大的数据容量与请求吞吐量。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;NewSQL 通常主打“分布式”的概念，通过“分布式”解决&lt;strong&gt;水平伸缩性&lt;/strong&gt;问题。在架构上通常拥有多个对等数据节点以及协调者，使用分布式共识协议 Paxos/Raft 进行复制，可以通过添加数据节点的方式进行&lt;strong&gt;水平伸缩&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;首先&lt;/strong&gt;，分布式数据库因其内在局限性，会牺牲许多&lt;strong&gt;功能&lt;/strong&gt;，只能提供较为简单有限的 CRUD 查询支持。&lt;strong&gt;其次&lt;/strong&gt;，分布式数据库因为需要通过多次网络 RPC 完成请求，所以&lt;strong&gt;性能&lt;/strong&gt;相比集中式数据库通常有70%以上的折损。&lt;strong&gt;再者&lt;/strong&gt;，分布式数据库通常由DN/CN以及TSO等多个组件构成，运维管理复杂，引入大量非本质&lt;strong&gt;复杂度&lt;/strong&gt;。&lt;strong&gt;最后&lt;/strong&gt;，分布式数据库在&lt;strong&gt;高可用容灾&lt;/strong&gt;方面相较于经典集中式主从并没有质变，反而因为复数组件引入大量额外失效点。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-2.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-2.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;sysbench 吞吐对比&lt;/a&gt;[2]&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在以前，分布式数据库的利弊权衡是成立的：互联网需要更大的数据存储容量与更高的访问吞吐量：这个问题是必须解决的，而这些缺点是可以克服的。但今日，硬件的发展废问了 量 的问题，那么分布式数据库的存在意义就连同着它想解决的问题本身被一并抹除了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-3.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-3.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;时代变了，大人&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;新硬件的冲击&#34;&gt;新硬件的冲击&lt;/h2&gt;
+&lt;p&gt;摩尔定律指出，每18～24个月，处理器性能翻倍，成本减半。这个规律也基本适用于存储。从2013年开始到2023年是5～6个周期，性能和成本和10年前比应该有&lt;strong&gt;几十倍&lt;/strong&gt;的差距，是不是这样呢？&lt;/p&gt;
+&lt;p&gt;让我们看一下 2013 年典型 SSD 的性能指标，并与 2022 年 PCI-e Gen4 NVMe SSD 的典型产品进行对比。不难发现：硬盘4K随机读写 IOPS从 &lt;strong&gt;60K/40K&lt;/strong&gt; 到了 &lt;strong&gt;1600K/600K&lt;/strong&gt;，价格从 &lt;strong&gt;2220$/TB&lt;/strong&gt; 到 &lt;strong&gt;40$/TB&lt;/strong&gt; 。性能翻了15 ～ 26倍，价格便宜了56 倍[3,4,5]，作为经验法则在数量级上肯定是成立了。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-4.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-4.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;2013 年 HDD/SSD 性能指标&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-5.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-5.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;2022 年NVMe Gen4 SSD 性能指标&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;十年前，机械硬盘还是绝对主流。1TB 的硬盘价格大概七八百元，64GB 的SSD 还要再贵点。十年后，主流 3.2TB 的企业级 NVMe SSD 也不过三千块钱。按五年质保折算，1TB每月成本只要 &lt;strong&gt;16&lt;/strong&gt;块钱，每年成本不到 &lt;strong&gt;200块&lt;/strong&gt;。作为参考，云厂商号称物美价廉的 S3对象存储都要 &lt;strong&gt;1800¥/TB·年。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-6.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-6.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;2013 - 2030 SSD/HDD 单位价格与预测&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;典型的第四代本地 NVMe 磁盘单卡最大容量可达 &lt;strong&gt;32TB～ 64TB&lt;/strong&gt;，提供 &lt;strong&gt;70µs/10µs&lt;/strong&gt; 4K随机读/写延迟，&lt;strong&gt;1600K/600K&lt;/strong&gt; 的读写IOPS，第五代更是有着单卡&lt;strong&gt;十几GB/s&lt;/strong&gt; 的惊人带宽。&lt;/p&gt;
+&lt;p&gt;这样的卡配上一台经典 Dell 64C / 512G 服务器，IDC代维5年折旧，总共十万块不到。而这样一台服务器跑 PostgreSQL &lt;strong&gt;sysbench&lt;/strong&gt; 单机点写入可以接近百万QPS，点查询干到两百万 QPS 不成问题。&lt;/p&gt;
+&lt;p&gt;这是什么概念呢？对于一个典型的中型互联网公司/银行，数据库请求数量级通常在几万/几十万 QPS这个范围；不重复的TP数据量级在百TB上下浮动。考虑到使用硬件存储压缩卡还能有个几倍压缩比，这类场景在现代硬件条件下，有可能集中式数据库单机单卡就直接搞定了[6]。&lt;/p&gt;
+&lt;p&gt;在以前，用户可能需要先砸个几百万搞 exadata 高端存储，再花天价购买 Oracle 商业数据库授权与原厂服务。而现在做到这些，硬件上只需一块几千块的企业级 SSD 卡即可起步；像 PostgreSQL 这样的开源 Oracle 替代，最大单表32TB照样跑得飞快，不再有当年MySQL非要分表不可的桎梏。原本高性能的数据库服务从情报/银行领域的奢侈品，变成各行各业都能轻松负担得起的平价服务[7]。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;性价比是第一产品力&lt;/strong&gt;，高性能大容量的存储在十年间性价比提高了三个数量级，分布式数据库曾经的价值亮点，在这种大力出奇迹的硬件变革下显得软弱无力。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;伪需求的困境&#34;&gt;伪需求的困境&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;在当下，牺牲功能性能复杂度换取伸缩性有极大概率是伪需求&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;在现代硬件的加持下，真实世界中  99%+ 的场景超不出单机集中式数据库的支持范围，剩下1%也大概率可以通过经典的水平/垂直拆分等工程手段解决。这一点对于互联网公司也能成立：即使是全球头部大厂，不可拆分的TP单表超过几十TB的场景依然罕见。&lt;/p&gt;
+&lt;p&gt;NewSQL的祖师爷 Google Spanner 是为了解决海量数据伸缩性的问题，但又有多少企业能有Google的业务数据量？从数据量上来讲，绝大多数企业终其生命周期的TP数据量，都超不过集中式数据库的单机瓶颈，而且这个瓶颈仍然在以摩尔定律的速度指数增长中。从请求吞吐量上来讲，很多企业的数据库性能余量足够让他们把业务逻辑全部用存储过程实现并丝滑地跑在数据库中。&lt;/p&gt;
+&lt;p&gt;“&lt;em&gt;过早优化是万恶之源&lt;/em&gt;”，为了不需要的规模去设计是白费功夫。如果量不再成为问题，那么为了不需要的量去牺牲其他属性就成了一件毫无意义的事情。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-7.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-7.png&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;“过早优化是万恶之源”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;在数据库的许多细分领域中，分布式并不是伪需求&lt;/strong&gt;：如果你需要一个高度可靠容灾的简单低频 KV 存储元数据，那么分布式的 etcd 就是合适的选择；如果你需要一张全球地理分布的表可以在各地任意读写，并愿意承受巨大的性能衰减作为代价，那么分布式的 YugabyteDB 也许是一个不错的选择。如果你需要进行信息公示并防止篡改与抵赖，区块链在本质上也是一种 Leaderless 的分布式账本数据库；&lt;/p&gt;
+&lt;p&gt;对于大规模数据分析OLAP来说，分布式可以说是&lt;strong&gt;必不可少&lt;/strong&gt;（不过这种一般称为数据仓库，MPP）；但是在事务处理OLTP领域，分布式可以说是&lt;strong&gt;大可不必&lt;/strong&gt;：OTLP数据库属于工作性记忆，而&lt;strong&gt;工作记忆&lt;/strong&gt;的特点就是小、快、功能丰富。即使是非常庞大的业务系统，同一时刻活跃的工作集也不会特别大。OLTP 系统设计的一个基本经验法则就是：&lt;strong&gt;如果你的问题规模可以在单机内解决，就不要去折腾分布式数据库&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;OLTP&lt;/strong&gt; 数据库已经有几十年的历史，现有内核已经发展到了相当成熟的地步。TP 领域标准正在逐渐收敛至 PostgreSQL，MySQL，Oracle 三种 Wire Protocol 。如果只是折腾数据库自动分库分表再加个全局事务这种“分布式”，那一定是没有出路的。如果真能有“分布式”数据库杀出一条血路，那大概率也不是因为“分布式”这个“伪需求”，而应当归功于新功能、开源生态、兼容性、易用性、国产信创、自主可控这些因素。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;迷茫下的挣扎&#34;&gt;迷茫下的挣扎&lt;/h2&gt;
+&lt;p&gt;分布式数据库最大的挑战来自于市场结构：&lt;strong&gt;最有可能会使用分布式TP数据库的互联网公司，反而是最不可能为此付费的一个群体&lt;/strong&gt;。互联网公司可以作为很好的高质量用户甚至贡献者，提供案例、反馈与PR，但唯独在为软件掏钱买单这件事上与其&lt;strong&gt;模因本能&lt;/strong&gt;相抵触。即使头部分布式数据库厂商，也面临着&lt;strong&gt;叫好不叫座&lt;/strong&gt;的难题。&lt;/p&gt;
+&lt;p&gt;近日与某分布式数据库厂工程师闲聊时获悉，在客户那儿做 POC 时，Oracle 10秒跑完的查询，他们的分布式数据库用上各种资源和 Dirty Hack 都有一个数量级上的差距。即使是从10年前 PostgreSQL 9.2 分叉出来的 openGauss，都能在一些场景下干翻不少分布式数据库，更别提10年后的 PostgreSQL 15 与 Oracle 23c 了。这种差距甚至会让原厂都感到迷茫，分布式数据库的出路在哪里？&lt;/p&gt;
+&lt;p&gt;所以一些分布式数据库开始自救转型， &lt;strong&gt;HTAP&lt;/strong&gt; 是一个典型例子：分布式搞事务鸡肋，但是做分析很好呀。那么为什么不能捏在一起凑一凑？一套系统，同时可以做事务处理与分析哟！但真实世界的工程师都明白：&lt;strong&gt;AP系统和TP系统各有各的模式，强行把两个需求南辕北辙的系统硬捏合在一块，只会让两件事都难以成功&lt;/strong&gt;。不论是使用经典 ETL/CDC 推拉到专用 ClickHouse/Greenplum/Doris 去处理，还是逻辑复制到In-Mem列存的专用从库，哪一种都要比用一个奇美拉杂交HTAP数据库要更靠谱。&lt;/p&gt;
+&lt;p&gt;另一种思路是 &lt;strong&gt;单机分布式一体化&lt;/strong&gt;：&lt;strong&gt;打不过就加入&lt;/strong&gt; ：添加一个单机模式以规避代价高昂的网络RPC开销，起码在那些用不上分布式的99%场景中，不至于在硬指标上被集中式数据库碾压得一塌糊涂 —— &lt;strong&gt;用不上分布式没关系，先拽上车别被其他人截胡！&lt;/strong&gt; 但这里的问题本质与 HTAP 是一样的：强行整合异质数据系统没有意义，如果这样做有价值，那么为什么没人去把所有异构数据库整合一个什么都能做的巨无霸二进制 —— &lt;strong&gt;数据库全能王？&lt;/strong&gt; 因为这样违背了KISS原则：&lt;strong&gt;Keep&lt;/strong&gt; &lt;strong&gt;It&lt;/strong&gt; &lt;strong&gt;Simple,&lt;/strong&gt; &lt;strong&gt;Stupid！&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;distributive-bullshit-8.png&#34; src=&#34;/zh/blog/db/distributive-bullshit/distributive-bullshit-8.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;分布式数据库和&lt;strong&gt;数据中台&lt;/strong&gt;的处境类似[8]：起源于互联网大厂内部的场景，也解决过领域特定的问题。曾几何时乘着互联网行业的东风，数据库言必谈分布式，火热风光好不得意。却因为过度的包装吹捧，承诺了太多不切实际的东西，又无法达到用户预期 —— 最终一地鸡毛，成为皇帝的新衣。&lt;/p&gt;
+&lt;p&gt;TP数据库领域还有很多地方值得投入精力：Leveraging new hardwares，积极拥抱 CXL，RDMA，NVMe 等底层体系结构变革；或者提供简单易用的声明式接口，让数据库的使用与管理更加便利；提供更为智能的自动驾驶监控管控，尽可能消除运维性的杂活儿；开发类似 Babelfish 的 MySQL / Oracle 兼容插件，实现关系数据库 WireProtocol 统一。哪怕砸钱堆人提供更好的支持服务，都比一个 “分布式” 的伪需求噱头要更有意义。&lt;/p&gt;
+&lt;p&gt;因时而动，君子不器。愿分布式数据库厂商们找到自己的 PMF，做一些用户真正需要的东西。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;references&#34;&gt;References&lt;/h2&gt;
+&lt;p&gt;[1] &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485399&amp;idx=1&amp;sn=0b7d5a7dc24295afcc56ec688b2c2d06&amp;chksm=fe4b320cc93cbb1a369f9c9a7c50811c6a4f784fd2dd070f6ce5b16378502b8e5c7c76b716e1&amp;scene=21#wechat_redirect&#34;&gt;数据库需求层次金字塔 &lt;/a&gt;: &lt;em&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&#34;&gt;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[2] &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485240&amp;idx=1&amp;sn=9052f03ae2ef21d9e21037fd7a1fa7fe&amp;chksm=fe4b32e3c93cbbf522616346c1afd49e1e6edbb0898694df224fe2134a69c0c4562aab35587a&amp;scene=21#wechat_redirect&#34;&gt;PostgreSQL到底有多强？&lt;/a&gt; : &lt;em&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[3] 2013年SSD性能 : &lt;em&gt;&lt;a href=&#34;https://www.snia.org/sites/default/files/SNIASSSI.SSDPerformance-APrimer2013.pdf&#34;&gt;https://www.snia.org/sites/default/files/SNIASSSI.SSDPerformance-APrimer2013.pdf&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[4] 2022年镁光9400 NVMe SSD 规格说明 : &lt;em&gt;&lt;a href=&#34;https://media-www.micron.com/-/media/client/global/documents/products/product-flyer/9400_nvme_ssd_product_brief.pdf&#34;&gt;https://media-www.micron.com/-/media/client/global/documents/products/product-flyer/9400_nvme_ssd_product_brief.pdf&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[5] 2013-2030 SSD价格走势与预测 : &lt;em&gt;&lt;a href=&#34;https://blocksandfiles.com/2021/01/25/wikibon-ssds-vs-hard-drives-wrights-law/&#34;&gt;https://blocksandfiles.com/2021/01/25/wikibon-ssds-vs-hard-drives-wrights-law/&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[6] &lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzIxNTQ0MDQxNg==&amp;mid=2247516311&amp;idx=1&amp;sn=b93dc765a952f998ccea6e85ebfb7b8d&amp;scene=21#wechat_redirect&#34;&gt;单实例100TB使用压缩卡到20TB&lt;/a&gt;: &lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=MzIxNTQ0MDQxNg==&amp;mid=2247516311&amp;idx=1&amp;sn=b93dc765a952f998ccea6e85ebfb7b8d&amp;scene=21#wechat_redirect&#34;&gt;&lt;em&gt;https://mp.weixin.qq.com/s/JSQPzep09rDYbM-x5ptsZA&lt;/em&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[7] &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485391&amp;idx=1&amp;sn=4cec9af2b58160eb345a6b12411f0b68&amp;chksm=fe4b3214c93cbb023c13a89133c75bf1e88e1543de9359df7447498e4a9d5ec555313a954566&amp;scene=21#wechat_redirect&#34;&gt;公有云是不是杀猪盘？&lt;/a&gt;: &lt;em&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;[8] &lt;a href=&#34;https://mp.weixin.qq.com/s?__biz=Mzg3NjcyNDk3MQ==&amp;mid=2247486918&amp;idx=1&amp;sn=c1c0331b01e2c91e65ec6ed755093582&amp;scene=21#wechat_redirect&#34;&gt;中台：一场彻头彻尾的自欺欺人&lt;/a&gt;: &lt;em&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/VgTU7NcOwmrX-nbrBBeH_w&#34;&gt;https://mp.weixin.qq.com/s/VgTU7NcOwmrX-nbrBBeH_w&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 区块链与分布式数据库</title>
+      <link>/zh/blog/db/blockchian/</link>
+      <pubDate>Sat, 09 Jun 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/db/blockchian/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/db/blockchian/featured_hu093e0bcf1f545ac0489a2693174b7e8a_430236_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
+        
+        &lt;p&gt;&lt;strong&gt;区块链的本质，想提供的功能，及其演化方向，就是分布式数据库。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;确切的讲，是&lt;strong&gt;拜占庭容错（抗恶意节点攻击）的分布式（无领导者复制）数据库&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;blockchain.jpg&#34;&gt;&lt;/p&gt;
+&lt;p&gt;如果这种分布式数据库用来存储各种币的&lt;strong&gt;交易记录&lt;/strong&gt;，这个系统就叫做所谓的“XX币”。例如以太坊就是这样一个分布式数据库，上面除了记载着各种山寨币的交易记录，还可以记载各种奇奇怪怪的内容。花一点以太币，就可以在这个分布式数据库里留下&lt;a href=&#34;https://etherscan.io/tx/0x2d6a7b0f6adeff38423d4c62cd8b6ccb708ddad85da5d3d06756ad4d8a04a6a2&#34;&gt;一条记录（一封信）&lt;/a&gt;。而所谓&lt;strong&gt;智能合约&lt;/strong&gt;就是这个分布式数据库上的&lt;strong&gt;存储过程&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;从形式上看，&lt;strong&gt;区块链&lt;/strong&gt; 与 &lt;strong&gt;预写式日志（Write-Ahead-Log, WAL, Binlog, Redolog）&lt;/strong&gt; 在设计原理上是高度一致的。&lt;/p&gt;
+&lt;p&gt;WAL是数据库的核心数据结构，记录了从数据库创建之初到当前时刻的所有变更，用于实现主从复制、备份回滚、故障恢复等功能。如果保留了全量的WAL日志，就可以从起点回放WAL，时间旅行到任意时刻的状态，如PostgreSQL的PITR。&lt;/p&gt;
+&lt;p&gt;区块链其实就是这样一份日志，它记录了从创世以来的每笔Transaction。回放日志就可以还原数据库任意时刻的状态（反之则不成立）。所以区块链当然可以算作某种意义上的数据库。&lt;/p&gt;
+&lt;p&gt;区块链的两大特性：去中心化与防篡改，用数据库的概念也很好理解：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;去中心化&lt;/strong&gt;的实质就是&lt;strong&gt;无领导者复制（leaderless replication），&lt;strong&gt;核心在于&lt;/strong&gt;分布式共识&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;防篡改&lt;/strong&gt;的实质就是&lt;strong&gt;拜占庭容错&lt;/strong&gt;，即，使得 &lt;strong&gt;篡改WAL的计算代价在概率上不可行&lt;/strong&gt; 。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;正如WAL分为&lt;strong&gt;日志段&lt;/strong&gt;，区块链也被划分为一个一个 &lt;strong&gt;区块&lt;/strong&gt; ，且每一段带有先前日志段的哈希指纹。&lt;/p&gt;
+&lt;p&gt;所谓挖矿就是一个公开的猜数字比快游戏（满足条件的数字才会被共识承认），先猜中者能获取下一个日志段的初夜权：向日志段里写一笔向自己转账的记录（就是挖矿的奖励），并广播出去（如果别人也猜中了，以先广播至多数为准）。所有节点通过共识算法，保证当前最长的链为权威日志版本。区块链通过&lt;strong&gt;共识算法&lt;/strong&gt;实现日志段的&lt;strong&gt;无主复制&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;而如果想要修改某个WAL日志段中的一比交易记录，比如，转给自己一万个比特币，需要把这个区块以及其后所有区块的指纹给凑出来（连猜几次数字），并让多数节点相信这个伪造版本才行（拼一个更长的伪造版本，意味着猜更多次数字）。比特币中六个区块确认一个交易就是这个意思，篡改六个日志段之前的记录的算例代价，通常在概率上是不可行的。区块链通过这种机制（如Merkle树）实现&lt;strong&gt;拜占庭容错&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;区块链涉及到的相关技术中，除了&lt;strong&gt;分布式共识&lt;/strong&gt;外都很简单，但这种&lt;strong&gt;应用方式&lt;/strong&gt;与&lt;strong&gt;机制设计&lt;/strong&gt;确实是相当惊艳的。区块链可以算是一次数据库的演化尝试，长期来看前景广阔。但搞链能立竿见影起作用的领域，好像都是老大哥的地盘。而且不管怎么吹嘘，现在的区块链离真正意义上的分布式数据库还差的太远，所以现在入场搞应用的大概率都是先烈。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+  </channel>
+</rss>
