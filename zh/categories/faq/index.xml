@@ -534,8 +534,23 @@
 &lt;p&gt;例如，您可以设置 &lt;code&gt;region&lt;/code&gt; = &lt;code&gt;china&lt;/code&gt;，这样将使用 &lt;code&gt;baseurl&lt;/code&gt; 中键为 &lt;code&gt;china&lt;/code&gt; 的 URL 而不是 &lt;code&gt;default&lt;/code&gt;。&lt;/p&gt;
 &lt;p&gt;如果防火墙或GFW屏蔽了某些仓库，考虑使用&lt;a href=&#34;/zh/docs/reference/param#proxy_env&#34;&gt;&lt;code&gt;proxy_env&lt;/code&gt;&lt;/a&gt; 来绕过。&lt;/p&gt;
 &lt;hr&gt;
+&lt;h2 id=&#34;安装失败应该如何解决&#34;&gt;安装失败应该如何解决？&lt;/h2&gt;
+&lt;p&gt;Pigsty 不依赖 Docker，所以期待的环境是一个全新安装操作系统后的状态，如果您使用已经跑了千奇百怪服务的系统，更容易遇到疑难杂症，我们建议不要这么做。
+出现安装失败时，可以按照以下思路进行排查：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;您应当确认当前失败的位置在哪个模块，不同模块失败有不同的原因。您应当保留 Ansible 剧本输出结果备用，并找到所有标红的 Failed 任务。&lt;/li&gt;
+&lt;li&gt;如果出现无法识别配置，剧本直接无法开始，请检查您的配置文件是否是合法的 YAML，缩进，括号等是否有问题。&lt;/li&gt;
+&lt;li&gt;如果错误与本地软件源，Nginx 有关，请检查你的系统是不是全新系统，是否已经运行了 Nginx 或其他组件？或者是否有特殊的防火墙与安全策略在运作？&lt;/li&gt;
+&lt;li&gt;如果是安装节点软件包时出现错误，您是否使用了OS小版本精确匹配的离线软件包？上游是否出现依赖错漏？请参考下面的内容解决&lt;/li&gt;
+&lt;li&gt;如果是系统配置出现错误，您的操作系统是否是全新安装的状态？或者 —— 精简安装到了 Locale 都没有配置的状态？&lt;/li&gt;
+&lt;li&gt;如果是 MinIO 出现问题，您是否使用了 SNMD，MNMD 部署却没有提供真实的磁盘挂载点？您的 &lt;code&gt;sss.pigsty&lt;/code&gt; 静态域名是否指向了任意 MinIO 节点或 LB 集群？&lt;/li&gt;
+&lt;li&gt;如果是 PGSQL 安装出现了问题，您在 pg_extension 中指定安装的扩展，是否还没有添加到 repo_packages 中，或者还没有被覆盖？&lt;/li&gt;
+&lt;li&gt;如果是 PGSQL 启动出现了问题，例如 wait for patroni primary，请参考 &lt;a href=&#34;/zh/docs/pgsql/faq&#34;&gt;PGSQL FAQ&lt;/a&gt; 解决。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
 &lt;h2 id=&#34;软件包安装失败如何解决&#34;&gt;软件包安装失败如何解决？&lt;/h2&gt;
-&lt;p&gt;请注意，Pigsty 的预制 &lt;a href=&#34;/zh/docs/setup/offline/#%E7%A6%BB%E7%BA%BF%E8%BD%AF%E4%BB%B6%E5%8C%85&#34;&gt;&lt;strong&gt;离线软件包&lt;/strong&gt;&lt;/a&gt; 是针对 &lt;a href=&#34;/zh/docs/reference/compatibility/#vagrant-%E9%95%9C%E5%83%8F%E5%8F%82%E8%80%83&#34;&gt;&lt;strong&gt;特定操作系统发行版小版本&lt;/strong&gt;&lt;/a&gt; 打包的，因此如果您使用的操作系统版本没有精确对齐，我们不建议使用离线软件安装包，而是直接从上游下载符合当前操作系统实际情况的软件包版本。&lt;/p&gt;
+&lt;p&gt;请注意，Pigsty 的预制 &lt;a href=&#34;/zh/docs/setup/offline#%E7%A6%BB%E7%BA%BF%E8%BD%AF%E4%BB%B6%E5%8C%85&#34;&gt;&lt;strong&gt;离线软件包&lt;/strong&gt;&lt;/a&gt; 是针对 &lt;a href=&#34;/zh/docs/reference/compatibility/#vagrant-%E9%95%9C%E5%83%8F%E5%8F%82%E8%80%83&#34;&gt;&lt;strong&gt;特定操作系统发行版小版本&lt;/strong&gt;&lt;/a&gt; 打包的，
+因此如果您使用的操作系统版本没有精确对齐，我们不建议使用离线软件安装包，而是直接从上游下载符合当前操作系统实际情况的软件包版本。&lt;/p&gt;
 &lt;p&gt;如果在线安装无法解决包冲突问题，您首先可以尝试修改 Pigsty 使用的上游软件源。例如在 EL 系操作系统中， Pigsty 默认的上游软件源中使用 &lt;code&gt;$releasever&lt;/code&gt; 这样的大版本占位符，它将被解析为具体的 7，8，9 大版本号，但是许多操作系统发行版都提供了 Vault，允许您使用特定某一个版本的软件包镜像。
 因此，您可以将 &lt;code&gt;repo_upstream&lt;/code&gt; 参数中的 BaseURL 前段替换为具体的 Vault 小版本仓库，例如：&lt;/p&gt;
 &lt;ul&gt;
@@ -584,11 +599,11 @@
 &lt;p&gt;所有默认的配置模板都在 &lt;code&gt;files/pigsty&lt;/code&gt;中，你可以使用 &lt;code&gt;-c&lt;/code&gt; 直接指定想要使用的配置模板。如果您已经知道如何配置 Pigsty 了，那么完全可以跳过这一步，直接编辑 Pigsty 配置文件。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;pigsty配置文件是干什么的&#34;&gt;Pigsty配置文件是干什么的？&lt;/h2&gt;
-&lt;p&gt;Pigsty主目录下的 &lt;code&gt;pigsty.yml&lt;/code&gt; 是默认的配置文件，可以用来描述整套部署的环境，在 &lt;a href=&#34;https://github.com/Vonng/pigsty/tree/master/files/pigsty&#34;&gt;&lt;code&gt;files/pigsty&lt;/code&gt;&lt;/a&gt; 有许多配置示例供你参考。&lt;/p&gt;
-&lt;p&gt;当执行剧本时，你可以使用 &lt;code&gt;-i &amp;lt;path&amp;gt;&lt;/code&gt; 参数，选用其他位置的配置文件。例如，你想根据另一个专门的配置文件 &lt;code&gt;redis.yml&lt;/code&gt; 来安装 redis：&lt;code&gt;./redis.yml -i files/pigsty/redis.yml&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Pigsty主目录下的 &lt;code&gt;pigsty.yml&lt;/code&gt; 是默认的配置文件，可以用来描述整套部署的环境，在 &lt;a href=&#34;https://github.com/Vonng/pigsty/tree/main/conf&#34;&gt;&lt;code&gt;conf/&lt;/code&gt;&lt;/a&gt; 目录中有许多配置示例供你参考。在 &lt;a href=&#34;/zh/docs/conf&#34;&gt;文档站：配置模板&lt;/a&gt; 中相关说明。&lt;/p&gt;
+&lt;p&gt;当执行剧本时，你可以使用 &lt;code&gt;-i &amp;lt;path&amp;gt;&lt;/code&gt; 参数，选用其他位置的配置文件。例如，你想根据另一个专门的配置文件 &lt;code&gt;redis.yml&lt;/code&gt; 来安装 redis，可以这样做：&lt;code&gt;./redis.yml -i files/pigsty/redis.yml&lt;/code&gt;&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;如何使用-cmdb-作为配置清单&#34;&gt;如何使用 CMDB 作为配置清单？&lt;/h2&gt;
-&lt;p&gt;默认的配置文件路径在 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/ansible.cfg&#34;&gt;&lt;code&gt;ansible.cfg&lt;/code&gt;&lt;/a&gt; 中指定为：&lt;code&gt;inventory = pigsty.yml&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Ansible 默认使用的配置清单在 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/ansible.cfg&#34;&gt;&lt;code&gt;ansible.cfg&lt;/code&gt;&lt;/a&gt; 中指定为：&lt;code&gt;inventory = pigsty.yml&lt;/code&gt;&lt;/p&gt;
 &lt;p&gt;你可以使用 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/bin/inventory_cmdb&#34;&gt;&lt;code&gt;bin/inventory_cmdb&lt;/code&gt;&lt;/a&gt; 切换到动态的 CMDB 清单，
 使用 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/bin/inventory_conf&#34;&gt;&lt;code&gt;bin/inventory_conf&lt;/code&gt;&lt;/a&gt; 返回到本地配置文件。
 你还需要使用 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/bin/inventory_load&#34;&gt;&lt;code&gt;bin/inventory_load&lt;/code&gt;&lt;/a&gt; 将当前的配置文件清单加载到 CMDB。&lt;/p&gt;
@@ -597,10 +612,14 @@
 &lt;h2 id=&#34;配置文件中的ip地址占位符是干什么的&#34;&gt;配置文件中的IP地址占位符是干什么的？&lt;/h2&gt;
 &lt;p&gt;Pigsty 使用 &lt;code&gt;10.10.10.10&lt;/code&gt; 作为当前节点 IP 的占位符，配置过程中会用当前节点的主 IP 地址替换它。&lt;/p&gt;
 &lt;p&gt;当 &lt;code&gt;configure&lt;/code&gt; 检测到当前节点有多个 NIC 带有多个 IP 时，配置向导会提示使用哪个&lt;strong&gt;主要&lt;/strong&gt; IP，即 &lt;strong&gt;用户用于从内部网络访问节点的 IP&lt;/strong&gt;，此 IP 将用于在配置文件模板中替换占位符 &lt;code&gt;10.10.10.10&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;请注意，您应当使用静态 IP 地址，而不是 DHCP 分配的动态 IP 地址，因为 Pigsty 使用静态 IPv4 地址唯一标识节点。&lt;/p&gt;
 &lt;p&gt;请注意：不要使用公共 IP 作为主 IP，因为 Pigsty 会使用主 IP 来配置内部服务，例如 Nginx，Prometheus，Grafana，Loki，AlertManager，Chronyd，DNSMasq 等，除了 Nginx 之外的服务不应该对外界暴露端口。&lt;/p&gt;
 &lt;hr&gt;
+&lt;h2 id=&#34;我没有静态ip可以安装pigsty吗&#34;&gt;我没有静态IP，可以安装Pigsty吗？&lt;/h2&gt;
+&lt;p&gt;如果您的服务器没有静态IP，在 &lt;strong&gt;单机部署&lt;/strong&gt; 的情况下，可以使用本地环回地址 &lt;code&gt;127.0.0.1&lt;/code&gt; 作为这个唯一节点的 IP 地址标识。&lt;/p&gt;
+&lt;hr&gt;
 &lt;h2 id=&#34;配置文件中的哪些参数需要用户特殊关注&#34;&gt;配置文件中的哪些参数需要用户特殊关注？&lt;/h2&gt;
-&lt;p&gt;Pigsty 提供了 280+ 配置参数，可以对整个环境与各个模块 infra/node/etcd/minio/pgsql 进行细致入微的定制。&lt;/p&gt;
+&lt;p&gt;Pigsty 提供了 280+ 配置参数，可以对整个环境与各个模块 infra / node / etcd / minio / pgsql 进行细致入微的定制。&lt;/p&gt;
 &lt;p&gt;通常在单节点安装中，你不需要对默认生成的配置文件进行任何调整。但如果需要，可以关注以下这些参数：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;当访问 web 服务组件时，域名由 &lt;a href=&#34;/zh/docs/reference/param#infra_portal&#34;&gt;&lt;code&gt;infra_portal&lt;/code&gt;&lt;/a&gt; 指定，有些服务只能通过 Nginx 代理使用域名访问。&lt;/li&gt;
@@ -611,24 +630,36 @@
 &lt;h2 id=&#34;在默认单机安装时到底都安装了什么东西&#34;&gt;在默认单机安装时，到底都安装了什么东西？&lt;/h2&gt;
 &lt;p&gt;当您执行 &lt;code&gt;make install&lt;/code&gt; 时，实际上是调用 Ansible 剧本 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/install.yml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt;，根据配置文件中的参数，安装以下内容：&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;&lt;code&gt;INFRA&lt;/code&gt; 模块：提供本地软件源，Nginx Web接入点，DNS服务器，NTP服务器，Prometheus与Grafana可观测性技术栈。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;NODE&lt;/code&gt; 模块，将当前节点纳入 Pigsty 管理，部署 HAProxy 与 监控。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;ETCD&lt;/code&gt; 模块，部署一个单机 etcd 集群，作为 PG 高可用的 DCS&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;MINIO&lt;/code&gt; 模块是默认不安装的，它可以作为 PG 的备份仓库。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;PGSQL&lt;/code&gt; 模块，一个单机 PostgreSQL 数据库实例。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt; 模块：提供本地软件源，Nginx Web接入点，DNS服务器，NTP服务器，Prometheus与Grafana可观测性技术栈。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;  模块，将当前节点纳入 Pigsty 管理，部署 HAProxy 与 监控。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;  模块，部署一个单机 etcd 集群，作为 PG 高可用的 DCS&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 模块如果定义，则会安装，它可以作为 PG 的可选备份仓库。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 模块，一个单机 PostgreSQL 数据库实例。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;hr&gt;
-&lt;h2 id=&#34;安装遇到rpm冲突怎么办&#34;&gt;安装遇到RPM冲突怎么办？&lt;/h2&gt;
-&lt;p&gt;在安装 node/infra/pgsql 软件包期间，可能有微小的几率出现 rpm 冲突。特别是，如果您使用的 EL 7-9 小版本不同于 7.9, 8.9, 9.3 ，或者使用了一些冷门换皮魔改发行版的话，可能会出现这种情况。&lt;/p&gt;
-&lt;p&gt;解决这个问题的最简单方法是：不使用离线包进行安装，这将直接从上游仓库中下载最合适您当前系统的软件包。如果只有少数几个 RPM 包有问题，你可以使用一个小技巧快速修复：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;rm -rf /www/pigsty/repo_complete    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 删除 repo_complete 标记文件，以标记此仓库为不完整（这样会重新从上游下载软件）&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;rm -rf SomeBrokenRPMPackages        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 删除有问题的 RPM 包&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./infra.yml -t repo_upstream        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 写入上游仓库。你也可以使用 /etc/yum.repos.d/backup/*&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./infra.yml -t repo_pkg             &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 根据你当前的操作系统下载软件包&lt;/span&gt;
+&lt;h2 id=&#34;安装遇到软件包冲突怎么办&#34;&gt;安装遇到软件包冲突怎么办？&lt;/h2&gt;
+&lt;p&gt;在安装 node / infra / pgsql 软件包期间，可能有微小的几率出现软件包依赖错漏冲突。这里有几种常见原因：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;上游软件源发布了不匹配的软件包版本或缺失了依赖，您可能要等待上游修复此问题，时间以周计。事先在依赖完备时制作的离线安装包可以预防这个问题。&lt;/li&gt;
+&lt;li&gt;您制作离线安装包操作系统小版本与当前操作系统的小版本不匹配，您可以使用在线安装，或重新使用相同系统下制作的离线软件包的方式解决此问题&lt;/li&gt;
+&lt;li&gt;个别不重要，非必选的软件包，可以直接将其从安装列表，或本地软件源中剔除的方式快速绕过。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;如何重建本地软件仓库&#34;&gt;如何重建本地软件仓库？&lt;/h2&gt;
+&lt;p&gt;我想要从上游仓库重新下载软件包，但是执行 &lt;code&gt;./infra.yml&lt;/code&gt; 和 &lt;code&gt;repo&lt;/code&gt; 子任务都跳过下载了，怎么办？&lt;/p&gt;
+&lt;p&gt;您可以使用以下快捷命令和剧本任务，强制重建本地软件源。 Pigsty 会重新检查上游仓库并下载软件包。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make repo-build      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# ./infra.yml -t repo_build  &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;如何在安装后下载最新版本的软件包&#34;&gt;如何在安装后下载最新版本的软件包？&lt;/h2&gt;
+&lt;p&gt;如果您想要下载最新的软件包版本（RPM/DEB），你可以选择在 &lt;code&gt;/www/pigsty&lt;/code&gt; 中手工使用 &lt;code&gt;apt/dnf&lt;/code&gt; 下载特定版本的软件包。
+在这种情况下，您可以使用以下命令，只更新本地软件仓库的元数据库，而不是整个重建：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./infra.yml -t repo_create
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;或者移除 &lt;code&gt;/www/pigsty&lt;/code&gt; 中的旧版本软件包后重新执行仓库重建命令：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;make repo-build      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# ./infra.yml -t repo_build  &lt;/span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
 &lt;h2 id=&#34;如何使用-vagrant-创建本地虚拟机&#34;&gt;如何使用 Vagrant 创建本地虚拟机？&lt;/h2&gt;
 &lt;p&gt;当你第一次使用 Vagrant 启动某个特定的操作系统仓库时，它会下载相应的 Box/Img 镜像文件，Pigsty 沙箱默认使用 &lt;code&gt;generic/rocky9&lt;/code&gt; 镜像。&lt;/p&gt;
-&lt;p&gt;使用代理可能会增加下载速度。Box/Img 只需下载一次，在重建沙箱时会被重复使用。&lt;/p&gt;
+&lt;p&gt;使用代理可能会增加下载速度。Box/Image 只需下载一次，在重建沙箱时会被重复使用。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;阿里云上-centos-79-特有的-rpm-冲突问题&#34;&gt;阿里云上 CentOS 7.9 特有的 RPM 冲突问题&lt;/h2&gt;
 &lt;p&gt;阿里云的 CentOS 7.9 额外安装的 &lt;code&gt;nscd&lt;/code&gt; 可能会导致 RPM 冲突问题：&lt;code&gt;&amp;quot;Error: Package: nscd-2.17-307.el7.1.x86_64 (@base)&amp;quot;&lt;/code&gt;&lt;/p&gt;
@@ -649,7 +680,9 @@
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-ini&#34; data-lang=&#34;ini&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;[defaults]&lt;/span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;timeout&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;10 # 将其修改为 60，120 或更高。&lt;/span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果你的SSH连接非常慢，通常会是 DNS的问题，请检查sshd配置确保 &lt;code&gt;UseDNS no&lt;/code&gt;。&lt;/p&gt;
-
+&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
       </description>
     </item>
     
