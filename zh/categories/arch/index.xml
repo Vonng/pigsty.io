@@ -15,7 +15,76 @@
     
     
     <item>
-      <title>Docs: 架构</title>
+      <title>Docs: 系统架构</title>
+      <link>/zh/docs/concept/arch/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/concept/arch/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Pigsty 使用 &lt;strong&gt;模块化架构&lt;/strong&gt; 与 &lt;strong&gt;声明式接口&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Pigsty 使用&lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt;描述整套部署环境，并通过 ansible &lt;a href=&#34;/zh/docs/setup/playbook&#34;&gt;剧本&lt;/a&gt;实现。&lt;/li&gt;
+&lt;li&gt;Pigsty 在可以在任意节点上运行，无论是物理裸机还是虚拟机，只要操作系统&lt;a href=&#34;/zh/docs/setup/install#%E8%A6%81%E6%B1%82&#34;&gt;兼容&lt;/a&gt;即可。&lt;/li&gt;
+&lt;li&gt;Pigsty 的行为由配置参数控制，具有幂等性的剧本 会将节点调整到配置所描述的状态。&lt;/li&gt;
+&lt;li&gt;Pigsty 采用模块化设计，可自由组合以适应不同场景。使用剧本将模块安装到配置指定的节点上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;模块&#34;&gt;模块&lt;/h2&gt;
+&lt;p&gt;Pigsty 采用模块化设计，有六个主要的默认模块：&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;：由 Patroni、Pgbouncer、HAproxy、PgBackrest 等驱动的自治高可用 Postgres 集群。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;：本地软件仓库、Prometheus、Grafana、Loki、AlertManager、PushGateway、Blackbox Exporter&amp;hellip;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;：调整节点到所需状态、名称、时区、NTP、ssh、sudo、haproxy、docker、promtail、keepalived&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;：分布式键值存储，用作高可用 Postgres 集群的 DCS：共识选主/配置管理/服务发现。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt;：Redis 服务器，支持独立主从、哨兵、集群模式，并带有完整的监控支持。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;：与 S3 兼容的简单对象存储服务器，可作为 PG数据库备份的可选目的地。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;你可以声明式地自由组合它们。如果你想要主机监控，在基础设施节点上安装&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;模块，并在纳管节点上安装 &lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt; 模块就足够了。
+&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 模块用于搭建高可用 PG 集群，将模块安装在多个节点上，可以自动形成一个高可用的数据库集群。
+您可以复用 Pigsty 基础架构并开发您自己的模块，&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 可以作为一个样例。后续还会有更多的模块加入，例如对 Mongo 与 MySQL 的初步支持已经提上了日程。&lt;/p&gt;
+&lt;p&gt;请注意，所有模块都强依赖 &lt;code&gt;NODE&lt;/code&gt; 模块：在 Pigsty 中节点必须先安装 &lt;code&gt;NODE&lt;/code&gt; 模块，被 Pigsty 纳管后方可部署其他模块。
+当节点（默认）使用本地软件源进行安装时，&lt;code&gt;NODE&lt;/code&gt; 模块对 &lt;code&gt;INFRA&lt;/code&gt; 模块有弱依赖。因此安装 &lt;code&gt;INFRA&lt;/code&gt; 模块的管理节点/基础设施节点会在 [&lt;code&gt;install.yml&lt;/code&gt;] 剧本中完成 Bootstrap 过程，解决循环依赖。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/setup/provision&#34;&gt;&lt;img alt=&#34;pigsty-sandbox.jpg&#34; src=&#34;/img/pigsty/sandbox.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;单机安装&#34;&gt;单机安装&lt;/h2&gt;
+&lt;p&gt;默认情况下，Pigsty 将在单个 &lt;strong&gt;节点&lt;/strong&gt; (物理机/虚拟机) 上安装。&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/install.yml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt; 剧本将在&lt;strong&gt;当前&lt;/strong&gt;节点上安装 &lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 模块，
+这将为你提供一个功能完备的可观测性技术栈全家桶 (Prometheus、Grafana、Loki、AlertManager、PushGateway、BlackboxExporter 等) ，以及一个内置的 PostgreSQL 单机实例作为 CMDB，也可以开箱即用。 (集群名 &lt;code&gt;pg-meta&lt;/code&gt;，库名为 &lt;code&gt;meta&lt;/code&gt;)。&lt;/p&gt;
+&lt;p&gt;这个节点现在会有完整的自我监控系统、可视化工具集，以及一个自动配置有 PITR 的 Postgres 数据库（HA不可用，因为你只有一个节点）。你可以使用此节点作为开发箱、测试、运行演示以及进行数据可视化和分析。或者，还可以把这个节点当作管理节点，部署纳管更多的节点！&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/infra/&#34;&gt;&lt;img alt=&#34;pigsty-arch.jpg&#34; src=&#34;/img/pigsty/arch.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;监控&#34;&gt;监控&lt;/h2&gt;
+&lt;p&gt;安装的 &lt;a href=&#34;/zh/docs/concept/arch/#单机安装&#34;&gt;单机元节点&lt;/a&gt; 可用作&lt;strong&gt;管理节点&lt;/strong&gt;和&lt;strong&gt;监控中心&lt;/strong&gt;，以将更多节点和数据库服务器置于其监视和控制之下。&lt;/p&gt;
+&lt;p&gt;Pigsty 的监控系统可以独立使用，如果你想安装 Prometheus / Grafana 可观测性全家桶，Pigsty 为你提供了最佳实践！
+它为 &lt;a href=&#34;https://demo.pigsty.cc/d/node-overview&#34;&gt;主机节点&lt;/a&gt; 和 &lt;a href=&#34;https://demo.pigsty.cc/d/pgsql-overview&#34;&gt;PostgreSQL数据库&lt;/a&gt; 提供了丰富的仪表盘。
+无论这些节点或 PostgreSQL 服务器是否由 Pigsty 管理，只需简单的配置，你就可以立即拥有生产级的监控和告警系统，并将现有的主机与PostgreSQL纳入监管。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/pgsql/dashboard&#34;&gt;&lt;img alt=&#34;pigsty-dashboard.jpg&#34; src=&#34;/img/pigsty/dashboard.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;高可用pg集群&#34;&gt;高可用PG集群&lt;/h2&gt;
+&lt;p&gt;Pigsty 帮助您在任何地方 &lt;strong&gt;拥有&lt;/strong&gt; 您自己的生产级高可用 PostgreSQL RDS 服务。&lt;/p&gt;
+&lt;p&gt;要创建这样一个高可用 PostgreSQL 集群/RDS服务，你只需用简短的配置来描述它，并运行剧本来创建即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-test&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 2, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.13&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 3, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-test }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ bin/pgsql-add pg-test  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化集群 &amp;#39;pg-test&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;不到10分钟，您将拥有一个服务接入，监控，备份PITR，高可用配置齐全的 PostgreSQL 数据库集群。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;&lt;img alt=&#34;pigsty-ha.png&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;硬件故障由 patroni、etcd 和 haproxy 提供的自愈高可用架构来兜底，在主库故障的情况下，默认会在 30 秒内执行自动故障转移（Failover）。
+客户端无需修改配置重启应用：Haproxy 利用 patroni 健康检查进行流量分发，读写请求会自动分发到新的集群主库中，并避免脑裂的问题。
+这一过程十分丝滑，例如在从库故障，或主动切换（switchover）的情况下，客户端只有一瞬间的当前查询闪断，&lt;/p&gt;
+&lt;p&gt;软件故障、人为错误和 数据中心级灾难由 pgbackrest 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;MinIO&lt;/a&gt; 集群来兜底。这为您提供了本地/云端的 PITR 能力，并在数据中心失效的情况下提供了跨地理区域复制，与异地容灾功能。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;数据库即代码&#34;&gt;数据库即代码&lt;/h2&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 系统架构</title>
       <link>/zh/docs/pgsql/arch/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
@@ -140,75 +209,6 @@ Pigsty 使用 pgBackRest 管理备份，接受WAL归档，执行PITR。备份仓
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full_type&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;time    &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在 minio 仓库上按时间保留完整备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;retention_full&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;14&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;            &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 保留过去 14 天的完整备份&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;默认情况下，Pigsty提供了两种预置&lt;a href=&#34;/zh/docs/pgsql/pitr#%E5%A4%87%E4%BB%BD%E7%AD%96%E7%95%A5&#34;&gt;备份策略&lt;/a&gt;：默认使用本地文件系统备份仓库，在这种情况下每天进行一次全量备份，确保用户任何时候都能回滚至一天内的任意时间点。备选策略使用专用的 MinIO 集群或S3存储备份，每周一全备，每天一增备，默认保留两周的备份与WAL归档。&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Docs: 系统架构</title>
-      <link>/zh/docs/concept/arch/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/docs/concept/arch/</guid>
-      <description>
-        
-        
-        &lt;p&gt;Pigsty 使用 &lt;strong&gt;模块化架构&lt;/strong&gt; 与 &lt;strong&gt;声明式接口&lt;/strong&gt;。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Pigsty 使用&lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt;描述整套部署环境，并通过 ansible &lt;a href=&#34;/zh/docs/setup/playbook&#34;&gt;剧本&lt;/a&gt;实现。&lt;/li&gt;
-&lt;li&gt;Pigsty 在可以在任意节点上运行，无论是物理裸机还是虚拟机，只要操作系统&lt;a href=&#34;/zh/docs/setup/install#%E8%A6%81%E6%B1%82&#34;&gt;兼容&lt;/a&gt;即可。&lt;/li&gt;
-&lt;li&gt;Pigsty 的行为由配置参数控制，具有幂等性的剧本 会将节点调整到配置所描述的状态。&lt;/li&gt;
-&lt;li&gt;Pigsty 采用模块化设计，可自由组合以适应不同场景。使用剧本将模块安装到配置指定的节点上。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;模块&#34;&gt;模块&lt;/h2&gt;
-&lt;p&gt;Pigsty 采用模块化设计，有六个主要的默认模块：&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt;：由 Patroni、Pgbouncer、HAproxy、PgBackrest 等驱动的自治高可用 Postgres 集群。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;：本地软件仓库、Prometheus、Grafana、Loki、AlertManager、PushGateway、Blackbox Exporter&amp;hellip;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt;：调整节点到所需状态、名称、时区、NTP、ssh、sudo、haproxy、docker、promtail、keepalived&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;：分布式键值存储，用作高可用 Postgres 集群的 DCS：共识选主/配置管理/服务发现。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt;：Redis 服务器，支持独立主从、哨兵、集群模式，并带有完整的监控支持。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt;：与 S3 兼容的简单对象存储服务器，可作为 PG数据库备份的可选目的地。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;你可以声明式地自由组合它们。如果你想要主机监控，在基础设施节点上安装&lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;模块，并在纳管节点上安装 &lt;a href=&#34;/zh/docs/node&#34;&gt;&lt;code&gt;NODE&lt;/code&gt;&lt;/a&gt; 模块就足够了。
-&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 模块用于搭建高可用 PG 集群，将模块安装在多个节点上，可以自动形成一个高可用的数据库集群。
-您可以复用 Pigsty 基础架构并开发您自己的模块，&lt;a href=&#34;/zh/docs/redis&#34;&gt;&lt;code&gt;REDIS&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 可以作为一个样例。后续还会有更多的模块加入，例如对 Mongo 与 MySQL 的初步支持已经提上了日程。&lt;/p&gt;
-&lt;p&gt;请注意，所有模块都强依赖 &lt;code&gt;NODE&lt;/code&gt; 模块：在 Pigsty 中节点必须先安装 &lt;code&gt;NODE&lt;/code&gt; 模块，被 Pigsty 纳管后方可部署其他模块。
-当节点（默认）使用本地软件源进行安装时，&lt;code&gt;NODE&lt;/code&gt; 模块对 &lt;code&gt;INFRA&lt;/code&gt; 模块有弱依赖。因此安装 &lt;code&gt;INFRA&lt;/code&gt; 模块的管理节点/基础设施节点会在 [&lt;code&gt;install.yml&lt;/code&gt;] 剧本中完成 Bootstrap 过程，解决循环依赖。&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;/zh/docs/setup/provision&#34;&gt;&lt;img alt=&#34;pigsty-sandbox.jpg&#34; src=&#34;/img/pigsty/sandbox.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;单机安装&#34;&gt;单机安装&lt;/h2&gt;
-&lt;p&gt;默认情况下，Pigsty 将在单个 &lt;strong&gt;节点&lt;/strong&gt; (物理机/虚拟机) 上安装。&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/install.yml&#34;&gt;&lt;code&gt;install.yml&lt;/code&gt;&lt;/a&gt; 剧本将在&lt;strong&gt;当前&lt;/strong&gt;节点上安装 &lt;a href=&#34;/zh/docs/infra&#34;&gt;&lt;code&gt;INFRA&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/etcd&#34;&gt;&lt;code&gt;ETCD&lt;/code&gt;&lt;/a&gt;、&lt;a href=&#34;/zh/docs/pgsql&#34;&gt;&lt;code&gt;PGSQL&lt;/code&gt;&lt;/a&gt; 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;&lt;code&gt;MINIO&lt;/code&gt;&lt;/a&gt; 模块，
-这将为你提供一个功能完备的可观测性技术栈全家桶 (Prometheus、Grafana、Loki、AlertManager、PushGateway、BlackboxExporter 等) ，以及一个内置的 PostgreSQL 单机实例作为 CMDB，也可以开箱即用。 (集群名 &lt;code&gt;pg-meta&lt;/code&gt;，库名为 &lt;code&gt;meta&lt;/code&gt;)。&lt;/p&gt;
-&lt;p&gt;这个节点现在会有完整的自我监控系统、可视化工具集，以及一个自动配置有 PITR 的 Postgres 数据库（HA不可用，因为你只有一个节点）。你可以使用此节点作为开发箱、测试、运行演示以及进行数据可视化和分析。或者，还可以把这个节点当作管理节点，部署纳管更多的节点！&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;/zh/docs/infra/&#34;&gt;&lt;img alt=&#34;pigsty-arch.jpg&#34; src=&#34;/img/pigsty/arch.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;监控&#34;&gt;监控&lt;/h2&gt;
-&lt;p&gt;安装的 &lt;a href=&#34;/zh/docs/concept/arch/#单机安装&#34;&gt;单机元节点&lt;/a&gt; 可用作&lt;strong&gt;管理节点&lt;/strong&gt;和&lt;strong&gt;监控中心&lt;/strong&gt;，以将更多节点和数据库服务器置于其监视和控制之下。&lt;/p&gt;
-&lt;p&gt;Pigsty 的监控系统可以独立使用，如果你想安装 Prometheus / Grafana 可观测性全家桶，Pigsty 为你提供了最佳实践！
-它为 &lt;a href=&#34;https://demo.pigsty.cc/d/node-overview&#34;&gt;主机节点&lt;/a&gt; 和 &lt;a href=&#34;https://demo.pigsty.cc/d/pgsql-overview&#34;&gt;PostgreSQL数据库&lt;/a&gt; 提供了丰富的仪表盘。
-无论这些节点或 PostgreSQL 服务器是否由 Pigsty 管理，只需简单的配置，你就可以立即拥有生产级的监控和告警系统，并将现有的主机与PostgreSQL纳入监管。&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;/zh/docs/pgsql/dashboard&#34;&gt;&lt;img alt=&#34;pigsty-dashboard.jpg&#34; src=&#34;/img/pigsty/dashboard.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;高可用pg集群&#34;&gt;高可用PG集群&lt;/h2&gt;
-&lt;p&gt;Pigsty 帮助您在任何地方 &lt;strong&gt;拥有&lt;/strong&gt; 您自己的生产级高可用 PostgreSQL RDS 服务。&lt;/p&gt;
-&lt;p&gt;要创建这样一个高可用 PostgreSQL 集群/RDS服务，你只需用简短的配置来描述它，并运行剧本来创建即可：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg-test&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 1, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;primary }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 2, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.13&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_seq: 3, pg_role&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;replica }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;pg_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pg-test }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ bin/pgsql-add pg-test  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化集群 &amp;#39;pg-test&amp;#39;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;不到10分钟，您将拥有一个服务接入，监控，备份PITR，高可用配置齐全的 PostgreSQL 数据库集群。&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;&lt;img alt=&#34;pigsty-ha.png&#34; src=&#34;/img/pigsty/ha.png&#34;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;硬件故障由 patroni、etcd 和 haproxy 提供的自愈高可用架构来兜底，在主库故障的情况下，默认会在 30 秒内执行自动故障转移（Failover）。
-客户端无需修改配置重启应用：Haproxy 利用 patroni 健康检查进行流量分发，读写请求会自动分发到新的集群主库中，并避免脑裂的问题。
-这一过程十分丝滑，例如在从库故障，或主动切换（switchover）的情况下，客户端只有一瞬间的当前查询闪断，&lt;/p&gt;
-&lt;p&gt;软件故障、人为错误和 数据中心级灾难由 pgbackrest 和可选的 &lt;a href=&#34;/zh/docs/minio&#34;&gt;MinIO&lt;/a&gt; 集群来兜底。这为您提供了本地/云端的 PITR 能力，并在数据中心失效的情况下提供了跨地理区域复制，与异地容灾功能。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;数据库即代码&#34;&gt;数据库即代码&lt;/h2&gt;
 
       </description>
     </item>
