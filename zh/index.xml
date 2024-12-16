@@ -672,6 +672,168 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: OpenAI全球宕机复盘：K8S循环依赖</title>
+      <link>/zh/blog/cloud/openai-failure/</link>
+      <pubDate>Sat, 14 Dec 2024 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/openai-failure/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/openai-failure/featured_hu02aa61ae1d9de35cbe238d2676170cb9_136909_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;12月11日，OpenAI 出现了全球范围内的不可用故障，影响了 ChatGPT，API，Sora，Playground 和 Labs 等服务。影响范围从 12 月 11 日下午 3:16 至晚上 7:38 期间，持续时间超过四个小时，产生显著影响。&lt;/p&gt;
+&lt;p&gt;根据 OpenIA 在事后发布的&lt;a href=&#34;https://status.openai.com/incidents/ctrsv3lwd797&#34;&gt;故障报告&lt;/a&gt;，此次故障的直接原因是新部署了一套监控，压垮了 Kubernetes 控制面。然后因为控制面故障导致无法直接回滚，进一步放大的故障影响，导致了长时间的不可用。&lt;/p&gt;
+&lt;p&gt;其实这个故障和去年双十一  &lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;阿里云全球史诗故障&lt;/a&gt;  非常类似。都是全球控制面不可用，根因都是循环依赖（以及测试/发布灰度不足）。无非是阿里云是 OSS 和 IAM 之间循环依赖，OpenAI 是 DNS 和 K8S 的循环依赖。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;循环依赖是架构设计中的大忌，就像在基础设施中放了炸药包，容易被一些临时性偶发性故障点爆。这次故障再次为我们敲响警钟。当然这次故障的原因还可以进一步深挖，比如测试/灰度不足，以及 架构杂耍：&lt;/p&gt;
+&lt;p&gt;比如 K8S 官方建议的 &lt;a href=&#34;https://kubernetes.io/docs/setup/best-practices/cluster-large/&#34;&gt;最大集群规模是 5000 节点&lt;/a&gt;，而我还清晰记得 OpenAI 发表过一篇吹牛文章：《&lt;a href=&#34;https://newsletter.betterstack.com/p/how-openai-scaled-kubernetes-to-7500&#34;&gt;我们是如何通过移除一个组件来让K8S跑到7500节点的&lt;/a&gt;》
+—— 不仅不留冗余，还要超载压榨50%，最终，这次还真就在集群规模上翻了大车。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;OpenAI 是 AI 领域的当红炸子鸡，其产品的实力与受欢迎程度毋庸置疑。这是依然无法掩盖其在基础设施上的薄弱 —— 基础设施想要搞好确实不容易，这也是为什么 AWS 和 DataDog 这样的公司赚得钵满盆翻的核心原因。&lt;/p&gt;
+&lt;p&gt;OpenAI 在去年在 &lt;a href=&#34;https://community.openai.com/t/postmortem-feb-20-2023-openai-suffered-a-major-db-outage/73068&#34;&gt;PostgreSQL 数据库与 pgBouncer 连接池&lt;/a&gt; 上也翻过大车。这两年来的在基础设施可靠性上的表现也说不上亮眼。这次故障再次说明，即使是万亿级独角兽，在非专业领域上，也照样是个草台班子。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h4 id=&#34;参考阅读&#34;&gt;&lt;strong&gt;参考阅读&lt;/strong&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;无双删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;阿里云：高可用容灾神话的破灭&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OxhhJ4U1P43di_eaE1uGPw&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/4a8Qy4O80xqsnytC4l9lRg&#34;&gt;数据库应该放入K8S里吗？&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;故障复盘原文&#34;&gt;故障复盘原文&lt;/h2&gt;
+&lt;h3 id=&#34;apichatgpt-和-sora-出现问题&#34;&gt;API、ChatGPT 和 Sora 出现问题&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://status.openai.com/incidents/ctrsv3lwd797&#34;&gt;https://status.openai.com/incidents/ctrsv3lwd797&lt;/a&gt;&lt;/p&gt;
+&lt;h4 id=&#34;openai故障报告复盘&#34;&gt;OpenAI故障报告复盘&lt;/h4&gt;
+&lt;p&gt;本文详细记录了 2024 年 12 月 11 日发生的一次故障，当时所有 OpenAI 服务均出现了严重的停机问题。根源在于我们部署了新的遥测服务（telemetry service），意外导致 Kubernetes 控制平面负载过重，从而引发关键系统的连锁故障。我们将深入解析故障根本原因，概述故障处理的具体步骤，并分享我们为防止类似事件再次发生而采取的改进措施。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;影响&#34;&gt;影响&lt;/h3&gt;
+&lt;p&gt;在太平洋时间 2024 年 12 月 11 日下午 3:16 至晚上 7:38 之间，所有 OpenAI 服务均出现了严重降级或完全不可用。这起事故源于我们在所有集群中推出的新遥测服务配置，&lt;strong&gt;并非&lt;/strong&gt;由安全漏洞或近期产品发布所致。从下午 3:16 开始，各产品性能均出现大幅下降。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;ChatGPT：&lt;/strong&gt; 在下午 5:45 左右开始大幅恢复，并于晚上 7:01 完全恢复。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;API：&lt;/strong&gt; 在下午 5:36 左右开始大幅恢复，于晚上 7:38 所有模型全部恢复正常。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Sora：&lt;/strong&gt; 于晚上 7:01 完全恢复。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;根因&#34;&gt;根因&lt;/h3&gt;
+&lt;p&gt;OpenAI 在全球范围内运营着数百个 Kubernetes 集群。Kubernetes 的控制平面主要负责集群管理，而数据平面则实际运行工作负载（如模型推理服务）。&lt;/p&gt;
+&lt;p&gt;为提升组织整体可靠性，我们一直在加强集群级别的可观测性工具，以加深对系统运行状态的可见度。太平洋时间下午 3:12，我们在所有集群部署了一项新的遥测服务，用于收集 Kubernetes 控制平面的详细指标。&lt;/p&gt;
+&lt;p&gt;由于遥测服务会涉及非常广泛的操作范围，这项新服务的配置无意间让每个集群中的所有节点都执行了高成本的 Kubernetes API 操作，并且该操作成本会随着集群规模的扩大而成倍增加。数千个节点同时发起这些高负载请求，导致 Kubernetes API 服务器不堪重负，进而瘫痪了大型集群的控制平面。该问题在规模最大的集群中最为严重，因此在测试环境并未检测到；另一方面，DNS 缓存也使问题在正式环境中的可见度降低，直到问题在整个集群开始全面扩散后才逐渐显现。&lt;/p&gt;
+&lt;p&gt;尽管 Kubernetes 数据平面大部分情况下可独立于控制平面运行，但数据平面的 DNS 解析依赖控制平面——如果控制平面瘫痪，服务之间便无法通过 DNS 相互通信。&lt;/p&gt;
+&lt;p&gt;简而言之，新遥测服务的配置在大型集群中意外地生成了巨大的 Kubernetes API 负载，导致控制平面瘫痪，进而使 DNS 服务发现功能中断。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;测试与部署&#34;&gt;测试与部署&lt;/h3&gt;
+&lt;p&gt;我们在一个预发布（staging）集群中对变更进行了测试，当时并未发现任何问题。该故障主要对超过一定规模的集群产生影响；再加上每个节点的 DNS 缓存延迟了故障的可见时间，使得变更在正式环境被大范围部署之前并没有暴露出任何明显异常。&lt;/p&gt;
+&lt;p&gt;在部署之前，我们最关注的是这项新遥测服务本身对系统资源（CPU/内存）的消耗。在部署前也对所有集群的资源使用情况进行了评估，确保新部署不会干扰正在运行的服务。虽然我们针对不同集群调优了资源请求，但并未考虑 Kubernetes API 服务器的负载问题。与此同时，此次变更的监控流程主要关注了服务自身的健康状态，并没有完善地监控集群健康（尤其是控制平面的健康）。&lt;/p&gt;
+&lt;p&gt;Kubernetes 数据平面（负责处理用户请求）设计上可以在控制平面离线的情况下继续工作。然而，Kubernetes API 服务器对于 DNS 解析至关重要，而 DNS 解析对于许多服务都是核心依赖。&lt;/p&gt;
+&lt;p&gt;DNS 缓存在故障早期阶段起到了暂时的缓冲作用，使得一些陈旧但可用的 DNS 记录得以继续为服务提供地址解析。但在接下来 20 分钟里，这些缓存逐步过期，依赖实时 DNS 的服务开始出现故障。这段时间差恰好在部署持续推进时才逐渐暴露问题，使得最终故障范围更为集中和明显。一旦 DNS 缓存失效，集群里的所有服务都会向 DNS 发起新请求，进一步加剧了控制平面的负载，使得故障难以在短期内得到缓解。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;故障修复&#34;&gt;故障修复&lt;/h3&gt;
+&lt;p&gt;在大多数情况下，监控部署和回滚有问题的变更都相对容易，我们也有自动化工具来检测和回滚故障性部署。此次事件中，我们的检测工具确实正常工作——在客户受影响前几分钟就已经发出了警报。不过要真正修复这个问题，需要先删除导致问题的遥测服务，而这需要访问 Kubernetes 控制平面。然而，API 服务器在承受巨大负载的情况下无法正常处理管理操作，导致我们无法第一时间移除故障性服务。&lt;/p&gt;
+&lt;p&gt;我们在几分钟内确认了问题，并立即启动多个工作流程，尝试不同途径迅速恢复集群：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;缩小集群规模：&lt;/strong&gt; 通过减少节点数量来降低 Kubernetes API 总负载。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;阻断对 Kubernetes 管理 API 的网络访问：&lt;/strong&gt; 阻止新的高负载请求，让 API 服务器有时间恢复。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;扩容 Kubernetes API 服务器：&lt;/strong&gt; 提升可用资源以应对积压请求，从而为移除故障服务赢得操作窗口。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;我们同时采用这三种方法，最终恢复了对部分控制平面的访问权限，从而得以删除导致问题的遥测服务。&lt;/p&gt;
+&lt;p&gt;一旦我们恢复对部分控制平面的访问权限，系统就开始迅速好转。在可能的情况下，我们将流量切换到健康的集群，同时对仍然存在问题的其他集群进行进一步修复。部分集群仍在修复过程出现资源竞争问题：很多服务同时尝试重新下载所需组件，导致资源饱和并需要人工干预。&lt;/p&gt;
+&lt;p&gt;此次事故是多项系统与流程在同一时间点相互作用、同时失效的结果，主要体现在：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;测试环境未能捕捉到新配置对 Kubernetes 控制平面的影响。&lt;/li&gt;
+&lt;li&gt;DNS 缓存使服务故障出现了时间延迟，从而让变更在故障完全暴露前被大范围部署。&lt;/li&gt;
+&lt;li&gt;故障发生时无法访问控制平面，导致修复进程十分缓慢。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;时间线&#34;&gt;时间线&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;2024 年 12 月 10 日：&lt;/strong&gt; 新的遥测服务部署到预发布集群，经测试无异常。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;2024 年 12 月 11 日 下午 2:23：&lt;/strong&gt; 引入该服务的代码合并到主分支，并触发部署流水线。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 2:51 至 3:20：&lt;/strong&gt; 变更逐步应用到所有集群。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 3:13：&lt;/strong&gt; 告警触发，通知到工程师。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 3:16：&lt;/strong&gt; 少量客户开始受到影响。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 3:16：&lt;/strong&gt; 根因被确认。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 3:27：&lt;/strong&gt; 工程师开始把流量从受影响的集群迁移。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 3:40：&lt;/strong&gt; 客户影响达到最高峰。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;下午 4:36：&lt;/strong&gt; 首个集群恢复。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;晚上 7:38：&lt;/strong&gt; 所有集群恢复。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;预防措施&#34;&gt;预防措施&lt;/h3&gt;
+&lt;p&gt;为防止类似事故再次发生，我们正在采取如下措施：&lt;/p&gt;
+&lt;h5 id=&#34;1-更健壮的分阶段部署&#34;&gt;1. 更健壮的分阶段部署&lt;/h5&gt;
+&lt;p&gt;我们将继续加强基础设施变更的分阶段部署和监控机制，确保任何故障都能被迅速发现并限制在较小范围。今后所有与基础设施相关的配置变更都会采用更全面的分阶段部署流程，并在部署过程中持续监控服务工作负载以及 Kubernetes 控制平面的健康状态。&lt;/p&gt;
+&lt;h5 id=&#34;2-故障注入测试&#34;&gt;2. 故障注入测试&lt;/h5&gt;
+&lt;p&gt;Kubernetes 数据平面需要进一步增强在缺失控制平面的情况下的生存能力。我们将引入针对该场景的测试手段，包括在测试环境有意注入“错误配置”来验证系统检测和回滚能力。&lt;/p&gt;
+&lt;h5 id=&#34;3-紧急访问-kubernetes-控制平面&#34;&gt;3. 紧急访问 Kubernetes 控制平面&lt;/h5&gt;
+&lt;p&gt;当前我们还没有一套应对数据平面向控制平面施加过大压力时，依旧能访问 API 服务器的应急机制。我们计划建立“破冰”机制（break-glass），确保在任何情况下工程团队都能访问 Kubernetes API 服务器。&lt;/p&gt;
+&lt;h5 id=&#34;4-进一步解耦-kubernetes-数据平面和控制平面&#34;&gt;4. 进一步解耦 Kubernetes 数据平面和控制平面&lt;/h5&gt;
+&lt;p&gt;我们目前对 Kubernetes DNS 服务的依赖，使得数据平面和控制平面存在耦合关系。我们会投入更多精力，使得控制平面对关键服务和产品工作负载不再是“负载核心”，从而降低对 DNS 的单点依赖。&lt;/p&gt;
+&lt;h5 id=&#34;5-更快的恢复速度&#34;&gt;5. 更快的恢复速度&lt;/h5&gt;
+&lt;p&gt;我们将针对集群启动所需的关键资源引入更完善的缓存和动态限流机制，并定期进行“快速替换整个集群”的演练，以确保在最短时间内实现正确、完整的启动和恢复。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;结语&#34;&gt;结语&lt;/h3&gt;
+&lt;p&gt;我们对这次事故造成的影响向所有客户表示诚挚的歉意——无论是 ChatGPT 用户、API 开发者还是依赖 OpenAI 产品的企业。此次事件没有达到我们自身对系统可靠性的期望。我们意识到向所有用户提供高度可靠的服务至关重要，接下来将优先落实上述防范措施，不断提升服务的可靠性。感谢大家在此次故障期间的耐心等待。&lt;/p&gt;
+&lt;p&gt;发表于 23 小时前。2024 年 12 月 12 日 - 17:19 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;已解决&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在 2024 年 12 月 11 日下午 3:16 到晚上 7:38 期间，OpenAI 的服务不可用。大约在下午 5:40 开始，我们观察到 API 流量逐渐恢复；ChatGPT 和 Sora 则在下午 6:50 左右恢复。我们在晚上 7:38 排除了故障，并使所有服务重新恢复正常。&lt;/p&gt;
+&lt;p&gt;OpenAI 将对本次事故进行完整的根本原因分析，并在此页面分享后续详情。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 22:23 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;监控&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;API、ChatGPT 和 Sora 的流量大体恢复。我们将继续监控，确保问题彻底解决。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 19:53 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正持续推进修复工作。API 流量正在恢复，我们逐个地区恢复 ChatGPT 流量。Sora 已开始部分恢复。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 18:54 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正努力修复问题。API 和 ChatGPT 已部分恢复，Sora 仍然离线。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 17:50 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正继续研发修复方案。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 17:03 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正继续研发修复方案。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 16:59 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们已经找到一个可行的恢复方案，并开始看到部分流量成功返回。我们将继续努力，使服务尽快恢复正常。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 16:55 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;ChatGPT、Sora 和 API 依然无法使用。我们已经定位到问题，并正在部署修复方案。我们正在尽快恢复服务，对停机带来的影响深表歉意。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 16:24 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;已确认问题&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们接到报告称 API 调用出现错误，platform.openai.com 和 ChatGPT 的登录也出现问题。我们已经确认问题，并正在开展修复。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 15:53 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正在继续调查此问题。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 15:45 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;更新&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们正在继续调查此问题。&lt;/p&gt;
+&lt;p&gt;2024 年 12 月 11 日 - 15:42 PST&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;调查中&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;我们目前正在调查该问题，很快会提供更多更新信息。&lt;/p&gt;
+&lt;p&gt;发表于 2 天前。2024 年 12 月 11 日 - 15:17 PST&lt;/p&gt;
+&lt;p&gt;本次故障影响了 API、ChatGPT、Sora、Playground 以及 Labs。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: 七周七数据库（2025年）</title>
       <link>/zh/blog/db/7-week-7-db/</link>
       <pubDate>Tue, 03 Dec 2024 00:00:00 +0000</pubDate>
@@ -2740,6 +2902,7 @@ Hydra 和 DuckDB 原厂 MotherDuck 亲自下场搞的 &lt;code&gt;pg_duckdb&lt;/
 &lt;/ul&gt;
 &lt;p&gt;&lt;strong&gt;其他&lt;/strong&gt;&lt;/p&gt;
 &lt;ul&gt;
+&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-10-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/dQrlBnlQO1mcZkg1wQESiA&#34;&gt;沸沸扬扬！！！某国内互联网公司，信息泄露导致国外用卡被盗刷。。。&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-10-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/z-hQ57BaSNPC6GkvqNAafw&#34;&gt;本号收到美团投诉：美团没有存储外卡CVV等敏感信息&lt;/a&gt;&lt;/li&gt;
@@ -2779,6 +2942,7 @@ Hydra 和 DuckDB 原厂 MotherDuck 亲自下场搞的 &lt;code&gt;pg_duckdb&lt;/
 &lt;hr&gt;
 &lt;h2 id=&#34;云计算泥石流专栏原文&#34;&gt;云计算泥石流专栏原文&lt;/h2&gt;
 &lt;ul&gt;
+&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-11-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/D2XmL2YYN2kqHtwFN4FVGQ&#34;&gt;支付宝崩了？双十一整活王又来了&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;2024-10-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/li&gt;
@@ -9413,85 +9577,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;p&gt;因此从长期来看，公有云厂商大概也会有这么一天：在云硬件上通过类似于电力行业，通过垄断并购与兼并形成“规模效应”，利用“峰谷电”，“弹性定价”等各种方式优化整体资源利用率，在相互斗兽竞争中将算力成本不断压低至新的底线，实现“家家有电用”。当然，最后也少不了政府监管介入，公私合营收归国有，成为如同国家电网与电信运营商类似的存在，最终实现 IaaS 层的存储带宽算力的垄断。&lt;/p&gt;
 &lt;p&gt;而与之对应，制造灯泡、空调、洗衣机这类电器的职能会从电力公司中剥离，百花齐放。云厂商的 PaaS / SaaS 在被更好，更优质，更便宜的开源替代冲击下逐渐萎缩，或回归到足够低廉的价格水平。&lt;/p&gt;
 &lt;p&gt;正如当年开源运动的死对头微软，现在也选择拥抱开源。公有云厂商肯定也会有这一天，与自由软件世界达成和解，心平气和地接受基础设施供应商的角色定位，为大家提供水与电一般的存算资源。而&lt;strong&gt;云软件终将&lt;/strong&gt;会回归正常毛利，&lt;strong&gt;希望那一天人们能记得，这不是因为云厂商大发慈悲，而是有人带来过开源平替。&lt;/strong&gt;&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: PostgreSQL会修改开源许可证吗？</title>
-      <link>/zh/blog/pg/pg-license/</link>
-      <pubDate>Wed, 20 Mar 2024 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/pg/pg-license/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/pg/pg-license/featured_hu8a9a4c1a17928e967c5358b7b08439ad_508126_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
-        
-        &lt;blockquote&gt;
-&lt;p&gt;作者：&lt;a href=&#34;https://jkatz05.com/post/postgres/&#34;&gt;Jonathan Katz&lt;/a&gt;，PostgreSQL 核心组成员（1 of 7），AWS RDS 首席产品经理&lt;/p&gt;
-&lt;p&gt;译者：&lt;a href=&#34;https://vonng.com&#34;&gt;冯若航&lt;/a&gt;，PostgreSQL 专家，Free RDS PG Alternative —— Pigsty 作者&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;postgresql会修改开源许可证吗&#34;&gt;PostgreSQL会修改开源许可证吗&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;声明：我是&lt;a href=&#34;https://www.postgresql.org/developer/core/&#34;&gt;PostgreSQL 核心组&lt;/a&gt; 的成员，但本文内容是我的个人观点，并非 PostgreSQL 官方声明 …… &lt;strong&gt;除非我提供了指向官方声明的链接&lt;/strong&gt;；&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;今天得知 &lt;a href=&#34;https://redis.com/blog/redis-adopts-dual-source-available-licensing/&#34;&gt;Redis 项目将不再使用开源许可证发布&lt;/a&gt;，我感到非常遗憾。原因有二：一是作为长期的 Redis 用户和较早的采用者，二是作为一个开源贡献者。对于开源商业化这件事的挑战，我不得不说确实感同身受 —— 特别是我曾站在针锋相对的不同阵营之中（译注：作者也是 AWS RDS 首席产品经理）。我也清楚这些变化对下游的冲击，它们可能对用户采纳、应用技术的方式产生颠覆性的影响。&lt;/p&gt;
-&lt;p&gt;每当开源许可证领域出现重大变动时，尤其是在数据库及相关系统中（例如 MySQL =&amp;gt; Sun =&amp;gt; Oracle 就是第一个映入我脑海的），我总会听到这样的问题：“PostgreSQL会修改其许可证吗？”&lt;/p&gt;
-&lt;p&gt;PostgreSQL 的网站上其实 &lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;有答案&lt;/a&gt;：&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PostgreSQL会使用不同的许可证发布吗？PostgreSQL 全球开发组（PGDG）依然致力于永远将 PostgreSQL  作为自由和开源软件提供。我们没有更改 PostgreSQL 许可证，或使用不同许可证发布 PostgreSQL 的计划。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;blockquote&gt;
-&lt;p&gt;声明：上面这段确实是我参与撰写的&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;PostgreSQL许可证&lt;/a&gt;（又名 “&lt;strong&gt;协议&lt;/strong&gt;” — &lt;a href=&#34;https://pgsnake.blogspot.com/&#34;&gt;Dave Page&lt;/a&gt; 和我在这个词上来回辩论挺有意思的）是一个&lt;a href=&#34;https://opensource.org/license/postgresql&#34;&gt;开源倡议组织（OSI）认可的许可证&lt;/a&gt;，采用非常宽松的许可模型。至于它与哪个许可证最为相似，我建议阅读 &lt;a href=&#34;https://www.postgresql.org/message-id/1776.1256525282@sss.pgh.pa.us&#34;&gt;Tom Lane在2009年写的这封电子邮件&lt;/a&gt; （大意是：更接近 MIT 协议，叫 BSD 也行）。&lt;/p&gt;
-&lt;p&gt;尽管这么说，但 PostgreSQL不会改变许可证，还是有一些原因在里面的：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;许可证的名字就叫 “&lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;PostgreSQL许可证&lt;/a&gt;” —— 你都用项目来命名许可证了，还改什么协议？&lt;/li&gt;
-&lt;li&gt;PostgreSQL项目发起时，以开源社区协作为主旨，&lt;strong&gt;意在防止任何单一实体控制本项目&lt;/strong&gt;。这一点作为项目的精神主旨已经延续了近三十年时间了，并且在项目 &lt;a href=&#34;https://www.postgresql.org/about/policies/&#34;&gt;项目政策 &lt;/a&gt;中有着明确体现。&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/message-id/937d27e10910260840s1d28aab2o799f2c58d14dfb1e@mail.gmail.com&#34;&gt;Dave Page 在这封邮件中明确表示过&lt;/a&gt; 😊&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;那么真正的问题就变成了，&lt;strong&gt;如果 PostgreSQL 要改变许可证，会出于什么理由呢&lt;/strong&gt;？通常变更许可证的原因是出于商业决策 —— 但看起来围绕 PostgreSQL 的商业业务与 PostgreSQL 的功能集合一样强壮。冯若航（Vonng）最近&lt;a href=&#34;https://medium.com/@fengruohang/postgres-is-eating-the-database-world-157c204dcfc4&#34;&gt;写了一篇博客文章&lt;/a&gt;，突出展现了围绕 PostgreSQL 打造的软件与商业生态，这还仅仅是一部分。&lt;/p&gt;
-&lt;p&gt;我说 “仅仅是一部分” 的意思是，在历史上和现在还有更多的项目和商业，是围绕着 PostgreSQL 代码库的某些部分构建的。这些项目中许多都使用了不同的许可证发布，或者干脆就是闭源的。但它们也直接或间接地推动了PostgreSQL 的采用，并使 PostgreSQL 协议变得无处不在。&lt;/p&gt;
-&lt;p&gt;但 PostgreSQL 不会改变其许可证的最大原因是，这将对所有 PostgreSQL 用户产生不利影响。对一项技术来说，建立信任需要很长时间，尤其是当该技术经常用于应用程序最关键的部分：数据存储与检索。&lt;a href=&#34;https://www.postgresql.org/about/&#34;&gt;PostgreSQL赢得了良好的声誉 —— 凭借其久经考验的架构、可靠性、数据完整性、强大的功能集、可扩展性，以及背后充满奉献精神的开源社区，始终如一地提供优质、创新的解决方案&lt;/a&gt;。修改 PostgreSQL 的许可证将破坏该项目过去近三十年来建立起的所有良好声誉。&lt;/p&gt;
-&lt;p&gt;尽管 PostgreSQL 项目确实有不完美之处（我当然也对这些不完美的地方有所贡献），但 PostgreSQL 许可证对PostgreSQL 社区和整个开源界来说，确实是一份真正的礼物，我们将继续珍惜并帮助保持 PostgreSQL 真正的自由和开源。毕竟，&lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;官网上也是这么说的&lt;/a&gt; ;)&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;译者评论&#34;&gt;译者评论&lt;/h2&gt;
-&lt;p&gt;能被 PostgreSQL 全球社区核心组成员提名推荐，我感到非常荣幸。上文中 Jonathan 提到我的文章是《&lt;a href=&#34;https://mp.weixin.qq.com/s/8_uhRH93oAoHZqoC90DA6g&#34;&gt;PostgreSQL正在吞噬数据库世界&lt;/a&gt;》，英文版为《&lt;a href=&#34;https://medium.com/@fengruohang/postgres-is-eating-the-database-world-157c204dcfc4&#34;&gt;PostgreSQL is Eating The Database World&lt;/a&gt;》。发布于 Medium：https://medium.com/@fengruohang/postgres-is-eating-the-database-world-157c204dcfc4 ，并在 HackerNews ，X，LinkedIn 上引起相当热烈的讨论。&lt;/p&gt;
-&lt;p&gt;Redis 变更其许可证协议，是开源软件领域又一里程碑式的事件 —— 至此，所有头部的 NoSQL 数据库 ，包括 MongoDB， ElasticSearch，加上 Redis ，都已经切换到了 SSPL —— 一种不被 OSI 承认的许可证协议。&lt;/p&gt;
-&lt;p&gt;Redis 切换为更为严格的 SSPL 协议的核心原因，用 Redis Labs CEO 的话讲就是：“&lt;strong&gt;多年来，我们就像个傻子一样，他们拿着我们开发的东西大赚了一笔&lt;/strong&gt;”。“他们”是谁？ —— &lt;strong&gt;公有云&lt;/strong&gt;。切换 SSPL 的目的是，试图通过法律工具阻止这些云厂商白嫖吸血开源，成为体面的社区参与者，将软件的管理、监控、托管等方面的代码开源回馈社区。&lt;/p&gt;
-&lt;p&gt;不幸的是，你可以强迫一家公司提供他们的 GPL/SSPL 衍生软件项目的源码，但你不能强迫他们成为开源社区的好公民。公有云对于这样的协议往往也嗤之以鼻，大多数云厂商只是简单拒绝使用AGPL许可的软件：要么使用一个采用更宽松许可的替代实现版本，要么自己重新实现必要的功能，或者直接购买一个没有版权限制的商业许可。&lt;/p&gt;
-&lt;p&gt;当 Redis 宣布更改协议后，马上就有 AWS 员工跳出来 Fork Redis —— “Redis 不开源了，我们的分叉才是真开源！” 然后 AWS CTO 出来叫好，并假惺惺的说：这是我们员工的个人行为 —— 堪称是现实版杀人诛心。而同样的事情，已经发生过几次了，比如分叉 ElasticSearh 的 OpenSearch，分叉 MongoDB 的 DocumentDB。&lt;/p&gt;
-&lt;p&gt;因为引入了额外的限制与所谓的“歧视”条款，OSI 并没有将 SSPL 认定为开源协议。因此使用 SSPL 的举措被解读为 —— “Redis 不再开源”，而云厂商的各种 Fork 是“开源”的。从法律工具的角度来说，这是成立的。但从朴素道德情感出发，这样的说法对于 Redis 来说是极其不公正的抹黑与羞辱。&lt;/p&gt;
-&lt;p&gt;正如罗翔老师所说：法律工具的判断永远不能超越社区成员朴素的道德情感。如果协和与华西不是三甲，那么丢脸的不是这些医院，而是三甲这个标准。如果年度游戏不是巫师3，荒野之息，博德之门，那么丢脸的不是这些厂商，而是评级机构。如果 Redis 不再算“开源”，真正应该感到汗颜的应该是OSI 与开源这个理念。&lt;/p&gt;
-&lt;p&gt;越来越多的知名开源软件，都开始切换到敌视针对云厂商白嫖的许可证协议上来。不仅仅是 Redis 与 MongoDB，ElasticSearch 在 2021 年也从 Apache 2.0 修改为 SSL 与 ElasticSearch，知名的开源软件 MinIO 与 Grafana 分别在 2020，2021年从 Apache v2 协议切换到了 AGPLv3 协议。&lt;/p&gt;
-&lt;p&gt;一些老牌的开源项目例如 PostgreSQL ，正如 Jonathan 所说，历史沉淀（三十年的声誉！）让它们已经在事实上无法变更开源协议了。但我们可以看到，许多新强力的 PostgreSQL 扩展插件开始使用 AGPLv3 作为默认的开源协议，而不是以前默认使用的 BSD-like / PostgreSQL 友善协议。例如分布式扩展 Citus，列存扩展 Hydra，ES全文检索替代扩展 BM25，OLAP 加速组件 PG Analytics …… 等等等等。包括我们自己的 PostgreSQL 发行版 Pigsty，也在 2.0 的时候由 Apache 协议切换到了 AGPLv3 协议，背后的动机都是相似的 —— 针对软件自由的最大敌人 —— 云厂商进行反击。&lt;/p&gt;
-&lt;p&gt;在抵御云厂商白嫖的实践中，修改协议是最常见的做法：但AGPLv3 过于严格容易敌我皆伤，SSPL 因为明确表达这种敌我歧视，不被算作开源。业界需要一种新的歧视性软件许可证协议，来达到名正言顺区分敌我的效果。使用双协议进行明确的边界区分，也开始成为一种主流的开源商业化实践。&lt;/p&gt;
-&lt;p&gt;真正重要的事情一直都是软件自由，而“开源”只是实现软件自由的一种手段。而如果“开源”的理念无法适应新阶段矛盾斗争的需求，甚至会妨碍软件自由，它一样会过气，并不再重要，并最终被新的理念与实践所替代 —— 比如“本地优先”。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;英文原文&#34;&gt;英文原文&lt;/h2&gt;
-&lt;h3 id=&#34;will-postgresql-ever-change-its-license&#34;&gt;WILL POSTGRESQL EVER CHANGE ITS LICENSE?&lt;/h3&gt;
-&lt;p&gt;(Disclosure: I’m on the &lt;a href=&#34;https://www.postgresql.org/developer/core/&#34;&gt;PostgreSQL Core Team&lt;/a&gt;, but what’s written in this post are my personal views and not official project statements…unless I link to something that’s an official project statement ;)&lt;/p&gt;
-&lt;p&gt;I was very sad to learn today that the &lt;a href=&#34;https://redis.com/blog/redis-adopts-dual-source-available-licensing/&#34;&gt;Redis project will no longer be released under an open source license&lt;/a&gt;. Sad for two reasons: as a longtime Redis user and pretty early adopter, and as an open source contributor. I’ll preface that I’m empathetic to the challenges of building businesses around open source, having been on multiple sides of this equation. I’m also cognizant of the downstream effects of these changes that can completely flip how a user adopts and uses a piece of technology.&lt;/p&gt;
-&lt;p&gt;Whenever there’s a shakeup in open source licensing, particularly amongst databases and related systems (MySQL =&amp;gt; Sun =&amp;gt; Oracle being the one that first springs to mind), I’ll hear the question “Will PostgreSQL ever change its license?”&lt;/p&gt;
-&lt;p&gt;The PostgreSQL website &lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;has an answer&lt;/a&gt;:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Will PostgreSQL ever be released under a different license? The PostgreSQL Global Development Group remains committed to making PostgreSQL available as free and open &amp;gt; source software in perpetuity. There are no plans to change the PostgreSQL License or release PostgreSQL under a different license.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;(Disclosure: I did help write the above paragraph).&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;The PostgreSQL Licence&lt;/a&gt; (aka “License” – &lt;a href=&#34;https://pgsnake.blogspot.com/&#34;&gt;Dave Page&lt;/a&gt; and I have fun going back and forth on this) is an &lt;a href=&#34;https://opensource.org/license/postgresql&#34;&gt;Open Source Initiative (OSI) recognized license&lt;/a&gt;, and has a very permissive model. In terms of which license it’s most similar to, I defer to this email that &lt;a href=&#34;https://www.postgresql.org/message-id/1776.1256525282@sss.pgh.pa.us&#34;&gt;Tom Lane wrote in 2009&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;That said, there are a few reasons why PostgreSQL won’t change it’s license:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;It’s “&lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;The PostgreSQL Licence&lt;/a&gt;” – why change license when you have it named after the project?&lt;/li&gt;
-&lt;li&gt;The PostgreSQL Project began as a collaborative open source effort and is set up to prevent a single entity to take control. This carries through in the project’s ethos almost 30 years later, and is even codified throughout the &lt;a href=&#34;https://www.postgresql.org/about/policies/&#34;&gt;project policies&lt;/a&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;a href=&#34;https://www.postgresql.org/message-id/937d27e10910260840s1d28aab2o799f2c58d14dfb1e@mail.gmail.com&#34;&gt;Dave Page explicitly said so in this email&lt;/a&gt; :)&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The question then becomes - is there a reason that PostgreSQL would change its license? Typically these changes happen as part of a business decision - but it seems that business around PostgreSQL is as robust as its feature set. Ruohang Feng (Vonng) recently &lt;a href=&#34;https://medium.com/@fengruohang/postgres-is-eating-the-database-world-157c204dcfc4&#34;&gt;wrote a blog post&lt;/a&gt; that highlighted just a slice of the PostgreSQL software and business ecosystem that’s been built around it, which is only possible through the PostgreSQL Licence. I say “just a slice” because there’s even more, both historically and current, projects and business that are built up around some portion of the PostgreSQL codebase. While many of these projects may be released under different licenses or be closed source, they have helped drive, both directly and indirectly, PostgreSQL adoption, and have helped make the PostgreSQL protocol ubiquitous.&lt;/p&gt;
-&lt;p&gt;But the biggest reason why PostgreSQL would not change its license is the disservice it would do to all PostgreSQL users. It takes a long time to build trust in a technology that is often used for the most critical part of an application: storage and retrieval of data. &lt;a href=&#34;https://www.postgresql.org/about/&#34;&gt;PostgreSQL has earned a strong reputation for its proven architecture, reliability, data integrity, robust feature set, extensibility, and the dedication of the open source community behind the software to consistently deliver performant and innovative solutions&lt;/a&gt;. Changing the license of PostgreSQL would shatter all of the goodwill the project has built up through the past (nearly) 30 years.&lt;/p&gt;
-&lt;p&gt;While there are definitely parts of the PostgreSQL project that are imperfect (and I certainly contribute to those imperfections), the PostgreSQL Licence is a true gift to the PostgreSQL community and open source in general that we’ll continue to cherish and help keep PostgreSQL truly free and open source. After all, it says &lt;a href=&#34;https://www.postgresql.org/about/licence/&#34;&gt;so on the website&lt;/a&gt; ;)&lt;/p&gt;
 
       </description>
     </item>
