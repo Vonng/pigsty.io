@@ -1,0 +1,1488 @@
+<!doctype html>
+<html itemscope itemtype="http://schema.org/WebPage" lang="zh" class="no-js">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+
+
+<link rel="shortcut icon" href="/favicons/favicon.ico" >
+<link rel="apple-touch-icon" href="/favicons/apple-touch-icon-180x180.png" sizes="180x180">
+<link rel="icon" type="image/png" href="/favicons/favicon-16x16.png" sizes="16x16">
+<link rel="icon" type="image/png" href="/favicons/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/favicons/android-36x36.png" sizes="36x36">
+<link rel="icon" type="image/png" href="/favicons/android-48x48.png" sizes="48x48">
+<link rel="icon" type="image/png" href="/favicons/android-72x72.png" sizes="72x72">
+<link rel="icon" type="image/png" href="/favicons/android-96x96.png" sizes="96x96">
+<link rel="icon" type="image/png" href="/favicons/android-144x144.png" sizes="144x144">
+<link rel="icon" type="image/png" href="/favicons/android-192x192.png" sizes="192x192">
+
+<title>小猪骑大象：PG内核与扩展包管理神器 | Pigsty</title>
+<meta name="description" content="最近我在忙一个非常有趣的新项目，这两天总算弄完了。各位朋友们，给大家介绍一下这个有趣的小东西，PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，我称之为 “pig”。
+那么 pig 是干什么的？简单来说，这是一个 PostgreSQL 的包管理器，也是 PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，它可以在主流 Linux 操作系统上提供跨发行版的丝滑无缝的 PostgreSQL 安装部署体验。而且还通过国内镜像解决了下载速度慢和部分仓库被墙的问题。
+当然，安装 PG 这种事算不上有什么技术挑战，真正有难度的是 PostgreSQL 生态中的扩展插件。PostgreSQL 有着数据库世界中独一无二的繁荣扩展生态，提供各种强大而惊人的能力。而 pig 则能够在（Debian / Ubuntu / EL ）三大 Linux 主流发行版（五个大版本 x AMD/ARM 两大架构）上，提供 340 个 PG 插件开箱即用的能力。
+为什么插件对 PG 至关重要？请参阅《PostgreSQL正在吞噬数据库世界》
+快速上手 pig 本身是一个 Go 编写的二进制程序，您可以直接从 Release 页面下载，或者使用 Pigsty 现成提供的 YUM / APT 仓库，使用操作系统的包管理器安装。
+curl -fsSL https://repo.pigsty.io/pig | bash # cloudflare 全球仓库（默认） curl -fsSL https://repo.pigsty.cc/pig | bash # 中国大陆墙内镜像仓库 使用 pig 分两个步骤，首先，使用 repo 子命令添加上游仓库">
+<meta property="og:title" content="小猪骑大象：PG内核与扩展包管理神器" />
+<meta property="og:description" content="最近我在忙一个非常有趣的新项目，这两天总算弄完了。各位朋友们，给大家介绍一下这个有趣的小东西，PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，我称之为 “pig”。
+那么 pig 是干什么的？简单来说，这是一个 PostgreSQL 的包管理器，也是 PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，它可以在主流 Linux 操作系统上提供跨发行版的丝滑无缝的 PostgreSQL 安装部署体验。而且还通过国内镜像解决了下载速度慢和部分仓库被墙的问题。
+当然，安装 PG 这种事算不上有什么技术挑战，真正有难度的是 PostgreSQL 生态中的扩展插件。PostgreSQL 有着数据库世界中独一无二的繁荣扩展生态，提供各种强大而惊人的能力。而 pig 则能够在（Debian / Ubuntu / EL ）三大 Linux 主流发行版（五个大版本 x AMD/ARM 两大架构）上，提供 340 个 PG 插件开箱即用的能力。
+为什么插件对 PG 至关重要？请参阅《PostgreSQL正在吞噬数据库世界》
+快速上手 pig 本身是一个 Go 编写的二进制程序，您可以直接从 Release 页面下载，或者使用 Pigsty 现成提供的 YUM / APT 仓库，使用操作系统的包管理器安装。
+curl -fsSL https://repo.pigsty.io/pig | bash # cloudflare 全球仓库（默认） curl -fsSL https://repo.pigsty.cc/pig | bash # 中国大陆墙内镜像仓库 使用 pig 分两个步骤，首先，使用 repo 子命令添加上游仓库" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="//localhost:1313/zh/blog/pg/pig-announce/" /><meta property="og:image" content="//localhost:1313/zh/blog/pg/pig-announce/featured.jpg" /><meta property="article:section" content="blog" />
+<meta property="article:published_time" content="2024-12-23T00:00:00+00:00" />
+<meta property="article:modified_time" content="2024-12-23T00:00:00+00:00" />
+
+<meta itemprop="name" content="小猪骑大象：PG内核与扩展包管理神器">
+<meta itemprop="description" content="最近我在忙一个非常有趣的新项目，这两天总算弄完了。各位朋友们，给大家介绍一下这个有趣的小东西，PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，我称之为 “pig”。
+那么 pig 是干什么的？简单来说，这是一个 PostgreSQL 的包管理器，也是 PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，它可以在主流 Linux 操作系统上提供跨发行版的丝滑无缝的 PostgreSQL 安装部署体验。而且还通过国内镜像解决了下载速度慢和部分仓库被墙的问题。
+当然，安装 PG 这种事算不上有什么技术挑战，真正有难度的是 PostgreSQL 生态中的扩展插件。PostgreSQL 有着数据库世界中独一无二的繁荣扩展生态，提供各种强大而惊人的能力。而 pig 则能够在（Debian / Ubuntu / EL ）三大 Linux 主流发行版（五个大版本 x AMD/ARM 两大架构）上，提供 340 个 PG 插件开箱即用的能力。
+为什么插件对 PG 至关重要？请参阅《PostgreSQL正在吞噬数据库世界》
+快速上手 pig 本身是一个 Go 编写的二进制程序，您可以直接从 Release 页面下载，或者使用 Pigsty 现成提供的 YUM / APT 仓库，使用操作系统的包管理器安装。
+curl -fsSL https://repo.pigsty.io/pig | bash # cloudflare 全球仓库（默认） curl -fsSL https://repo.pigsty.cc/pig | bash # 中国大陆墙内镜像仓库 使用 pig 分两个步骤，首先，使用 repo 子命令添加上游仓库"><meta itemprop="datePublished" content="2024-12-23T00:00:00+00:00" />
+<meta itemprop="dateModified" content="2024-12-23T00:00:00+00:00" />
+<meta itemprop="wordCount" content="766"><meta itemprop="image" content="//localhost:1313/zh/blog/pg/pig-announce/featured.jpg" />
+<meta itemprop="keywords" content="PostgreSQL,工具," /><meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="//localhost:1313/zh/blog/pg/pig-announce/featured.jpg" /><meta name="twitter:title" content="小猪骑大象：PG内核与扩展包管理神器"/>
+<meta name="twitter:description" content="最近我在忙一个非常有趣的新项目，这两天总算弄完了。各位朋友们，给大家介绍一下这个有趣的小东西，PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，我称之为 “pig”。
+那么 pig 是干什么的？简单来说，这是一个 PostgreSQL 的包管理器，也是 PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，它可以在主流 Linux 操作系统上提供跨发行版的丝滑无缝的 PostgreSQL 安装部署体验。而且还通过国内镜像解决了下载速度慢和部分仓库被墙的问题。
+当然，安装 PG 这种事算不上有什么技术挑战，真正有难度的是 PostgreSQL 生态中的扩展插件。PostgreSQL 有着数据库世界中独一无二的繁荣扩展生态，提供各种强大而惊人的能力。而 pig 则能够在（Debian / Ubuntu / EL ）三大 Linux 主流发行版（五个大版本 x AMD/ARM 两大架构）上，提供 340 个 PG 插件开箱即用的能力。
+为什么插件对 PG 至关重要？请参阅《PostgreSQL正在吞噬数据库世界》
+快速上手 pig 本身是一个 Go 编写的二进制程序，您可以直接从 Release 页面下载，或者使用 Pigsty 现成提供的 YUM / APT 仓库，使用操作系统的包管理器安装。
+curl -fsSL https://repo.pigsty.io/pig | bash # cloudflare 全球仓库（默认） curl -fsSL https://repo.pigsty.cc/pig | bash # 中国大陆墙内镜像仓库 使用 pig 分两个步骤，首先，使用 repo 子命令添加上游仓库"/>
+
+
+
+
+
+<link href="/scss/main.css" rel="stylesheet">
+
+<script
+  src="/js/jquery-3.6.3.min.js"
+  integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
+  crossorigin="anonymous"></script>
+<script defer
+  src="/js/lunr.min.js"
+  integrity="sha384-203J0SNzyqHby3iU6hzvzltrWi/M41wOP5Gu+BiJMz5nwKykbkUx8Kp7iti0Lpli"
+  crossorigin="anonymous"></script>
+
+  </head>
+  <body class="td-page td-blog">
+    <header>
+      <nav class="td-navbar navbar-dark js-navbar-scroll">
+<div class="container-fluid flex-column flex-md-row">
+  <a class="navbar-brand" href="/zh/"><span class="navbar-brand__logo navbar-logo"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 24 24" width="24" height="24"><defs/><g id="32" fill="none" stroke-dasharray="none" fill-opacity="1" stroke-opacity="1" stroke="none"><title>32</title><g id="32_图层_2"><title>图层 2</title><g id="Group_17"><g id="Graphic_16"/><g id="Graphic_15"><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#bbb" fill-opacity=".9526367"/><path d="M7.666187 11.971335l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_14"><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" fill="#de372c" fill-opacity=".8545852"/><path d="M7.666187 19.474806l2.165064-3.75H14.16138l2.165065 3.75-2.165065 3.75H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_13"><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" fill="#424242" fill-opacity=".9016462"/><path d="M14.161476 15.751202l2.165064-3.75h4.33013l2.165064 3.75-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_12"><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" fill="#ffa269" fill-opacity=".8975772"/><path d="M14.161476 8.226008 16.32654 4.4760076h4.33013L22.821734 8.226008l-2.165064 3.75H16.32654z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_11"><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" fill="#419edb" fill-opacity=".8979957"/><path d="M7.666187 4.5 9.831251.75H14.16138L16.326445 4.5 14.16138 8.25H9.831251z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_10"><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" fill="#2f6793" fill-opacity=".9002511"/><path d="M1.1491742 8.226008 3.3142388 4.4760076H7.644368L9.809432 8.226008l-2.165064 3.75H3.3142388z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g><g id="Graphic_9"><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" fill="#53ac79" fill-opacity=".9"/><path d="M1.182071 15.741036l2.1650645-3.75h4.330129l2.1650645 3.75-2.1650645 3.75H3.3471355z" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6730434"/></g></g></g></g></svg></span><span class="navbar-brand__name">Pigsty</span></a>
+  <div class="td-navbar-nav-scroll ms-md-auto" id="main_navbar">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="/zh/docs/"><i class='fa-solid fa-book'></i><span>文档</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" href="/zh/blog/"><i class="fas fa-blog"></i><span>博客</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://github.com/Vonng/pigsty/" target="_blank" rel="noopener"><i class='fab fa-github'></i><span>GitHub</span></a>
+      </li>
+      <li class="nav-item dropdown d-none d-lg-block">
+        <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/">English</a></li>
+    </ul>
+</div>
+</li>
+      </ul>
+  </div>
+  <div class="d-none d-lg-block">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+  </div>
+</div>
+</nav>
+    </header>
+    <div class="container-fluid td-outer">
+      <div class="td-main">
+        <div class="row flex-xl-nowrap">
+          <aside class="col-12 col-md-3 col-xl-2 td-sidebar d-print-none">
+            <div id="td-sidebar-menu" class="td-sidebar__inner">
+  <form class="td-sidebar__search d-flex align-items-center">
+    <div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    class="td-search__input form-control"
+    placeholder="Search this site…"
+    aria-label="Search this site…"
+    autocomplete="off"
+    
+    data-offline-search-index-json-src="/offline-search-index.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="10"
+  >
+</div>
+    <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
+    </button>
+  </form>
+  <nav class="td-sidebar-nav collapse foldable-nav" id="td-section-nav">
+    <div class="td-sidebar-nav__section nav-item dropdown d-block d-lg-none">
+      <div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-language"></i>中文</a>
+  <ul class="dropdown-menu">
+    <li><a class="dropdown-item" href="/">English</a></li>
+    </ul>
+</div>
+
+    </div>
+    <ul class="td-sidebar-nav__section pe-md-3 ul-0">
+      <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblog-li">
+  <a href="/zh/blog/" title="Pigsty 博客文章" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-zhblog"><span class="">博客</span></a>
+  <ul class="ul-1">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdb-li">
+  <input type="checkbox" id="m-zhblogdb-check"/>
+  <label for="m-zhblogdb-check"><a href="/zh/blog/db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdb"><i class="fas fa-database"></i><span class="">数据库</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdb7-week-7-db-li">
+  <input type="checkbox" id="m-zhblogdb7-week-7-db-check"/>
+  <label for="m-zhblogdb7-week-7-db-check"><a href="/zh/blog/db/7-week-7-db/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdb7-week-7-db"><span class="">七周七数据库（2025年）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbguru-li">
+  <input type="checkbox" id="m-zhblogdbguru-check"/>
+  <label for="m-zhblogdbguru-check"><a href="/zh/blog/db/guru/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbguru"><span class="">数据库老司机：文章导航</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsupabase-li">
+  <input type="checkbox" id="m-zhblogdbsupabase-check"/>
+  <label for="m-zhblogdbsupabase-check"><a href="/zh/blog/db/supabase/" title="自建Supabase：创业出海的首选数据库" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsupabase"><span class="">自建Supabase其实很容易</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbfuture-hardware-li">
+  <input type="checkbox" id="m-zhblogdbfuture-hardware-check"/>
+  <label for="m-zhblogdbfuture-hardware-check"><a href="/zh/blog/db/future-hardware/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbfuture-hardware"><span class="">面向未来数据库的现代硬件</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbcan-mysql-catchup-li">
+  <input type="checkbox" id="m-zhblogdbcan-mysql-catchup-check"/>
+  <label for="m-zhblogdbcan-mysql-catchup-check"><a href="/zh/blog/db/can-mysql-catchup/" title="PZ：MySQL还有机会赶上PostgreSQL的势头吗？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbcan-mysql-catchup"><span class="">MySQL还能赶上PG吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdblinus-ban-ru-li">
+  <input type="checkbox" id="m-zhblogdblinus-ban-ru-check"/>
+  <label for="m-zhblogdblinus-ban-ru-check"><a href="/zh/blog/db/linus-ban-ru/" title="开源“暴君”Linus清洗整风" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdblinus-ban-ru"><span class="">开源暴君Linus清君侧</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbbio-core-cpu-core-li">
+  <input type="checkbox" id="m-zhblogdbbio-core-cpu-core-check"/>
+  <label for="m-zhblogdbbio-core-cpu-core-check"><a href="/zh/blog/db/bio-core-cpu-core/" title="先优化碳基BIO核，再优化硅基CPU核" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbbio-core-cpu-core"><span class="">先优化BIO核，再优化CPU核</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbbad-mongo-li">
+  <input type="checkbox" id="m-zhblogdbbad-mongo-check"/>
+  <label for="m-zhblogdbbad-mongo-check"><a href="/zh/blog/db/bad-mongo/" title="MongoDB没有未来：好营销救不了烂芒果" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbbad-mongo"><span class="">Mongo没有未来</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbmongo-powered-by-pg-li">
+  <input type="checkbox" id="m-zhblogdbmongo-powered-by-pg-check"/>
+  <label for="m-zhblogdbmongo-powered-by-pg-check"><a href="/zh/blog/db/mongo-powered-by-pg/" title="MongoDB: 现在由PostgreSQL强力驱动？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbmongo-powered-by-pg"><span class="">MongoDB：现由PGSQL驱动</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdboss-gov-li">
+  <input type="checkbox" id="m-zhblogdboss-gov-check"/>
+  <label for="m-zhblogdboss-gov-check"><a href="/zh/blog/db/oss-gov/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdboss-gov"><span class="">瑞士强制政府软件开源</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbmysql-is-dead-li">
+  <input type="checkbox" id="m-zhblogdbmysql-is-dead-check"/>
+  <label for="m-zhblogdbmysql-is-dead-check"><a href="/zh/blog/db/mysql-is-dead/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbmysql-is-dead"><span class="">MySQL 已死，PostgreSQL 当立</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbcve-2024-6387-li">
+  <input type="checkbox" id="m-zhblogdbcve-2024-6387-check"/>
+  <label for="m-zhblogdbcve-2024-6387-check"><a href="/zh/blog/db/cve-2024-6387/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbcve-2024-6387"><span class="">CVE-2024-6387 SSH 漏洞修复</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbcan-oracle-save-mysql-li">
+  <input type="checkbox" id="m-zhblogdbcan-oracle-save-mysql-check"/>
+  <label for="m-zhblogdbcan-oracle-save-mysql-check"><a href="/zh/blog/db/can-oracle-save-mysql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbcan-oracle-save-mysql"><span class="">Oracle 还能挽救 MySQL 吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdboracle-kill-mysql-li">
+  <input type="checkbox" id="m-zhblogdboracle-kill-mysql-check"/>
+  <label for="m-zhblogdboracle-kill-mysql-check"><a href="/zh/blog/db/oracle-kill-mysql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdboracle-kill-mysql"><span class="">Oracle最终还是杀死了MySQL</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsakila-where-are-you-going-li">
+  <input type="checkbox" id="m-zhblogdbsakila-where-are-you-going-check"/>
+  <label for="m-zhblogdbsakila-where-are-you-going-check"><a href="/zh/blog/db/sakila-where-are-you-going/" title="MySQL性能越来越差，Sakila将何去何从？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsakila-where-are-you-going"><span class="">MySQL 到底将何去何从？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbcheap-polar-li">
+  <input type="checkbox" id="m-zhblogdbcheap-polar-check"/>
+  <label for="m-zhblogdbcheap-polar-check"><a href="/zh/blog/db/cheap-polar/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbcheap-polar"><span class="">20刀好兄弟PolarDB：论数据库该卖什么价？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdb-china-li">
+  <input type="checkbox" id="m-zhblogdbdb-china-check"/>
+  <label for="m-zhblogdbdb-china-check"><a href="/zh/blog/db/db-china/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdb-china"><span class="">国产数据库到底能不能打？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbredis-oss-li">
+  <input type="checkbox" id="m-zhblogdbredis-oss-check"/>
+  <label for="m-zhblogdbredis-oss-check"><a href="/zh/blog/db/redis-oss/" title="Redis不开源是“开源”之耻，更是公有云之耻" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbredis-oss"><span class="">Redis不开源是“开源”之耻</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbbad-mysql-li">
+  <input type="checkbox" id="m-zhblogdbbad-mysql-check"/>
+  <label for="m-zhblogdbbad-mysql-check"><a href="/zh/blog/db/bad-mysql/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbbad-mysql"><span class="">MySQL正确性竟如此垃圾？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdb-in-k8s-li">
+  <input type="checkbox" id="m-zhblogdbdb-in-k8s-check"/>
+  <label for="m-zhblogdbdb-in-k8s-check"><a href="/zh/blog/db/db-in-k8s/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdb-in-k8s"><span class="">数据库应该放入K8S里吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsvdb-is-dead-li">
+  <input type="checkbox" id="m-zhblogdbsvdb-is-dead-check"/>
+  <label for="m-zhblogdbsvdb-is-dead-check"><a href="/zh/blog/db/svdb-is-dead/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsvdb-is-dead"><span class="">专用向量数据库凉了吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdb-choke-li">
+  <input type="checkbox" id="m-zhblogdbdb-choke-check"/>
+  <label for="m-zhblogdbdb-choke-check"><a href="/zh/blog/db/db-choke/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdb-choke"><span class="">数据库真被卡脖子了吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbrhel-compatibility-li">
+  <input type="checkbox" id="m-zhblogdbrhel-compatibility-check"/>
+  <label for="m-zhblogdbrhel-compatibility-check"><a href="/zh/blog/db/rhel-compatibility/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbrhel-compatibility"><span class="">EL系操作系统发行版哪家强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbsovereign-dbos-li">
+  <input type="checkbox" id="m-zhblogdbsovereign-dbos-check"/>
+  <label for="m-zhblogdbsovereign-dbos-check"><a href="/zh/blog/db/sovereign-dbos/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbsovereign-dbos"><span class="">基础软件需要什么样的自主可控？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbrethink-li">
+  <input type="checkbox" id="m-zhblogdbrethink-check"/>
+  <label for="m-zhblogdbrethink-check"><a href="/zh/blog/db/rethink/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbrethink"><span class="">正本清源：技术反思录</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdemand-pyramid-li">
+  <input type="checkbox" id="m-zhblogdbdemand-pyramid-check"/>
+  <label for="m-zhblogdbdemand-pyramid-check"><a href="/zh/blog/db/demand-pyramid/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdemand-pyramid"><span class="">数据库需求层次金字塔</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbdistributive-bullshit-li">
+  <input type="checkbox" id="m-zhblogdbdistributive-bullshit-check"/>
+  <label for="m-zhblogdbdistributive-bullshit-check"><a href="/zh/blog/db/distributive-bullshit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbdistributive-bullshit"><span class="">分布式数据库是不是伪需求？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbmicroservice-bad-idea-li">
+  <input type="checkbox" id="m-zhblogdbmicroservice-bad-idea-check"/>
+  <label for="m-zhblogdbmicroservice-bad-idea-check"><a href="/zh/blog/db/microservice-bad-idea/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbmicroservice-bad-idea"><span class="">微服务是不是个蠢主意？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbgoodbye-gpl-li">
+  <input type="checkbox" id="m-zhblogdbgoodbye-gpl-check"/>
+  <label for="m-zhblogdbgoodbye-gpl-check"><a href="/zh/blog/db/goodbye-gpl/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbgoodbye-gpl"><span class="">是时候和GPL说再见了</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbpg-in-docker-li">
+  <input type="checkbox" id="m-zhblogdbpg-in-docker-check"/>
+  <label for="m-zhblogdbpg-in-docker-check"><a href="/zh/blog/db/pg-in-docker/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbpg-in-docker"><span class="">容器化数据库是个好主意吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbreason-about-time-li">
+  <input type="checkbox" id="m-zhblogdbreason-about-time-check"/>
+  <label for="m-zhblogdbreason-about-time-check"><a href="/zh/blog/db/reason-about-time/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbreason-about-time"><span class="">理解时间：闰年闰秒，时间与时区</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbcharacter-encoding-li">
+  <input type="checkbox" id="m-zhblogdbcharacter-encoding-check"/>
+  <label for="m-zhblogdbcharacter-encoding-check"><a href="/zh/blog/db/character-encoding/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbcharacter-encoding"><span class="">理解字符编码原理</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbconcurrent-control-li">
+  <input type="checkbox" id="m-zhblogdbconcurrent-control-check"/>
+  <label for="m-zhblogdbconcurrent-control-check"><a href="/zh/blog/db/concurrent-control/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbconcurrent-control"><span class="">并发异常那些事</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbblockchian-li">
+  <input type="checkbox" id="m-zhblogdbblockchian-check"/>
+  <label for="m-zhblogdbblockchian-check"><a href="/zh/blog/db/blockchian/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbblockchian"><span class="">区块链与分布式数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbconsistency-li">
+  <input type="checkbox" id="m-zhblogdbconsistency-check"/>
+  <label for="m-zhblogdbconsistency-check"><a href="/zh/blog/db/consistency/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbconsistency"><span class="">一致性：过载的术语</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdbwhy-learn-database-li">
+  <input type="checkbox" id="m-zhblogdbwhy-learn-database-check"/>
+  <label for="m-zhblogdbwhy-learn-database-check"><a href="/zh/blog/db/why-learn-database/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdbwhy-learn-database"><span class="">为什么要学习数据库原理</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogcloud-li">
+  <input type="checkbox" id="m-zhblogcloud-check"/>
+  <label for="m-zhblogcloud-check"><a href="/zh/blog/cloud/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogcloud"><i class="fas fa-cloud"></i><span class="">云计算</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudopenai-failure-li">
+  <input type="checkbox" id="m-zhblogcloudopenai-failure-check"/>
+  <label for="m-zhblogcloudopenai-failure-check"><a href="/zh/blog/cloud/openai-failure/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudopenai-failure"><span class="">OpenAI全球宕机复盘：K8S循环依赖</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudexit-li">
+  <input type="checkbox" id="m-zhblogcloudexit-check"/>
+  <label for="m-zhblogcloudexit-check"><a href="/zh/blog/cloud/exit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudexit"><span class="">云计算泥石流：文章导航</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudwordpress-drama-li">
+  <input type="checkbox" id="m-zhblogcloudwordpress-drama-check"/>
+  <label for="m-zhblogcloudwordpress-drama-check"><a href="/zh/blog/cloud/wordpress-drama/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudwordpress-drama"><span class="">WordPress社区内战：论共同体划界问题</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudrds-scam-li">
+  <input type="checkbox" id="m-zhblogcloudrds-scam-check"/>
+  <label for="m-zhblogcloudrds-scam-check"><a href="/zh/blog/cloud/rds-scam/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudrds-scam"><span class="">云数据库：用米其林的价格，吃预制菜大锅饭</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudaliyun-ha-li">
+  <input type="checkbox" id="m-zhblogcloudaliyun-ha-check"/>
+  <label for="m-zhblogcloudaliyun-ha-check"><a href="/zh/blog/cloud/aliyun-ha/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudaliyun-ha"><span class="">阿里云：高可用容灾神话破灭</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloud-exit-li">
+  <input type="checkbox" id="m-zhblogcloudcloud-exit-check"/>
+  <label for="m-zhblogcloudcloud-exit-check"><a href="/zh/blog/cloud/cloud-exit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloud-exit"><span class="">云计算泥石流：合订本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudrds-failure-li">
+  <input type="checkbox" id="m-zhblogcloudrds-failure-check"/>
+  <label for="m-zhblogcloudrds-failure-check"><a href="/zh/blog/cloud/rds-failure/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudrds-failure"><span class="">草台班子唱大戏，阿里云PG翻车记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudnetease-li">
+  <input type="checkbox" id="m-zhblogcloudnetease-check"/>
+  <label for="m-zhblogcloudnetease-check"><a href="/zh/blog/cloud/netease/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudnetease"><span class="">我们能从网易云音乐故障中学到什么？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudbsod-friday-li">
+  <input type="checkbox" id="m-zhblogcloudbsod-friday-check"/>
+  <label for="m-zhblogcloudbsod-friday-check"><a href="/zh/blog/cloud/bsod-friday/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudbsod-friday"><span class="">蓝屏星期五：甲乙双方都是草台班子</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudahrefs-saving-li">
+  <input type="checkbox" id="m-zhblogcloudahrefs-saving-check"/>
+  <label for="m-zhblogcloudahrefs-saving-check"><a href="/zh/blog/cloud/ahrefs-saving/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudahrefs-saving"><span class="">Ahrefs不上云，省下四亿美元</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudgcp-unisuper-li">
+  <input type="checkbox" id="m-zhblogcloudgcp-unisuper-check"/>
+  <label for="m-zhblogcloudgcp-unisuper-check"><a href="/zh/blog/cloud/gcp-unisuper/" title="删库：Google云爆破了大基金的整个云账户" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudgcp-unisuper"><span class="">Google云删库：UniSuper</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouds3-scam-li">
+  <input type="checkbox" id="m-zhblogclouds3-scam-check"/>
+  <label for="m-zhblogclouds3-scam-check"><a href="/zh/blog/cloud/s3-scam/" title="云上黑暗森林：打爆云账单，只需要S3桶名" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouds3-scam"><span class="">打爆云账单，只需要S3桶名</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcf-interview-li">
+  <input type="checkbox" id="m-zhblogcloudcf-interview-check"/>
+  <label for="m-zhblogcloudcf-interview-check"><a href="/zh/blog/cloud/cf-interview/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcf-interview"><span class="">Cloudflare圆桌访谈与问答录</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudqcloud-li">
+  <input type="checkbox" id="m-zhblogcloudqcloud-check"/>
+  <label for="m-zhblogcloudqcloud-check"><a href="/zh/blog/cloud/qcloud/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudqcloud"><span class="">我们能从腾讯云大故障中学到什么?</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloudflare-li">
+  <input type="checkbox" id="m-zhblogcloudcloudflare-check"/>
+  <label for="m-zhblogcloudcloudflare-check"><a href="/zh/blog/cloud/cloudflare/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloudflare"><span class="">吊打公有云的赛博佛祖 Cloudflare</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudluo-live-li">
+  <input type="checkbox" id="m-zhblogcloudluo-live-check"/>
+  <label for="m-zhblogcloudluo-live-check"><a href="/zh/blog/cloud/luo-live/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudluo-live"><span class="">罗永浩救不了牙膏云？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudecs-li">
+  <input type="checkbox" id="m-zhblogcloudecs-check"/>
+  <label for="m-zhblogcloudecs-check"><a href="/zh/blog/cloud/ecs/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudecs"><span class="">剖析阿里云服务器算力成本</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouduptime-li">
+  <input type="checkbox" id="m-zhblogclouduptime-check"/>
+  <label for="m-zhblogclouduptime-check"><a href="/zh/blog/cloud/uptime/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouduptime"><span class="">云下高可用秘诀：拒绝复杂度自慰</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouds3-li">
+  <input type="checkbox" id="m-zhblogclouds3-check"/>
+  <label for="m-zhblogclouds3-check"><a href="/zh/blog/cloud/s3/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouds3"><span class="">扒皮云对象存储：从降本到杀猪</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcloud-exit-faq-li">
+  <input type="checkbox" id="m-zhblogcloudcloud-exit-faq-check"/>
+  <label for="m-zhblogcloudcloud-exit-faq-check"><a href="/zh/blog/cloud/cloud-exit-faq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcloud-exit-faq"><span class="">半年下云省千万，DHH下云FAQ</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudsmile-li">
+  <input type="checkbox" id="m-zhblogcloudsmile-check"/>
+  <label for="m-zhblogcloudsmile-check"><a href="/zh/blog/cloud/smile/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudsmile"><span class="">从降本增笑到真的降本增效</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudbonus-li">
+  <input type="checkbox" id="m-zhblogcloudbonus-check"/>
+  <label for="m-zhblogcloudbonus-check"><a href="/zh/blog/cloud/bonus/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudbonus"><span class="">重新拿回计算机硬件的红利</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudaliyun-li">
+  <input type="checkbox" id="m-zhblogcloudaliyun-check"/>
+  <label for="m-zhblogcloudaliyun-check"><a href="/zh/blog/cloud/aliyun/" title="我们能从阿里云全球故障中学到什么?" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudaliyun"><span class="">阿里云史诗级故障非官方复盘</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcheap-ecs-li">
+  <input type="checkbox" id="m-zhblogcloudcheap-ecs-check"/>
+  <label for="m-zhblogcloudcheap-ecs-check"><a href="/zh/blog/cloud/cheap-ecs/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcheap-ecs"><span class="">薅阿里云羊毛，打造数字家园</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddebris-li">
+  <input type="checkbox" id="m-zhblogclouddebris-check"/>
+  <label for="m-zhblogclouddebris-check"><a href="/zh/blog/cloud/debris/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddebris"><span class="">云计算泥石流：用数据解构公有云</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudodyssey-done-li">
+  <input type="checkbox" id="m-zhblogcloudodyssey-done-check"/>
+  <label for="m-zhblogcloudodyssey-done-check"><a href="/zh/blog/cloud/odyssey-done/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudodyssey-done"><span class="">DHH：下云省下千万美元，比预想的还要多！</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudodyssey-li">
+  <input type="checkbox" id="m-zhblogcloudodyssey-check"/>
+  <label for="m-zhblogcloudodyssey-check"><a href="/zh/blog/cloud/odyssey/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudodyssey"><span class="">下云奥德赛：该放弃云计算了吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudfinops-li">
+  <input type="checkbox" id="m-zhblogcloudfinops-check"/>
+  <label for="m-zhblogcloudfinops-check"><a href="/zh/blog/cloud/finops/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudfinops"><span class="">FinOps终点是下云</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudprofit-li">
+  <input type="checkbox" id="m-zhblogcloudprofit-check"/>
+  <label for="m-zhblogcloudprofit-check"><a href="/zh/blog/cloud/profit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudprofit"><span class="">云计算为啥还没挖沙子赚钱？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudsla-li">
+  <input type="checkbox" id="m-zhblogcloudsla-check"/>
+  <label for="m-zhblogcloudsla-check"><a href="/zh/blog/cloud/sla/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudsla"><span class="">云SLA是不是安慰剂？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudebs-li">
+  <input type="checkbox" id="m-zhblogcloudebs-check"/>
+  <label for="m-zhblogcloudebs-check"><a href="/zh/blog/cloud/ebs/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudebs"><span class="">云盘是不是杀猪盘？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudcdn-li">
+  <input type="checkbox" id="m-zhblogcloudcdn-check"/>
+  <label for="m-zhblogcloudcdn-check"><a href="/zh/blog/cloud/cdn/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudcdn"><span class="">垃圾腾讯云CDN：从入门到放弃？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudno-dba-bullshit-li">
+  <input type="checkbox" id="m-zhblogcloudno-dba-bullshit-check"/>
+  <label for="m-zhblogcloudno-dba-bullshit-check"><a href="/zh/blog/cloud/no-dba-bullshit/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudno-dba-bullshit"><span class="">驳《再论为什么你不应该招DBA》</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudparadigm-li">
+  <input type="checkbox" id="m-zhblogcloudparadigm-check"/>
+  <label for="m-zhblogcloudparadigm-check"><a href="/zh/blog/cloud/paradigm/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudparadigm"><span class="">范式转移：从云到本地优先</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudrds-li">
+  <input type="checkbox" id="m-zhblogcloudrds-check"/>
+  <label for="m-zhblogcloudrds-check"><a href="/zh/blog/cloud/rds/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudrds"><span class="">云数据库是不是智商税</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogcloudis-dba-good-job-li">
+  <input type="checkbox" id="m-zhblogcloudis-dba-good-job-check"/>
+  <label for="m-zhblogcloudis-dba-good-job-check"><a href="/zh/blog/cloud/is-dba-good-job/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogcloudis-dba-good-job"><span class="">DBA还是一份好工作吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddrop-rds-li">
+  <input type="checkbox" id="m-zhblogclouddrop-rds-check"/>
+  <label for="m-zhblogclouddrop-rds-check"><a href="/zh/blog/cloud/drop-rds/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddrop-rds"><span class="">云RDS：从删库到跑路</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogclouddba-vs-rds-li">
+  <input type="checkbox" id="m-zhblogclouddba-vs-rds-check"/>
+  <label for="m-zhblogclouddba-vs-rds-check"><a href="/zh/blog/cloud/dba-vs-rds/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogclouddba-vs-rds"><span class="">DBA会被云淘汰吗？</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-zhblogpg-li">
+  <input type="checkbox" id="m-zhblogpg-check" checked/>
+  <label for="m-zhblogpg-check"><a href="/zh/blog/pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogpg"><i class="fas fa-bullhorn"></i><span class="">PG 生态</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-zhblogpgpig-announce-li">
+  <input type="checkbox" id="m-zhblogpgpig-announce-check" checked/>
+  <label for="m-zhblogpgpig-announce-check"><a href="/zh/blog/pg/pig-announce/" title="小猪骑大象：PG内核与扩展包管理神器" class="align-left ps-0  active td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpig-announce"><span class="td-sidebar-nav-active-item">小猪骑大象：PG包管理神器Pig</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-faint-li">
+  <input type="checkbox" id="m-zhblogpgpg-faint-check"/>
+  <label for="m-zhblogpgpg-faint-check"><a href="/zh/blog/pg/pg-faint/" title="不要更新！发布当日叫停：PG也躲不过大翻车" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-faint"><span class="">发布当日叫停：PG也躲不过大翻车</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg12-eol-pg17-up-li">
+  <input type="checkbox" id="m-zhblogpgpg12-eol-pg17-up-check"/>
+  <label for="m-zhblogpgpg12-eol-pg17-up-check"><a href="/zh/blog/pg/pg12-eol-pg17-up/" title="PostgreSQL 12 过保，PG 17 上位" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg12-eol-pg17-up"><span class="">PG12过保，PG17上位</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-ext-repo-li">
+  <input type="checkbox" id="m-zhblogpgpg-ext-repo-check"/>
+  <label for="m-zhblogpgpg-ext-repo-check"><a href="/zh/blog/pg/pg-ext-repo/" title="PostgreSQL神功大成！最全扩展仓库来了！" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-ext-repo"><span class="">PostgreSQL神功大成！</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-convention-li">
+  <input type="checkbox" id="m-zhblogpgpg-convention-check"/>
+  <label for="m-zhblogpgpg-convention-check"><a href="/zh/blog/pg/pg-convention/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-convention"><span class="">PostgreSQL 规约（2024版）</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-17-li">
+  <input type="checkbox" id="m-zhblogpgpg-17-check"/>
+  <label for="m-zhblogpgpg-17-check"><a href="/zh/blog/pg/pg-17/" title="PostgreSQL 17 发布：摊牌了，我不装了！" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-17"><span class="">PG17发布：摊牌了，我不装了！</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-replace-mssql-li">
+  <input type="checkbox" id="m-zhblogpgpg-replace-mssql-check"/>
+  <label for="m-zhblogpgpg-replace-mssql-check"><a href="/zh/blog/pg/pg-replace-mssql/" title="PostgreSQL可以替代微软SQL Server吗？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-replace-mssql"><span class="">PG可以替代MSSQL吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-duckdb-li">
+  <input type="checkbox" id="m-zhblogpgpg-duckdb-check"/>
+  <label for="m-zhblogpgpg-duckdb-check"><a href="/zh/blog/pg/pg-duckdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-duckdb"><span class="">谁整合好DuckDB，谁赢得OLAP世界</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-again-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-again-check"/>
+  <label for="m-zhblogpgpg-is-no1-again-check"><a href="/zh/blog/pg/pg-is-no1-again/" title="StackOverflow 2024调研：PostgreSQL已经杀疯了" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1-again"><span class="">SO 2024：PostgreSQL已经杀疯了</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgdify-setup-li">
+  <input type="checkbox" id="m-zhblogpgdify-setup-check"/>
+  <label for="m-zhblogpgdify-setup-check"><a href="/zh/blog/pg/dify-setup/" title="使用Pigsty,PG,PGVector自建Dify -- AI工作流平台" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgdify-setup"><span class="">使用Pigsty自建Dify，AI工作流</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpgcondev-2024-li">
+  <input type="checkbox" id="m-zhblogpgpgcondev-2024-check"/>
+  <label for="m-zhblogpgpgcondev-2024-check"><a href="/zh/blog/pg/pgcondev-2024/" title="让PG停摆一周的大会：PGCon.Dev 2024 参会记" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpgcondev-2024"><span class="">PGCon.Dev 2024 参会记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-17-beta1-li">
+  <input type="checkbox" id="m-zhblogpgpg-17-beta1-check"/>
+  <label for="m-zhblogpgpg-17-beta1-check"><a href="/zh/blog/pg/pg-17-beta1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-17-beta1"><span class="">PostgreSQL 17 beta1 发布！</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-for-everything-li">
+  <input type="checkbox" id="m-zhblogpgpg-for-everything-check"/>
+  <label for="m-zhblogpgpg-for-everything-check"><a href="/zh/blog/pg/pg-for-everything/" title="为什么PostgreSQL是未来数据库的事实标准？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-for-everything"><span class="">为什么PG是未来数据的基石？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-license-li">
+  <input type="checkbox" id="m-zhblogpgpg-license-check"/>
+  <label for="m-zhblogpgpg-license-check"><a href="/zh/blog/pg/pg-license/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-license"><span class="">PostgreSQL会修改开源许可证吗？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-eat-db-world-li">
+  <input type="checkbox" id="m-zhblogpgpg-eat-db-world-check"/>
+  <label for="m-zhblogpgpg-eat-db-world-check"><a href="/zh/blog/pg/pg-eat-db-world/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-eat-db-world"><span class="">PostgreSQL正在吞噬数据库世界</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgjust-use-pg-li">
+  <input type="checkbox" id="m-zhblogpgjust-use-pg-check"/>
+  <label for="m-zhblogpgjust-use-pg-check"><a href="/zh/blog/pg/just-use-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgjust-use-pg"><span class="">技术极简主义：一切皆用Postgres</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgparadedb-li">
+  <input type="checkbox" id="m-zhblogpgparadedb-check"/>
+  <label for="m-zhblogpgparadedb-check"><a href="/zh/blog/pg/paradedb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgparadedb"><span class="">PG生态新玩家：ParadeDB</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-scalability-li">
+  <input type="checkbox" id="m-zhblogpgpg-scalability-check"/>
+  <label for="m-zhblogpgpg-scalability-check"><a href="/zh/blog/pg/pg-scalability/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-scalability"><span class="">令人惊叹的PostgreSQL可伸缩性</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-in-2024-li">
+  <input type="checkbox" id="m-zhblogpgpg-in-2024-check"/>
+  <label for="m-zhblogpgpg-in-2024-check"><a href="/zh/blog/pg/pg-in-2024/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-in-2024"><span class="">展望 PostgreSQL 的2024</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgferretdb-li">
+  <input type="checkbox" id="m-zhblogpgferretdb-check"/>
+  <label for="m-zhblogpgferretdb-check"><a href="/zh/blog/pg/ferretdb/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgferretdb"><span class="">FerretDB：假扮成MongoDB的PG</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgvector-json-pg-li">
+  <input type="checkbox" id="m-zhblogpgvector-json-pg-check"/>
+  <label for="m-zhblogpgvector-json-pg-check"><a href="/zh/blog/pg/vector-json-pg/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgvector-json-pg"><span class="">向量是新的 JSON</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-no1-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-no1-check"/>
+  <label for="m-zhblogpgpg-is-no1-check"><a href="/zh/blog/pg/pg-is-no1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-no1"><span class="">PostgreSQL：最成功的数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-performence-li">
+  <input type="checkbox" id="m-zhblogpgpg-performence-check"/>
+  <label for="m-zhblogpgpg-performence-check"><a href="/zh/blog/pg/pg-performence/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-performence"><span class="">PostgreSQL 到底有多强？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-best-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-best-check"/>
+  <label for="m-zhblogpgpg-is-best-check"><a href="/zh/blog/pg/pg-is-best/" title="为什么PostgreSQL是最成功的数据库？" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-best"><span class="">为什么PG是最成功的数据库？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpigsty-intro-li">
+  <input type="checkbox" id="m-zhblogpgpigsty-intro-check"/>
+  <label for="m-zhblogpgpigsty-intro-check"><a href="/zh/blog/pg/pigsty-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpigsty-intro"><span class="">开箱即用的PG发行版：Pigsty</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-great-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-great-check"/>
+  <label for="m-zhblogpgpg-is-great-check"><a href="/zh/blog/pg/pg-is-great/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-great"><span class="">为什么PostgreSQL前途无量？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-is-good-li">
+  <input type="checkbox" id="m-zhblogpgpg-is-good-check"/>
+  <label for="m-zhblogpgpg-is-good-check"><a href="/zh/blog/pg/pg-is-good/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-is-good"><span class="">PostgreSQL好处都有啥</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogpgpg-go-driver-li">
+  <input type="checkbox" id="m-zhblogpgpg-go-driver-check"/>
+  <label for="m-zhblogpgpg-go-driver-check"><a href="/zh/blog/pg/pg-go-driver/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogpgpg-go-driver"><span class="">Go数据库教程：database/sql</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogdev-li">
+  <input type="checkbox" id="m-zhblogdev-check"/>
+  <label for="m-zhblogdev-check"><a href="/zh/blog/dev/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogdev"><i class="fas fa-keyboard"></i><span class="">PG 开发</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevllm-and-pgvector-li">
+  <input type="checkbox" id="m-zhblogdevllm-and-pgvector-check"/>
+  <label for="m-zhblogdevllm-and-pgvector-check"><a href="/zh/blog/dev/llm-and-pgvector/" title="AI大模型与向量库 PGVector" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevllm-and-pgvector"><span class="">AI大模型与PGVector</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevfuzzymatch-li">
+  <input type="checkbox" id="m-zhblogdevfuzzymatch-check"/>
+  <label for="m-zhblogdevfuzzymatch-check"><a href="/zh/blog/dev/fuzzymatch/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevfuzzymatch"><span class="">高级模糊查询的实现</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevwire-protocol-li">
+  <input type="checkbox" id="m-zhblogdevwire-protocol-check"/>
+  <label for="m-zhblogdevwire-protocol-check"><a href="/zh/blog/dev/wire-protocol/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevwire-protocol"><span class="">前后端通信线缆协议</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevisolation-level-li">
+  <input type="checkbox" id="m-zhblogdevisolation-level-check"/>
+  <label for="m-zhblogdevisolation-level-check"><a href="/zh/blog/dev/isolation-level/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevisolation-level"><span class="">事务隔离等级注意事项</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevlogical-decoding-li">
+  <input type="checkbox" id="m-zhblogdevlogical-decoding-check"/>
+  <label for="m-zhblogdevlogical-decoding-check"><a href="/zh/blog/dev/logical-decoding/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevlogical-decoding"><span class="">CDC 变更数据捕获机理</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-lock-li">
+  <input type="checkbox" id="m-zhblogdevpg-lock-check"/>
+  <label for="m-zhblogdevpg-lock-check"><a href="/zh/blog/dev/pg-lock/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-lock"><span class="">PostgreSQL中的锁</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevgin-li">
+  <input type="checkbox" id="m-zhblogdevgin-check"/>
+  <label for="m-zhblogdevgin-check"><a href="/zh/blog/dev/gin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevgin"><span class="">GIN搜索的O(n2)负载度</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevgeoip-li">
+  <input type="checkbox" id="m-zhblogdevgeoip-check"/>
+  <label for="m-zhblogdevgeoip-check"><a href="/zh/blog/dev/geoip/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevgeoip"><span class="">GeoIP 地理逆查询优化</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-trigger-li">
+  <input type="checkbox" id="m-zhblogdevsql-trigger-check"/>
+  <label for="m-zhblogdevsql-trigger-check"><a href="/zh/blog/dev/sql-trigger/" title="PostgreSQL的触发器使用注意事项" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-trigger"><span class="">触发器使用注意事项</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-convention-li">
+  <input type="checkbox" id="m-zhblogdevpg-convention-check"/>
+  <label for="m-zhblogdevpg-convention-check"><a href="/zh/blog/dev/pg-convention/" title="PostgreSQL开发规约（2018版）" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-convention"><span class="">PostgreSQL开发规约2018版</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevknn-optimize-li">
+  <input type="checkbox" id="m-zhblogdevknn-optimize-check"/>
+  <label for="m-zhblogdevknn-optimize-check"><a href="/zh/blog/dev/knn-optimize/" title="KNN极致优化：从RDS到PostGIS" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevknn-optimize"><span class="">KNN极致优化：GIS圈选</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevadcode-geodecode-li">
+  <input type="checkbox" id="m-zhblogdevadcode-geodecode-check"/>
+  <label for="m-zhblogdevadcode-geodecode-check"><a href="/zh/blog/dev/adcode-geodecode/" title="PostGIS高效解决行政区划归属查询" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevadcode-geodecode"><span class="">行政区划查询：GIS点找面</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-distinct-on-li">
+  <input type="checkbox" id="m-zhblogdevsql-distinct-on-check"/>
+  <label for="m-zhblogdevsql-distinct-on-check"><a href="/zh/blog/dev/sql-distinct-on/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-distinct-on"><span class="">Distinct On 去除重复数据</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-func-volatility-li">
+  <input type="checkbox" id="m-zhblogdevsql-func-volatility-check"/>
+  <label for="m-zhblogdevsql-func-volatility-check"><a href="/zh/blog/dev/sql-func-volatility/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-func-volatility"><span class="">函数易变性等级分类</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevsql-exclude-li">
+  <input type="checkbox" id="m-zhblogdevsql-exclude-check"/>
+  <label for="m-zhblogdevsql-exclude-check"><a href="/zh/blog/dev/sql-exclude/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevsql-exclude"><span class="">用 Exclude 实现互斥约束</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevnotify-trigger-based-repl-li">
+  <input type="checkbox" id="m-zhblogdevnotify-trigger-based-repl-check"/>
+  <label for="m-zhblogdevnotify-trigger-based-repl-check"><a href="/zh/blog/dev/notify-trigger-based-repl/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevnotify-trigger-based-repl"><span class="">GO与PG实现缓存同步</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevaudit-change-li">
+  <input type="checkbox" id="m-zhblogdevaudit-change-check"/>
+  <label for="m-zhblogdevaudit-change-check"><a href="/zh/blog/dev/audit-change/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevaudit-change"><span class="">用触发器审计数据变化</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevpg-recsys-li">
+  <input type="checkbox" id="m-zhblogdevpg-recsys-check"/>
+  <label for="m-zhblogdevpg-recsys-check"><a href="/zh/blog/dev/pg-recsys/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevpg-recsys"><span class="">SQL实现ItemCF推荐系统</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogdevuuid-li">
+  <input type="checkbox" id="m-zhblogdevuuid-check"/>
+  <label for="m-zhblogdevuuid-check"><a href="/zh/blog/dev/uuid/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogdevuuid"><span class="">UUID性质原理与应用</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogadmin-li">
+  <input type="checkbox" id="m-zhblogadmin-check"/>
+  <label for="m-zhblogadmin-check"><a href="/zh/blog/admin/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogadmin"><i class="fas fa-balance-scale"></i><span class="">PG 管理</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminlogical-replication-li">
+  <input type="checkbox" id="m-zhblogadminlogical-replication-check"/>
+  <label for="m-zhblogadminlogical-replication-check"><a href="/zh/blog/admin/logical-replication/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminlogical-replication"><span class="">PostgreSQL 逻辑复制详解</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgss-li">
+  <input type="checkbox" id="m-zhblogadminpgss-check"/>
+  <label for="m-zhblogadminpgss-check"><a href="/zh/blog/admin/pgss/" title="PostgreSQL 宏观查询优化之 pg_stat_statements" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgss"><span class="">PG查询优化：观宏之道</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-filedump-li">
+  <input type="checkbox" id="m-zhblogadminpg-filedump-check"/>
+  <label for="m-zhblogadminpg-filedump-check"><a href="/zh/blog/admin/pg-filedump/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-filedump"><span class="">如何用 pg_filedump 抢救数据？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmincollate-li">
+  <input type="checkbox" id="m-zhblogadmincollate-check"/>
+  <label for="m-zhblogadmincollate-check"><a href="/zh/blog/admin/collate/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadmincollate"><span class="">PG中的本地化排序规则</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminreplica-identity-li">
+  <input type="checkbox" id="m-zhblogadminreplica-identity-check"/>
+  <label for="m-zhblogadminreplica-identity-check"><a href="/zh/blog/admin/replica-identity/" title="PG复制标识详解（Replica Identity）" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminreplica-identity"><span class="">PG复制标识详解</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminslow-query-li">
+  <input type="checkbox" id="m-zhblogadminslow-query-check"/>
+  <label for="m-zhblogadminslow-query-check"><a href="/zh/blog/admin/slow-query/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminslow-query"><span class="">PG慢查询诊断方法论</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmintime-travel-li">
+  <input type="checkbox" id="m-zhblogadmintime-travel-check"/>
+  <label for="m-zhblogadmintime-travel-check"><a href="/zh/blog/admin/time-travel/" title="故障档案:时间回溯导致的Patroni故障" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadmintime-travel"><span class="">故障档案：NTP/Patroni</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminalter-type-li">
+  <input type="checkbox" id="m-zhblogadminalter-type-check"/>
+  <label for="m-zhblogadminalter-type-check"><a href="/zh/blog/admin/alter-type/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminalter-type"><span class="">在线修改主键列类型</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmingolden-metrics-li">
+  <input type="checkbox" id="m-zhblogadmingolden-metrics-check"/>
+  <label for="m-zhblogadmingolden-metrics-check"><a href="/zh/blog/admin/golden-metrics/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadmingolden-metrics"><span class="">黄金监控指标：错误延迟吞吐饱和</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminentity-and-naming-li">
+  <input type="checkbox" id="m-zhblogadminentity-and-naming-check"/>
+  <label for="m-zhblogadminentity-and-naming-check"><a href="/zh/blog/admin/entity-and-naming/" title="数据库集群管理概念与实体命名规范" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminentity-and-naming"><span class="">数据库管理实体与命名规范</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-load-li">
+  <input type="checkbox" id="m-zhblogadminpg-load-check"/>
+  <label for="m-zhblogadminpg-load-check"><a href="/zh/blog/admin/pg-load/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-load"><span class="">PostgreSQL的KPI</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmigrate-column-type-li">
+  <input type="checkbox" id="m-zhblogadminmigrate-column-type-check"/>
+  <label for="m-zhblogadminmigrate-column-type-check"><a href="/zh/blog/admin/migrate-column-type/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmigrate-column-type"><span class="">在线修改PG字段类型</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminextension-li">
+  <input type="checkbox" id="m-zhblogadminextension-check"/>
+  <label for="m-zhblogadminextension-check"><a href="/zh/blog/admin/extension/" title="故障档案：PG安装Extension导致无法连接" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminextension"><span class="">故障:扩展导致拒绝连接</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminreplication-plan-li">
+  <input type="checkbox" id="m-zhblogadminreplication-plan-check"/>
+  <label for="m-zhblogadminreplication-plan-check"><a href="/zh/blog/admin/replication-plan/" title="PostgreSQL 常见复制拓扑方案" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminreplication-plan"><span class="">常见复制拓扑方案</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbackup-plan-li">
+  <input type="checkbox" id="m-zhblogadminbackup-plan-check"/>
+  <label for="m-zhblogadminbackup-plan-check"><a href="/zh/blog/admin/backup-plan/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbackup-plan"><span class="">温备：使用pg_receivewal</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpg-dump-failure-li">
+  <input type="checkbox" id="m-zhblogadminpg-dump-failure-check"/>
+  <label for="m-zhblogadminpg-dump-failure-check"><a href="/zh/blog/admin/pg-dump-failure/" title="故障档案：pg_dump导致的连接池污染" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpg-dump-failure"><span class="">故障档案：连接池污染</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpage-corruption-li">
+  <input type="checkbox" id="m-zhblogadminpage-corruption-check"/>
+  <label for="m-zhblogadminpage-corruption-check"><a href="/zh/blog/admin/page-corruption/" title="PostgreSQL数据页面损坏修复" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpage-corruption"><span class="">故障档案：数据页损坏</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbloat-li">
+  <input type="checkbox" id="m-zhblogadminbloat-check"/>
+  <label for="m-zhblogadminbloat-check"><a href="/zh/blog/admin/bloat/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbloat"><span class="">关系膨胀的监控与治理</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpipeline-intro-li">
+  <input type="checkbox" id="m-zhblogadminpipeline-intro-check"/>
+  <label for="m-zhblogadminpipeline-intro-check"><a href="/zh/blog/admin/pipeline-intro/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpipeline-intro"><span class="">PipelineDB快速上手</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmintimescale-install-li">
+  <input type="checkbox" id="m-zhblogadmintimescale-install-check"/>
+  <label for="m-zhblogadmintimescale-install-check"><a href="/zh/blog/admin/timescale-install/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadmintimescale-install"><span class="">TimescaleDB 快速上手</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminxid-wrap-around-li">
+  <input type="checkbox" id="m-zhblogadminxid-wrap-around-check"/>
+  <label for="m-zhblogadminxid-wrap-around-check"><a href="/zh/blog/admin/xid-wrap-around/" title="故障档案：PostgreSQL事务号回卷" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminxid-wrap-around"><span class="">故障档案：XID回卷</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminsequence-overflow-li">
+  <input type="checkbox" id="m-zhblogadminsequence-overflow-check"/>
+  <label for="m-zhblogadminsequence-overflow-check"><a href="/zh/blog/admin/sequence-overflow/" title="故障档案：序列号消耗过快导致整型溢出" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminsequence-overflow"><span class="">故障档案：序列号溢出</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmon-table-size-li">
+  <input type="checkbox" id="m-zhblogadminmon-table-size-check"/>
+  <label for="m-zhblogadminmon-table-size-check"><a href="/zh/blog/admin/mon-table-size/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmon-table-size"><span class="">监控PG中的表大小</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgadmin-install-li">
+  <input type="checkbox" id="m-zhblogadminpgadmin-install-check"/>
+  <label for="m-zhblogadminpgadmin-install-check"><a href="/zh/blog/admin/pgadmin-install/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgadmin-install"><span class="">PgAdmin安装配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadmindownload-failure-li">
+  <input type="checkbox" id="m-zhblogadmindownload-failure-check"/>
+  <label for="m-zhblogadmindownload-failure-check"><a href="/zh/blog/admin/download-failure/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadmindownload-failure"><span class="">故障档案：快慢不匀雪崩</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpsql-and-bash-li">
+  <input type="checkbox" id="m-zhblogadminpsql-and-bash-check"/>
+  <label for="m-zhblogadminpsql-and-bash-check"><a href="/zh/blog/admin/psql-and-bash/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpsql-and-bash"><span class="">Bash与psql小技巧</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminroutine-maintain-li">
+  <input type="checkbox" id="m-zhblogadminroutine-maintain-check"/>
+  <label for="m-zhblogadminroutine-maintain-check"><a href="/zh/blog/admin/routine-maintain/" title="PostgreSQL例行维护" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminroutine-maintain"><span class="">PgSQL例行维护任务</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminbackup-overview-li">
+  <input type="checkbox" id="m-zhblogadminbackup-overview-check"/>
+  <label for="m-zhblogadminbackup-overview-check"><a href="/zh/blog/admin/backup-overview/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminbackup-overview"><span class="">备份恢复手段概览</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgbackrest-li">
+  <input type="checkbox" id="m-zhblogadminpgbackrest-check"/>
+  <label for="m-zhblogadminpgbackrest-check"><a href="/zh/blog/admin/pgbackrest/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgbackrest"><span class="">PgBackRest2中文文档</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpgbouncer-usage-li">
+  <input type="checkbox" id="m-zhblogadminpgbouncer-usage-check"/>
+  <label for="m-zhblogadminpgbouncer-usage-check"><a href="/zh/blog/admin/pgbouncer-usage/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpgbouncer-usage"><span class="">Pgbouncer快速上手</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminlogging-li">
+  <input type="checkbox" id="m-zhblogadminlogging-check"/>
+  <label for="m-zhblogadminlogging-check"><a href="/zh/blog/admin/logging/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminlogging"><span class="">PG服务器日志常规配置</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmigration-without-downtime-li">
+  <input type="checkbox" id="m-zhblogadminmigration-without-downtime-check"/>
+  <label for="m-zhblogadminmigration-without-downtime-check"><a href="/zh/blog/admin/migration-without-downtime/" title="空中换引擎 —— PostgreSQL不停机迁移数据" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmigration-without-downtime"><span class="">不停机迁移数据迁移基本原理</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminfio-li">
+  <input type="checkbox" id="m-zhblogadminfio-check"/>
+  <label for="m-zhblogadminfio-check"><a href="/zh/blog/admin/fio/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminfio"><span class="">使用FIO测试磁盘性能</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminsysbench-li">
+  <input type="checkbox" id="m-zhblogadminsysbench-check"/>
+  <label for="m-zhblogadminsysbench-check"><a href="/zh/blog/admin/sysbench/" title="使用sysbench测试PostgreSQL性能" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminsysbench"><span class="">使用sysbench测试性能</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminfind-dummy-index-li">
+  <input type="checkbox" id="m-zhblogadminfind-dummy-index-check"/>
+  <label for="m-zhblogadminfind-dummy-index-check"><a href="/zh/blog/admin/find-dummy-index/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminfind-dummy-index"><span class="">找出没用过的索引</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminssh-add-key-li">
+  <input type="checkbox" id="m-zhblogadminssh-add-key-check"/>
+  <label for="m-zhblogadminssh-add-key-check"><a href="/zh/blog/admin/ssh-add-key/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminssh-add-key"><span class="">批量配置SSH免密登录</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminwireshark-capture-li">
+  <input type="checkbox" id="m-zhblogadminwireshark-capture-check"/>
+  <label for="m-zhblogadminwireshark-capture-check"><a href="/zh/blog/admin/wireshark-capture/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminwireshark-capture"><span class="">Wireshark抓包分析协议</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminfile_fdw-li">
+  <input type="checkbox" id="m-zhblogadminfile_fdw-check"/>
+  <label for="m-zhblogadminfile_fdw-check"><a href="/zh/blog/admin/file_fdw/" title="file_fdw妙用无穷——从数据库读取系统信息" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminfile_fdw"><span class="">FileFDW用例：读取OS信息</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminunix-tool-li">
+  <input type="checkbox" id="m-zhblogadminunix-tool-check"/>
+  <label for="m-zhblogadminunix-tool-check"><a href="/zh/blog/admin/unix-tool/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminunix-tool"><span class="">Linux 常用统计 CLI 工具</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminpostgis-install-li">
+  <input type="checkbox" id="m-zhblogadminpostgis-install-check"/>
+  <label for="m-zhblogadminpostgis-install-check"><a href="/zh/blog/admin/postgis-install/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminpostgis-install"><span class="">源码编译安装 PostGIS</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogadminmongo_fdw-install-li">
+  <input type="checkbox" id="m-zhblogadminmongo_fdw-install-check"/>
+  <label for="m-zhblogadminmongo_fdw-install-check"><a href="/zh/blog/admin/mongo_fdw-install/" title="PostgreSQL MongoFDW安装部署" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogadminmongo_fdw-install"><span class="">MongoFDW安装部署</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogkernel-li">
+  <input type="checkbox" id="m-zhblogkernel-check"/>
+  <label for="m-zhblogkernel-check"><a href="/zh/blog/kernel/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogkernel"><i class="fas fa-gears"></i><span class="">PG 内核</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelpg-wal-page-seq-li">
+  <input type="checkbox" id="m-zhblogkernelpg-wal-page-seq-check"/>
+  <label for="m-zhblogkernelpg-wal-page-seq-check"><a href="/zh/blog/kernel/pg-wal-page-seq/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelpg-wal-page-seq"><span class="">PG先写脏页还是先写WAL？</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch1-li">
+  <input type="checkbox" id="m-zhblogkernelch1-check"/>
+  <label for="m-zhblogkernelch1-check"><a href="/zh/blog/kernel/ch1/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch1"><span class="">第一章 数据库的物理/逻辑结构</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch2-li">
+  <input type="checkbox" id="m-zhblogkernelch2-check"/>
+  <label for="m-zhblogkernelch2-check"><a href="/zh/blog/kernel/ch2/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch2"><span class="">第二章 进程和内存架构</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch3-li">
+  <input type="checkbox" id="m-zhblogkernelch3-check"/>
+  <label for="m-zhblogkernelch3-check"><a href="/zh/blog/kernel/ch3/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch3"><span class="">第三章 查询处理</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch4-li">
+  <input type="checkbox" id="m-zhblogkernelch4-check"/>
+  <label for="m-zhblogkernelch4-check"><a href="/zh/blog/kernel/ch4/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch4"><span class="">第四章 外部数据包装器</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch5-li">
+  <input type="checkbox" id="m-zhblogkernelch5-check"/>
+  <label for="m-zhblogkernelch5-check"><a href="/zh/blog/kernel/ch5/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch5"><span class="">第五章 并发控制</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch6-li">
+  <input type="checkbox" id="m-zhblogkernelch6-check"/>
+  <label for="m-zhblogkernelch6-check"><a href="/zh/blog/kernel/ch6/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch6"><span class="">第六章 垃圾清理过程</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch7-li">
+  <input type="checkbox" id="m-zhblogkernelch7-check"/>
+  <label for="m-zhblogkernelch7-check"><a href="/zh/blog/kernel/ch7/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch7"><span class="">第七章 堆内元组与仅索引扫描</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch8-li">
+  <input type="checkbox" id="m-zhblogkernelch8-check"/>
+  <label for="m-zhblogkernelch8-check"><a href="/zh/blog/kernel/ch8/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch8"><span class="">第八章 缓冲区管理器</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch9-li">
+  <input type="checkbox" id="m-zhblogkernelch9-check"/>
+  <label for="m-zhblogkernelch9-check"><a href="/zh/blog/kernel/ch9/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch9"><span class="">第九章 预写式日志</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch10-li">
+  <input type="checkbox" id="m-zhblogkernelch10-check"/>
+  <label for="m-zhblogkernelch10-check"><a href="/zh/blog/kernel/ch10/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch10"><span class="">第十章 基础备份与时间点恢复</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelch11-li">
+  <input type="checkbox" id="m-zhblogkernelch11-check"/>
+  <label for="m-zhblogkernelch11-check"><a href="/zh/blog/kernel/ch11/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelch11"><span class="">第十一章 流复制</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogkernelwal-and-checkpoint-li">
+  <input type="checkbox" id="m-zhblogkernelwal-and-checkpoint-check"/>
+  <label for="m-zhblogkernelwal-and-checkpoint-check"><a href="/zh/blog/kernel/wal-and-checkpoint/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogkernelwal-and-checkpoint"><span class="">WAL与检查点概述</span></a></label>
+  
+</li>
+  </ul>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-zhblogreleases-li">
+  <input type="checkbox" id="m-zhblogreleases-check"/>
+  <label for="m-zhblogreleases-check"><a href="/zh/blog/releases/" class="align-left ps-0  td-sidebar-link td-sidebar-link__section" id="m-zhblogreleases"><i class="fas fa-newspaper"></i><span class="">版本发布</span></a></label>
+  
+  <ul class="ul-2 foldable">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv320-li">
+  <input type="checkbox" id="m-zhblogreleasesv320-check"/>
+  <label for="m-zhblogreleasesv320-check"><a href="/zh/blog/releases/v3.2.0/" title="v3.2：命令行工具pig，完备的ARM扩展仓库，Supabase &amp; Grafana 加强" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv320"><span class="">v3.2：Pig CLI, ARM EXT</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv310-li">
+  <input type="checkbox" id="m-zhblogreleasesv310-check"/>
+  <label for="m-zhblogreleasesv310-check"><a href="/zh/blog/releases/v3.1.0/" title="v3.1：Supabase一键自建，PG17上位，ARM与Ubuntu24支持，MinIO改进" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv310"><span class="">v3.1：ARM, PG17 &amp; Supabase</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv300-li">
+  <input type="checkbox" id="m-zhblogreleasesv300-check"/>
+  <label for="m-zhblogreleasesv300-check"><a href="/zh/blog/releases/v3.0.0/" title="v3.0：海量扩展，插拔内核，RDS服务" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv300"><span class="">v3.0：扩展，服务，与内核</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv270-li">
+  <input type="checkbox" id="m-zhblogreleasesv270-check"/>
+  <label for="m-zhblogreleasesv270-check"><a href="/zh/blog/releases/v2.7.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv270"><span class="">v2.7：集异璧之大成</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv260-li">
+  <input type="checkbox" id="m-zhblogreleasesv260-check"/>
+  <label for="m-zhblogreleasesv260-check"><a href="/zh/blog/releases/v2.6.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv260"><span class="">v2.6：PG 踢馆 OLAP</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv250-li">
+  <input type="checkbox" id="m-zhblogreleasesv250-check"/>
+  <label for="m-zhblogreleasesv250-check"><a href="/zh/blog/releases/v2.5.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv250"><span class="">v2.5：Ubuntu &amp; PG16</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv240-li">
+  <input type="checkbox" id="m-zhblogreleasesv240-check"/>
+  <label for="m-zhblogreleasesv240-check"><a href="/zh/blog/releases/v2.4.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv240"><span class="">v2.4：监控云数据库</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv230-li">
+  <input type="checkbox" id="m-zhblogreleasesv230-check"/>
+  <label for="m-zhblogreleasesv230-check"><a href="/zh/blog/releases/v2.3.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv230"><span class="">v2.3：丰富应用生态</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv220-li">
+  <input type="checkbox" id="m-zhblogreleasesv220-check"/>
+  <label for="m-zhblogreleasesv220-check"><a href="/zh/blog/releases/v2.2.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv220"><span class="">v2.2：监控全面翻新</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv210-li">
+  <input type="checkbox" id="m-zhblogreleasesv210-check"/>
+  <label for="m-zhblogreleasesv210-check"><a href="/zh/blog/releases/v2.1.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv210"><span class="">v2.1：向量&#43;PG全系支持！</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv200-li">
+  <input type="checkbox" id="m-zhblogreleasesv200-check"/>
+  <label for="m-zhblogreleasesv200-check"><a href="/zh/blog/releases/v2.0.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv200"><span class="">v2.0：开源RDS PG替代</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv150-li">
+  <input type="checkbox" id="m-zhblogreleasesv150-check"/>
+  <label for="m-zhblogreleasesv150-check"><a href="/zh/blog/releases/v1.5.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv150"><span class="">v1.5.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv140-li">
+  <input type="checkbox" id="m-zhblogreleasesv140-check"/>
+  <label for="m-zhblogreleasesv140-check"><a href="/zh/blog/releases/v1.4.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv140"><span class="">v1.4.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv130-li">
+  <input type="checkbox" id="m-zhblogreleasesv130-check"/>
+  <label for="m-zhblogreleasesv130-check"><a href="/zh/blog/releases/v1.3.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv130"><span class="">v1.3.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv120-li">
+  <input type="checkbox" id="m-zhblogreleasesv120-check"/>
+  <label for="m-zhblogreleasesv120-check"><a href="/zh/blog/releases/v1.2.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv120"><span class="">v1.2.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv110-li">
+  <input type="checkbox" id="m-zhblogreleasesv110-check"/>
+  <label for="m-zhblogreleasesv110-check"><a href="/zh/blog/releases/v1.1.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv110"><span class="">v1.1.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv100-li">
+  <input type="checkbox" id="m-zhblogreleasesv100-check"/>
+  <label for="m-zhblogreleasesv100-check"><a href="/zh/blog/releases/v1.0.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv100"><span class="">v1.0.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv090-li">
+  <input type="checkbox" id="m-zhblogreleasesv090-check"/>
+  <label for="m-zhblogreleasesv090-check"><a href="/zh/blog/releases/v0.9.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv090"><span class="">v0.9.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv080-li">
+  <input type="checkbox" id="m-zhblogreleasesv080-check"/>
+  <label for="m-zhblogreleasesv080-check"><a href="/zh/blog/releases/v0.8.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv080"><span class="">v0.8.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv070-li">
+  <input type="checkbox" id="m-zhblogreleasesv070-check"/>
+  <label for="m-zhblogreleasesv070-check"><a href="/zh/blog/releases/v0.7.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv070"><span class="">v0.7.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv060-li">
+  <input type="checkbox" id="m-zhblogreleasesv060-check"/>
+  <label for="m-zhblogreleasesv060-check"><a href="/zh/blog/releases/v0.6.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv060"><span class="">v0.6.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv050-li">
+  <input type="checkbox" id="m-zhblogreleasesv050-check"/>
+  <label for="m-zhblogreleasesv050-check"><a href="/zh/blog/releases/v0.5.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv050"><span class="">v0.5.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv040-li">
+  <input type="checkbox" id="m-zhblogreleasesv040-check"/>
+  <label for="m-zhblogreleasesv040-check"><a href="/zh/blog/releases/v0.4.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv040"><span class="">v0.4.0 发布注记</span></a></label>
+  
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-zhblogreleasesv030-li">
+  <input type="checkbox" id="m-zhblogreleasesv030-check"/>
+  <label for="m-zhblogreleasesv030-check"><a href="/zh/blog/releases/v0.3.0/" class="align-left ps-0  td-sidebar-link td-sidebar-link__page" id="m-zhblogreleasesv030"><span class="">v0.3.0 发布注记</span></a></label>
+  
+</li>
+  </ul>
+</li>
+  </ul>
+</li>
+    </ul>
+  </nav>
+</div>
+
+          </aside>
+          <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
+            <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
+<a href="https://github.com/Vonng/pigsty.cc/tree/main/content/zh/blog/pg/pig-announce/index.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/Vonng/pigsty.cc/edit/main/content/zh/blog/pg/pig-announce/index.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/new/main/content/zh/blog/pg/pig-announce?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
+  <a href="https://github.com/Vonng/pigsty.cc/issues/new?title=%e5%b0%8f%e7%8c%aa%e9%aa%91%e5%a4%a7%e8%b1%a1%ef%bc%9aPG%e5%86%85%e6%a0%b8%e4%b8%8e%e6%89%a9%e5%b1%95%e5%8c%85%e7%ae%a1%e7%90%86%e7%a5%9e%e5%99%a8" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+  <a href="https://github.com/Vonng/pigsty/issues/new" class="td-page-meta--project td-page-meta__project-issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create project issue</a>
+  <a id="print" href="/zh/blog/pg/_print/"><i class="fa-solid fa-print fa-fw"></i> Print entire section</a>
+
+</div>
+
+            <div class="td-toc">
+        <nav id="TableOfContents">
+  <ul>
+    <li><a href="#快速上手">快速上手</a></li>
+    <li><a href="#为什么需要包管理器">为什么需要包管理器？</a></li>
+    <li><a href="#pgdg官方仓库有什么问题">PGDG官方仓库有什么问题？</a></li>
+    <li><a href="#为什么用操作系统包管理器">为什么用操作系统包管理器？</a></li>
+    <li><a href="#这个项目的价值在哪里">这个项目的价值在哪里？</a></li>
+    <li><a href="#这个项目的核心壁垒是什么">这个项目的核心壁垒是什么？</a></li>
+    <li><a href="#现在这个仓库是什么状态">现在这个仓库是什么状态</a></li>
+    <li><a href="#pig-使用什么开源协议如何考虑">Pig 使用什么开源协议，如何考虑？</a></li>
+    <li><a href="#为什么是你来做而不是别人">为什么是你来做，而不是别人？</a></li>
+    <li><a href="#谁还用包管理器docker不香吗">谁还用包管理器，Docker不香吗？</a></li>
+    <li><a href="#为什么叫-pig-这个名字">为什么叫 pig 这个名字？</a></li>
+    <li><a href="#下一步-pig-会如何发展">下一步 pig 会如何发展？</a></li>
+    <li><a href="#最后">最后</a></li>
+  </ul>
+</nav>
+      </div>
+    
+            <div class="taxonomy taxonomy-terms-cloud taxo-module">
+      <h5 class="taxonomy-title">Modules</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/app/" data-taxonomy-term="app"><span class="taxonomy-label">APP</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/blog/" data-taxonomy-term="blog"><span class="taxonomy-label">BLOG</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/docker/" data-taxonomy-term="docker"><span class="taxonomy-label">DOCKER</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/etcd/" data-taxonomy-term="etcd"><span class="taxonomy-label">ETCD</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/infra/" data-taxonomy-term="infra"><span class="taxonomy-label">INFRA</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/jupyter/" data-taxonomy-term="jupyter"><span class="taxonomy-label">JUPYTER</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/kafka/" data-taxonomy-term="kafka"><span class="taxonomy-label">KAFKA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/minio/" data-taxonomy-term="minio"><span class="taxonomy-label">MINIO</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/mongo/" data-taxonomy-term="mongo"><span class="taxonomy-label">MONGO</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/mysql/" data-taxonomy-term="mysql"><span class="taxonomy-label">MYSQL</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/node/" data-taxonomy-term="node"><span class="taxonomy-label">NODE</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/pgsql/" data-taxonomy-term="pgsql"><span class="taxonomy-label">PGSQL</span><span class="taxonomy-count">62</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/pigsty/" data-taxonomy-term="pigsty"><span class="taxonomy-label">PIGSTY</span><span class="taxonomy-count">42</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/redis/" data-taxonomy-term="redis"><span class="taxonomy-label">REDIS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/software/" data-taxonomy-term="software"><span class="taxonomy-label">SOFTWARE</span><span class="taxonomy-count">16</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/tigerbeetle/" data-taxonomy-term="tigerbeetle"><span class="taxonomy-label">TigerBeetle</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/module/victoria/" data-taxonomy-term="victoria"><span class="taxonomy-label">VICTORIA</span><span class="taxonomy-count">1</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-categories">
+      <h5 class="taxonomy-title">Categories</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/about/" data-taxonomy-term="about"><span class="taxonomy-label">About</span><span class="taxonomy-count">10</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">23</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/ai/" data-taxonomy-term="ai"><span class="taxonomy-label">AI</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/arch/" data-taxonomy-term="arch"><span class="taxonomy-label">Arch</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/business/" data-taxonomy-term="business"><span class="taxonomy-label">Business</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/concept/" data-taxonomy-term="concept"><span class="taxonomy-label">Concept</span><span class="taxonomy-count">12</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/config/" data-taxonomy-term="config"><span class="taxonomy-label">Config</span><span class="taxonomy-count">25</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/dashboard/" data-taxonomy-term="dashboard"><span class="taxonomy-label">Dashboard</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/develop/" data-taxonomy-term="develop"><span class="taxonomy-label">Develop</span><span class="taxonomy-count">11</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/enterprise/" data-taxonomy-term="enterprise"><span class="taxonomy-label">Enterprise</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/faq/" data-taxonomy-term="faq"><span class="taxonomy-label">FAQ</span><span class="taxonomy-count">9</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/install/" data-taxonomy-term="install"><span class="taxonomy-label">Install</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/metrics/" data-taxonomy-term="metrics"><span class="taxonomy-label">Metrics</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/module/" data-taxonomy-term="module"><span class="taxonomy-label">Module</span><span class="taxonomy-count">16</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/monitor/" data-taxonomy-term="monitor"><span class="taxonomy-label">Monitor</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/overview/" data-taxonomy-term="overview"><span class="taxonomy-label">Overview</span><span class="taxonomy-count">20</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/param/" data-taxonomy-term="param"><span class="taxonomy-label">Param</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/playbook/" data-taxonomy-term="playbook"><span class="taxonomy-label">Playbook</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/price/" data-taxonomy-term="price"><span class="taxonomy-label">Price</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/reference/" data-taxonomy-term="reference"><span class="taxonomy-label">Reference</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/release/" data-taxonomy-term="release"><span class="taxonomy-label">Release</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/section/" data-taxonomy-term="section"><span class="taxonomy-label">Section</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/setup/" data-taxonomy-term="setup"><span class="taxonomy-label">Setup</span><span class="taxonomy-count">14</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/categories/usage/" data-taxonomy-term="usage"><span class="taxonomy-label">Usage</span><span class="taxonomy-count">2</span></a></li>
+        </ul>
+    </div>
+  <div class="taxonomy taxonomy-terms-cloud taxo-tags">
+      <h5 class="taxonomy-title">Tags</h5>
+      <ul class="taxonomy-terms">
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/1-node/" data-taxonomy-term="1-node"><span class="taxonomy-label">1-Node</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/2-node/" data-taxonomy-term="2-node"><span class="taxonomy-label">2-Node</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/3-node/" data-taxonomy-term="3-node"><span class="taxonomy-label">3-Node</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/4-node/" data-taxonomy-term="4-node"><span class="taxonomy-label">4-Node</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/5-node/" data-taxonomy-term="5-node"><span class="taxonomy-label">5-Node</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/access/" data-taxonomy-term="access"><span class="taxonomy-label">Access</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/admin/" data-taxonomy-term="admin"><span class="taxonomy-label">Admin</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/auth/" data-taxonomy-term="auth"><span class="taxonomy-label">Auth</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/aws/" data-taxonomy-term="aws"><span class="taxonomy-label">AWS</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cdc/" data-taxonomy-term="cdc"><span class="taxonomy-label">CDC</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cdn/" data-taxonomy-term="cdn"><span class="taxonomy-label">CDN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/citus/" data-taxonomy-term="citus"><span class="taxonomy-label">Citus</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cloudberry/" data-taxonomy-term="cloudberry"><span class="taxonomy-label">Cloudberry</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cloudflare/" data-taxonomy-term="cloudflare"><span class="taxonomy-label">Cloudflare</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/cost/" data-taxonomy-term="cost"><span class="taxonomy-label">Cost</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/database/" data-taxonomy-term="database"><span class="taxonomy-label">Database</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/dba/" data-taxonomy-term="dba"><span class="taxonomy-label">DBA</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/dhh/" data-taxonomy-term="dhh"><span class="taxonomy-label">DHH</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/docker/" data-taxonomy-term="docker"><span class="taxonomy-label">Docker</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/ebs/" data-taxonomy-term="ebs"><span class="taxonomy-label">EBS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/ecs/" data-taxonomy-term="ecs"><span class="taxonomy-label">ECS</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/extension/" data-taxonomy-term="extension"><span class="taxonomy-label">Extension</span><span class="taxonomy-count">24</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/failure/" data-taxonomy-term="failure"><span class="taxonomy-label">Failure</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/finops/" data-taxonomy-term="finops"><span class="taxonomy-label">FinOps</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/gin/" data-taxonomy-term="gin"><span class="taxonomy-label">GIN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/gis/" data-taxonomy-term="gis"><span class="taxonomy-label">GIS</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/go/" data-taxonomy-term="go"><span class="taxonomy-label">Go</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/greenplum/" data-taxonomy-term="greenplum"><span class="taxonomy-label">Greenplum</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/hba/" data-taxonomy-term="hba"><span class="taxonomy-label">HBA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/kernel/" data-taxonomy-term="kernel"><span class="taxonomy-label">Kernel</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/knn/" data-taxonomy-term="knn"><span class="taxonomy-label">KNN</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/kubernetes/" data-taxonomy-term="kubernetes"><span class="taxonomy-label">Kubernetes</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/linux/" data-taxonomy-term="linux"><span class="taxonomy-label">Linux</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/migration/" data-taxonomy-term="migration"><span class="taxonomy-label">Migration</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/mongodb/" data-taxonomy-term="mongodb"><span class="taxonomy-label">MongoDB</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/mssql/" data-taxonomy-term="mssql"><span class="taxonomy-label">MSSQL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/mysql/" data-taxonomy-term="mysql"><span class="taxonomy-label">MySQL</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/neon/" data-taxonomy-term="neon"><span class="taxonomy-label">Neon</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/offline/" data-taxonomy-term="offline"><span class="taxonomy-label">Offline</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/oracle/" data-taxonomy-term="oracle"><span class="taxonomy-label">Oracle</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/os/" data-taxonomy-term="os"><span class="taxonomy-label">OS</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pg%E5%86%85%E6%A0%B8/" data-taxonomy-term="pg%E5%86%85%E6%A0%B8"><span class="taxonomy-label">PG内核</span><span class="taxonomy-count">14</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pg%E5%BC%80%E5%8F%91/" data-taxonomy-term="pg%E5%BC%80%E5%8F%91"><span class="taxonomy-label">PG开发</span><span class="taxonomy-count">20</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pg%E7%94%9F%E6%80%81/" data-taxonomy-term="pg%E7%94%9F%E6%80%81"><span class="taxonomy-label">PG生态</span><span class="taxonomy-count">18</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pg%E7%AE%A1%E7%90%86/" data-taxonomy-term="pg%E7%AE%A1%E7%90%86"><span class="taxonomy-label">PG管理</span><span class="taxonomy-count">40</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pigsty/" data-taxonomy-term="pigsty"><span class="taxonomy-label">Pigsty</span><span class="taxonomy-count">25</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pigstyapp/" data-taxonomy-term="pigstyapp"><span class="taxonomy-label">PigstyApp</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/pitr/" data-taxonomy-term="pitr"><span class="taxonomy-label">PITR</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/polardb/" data-taxonomy-term="polardb"><span class="taxonomy-label">PolarDB</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span><span class="taxonomy-count">103</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/provision/" data-taxonomy-term="provision"><span class="taxonomy-label">Provision</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/rds/" data-taxonomy-term="rds"><span class="taxonomy-label">RDS</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/redis/" data-taxonomy-term="redis"><span class="taxonomy-label">Redis</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/release/" data-taxonomy-term="release"><span class="taxonomy-label">Release</span><span class="taxonomy-count">24</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/rpm/" data-taxonomy-term="rpm"><span class="taxonomy-label">RPM</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/s3/" data-taxonomy-term="s3"><span class="taxonomy-label">S3</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/security/" data-taxonomy-term="security"><span class="taxonomy-label">Security</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/service/" data-taxonomy-term="service"><span class="taxonomy-label">Service</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sla/" data-taxonomy-term="sla"><span class="taxonomy-label">SLA</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/slim/" data-taxonomy-term="slim"><span class="taxonomy-label">Slim</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sop/" data-taxonomy-term="sop"><span class="taxonomy-label">SOP</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sponsor/" data-taxonomy-term="sponsor"><span class="taxonomy-label">Sponsor</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/sql/" data-taxonomy-term="sql"><span class="taxonomy-label">SQL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/user/" data-taxonomy-term="user"><span class="taxonomy-label">User</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/visualization/" data-taxonomy-term="visualization"><span class="taxonomy-label">Visualization</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/wal/" data-taxonomy-term="wal"><span class="taxonomy-label">WAL</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E4%B8%8B%E4%BA%91/" data-taxonomy-term="%E4%B8%8B%E4%BA%91"><span class="taxonomy-label">下云</span><span class="taxonomy-count">34</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E4%BA%91%E6%95%85%E9%9A%9C/" data-taxonomy-term="%E4%BA%91%E6%95%85%E9%9A%9C"><span class="taxonomy-label">云故障</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E4%BA%91%E8%AE%A1%E7%AE%97/" data-taxonomy-term="%E4%BA%91%E8%AE%A1%E7%AE%97"><span class="taxonomy-label">云计算</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%85%A8%E6%96%87%E6%A3%80%E7%B4%A2/" data-taxonomy-term="%E5%85%A8%E6%96%87%E6%A3%80%E7%B4%A2"><span class="taxonomy-label">全文检索</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%87%BD%E6%95%B0/" data-taxonomy-term="%E5%87%BD%E6%95%B0"><span class="taxonomy-label">函数</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" data-taxonomy-term="%E5%88%86%E5%B8%83%E5%BC%8F"><span class="taxonomy-label">分布式</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%90%91%E9%87%8F/" data-taxonomy-term="%E5%90%91%E9%87%8F"><span class="taxonomy-label">向量</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E5%90%91%E9%87%8F%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">向量数据库</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%95%86%E4%B8%9A/" data-taxonomy-term="%E5%95%86%E4%B8%9A"><span class="taxonomy-label">商业</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%9B%BD%E4%BA%A7%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E5%9B%BD%E4%BA%A7%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">国产数据库</span><span class="taxonomy-count">4</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%A4%87%E4%BB%BD/" data-taxonomy-term="%E5%A4%87%E4%BB%BD"><span class="taxonomy-label">备份</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%B7%A5%E5%85%B7/" data-taxonomy-term="%E5%B7%A5%E5%85%B7"><span class="taxonomy-label">工具</span><span class="taxonomy-count">5</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%BC%80%E6%BA%90/" data-taxonomy-term="%E5%BC%80%E6%BA%90"><span class="taxonomy-label">开源</span><span class="taxonomy-count">7</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%80%A7%E8%83%BD/" data-taxonomy-term="%E6%80%A7%E8%83%BD"><span class="taxonomy-label">性能</span><span class="taxonomy-count">6</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%89%A9%E5%B1%95/" data-taxonomy-term="%E6%89%A9%E5%B1%95"><span class="taxonomy-label">扩展</span><span class="taxonomy-count">13</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%8C%87%E6%A0%87/" data-taxonomy-term="%E6%8C%87%E6%A0%87"><span class="taxonomy-label">指标</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F/" data-taxonomy-term="%E6%8E%A8%E8%8D%90%E7%B3%BB%E7%BB%9F"><span class="taxonomy-label">推荐系统</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" data-taxonomy-term="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F"><span class="taxonomy-label">操作系统</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%95%85%E9%9A%9C/" data-taxonomy-term="%E6%95%85%E9%9A%9C"><span class="taxonomy-label">故障</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%95%85%E9%9A%9C%E6%A1%A3%E6%A1%88/" data-taxonomy-term="%E6%95%85%E9%9A%9C%E6%A1%A3%E6%A1%88"><span class="taxonomy-label">故障档案</span><span class="taxonomy-count">8</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" data-taxonomy-term="%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="taxonomy-label">数据库</span><span class="taxonomy-count">32</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%95%B0%E6%8D%AE%E6%8D%9F%E5%9D%8F/" data-taxonomy-term="%E6%95%B0%E6%8D%AE%E6%8D%9F%E5%9D%8F"><span class="taxonomy-label">数据损坏</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%97%A5%E5%BF%97/" data-taxonomy-term="%E6%97%A5%E5%BF%97"><span class="taxonomy-label">日志</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%9E%B6%E6%9E%84/" data-taxonomy-term="%E6%9E%B6%E6%9E%84"><span class="taxonomy-label">架构</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E6%BC%8F%E6%B4%9E/" data-taxonomy-term="%E6%BC%8F%E6%B4%9E"><span class="taxonomy-label">漏洞</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E7%9B%91%E6%8E%A7/" data-taxonomy-term="%E7%9B%91%E6%8E%A7"><span class="taxonomy-label">监控</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E7%A1%AC%E4%BB%B6/" data-taxonomy-term="%E7%A1%AC%E4%BB%B6"><span class="taxonomy-label">硬件</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E7%BC%96%E7%A0%81/" data-taxonomy-term="%E7%BC%96%E7%A0%81"><span class="taxonomy-label">编码</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E8%85%BE%E8%AE%AF%E4%BA%91/" data-taxonomy-term="%E8%85%BE%E8%AE%AF%E4%BA%91"><span class="taxonomy-label">腾讯云</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E8%A7%84%E7%BA%A6/" data-taxonomy-term="%E8%A7%84%E7%BA%A6"><span class="taxonomy-label">规约</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E8%A7%A6%E5%8F%91%E5%99%A8/" data-taxonomy-term="%E8%A7%A6%E5%8F%91%E5%99%A8"><span class="taxonomy-label">触发器</span><span class="taxonomy-count">3</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E8%BF%81%E7%A7%BB/" data-taxonomy-term="%E8%BF%81%E7%A7%BB"><span class="taxonomy-label">迁移</span><span class="taxonomy-count">2</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E8%BF%9E%E6%8E%A5%E6%B1%A0/" data-taxonomy-term="%E8%BF%9E%E6%8E%A5%E6%B1%A0"><span class="taxonomy-label">连接池</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E9%94%81/" data-taxonomy-term="%E9%94%81"><span class="taxonomy-label">锁</span><span class="taxonomy-count">1</span></a></li>
+        <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E9%98%BF%E9%87%8C%E4%BA%91/" data-taxonomy-term="%E9%98%BF%E9%87%8C%E4%BA%91"><span class="taxonomy-label">阿里云</span><span class="taxonomy-count">7</span></a></li>
+        </ul>
+    </div>
+  
+	
+          </aside>
+          <main class="col-12 col-md-9 col-xl-8 ps-md-5 pe-md-4" role="main">
+            <a class="td-rss-button" title="RSS" href="/zh/blog/pg/index.xml" target="_blank" rel="noopener">
+              <i class="fa-solid fa-rss" aria-hidden="true"></i>
+            </a>
+            
+<div class="td-content">
+	<h1>小猪骑大象：PG内核与扩展包管理神器</h1>
+	
+	<div class="td-byline mb-4">
+		By <b><a href="https://vonng.com">冯若航</a>（<a href="https://vonng.com/en/">@Vonng</a>） | <a href="https://mp.weixin.qq.com/s/8zxeDQ7p5tPNGYED_1Bugg">微信公众号</a></b> |
+		<time datetime="2024-12-23" class="text-muted">2024年12月23日</time>
+	</div>
+	<header class="article-meta">
+		<div class="taxonomy taxonomy-terms-article taxo-tags">
+  <h5 class="taxonomy-title">Tags:</h5>
+  <ul class="taxonomy-terms">
+    <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/postgresql/" data-taxonomy-term="postgresql"><span class="taxonomy-label">PostgreSQL</span></a></li>
+    <li><a class="taxonomy-term" href="//localhost:1313/zh/tags/%E5%B7%A5%E5%85%B7/" data-taxonomy-term="%E5%B7%A5%E5%85%B7"><span class="taxonomy-label">工具</span></a></li>
+    </ul>
+</div>
+
+  </header>
+	<p>最近我在忙一个非常有趣的新项目，这两天总算弄完了。各位朋友们，给大家介绍一下这个有趣的小东西，PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，我称之为 “<a href="https://github.com/pgsty/pig"><strong>pig</strong></a>”。</p>
+<p>那么 pig 是干什么的？简单来说，这是一个 PostgreSQL 的包管理器，也是 PostgreSQL 与 Pigsty 中久久缺失的一个命令行工具，它可以在主流 Linux 操作系统上提供跨发行版的丝滑无缝的 PostgreSQL 安装部署体验。而且还通过国内镜像解决了下载速度慢和部分仓库被墙的问题。</p>
+<p><img alt="featured.jpg" src="/zh/blog/pg/pig-announce/featured.jpg"></p>
+<p>当然，安装 PG 这种事算不上有什么技术挑战，真正有难度的是 PostgreSQL 生态中的扩展插件。PostgreSQL 有着数据库世界中独一无二的繁荣扩展生态，提供各种强大而惊人的能力。而 pig 则能够在（Debian / Ubuntu / EL ）三大 Linux 主流发行版（五个大版本 x AMD/ARM 两大架构）上，提供 <strong>340</strong> 个 PG 插件开箱即用的能力。</p>
+<p><img src="/img/pigsty/ecosystem.jpg"></p>
+<p>为什么插件对 PG 至关重要？请参阅《<a href="/zh/blog/pg/pg-eat-db-world">PostgreSQL正在吞噬数据库世界</a>》</p>
+<hr>
+<h2 id="快速上手">快速上手</h2>
+<p>pig 本身是一个 Go 编写的二进制程序，您可以直接从 Release 页面下载，或者使用 Pigsty 现成提供的 YUM / APT 仓库，使用操作系统的包管理器安装。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.io/pig <span style="color:#000;font-weight:bold">|</span> bash     <span style="color:#8f5902;font-style:italic"># cloudflare 全球仓库（默认） </span>
+</span></span><span style="display:flex;"><span>curl -fsSL https://repo.pigsty.cc/pig <span style="color:#000;font-weight:bold">|</span> bash     <span style="color:#8f5902;font-style:italic"># 中国大陆墙内镜像仓库</span>
+</span></span></code></pre></div><p>使用 pig 分两个步骤，首先，使用 <code>repo</code> 子命令添加上游仓库</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ pig repo add pigsty pgdg -u  <span style="color:#8f5902;font-style:italic"># 添加 pgdg &amp; pigsty 仓库并更新缓存（比较礼貌的做法）</span>
+</span></span><span style="display:flex;"><span>$ pig repo <span style="color:#204a87">set</span> -u              <span style="color:#8f5902;font-style:italic"># 你也可以用这个命令直接移除所有现有Repo，并覆盖添加所有必须的Repo，粗暴但有效</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ pig ext install pg17         <span style="color:#8f5902;font-style:italic"># 如果您没有安装 PostgreSQL 内核，可以使用这种方式安装 PGDG 内核包</span>
+</span></span><span style="display:flex;"><span>$ pig ext install pg_duckdb    <span style="color:#8f5902;font-style:italic"># 默认针对当前活跃的 PG 安装扩展，例如安装：pg_duckdb 扩展（针对活跃的 PG17）</span>
+</span></span></code></pre></div><p>然后，您就可以使用 <code>ext</code> 子命令搜索，查阅，安装，卸载，更新扩展了。是的，如果你就是安装个扩展，也就是一行命令这么简单。</p>
+<p>你可以用命令行完成各种操作，文档里会详细介绍各种高级用法。此外，<code>pig</code> 还提供了一个 <code>sty</code> 子命令，用于安装 Pigsty 本身：</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pig sty init     <span style="color:#8f5902;font-style:italic"># 默认安装嵌入的最新 Pigsty 版本</span>
+</span></span><span style="display:flex;"><span>pig sty boot     <span style="color:#8f5902;font-style:italic"># 执行 Bootstrap，安装 Ansible</span>
+</span></span><span style="display:flex;"><span>pig sty conf     <span style="color:#8f5902;font-style:italic"># 执行 Configure，生成配置文件</span>
+</span></span><span style="display:flex;"><span>pig sty install  <span style="color:#8f5902;font-style:italic"># 执行 install.yml 剧本完成部署</span>
+</span></span></code></pre></div><hr>
+<h2 id="为什么需要包管理器">为什么需要包管理器？</h2>
+<p>那么在包管理器出现之前，用户想要安装 PostgreSQL 及其扩展，是怎么样的体验呢？当然你可以直接从源代码编译。PG 内核本身编译安装还是“很简单”的，几条命令就可以，不过 PG 生态的核心扩展 —— 地理空间事实标准 PostGIS 的编译安装基本上就立刻跳到地狱难度了。</p>
+<p>尽管如此，编译安装对 <strong>绝大多数用户</strong> 来说基本属于早已失传的古代技能了。根据我对社区的观察，你能对用户做出的最大期待就是会用 <code>yum/apt install</code>，然后会照着文档敲为数不多的 Linux 命令。再高的工作假设就显得不切实际了。</p>
+<p><a href="https://www.postgresql.org/download/"><img alt="pgdg-web.png" src="/zh/blog/pg/pig-announce/pgdg-web.png"></a></p>
+<blockquote>
+<p><a href="https://www.postgresql.org/download/">https://www.postgresql.org/download/</a></p>
+</blockquote>
+<hr>
+<h2 id="pgdg官方仓库有什么问题">PGDG官方仓库有什么问题？</h2>
+<p>尽管 PostgreSQL 官方提供了官方的 PGDG YUM / APT 仓库，但是这里依然有不少的问题：首先扩展数量只有一百个左右，其次，这里只有一半扩展是同时在 YUM / APT 仓库中提供的。最后，针对不同的 PG 大版本，芯片架构，操作系统发行版版本，经常性的会出现某个组合下的扩展缺失与错漏。</p>
+<p><img alt="pgdg-ext.png" src="/zh/blog/pg/pig-announce/pgdg-ext.png"></p>
+<p>为了解决这个问题，我们提供了一个 PGDG <a href="https://ext.pigsty.io">补充仓库</a>，这有点类似于 EL Linux 上的 EPEL 源，补齐了大量缺失的扩展插件，并实现了 Debian / Ubuntu / EL 三大主流 Linux 的扩展功能集对齐，补齐了一块行业空白。我们的扩展仓库完全遵循 PGDG 的打包规范与命名惯例，使用相同的环境构建，确保与官方内核包无缝衔接对齐。</p>
+<p><img alt="timescale.png" src="/zh/blog/pg/pig-announce/timescale.png"></p>
+<hr>
+<h2 id="为什么用操作系统包管理器">为什么用操作系统包管理器？</h2>
+<p>pig 被设计为原生使用 Linux 操作系统发行版现有的包管理器（yum / dnf / apt ），而非自己造一个全新的轮子。这是因为操作系统在解决依赖管理，升级降级这些问题上已经有了非常成熟且标准的实践了。并且毫无疑问最广大 PostgreSQL 用户群体早已接受并习惯于这一标准，因此我们认为打破这一标准的做法是远远弊大于利的。</p>
+<p>因此，pig 仓库使用的软件包全部使用操作系统标准的 RPM / DEB 格式进行封装，确保它可以在主流的 Linux 发行版上丝滑安装与运行。Pigsty 在不同操作系统发行版上提供了一层统一的抽象，你只需要知道扩展名就可以安装，你不需要操心 PG 版本号，OS 大小版本，芯片架构，pig 会为你处理好所有细节。</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-zed" data-lang="zed"><span style="display:flex;"><span><span style="color:#a40000">$</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">pig</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">ext</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">scan</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Installed</span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">*</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">PostgreSQL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">17</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">2</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#a40000">74</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">Extensions</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Active</span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">PG</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Version</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">PostgreSQL</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#a40000">17</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">2</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Config</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Path</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">usr/</span><span style="color:#000">pgsql</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#a40000">17</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">bin/</span><span style="color:#000">pg_config</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Binary</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Path</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">usr/</span><span style="color:#000">pgsql</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#a40000">17</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">bin</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Library</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Path</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">usr/</span><span style="color:#000">pgsql</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#a40000">17</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">lib</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Extension</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Path</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">usr/</span><span style="color:#000">pgsql</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#a40000">17</span><span style="color:#ce5c00;font-weight:bold">/</span><span style="color:#000">share/</span><span style="color:#000">extension</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Name</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#000">Version</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#000">SharedLibs</span><span style="color:#f8f8f8;text-decoration:underline">                                                           </span><span style="color:#000">Description</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#000">Meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#ce5c00;font-weight:bold">----</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#ce5c00;font-weight:bold">-------</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">----------</span><span style="color:#f8f8f8;text-decoration:underline">                                                           </span><span style="color:#ce5c00;font-weight:bold">---------------------</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#ce5c00;font-weight:bold">------</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">amcheck</span><span style="color:#f8f8f8;text-decoration:underline">              </span><span style="color:#a40000">1</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">4</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#000">functions</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">for</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">verifying</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">relation</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">integrity</span><span style="color:#f8f8f8;text-decoration:underline">                           </span><span style="color:#000">module_pathname</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#a40000">$</span><span style="color:#000">libdir/</span><span style="color:#000">amcheck</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relocatable</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">true</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lib</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">amcheck</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">so</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">anon</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#a40000">1</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">3</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">2</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">Data</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">anonymization</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">tools</span><span style="color:#f8f8f8;text-decoration:underline">                                             </span><span style="color:#000">directory</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">extension/</span><span style="color:#000">anon</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relocatable</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">false</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">superuser</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">false</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">module_pathname</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#a40000">$</span><span style="color:#000">libdir/</span><span style="color:#000">anon</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lib</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">anon</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">so</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">auth_delay</span><span style="color:#f8f8f8;text-decoration:underline">           </span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#000">pause</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">briefly</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">before</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">reporting</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">authentication</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">failure</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#000">lib</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">auth_delay</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">so</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000;font-weight:bold">...</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">wal2json</span><span style="color:#f8f8f8;text-decoration:underline">             </span><span style="color:#a40000">2</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">5</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">3</span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#000">Changing</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">data</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">capture</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">JSON</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">format</span><span style="color:#f8f8f8;text-decoration:underline">                                 </span><span style="color:#000">lib</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">wal2json</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">so</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">xml2</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#a40000">1</span><span style="color:#000;font-weight:bold">.</span><span style="color:#a40000">1</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#000">XPath</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">querying</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">and</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">XSLT</span><span style="color:#f8f8f8;text-decoration:underline">                                              </span><span style="color:#000">module_pathname</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#a40000">$</span><span style="color:#000">libdir/</span><span style="color:#000">pgxml</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">relocatable</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">false</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">lib</span><span style="color:#ce5c00;font-weight:bold">=</span><span style="color:#000">pgxml</span><span style="color:#000;font-weight:bold">.</span><span style="color:#000">so</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Encoding</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Libs</span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">cyrillic_and_mic</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">euc2004_sjis2004</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">euc_cn_and_mic</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">euc_jp_and_sjis</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">euc_kr_and_mic</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">euc_tw_and_big5</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">latin2_and_win1250</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">latin_and_mic</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_big5</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_cyrillic</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_euc2004</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_euc_cn</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_euc_jp</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_euc_kr</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_euc_tw</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_gb18030</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_gbk</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_iso8859</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_iso8859_1</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_johab</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_sjis</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_sjis2004</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_uhc</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">utf8_and_win</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Built</span><span style="color:#ce5c00;font-weight:bold">-</span><span style="color:#000">in</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Libs</span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">dict_snowball</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">libecpg</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">libecpg_compat</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">libpgtypes</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">libpq</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">libpqwalreceiver</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">llvmjit</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">Unmatched</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Shared</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">Libraries</span><span style="color:#ce5c00;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">psqlodbc</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">psqlodbca</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">psqlodbcw</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">psqlodbc</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">psqlodbca</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#000">psqlodbcw</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><blockquote>
+<p>使用 pig 工具扫描已安装的 PG 扩展</p>
+</blockquote>
+<hr>
+<h2 id="这个项目的价值在哪里">这个项目的价值在哪里？</h2>
+<p>抽象是软件能提供的核心价值。而 Pig 提供了一个相当优雅的抽象，解决好了 PostgreSQL 内核与扩展安装的问题。其实 Pigsty 在之前已经非常好的解决了这个问题 —— 你可以一键从裸操作系统上拉起装好所有 PG 扩展的插件，自带监控系统，高可用，PITR，还不要钱！</p>
+<p>但我能理解，这样一个一揽子一条龙全家桶解决方案并非适用于所有用户 —— 特别是许多外国人更喜欢：每个工具做好一件事做到极致的方式。pig 其实是用 Go 重写了 Pigsty 的包管理部分。只不过之前 Pigsty 是用 Ansible Playbook 实现的，有个 Python 依赖。而 Pig 是一个干干净净没有依赖的 Go 二进制程序，开箱即用。</p>
+<blockquote>
+<p>pig 除了可以一键安装 PG 扩展，当然也可以一键安装各种版本的 PG 内核。</p>
+</blockquote>
+<hr>
+<h2 id="这个项目的核心壁垒是什么">这个项目的核心壁垒是什么？</h2>
+<p>pig 只是一个小工具，真正重要的是这个工具背后的 Pigsty 扩展仓库。这个仓库里维护了 140 个 PG 扩展，以及各种针对 PGDG 仓库补漏的构件。要构建这个扩展仓库，你需要有丰富的 PostgreSQL 经验与 Linux 操作系统经验，你需要同时熟悉 RHEL 与 Debian/Ubuntu 的打包方法，而老实说这是一项相当稀缺的技能。</p>
+<p>我曾经跟 Pivotal （Greenplum）的团队聊天，老板说他们亟缺构建打包的专家。其实很容易就能看出来，他们发布的时候就一个可怜的 CentOS RPM 包。当然，说他们一句国内 PostgreSQL 综合实力第一的团队应该不为过，而这样的团队却依然没有懂这个的，这确实给我了一些启发。</p>
+<hr>
+<h2 id="现在这个仓库是什么状态">现在这个仓库是什么状态</h2>
+<p>目前这个仓库里面提供了 150 个独特的 PG 扩展，包括二十来个 Rust 编写的强力扩展。独特的意思就是没有被收录到 PGDG 官方仓库里。PGDG 官方仓库有 100 个左右扩展，PIGSTY 仓库提供了 150 个，再加上 PG 自带的 70 个，总数 320 个，不过有些扩展只在 EL 有，有的只在 DEB 上有，所以总可用扩展数量目前是 340 个。</p>
+<blockquote>
+<p>Provide 340 available extensions as RPM / DEB for PostgreSQL <strong>13</strong> - <strong>17</strong> in addition to the official PGDG repo.</p>
+<p>Available on Linux: Debian 12 / Ubuntu 24.04 / 22.04 / EL8 / EL9 compatible OS distros, and <code>x86_64</code> &amp; <code>ARM64</code> architectures.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Entry / Filter</th>
+<th style="text-align:center">All</th>
+<th style="text-align:center">PGDG</th>
+<th style="text-align:center">PIGSTY</th>
+<th style="text-align:center">CONTRIB</th>
+<th style="text-align:center">MISC</th>
+<th style="text-align:center">MISS</th>
+<th style="text-align:center">PG17</th>
+<th style="text-align:center">PG16</th>
+<th style="text-align:center">PG15</th>
+<th style="text-align:center">PG14</th>
+<th style="text-align:center">PG13</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">RPM Extension</td>
+<td style="text-align:center">334</td>
+<td style="text-align:center">114</td>
+<td style="text-align:center">147</td>
+<td style="text-align:center">69</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">6</td>
+<td style="text-align:center">303</td>
+<td style="text-align:center">330</td>
+<td style="text-align:center">333</td>
+<td style="text-align:center">321</td>
+<td style="text-align:center">303</td>
+</tr>
+<tr>
+<td style="text-align:center">DEB Extension</td>
+<td style="text-align:center">327</td>
+<td style="text-align:center">104</td>
+<td style="text-align:center">150</td>
+<td style="text-align:center">69</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">13</td>
+<td style="text-align:center">304</td>
+<td style="text-align:center">323</td>
+<td style="text-align:center">326</td>
+<td style="text-align:center">319</td>
+<td style="text-align:center">300</td>
+</tr>
+</tbody>
+</table>
+</blockquote>
+<p>这 340 个扩展的质量很高，是已经经过我严格筛选后的结果。一些没鸡毛用的扩展，缺乏维护，年久失修的扩展，代码质量差的扩展，无法跨平台兼容的扩展，已经被我无情淘汰了大概二三十个了。我们有一个网站 <a href="https://ext.pigsty.io">https://ext.pigsty.io</a> ，详细收录了这 340 个扩展的元数据详情。在 pig 命令行工具里面也提供了检索与查阅详情的能力。</p>
+<p><img alt="cf-traffic.png" src="/zh/blog/pg/pig-announce/cf-traffic.png"></p>
+<p>目前这个仓库托管在 Cloudflare 上，国内镜像放在腾讯云 CDN 上。每个月的下载量算上镜像大概 500 GB 左右，考虑到一个扩展也就几百KB，这个下载量还是相当可观的。</p>
+<hr>
+<h2 id="pig-使用什么开源协议如何考虑">Pig 使用什么开源协议，如何考虑？</h2>
+<p>这个仓库本身的代码，以及 <code>pig</code> 工具没有使用 Pigsty 的严格 AGPLv3 协议，而是宽松的 <code>Apache-2.0</code> 开源许可证，这样做的目的也是为了让更多的用户与厂商参与进来。目前，这个仓库已经成为了两家友商 AutoBase （原 postgresql_cluster）和 Omnigres 默认使用的上游扩展仓库。</p>
+<p>目前，我也在游说 CloudNativePG，Neon 和 Supabase 使用这个扩展仓库，我觉得问题不大，因为这属于互惠共赢的事情 —— 这些 PostgreSQL 发行版马上也可以宣称自己和 Pigsty 一样，340 个扩展开箱即用，哈哈。<a href="https://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&mid=2247488803&idx=1&sn=cce2ed9bfeee9ca23b64b564ac2d2220&scene=21#wechat_redirect">Omnigres 的创始人 Yurii 下下周来上海（PostgreSQL生态大会）跟我勾兑</a>，我们准备搞个大新闻，尽可能把它做成 PG 世界的一个新事实标准。</p>
+<hr>
+<h2 id="为什么是你来做而不是别人">为什么是你来做，而不是别人？</h2>
+<p>在年初，我提出了 可扩展性（Extensibility） 是 PostgreSQL 的核心属性，得到了社区的广泛认可与响应。我其实是期待生态里面有其他的人能够站出来，解决 PG 扩展分发的问题的。我曾经比较看好 Tembo 的愿景 —— 他们做了个 Trunk （宝箱），其实就是一个 PG 包管理器。我希望他们能做的足够好，这样我就不用操心扩展打包这些活了，直接拿过来就能用，整合到我的 PostgreSQL 发行版 Pigsty 里。</p>
+<p><img alt="trunk.png" src="/zh/blog/pg/pig-announce/trunk.png"></p>
+<p>但是这半年观察下来，我发现包括 Trunk 也好，PGXMAN 也好，都是雷声大雨点小，不干实事的家伙，折腾来折腾去就那么些老扩展。而且愿景也比较扯蛋 ：放着现有的 YUM / APT 实事标准不弄，一会弄个 OCI 镜像分发，一会弄个新 Catalog，唯独就是不解决用户的核心痛点 —— ”我他喵的现在就是想用这个扩展怎么办？“</p>
+<p><img alt="pgxman.png" src="/zh/blog/pg/pig-announce/pgxman.png"></p>
+<p>五年前，我在 PostgreSQL 生态寻找足够好的监控系统，也遇到过这个问题。社区不给力怎么办，当然是我行我上了。所以我也懒得等了，直接自己上了。老实说这里有许多难题要解决，但技术问题都是可以解决的。在这半年里，我在这个领域积累了独一无二的经验 —— 一个人就维护了超过整个 PGDG 仓库，占总数近 60% 的扩展包。</p>
+<p><img alt="pigsty-ext.png" src="/zh/blog/pg/pig-announce/pigsty-ext.png"></p>
+<hr>
+<h2 id="谁还用包管理器docker不香吗">谁还用包管理器，Docker不香吗？</h2>
+<p>我在 《<a href="/zh/blog/db/pg-in-docker"><strong>把 PostgreSQL 放入 Docker 是一个好主意</strong></a><strong>吗</strong>》这篇文章中深入聊过这个问题，其中特别提到过扩展的问题。总的来说，会遇到：扩展持久化的问题，安装扩展需要重新构建镜像，推送并重启的问题，难以同时组合使用扩展的问题。</p>
+<blockquote>
+<p>一个简单的例子是插件与包管理，PostgreSQL提供了很多实用的插件，譬如PostGIS。假如想为数据库安装该插件，在裸机上只要<code>yum install</code>然后<code>create extension postgis</code>两条命令就可以。但如果是在Docker里，按照Docker的实践原则，用户需要在镜像层次进行这个变更，否则下次容器重启时这个扩展就没了。因而需要修改Dockerfile，重新构建新镜像并推送到服务器上，最后<strong>重启数据库容器</strong>，毫无疑问，要麻烦的多。</p>
+<p>包管理是操作系统发行版的核心问题。然而 Docker 搅乱了这一切，例如，许多 PostgreSQL 不再以 RPM/DEB 包的形式发布二进制，而是以加装扩展的 Postgres Docker 镜像分发。这就会立即产生一个显著的问题，如果我想同时使用两种，三种，或者PG生态的一百多种扩展，那么应该如何把这些散碎的镜像整合到一起呢？相比可靠的操作系统包管理，构建Docker镜像总是需要耗费更多时间与精力才能正常起效。</p>
+</blockquote>
+<p>而且最重要的是你如果去看各种 PostgreSQL Docker 镜像的 Dockerfile 就会发现，它们几乎全都是使用操作系统的软件包来安装扩展的。说到底，这些活是省不了的。用 Docker 也改变不了这一点。</p>
+<hr>
+<h2 id="为什么叫-pig-这个名字">为什么叫 pig 这个名字？</h2>
+<p>我有一个开源的 PostgreSQL 发行版叫 Pigsty （猪圈），那么 pig 是作为 Pigsty 的管理命令行工具而存在的。猪圈里的动物是什么，自然是猪（pig）。当然，即使你不使用 Pigsty 这个 PG 发行版，你也可以独立使用 pig 这个命令行工具来安装，管理 PostgreSQL 与 扩展。</p>
+<p><img alt="apache-pig.jpeg" src="/zh/blog/pg/pig-announce/apache-pig.jpeg"></p>
+<p>有一个比较有名项目叫 Apache Pig ，在 Hadoop 上提供 SQL-Like 的查询语言支持（Pig Latin），已经占用了 Pig 这个名字，我也思考了很久要不要使用其他名字比如 pk （pigsty keeper，猪圈管理员），或者就叫 pg 。但最后还是决定叫 <code>pig</code>，反正 Apache Pig 已经过气了，使用这套工具的环境和 Apache Hadoop 的用户也尿不到一个壶里去，基本没有命名冲突的风险，所以就这么办了。</p>
+<hr>
+<h2 id="下一步-pig-会如何发展">下一步 pig 会如何发展？</h2>
+<p>如你所见，Pig 目前是作为 PostgreSQL 扩展管理器发布的，但它本质上是 Pigsty 的管控命令行工具。后续我会添加更多的功能，尽可能多地把 Pigsty 的一些功能移植进 pig 里来。</p>
+<p>在另一个方面，既然我已经成为了构建打包编译大师，那么就应该把这个技能发挥到极致。目前 Pigsty 除了支持原生的 PG 内核之外，还支持 IvorySQL，PolarDB，Babelfish 这样的 PG 分叉内核（分别提供 Oracle 兼容，RAC，MSSQL 兼容能力），但有一个问题就是这些数据库内核目前是没有扩展支持的。比如，如果你想在兼容 Oracle 语法（使用 PolarDB-O 或 IvorySQL）的同时使用 pgvector，那你只能自己去编译。</p>
+<blockquote>
+<p>PostgreSQL 生态的各种内核分叉 —— Kernels</p>
+</blockquote>
+<p>我的计划是针对主流的 PG Fork，统一提供主流 Linux 系统上的 RPM/DEB 内核包 + 扩展包。让这些分叉也可以做到 340 个 PG 扩展开箱即用。目前我已经基本跑通了 OrieloDB 的流程，可能会在下个版本有一个草案与初步实现。</p>
+<hr>
+<h2 id="最后">最后</h2>
+<p>希望 pig 这个工具，可以帮助你享受 PostgreSQL 和扩展插件的乐趣～。</p>
+<p><img alt="elephant.jpg" src="/zh/blog/pg/pig-announce/elephant.jpg"></p>
+
+	<ul class="list-unstyled d-flex justify-content-between align-items-center mb-0 pt-5">
+  <li>
+    <a href="/zh/blog/pg/pg-faint/" aria-label="Previous - 不要更新！发布当日叫停：PG也躲不过大翻车" class="btn btn-primary"><span class="me-1">←</span>Previous</a>
+  </li>
+  <li>
+    <a class="btn btn-primary disabled">Next<span class="ms-1">→</span></a>
+  </li>
+</ul>
+
+	</div>
+
+
+          </main>
+        </div>
+      </div>
+      <footer class="td-footer row d-print-none">
+  <div class="container-fluid">
+    <div class="row mx-md-2">
+      <div class="td-footer__left col-6 col-sm-4 order-sm-1">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Mail" aria-label="Mail">
+    <a target="_blank" rel="noopener" href="mailto:rh@vonng.com" aria-label="Mail">
+      <i class="fa fa-envelope"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="GitHub" aria-label="GitHub">
+    <a target="_blank" rel="noopener" href="https://github.com/Vonng/pigsty" aria-label="GitHub">
+      <i class="fab fa-github"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Twitter" aria-label="Twitter">
+    <a target="_blank" rel="noopener" href="https://twitter.com/GobeUncleWang" aria-label="Twitter">
+      <i class="fab fa-twitter"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__right col-6 col-sm-4 order-sm-3">
+        <ul class="td-footer__links-list">
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="WeChat" aria-label="WeChat">
+    <a target="_blank" rel="noopener" href="/img/pigsty/pigsty-cc.jpg" aria-label="WeChat">
+      <i class="fa fa-comment"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Discord" aria-label="Discord">
+    <a target="_blank" rel="noopener" href="https://discord.gg/wDzt5VyWEz" aria-label="Discord">
+      <i class="fab fa-discord"></i>
+    </a>
+  </li>
+  
+  <li class="td-footer__links-item" data-bs-toggle="tooltip" title="Telegram" aria-label="Telegram">
+    <a target="_blank" rel="noopener" href="https://t.me/joinchat/gV9zfZraNPM3YjFh" aria-label="Telegram">
+      <i class="fab fa-telegram"></i>
+    </a>
+  </li>
+  
+</ul>
+
+      </div><div class="td-footer__center col-12 col-sm-4 py-2 order-sm-2">
+        <span class="td-footer__copyright">&copy;
+    2018&ndash;2024
+    <span class="td-footer__authors">Ruohang Feng</span></span><span class="td-footer__all_rights_reserved">All Rights Reserved</span></span><span class="ms-2"><a href="https://vonng.com/en/" target="_blank" rel="noopener">@Vonng</a></span>
+<br><span>Pigsty® distributed under <a href="/docs/about/license" target="_blank" rel="noopener">AGPLv3</a></span>
+<br><span class="ms-2"><a href="/docs/about/privacy" target="_blank" rel="noopener">Privacy Policy</a></span>
+<span><a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备15016890号</a></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <script src="/js/main.js"></script>
+<script defer src="/js/click-to-copy.js" crossorigin="anonymous"></script>
+<script src='/js/tabpane-persist.js'></script>
+
+  </body>
+</html>
