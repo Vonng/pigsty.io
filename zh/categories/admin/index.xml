@@ -1716,6 +1716,108 @@ Debian 11 已经于 2024-07 进入 EOL，Ubuntu 20.04 将于 2025-04 进入 EOL�
     </item>
     
     <item>
+      <title>Docs: 管理预案</title>
+      <link>/zh/docs/redis/admin/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/admin/</guid>
+      <description>
+        
+        
+        &lt;p&gt;以下是一些常见的 etcd 管理任务 SOP（预案）：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#创建集群&#34;&gt;创建集群&lt;/a&gt;：如何初始化 etcd 集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#销毁集群&#34;&gt;销毁集群&lt;/a&gt;：如何销毁 etcd 集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#环境变量&#34;&gt;环境变量&lt;/a&gt;：如何配置 etcd 客户端，以访问 etcd 服务器集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#重载配置&#34;&gt;重载配置&lt;/a&gt;：如何更新客户端使用的 etcd 服务器成员列表？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#添加成员&#34;&gt;添加成员&lt;/a&gt;：如何向现有 etcd 集群添加新成员？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#移除成员&#34;&gt;移除成员&lt;/a&gt;：如何从 etcd 集群移除老成员？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;更多问题请参考 &lt;a href=&#34;/zh/docs/redis/faq/&#34;&gt;FAQ：ETCD&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;管理&#34;&gt;管理&lt;/h2&gt;
+&lt;p&gt;下面是 REDIS 模块常用的管理任务，更多问题请参考 &lt;a href=&#34;/zh/docs/redis/faq/&#34;&gt;FAQ：REDIS&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;初始化redis&#34;&gt;初始化Redis&lt;/h3&gt;
+&lt;p&gt;您可以使用 &lt;a href=&#34;/zh/docs/redis/admin/#redisyml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt; 剧本来初始化 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化集群内所有 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l &amp;lt;cluster&amp;gt;      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化特定节点上的所有 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l 10.10.10.10    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 节点&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化特定 Redis 实例：  10.10.10.11:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l 10.10.10.11 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; -t redis
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你也可以使用包装脚本命令行脚本来初始化：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add redis-ms          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 集群 &amp;#39;redis-ms&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add 10.10.10.10       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 节点 &amp;#39;10.10.10.10&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 实例 &amp;#39;10.10.10.10:6379&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;下线redis&#34;&gt;下线Redis&lt;/h3&gt;
+&lt;p&gt;您可以使用 &lt;a href=&#34;/zh/docs/redis/admin/#redis-rmyml&#34;&gt;&lt;code&gt;redis-rm.yml&lt;/code&gt;&lt;/a&gt; 剧本来初始化 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 集群 `redis-test`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l redis-test
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 集群 `redis-test` 并卸载 Redis 软件包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l redis-test -e &lt;span style=&#34;color:#000&#34;&gt;redis_uninstall&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 节点 10.10.10.13 上的所有实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l 10.10.10.13
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线特定 Redis 实例 10.10.10.13:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l 10.10.10.13 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你也可以使用包装脚本来下线 Redis 集群/节点/实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm redis-ms          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 集群 &amp;#39;redis-ms&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm 10.10.10.10       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 节点 &amp;#39;10.10.10.10&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 实例 &amp;#39;10.10.10.10:6379&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;重新配置redis&#34;&gt;重新配置Redis&lt;/h3&gt;
+&lt;p&gt;您可以部分执行 &lt;a href=&#34;/zh/docs/redis/admin/#redisyml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt; 剧本来重新配置 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l &amp;lt;cluster&amp;gt; -t redis_config,redis_launch
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，redis 无法在线重载配置，您只能使用 launch 任务进行重启来让配置生效。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;使用redis客户端&#34;&gt;使用Redis客户端&lt;/h2&gt;
+&lt;p&gt;使用 &lt;code&gt;redis-cli&lt;/code&gt; 访问 Reids 实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ redis-cli -h 10.10.10.10 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 使用 Host 与 Port 访问对应 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; auth redis.ms    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 使用密码验证&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OK
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; &lt;span style=&#34;color:#204a87&#34;&gt;set&lt;/span&gt; a &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;10&lt;/span&gt;         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 设置一个Key&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OK
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; get a            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 获取 Key 的值&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Redis提供了&lt;code&gt;redis-benchmark&lt;/code&gt;工具，可以用于Redis的性能评估，或生成一些负载用于测试。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;redis-benchmark -h 10.10.10.13 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;手工设置redis从库&#34;&gt;手工设置Redis从库&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://redis.io/commands/replicaof/&#34;&gt;https://redis.io/commands/replicaof/&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将一个 Redis 实例提升为主库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&amp;gt; REPLICAOF NO ONE
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;OK&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将一个 Redis 实例设置为另一个实例的从库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&amp;gt; REPLICAOF 127.0.0.1 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6799&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;OK&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;设置redis主从高可用&#34;&gt;设置Redis主从高可用&lt;/h3&gt;
+&lt;p&gt;Redis独立主从集群可以通过 Redis 哨兵集群配置自动高可用，详细用户请参考 &lt;a href=&#34;https://redis.io/docs/management/sentinel/&#34;&gt;Sentinel官方文档&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;以四节点&lt;a href=&#34;/zh/docs/setup/provision#%E6%B2%99%E7%AE%B1%E7%8E%AF%E5%A2%83&#34;&gt;沙箱环境&lt;/a&gt;为例，一套 Redis Sentinel 集群 &lt;code&gt;redis-meta&lt;/code&gt;，可以用来管理很多套独立 Redis 主从集群。&lt;/p&gt;
+&lt;p&gt;以一主一从的Redis普通主从集群 &lt;code&gt;redis-ms&lt;/code&gt; 为例，您需要在每个 Sentinel 实例上，使用 &lt;code&gt;SENTINEL MONITOR&lt;/code&gt; 添加目标，并使用 &lt;code&gt;SENTINEL SET&lt;/code&gt; 提供密码，高可用就配置完毕了。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 对于每一个 sentinel，将 redis 主服务器纳入哨兵管理：（26379,26380,26381）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ redis-cli -h 10.10.10.11 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;26379&lt;/span&gt; -a redis.meta
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.11:26379&amp;gt; SENTINEL MONITOR redis-ms 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.11:26379&amp;gt; SENTINEL SET redis-ms auth-pass redis.ms      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果启用了授权，需要配置密码&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您想移除某个由 Sentinel 管理的 Redis 主从集群，使用 &lt;code&gt;SENTINEL REMOVE &amp;lt;name&amp;gt;&lt;/code&gt; 移除即可。&lt;/p&gt;
+&lt;p&gt;您可以使用定义在 Sentinel 集群上的 &lt;a href=&#34;/zh/docs/reference/param#redis_sentinel_monitor&#34;&gt;&lt;code&gt;redis_sentinel_monitor&lt;/code&gt;&lt;/a&gt; 参数，来自动配置管理哨兵监控管理的主库列表。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_sentinel_monitor&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 需要被监控的主库列表，端口、密码、法定人数（应为1/2以上的哨兵数量）为可选参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-src, host: 10.10.10.45, port: 6379 ,password: redis.src, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-dst, host: 10.10.10.48, port: 6379 ,password: redis.dst, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;使用以下命令刷新 Redis 哨兵集群上的纳管主库列表：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l redis-meta -t redis-ha   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果您的 Sentinel 集群名称不是 redis-meta，请在这里替换。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+    <item>
       <title>Docs: 备份恢复</title>
       <link>/zh/docs/pgsql/pitr/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>

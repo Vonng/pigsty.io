@@ -15,6 +15,647 @@
     
     
     <item>
+      <title>Docs: 集群配置</title>
+      <link>/zh/docs/redis/config/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/config/</guid>
+      <description>
+        
+        
+        &lt;p&gt;在部署 Etcd 之前，你需要在 &lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt; 中定义一个 Etcd 集群，通常来说，你可以选择：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#单节点&#34;&gt;单节点&lt;/a&gt;，没有高可用性，适用于开发、测试、演示，或者依赖外部S3备份进行PITR的无高可用单机部署。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#三节点&#34;&gt;三节点&lt;/a&gt;，具有基本的高可用性，可以容忍一个节点的故障，适用于中小规模的生产环境&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#五节点&#34;&gt;五节点&lt;/a&gt;，具有更好的高可用性，可以容忍两个节点的故障，适用于大规模生产环境。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;偶数节点的 Etcd 集群没有意义，超过五节点的 Etcd 集群并不常见，因此通常使用的规格就是单节点，三节点，五节点。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;单节点&#34;&gt;单节点&lt;/h2&gt;
+&lt;p&gt;在 Pigsty 中，定义一个单例 Etcd 实例非常简单，只需要一行配置即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq: 1 } }, vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 Pigsty 提供的所有单机配置模板中，都有这样一项，其中的占位 IP 地址：&lt;code&gt;10.10.10.10&lt;/code&gt; 默认会被替换为当前管理节点的 IP。&lt;/p&gt;
+&lt;p&gt;除了 IP 地址外，这里唯一必要的参数是 &lt;a href=&#34;/zh/docs/redis/param/#etcd_seq&#34;&gt;&lt;code&gt;etcd_seq&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/redis/param/#etcd_cluster&#34;&gt;&lt;code&gt;etcd_cluster&lt;/code&gt;&lt;/a&gt;，它们会唯一标识每一个 Etcd 实例。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;三节点&#34;&gt;三节点&lt;/h2&gt;
+&lt;p&gt;三节点的 Etcd 集群最为常见，它可以容忍一个节点的故障，适用于中小规模的生产环境。&lt;/p&gt;
+&lt;p&gt;例如，Pigsty 的三节点模板：&lt;a href=&#34;/zh/docs/conf/trio&#34;&gt;&lt;code&gt;trio&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/conf/safe&#34;&gt;&lt;code&gt;safe&lt;/code&gt;&lt;/a&gt; 就使用了三节点的 Etcd 集群，如下所示：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; 
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# etcd_seq （etcd实例号）是必须指定的身份参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 实例号是正整数，一般从 0 或 1 开始依次分配&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 实例号应当终生不可变，一旦分配就不再回收使用。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 集群层面的参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd   &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 默认情况下，etcd集群名就叫 etcd， 除非您想要部署多套 etcd 集群，否则不要改这个名字&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_safeguard&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 是否打开 etcd 的防误删安全保险？ 在生产环境初始化完成后，可以考虑打开这个选项，避免误删。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_clean&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在初始化过程中，是否强制移除现有的 etcd 实例？测试的时候可以打开，这样剧本就是真正幂等的。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;五节点&#34;&gt;五节点&lt;/h2&gt;
+&lt;p&gt;五节点的 Etcd 集群可以容忍两个节点的故障，适用于大规模生产环境。&lt;/p&gt;
+&lt;p&gt;例如，Pigsty 的生产仿真模板：&lt;a href=&#34;/zh/docs/conf/prod&#34;&gt;&lt;code&gt;prod&lt;/code&gt;&lt;/a&gt; 中就使用了一个五节点的 Etcd 集群：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.21 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.22 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.23 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.24 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;4&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.25 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd    }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;使用etcd的服务&#34;&gt;使用Etcd的服务&lt;/h2&gt;
+&lt;p&gt;目前使用 Etcd 的服务有：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;patroni: 用于 PostgreSQL 高可用，Etcd 的配置将填入 Patroni 配置文件。&lt;/li&gt;
+&lt;li&gt;vip-manager: 用于在 PostgreSQL 集群上绑定一个可选的 L2 VIP，会从 Etcd 中读取集群的领导者信息。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当 etcd 集群的成员信息发生永久性变更时，您应当 &lt;a href=&#34;/zh/docs/redis/admin/#重载配置&#34;&gt;重载相关服务的配置&lt;/a&gt;，以确保服务能够正确访问 Etcd 集群。&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;patroni&lt;/code&gt; 上更新 etcd 端点引用：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_conf                            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新生成 patroni 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ansible all -f &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; -b -a &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;systemctl reload patroni&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新加载 patroni 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 &lt;code&gt;vip-manager&lt;/code&gt; 上更新 etcd 端点引用（如果你正在使用 PGSQL L2 VIP 才需要执行此操作）：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_vip_config                           &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新生成 vip-manager 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ansible all -f &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; -b -a &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;systemctl restart vip-manager&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重启 vip-manager 以使用新配置 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 参数列表</title>
+      <link>/zh/docs/redis/param/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/param/</guid>
+      <description>
+        
+        
+        &lt;p&gt;ETCD 是一个分布式的、可靠的键-值存储，用于存放系统中最为关键的数据。在 Pigsty 中，etcd 作为高可用组件 Patroni 使用的 DCS，它对于 PG 的高可用非常重要。&lt;/p&gt;
+&lt;p&gt;Pigsty 为 etcd 集群使用一个硬编码的默认集群组名 &lt;code&gt;etcd&lt;/code&gt;，它可以是一套现有的外部 etcd 集群，或者是默认由 Pigsty 使用 &lt;a href=&#34;/zh/docs/redis/playbook/#etcdyml&#34;&gt;etcd.yml&lt;/a&gt; 剧本部署创建的新etcd集群。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;参数列表&#34;&gt;参数列表&lt;/h2&gt;
+&lt;p&gt;Pigsty 中有 21 个关于 Redis 模块的配置参数：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;参数&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;类型&lt;/th&gt;
+&lt;th style=&#34;text-align:center&#34;&gt;级别&lt;/th&gt;
+&lt;th&gt;注释&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_cluster&#34;&gt;&lt;code&gt;redis_cluster&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;string&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis数据库集群名称，必选身份参数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_instances&#34;&gt;&lt;code&gt;redis_instances&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;dict&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;I&lt;/td&gt;
+&lt;td&gt;Redis节点上的实例定义&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_node&#34;&gt;&lt;code&gt;redis_node&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;int&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;I&lt;/td&gt;
+&lt;td&gt;Redis节点编号，正整数，集群内唯一，必选身份参数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_fs_main&#34;&gt;&lt;code&gt;redis_fs_main&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;path&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis主数据目录，默认为 &lt;code&gt;/data&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_exporter_enabled&#34;&gt;&lt;code&gt;redis_exporter_enabled&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;bool&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis Exporter 是否启用？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_exporter_port&#34;&gt;&lt;code&gt;redis_exporter_port&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;port&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis Exporter监听端口&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_exporter_options&#34;&gt;&lt;code&gt;redis_exporter_options&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;string&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C/I&lt;/td&gt;
+&lt;td&gt;Redis Exporter命令参数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_safeguard&#34;&gt;&lt;code&gt;redis_safeguard&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;bool&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;G/C/A&lt;/td&gt;
+&lt;td&gt;禁止抹除现存的Redis&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_clean&#34;&gt;&lt;code&gt;redis_clean&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;bool&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;G/C/A&lt;/td&gt;
+&lt;td&gt;初始化Redis是否抹除现存实例&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_rmdata&#34;&gt;&lt;code&gt;redis_rmdata&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;bool&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;G/C/A&lt;/td&gt;
+&lt;td&gt;移除Redis实例时是否一并移除数据？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_mode&#34;&gt;&lt;code&gt;redis_mode&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;enum&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis集群模式：sentinel，cluster，standalone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_conf&#34;&gt;&lt;code&gt;redis_conf&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;string&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis配置文件模板，sentinel 除外&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_bind_address&#34;&gt;&lt;code&gt;redis_bind_address&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;ip&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis监听地址，默认留空则会绑定主机IP&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_max_memory&#34;&gt;&lt;code&gt;redis_max_memory&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;size&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C/I&lt;/td&gt;
+&lt;td&gt;Redis可用的最大内存&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_mem_policy&#34;&gt;&lt;code&gt;redis_mem_policy&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;enum&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis内存逐出策略&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_password&#34;&gt;&lt;code&gt;redis_password&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;password&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis密码，默认留空则禁用密码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_rdb_save&#34;&gt;&lt;code&gt;redis_rdb_save&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;string[]&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis RDB 保存指令，字符串列表，空数组则禁用RDB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_aof_enabled&#34;&gt;&lt;code&gt;redis_aof_enabled&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;bool&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis AOF 是否启用？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_rename_commands&#34;&gt;&lt;code&gt;redis_rename_commands&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;dict&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis危险命令重命名列表&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_cluster_replicas&#34;&gt;&lt;code&gt;redis_cluster_replicas&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;int&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis原生集群中每个主库配几个从库？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href=&#34;/zh/docs/redis/param/#redis_cluster_replicas&#34;&gt;&lt;code&gt;redis_sentinel_monitor&lt;/code&gt;&lt;/a&gt;&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;master[]&lt;/td&gt;
+&lt;td style=&#34;text-align:center&#34;&gt;C&lt;/td&gt;
+&lt;td&gt;Redis哨兵监控的主库列表，只在哨兵集群上使用？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;默认参数&#34;&gt;默认参数&lt;/h2&gt;
+&lt;p&gt;Etcd 模块的默认参数定义于 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/redis/defaults/main.yml&#34;&gt;&lt;code&gt;roles/redis/defaults/main.yml&lt;/code&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#redis_cluster:            &amp;lt;集群&amp;gt; # Redis数据库集群名称，必选身份参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#redis_node: 1             &amp;lt;节点&amp;gt; # Redis节点上的实例定义&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#redis_instances: {}       &amp;lt;节点&amp;gt; # Redis节点编号，正整数，集群内唯一，必选身份参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_fs_main&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;/data            &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis主数据目录，默认为 `/data`&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_exporter_enabled&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;     &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis Exporter 是否启用？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_exporter_port&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;9121&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis Exporter监听端口&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_exporter_options&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis Exporter命令参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_safeguard&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;           &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 禁止抹除现存的Redis&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_clean&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;                &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化Redis是否抹除现存实例&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_rmdata&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;               &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 移除Redis实例时是否一并移除数据？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_mode&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;standalone          &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis集群模式：sentinel，cluster，standalone&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_conf&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;redis.conf          &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis配置文件模板，sentinel 除外&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_bind_address&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;0.0.0.0&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis监听地址，默认留空则会绑定主机IP&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_max_memory&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;1GB           &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis可用的最大内存&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_mem_policy&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;allkeys-lru   &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis内存逐出策略&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_password&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;               &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis密码，默认留空则禁用密码&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_rdb_save&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;1200 1&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis RDB 保存指令，字符串列表，空数组则禁用RDB&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_aof_enabled&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;         &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis AOF 是否启用？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_rename_commands&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis危险命令重命名列表&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_cluster_replicas&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;        &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis原生集群中每个主库配几个从库？&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_sentinel_monitor&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;       &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Redis哨兵监控的主库列表，只在哨兵集群上使用&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;redis_cluster&#34;&gt;&lt;code&gt;redis_cluster&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_cluster&lt;/code&gt;， 类型： &lt;code&gt;string&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;身份参数，必选参数，必须显式在集群层面配置，将用作集群内资源的命名空间。&lt;/p&gt;
+&lt;p&gt;需要遵循特定命名规则：&lt;code&gt;[a-z][a-z0-9-]*&lt;/code&gt;，以兼容不同约束对身份标识的要求，建议使用&lt;code&gt;redis-&lt;/code&gt;作为集群名前缀。&lt;/p&gt;
+&lt;h3 id=&#34;redis_node&#34;&gt;&lt;code&gt;redis_node&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_node&lt;/code&gt;， 类型： &lt;code&gt;int&lt;/code&gt;， 层次：&lt;code&gt;I&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis节点序列号，身份参数，必选参数，必须显式在节点（Host）层面配置。&lt;/p&gt;
+&lt;p&gt;自然数，在集群中应当是唯一的，用于区别与标识集群内的不同节点，从0或1开始分配。&lt;/p&gt;
+&lt;h3 id=&#34;redis_instances&#34;&gt;&lt;code&gt;redis_instances&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_instances&lt;/code&gt;， 类型： &lt;code&gt;dict&lt;/code&gt;， 层次：&lt;code&gt;I&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;当前 Redis 节点上的 Redis 实例定义，必选参数，必须显式在节点（Host）层面配置。&lt;/p&gt;
+&lt;p&gt;内容为JSON KV对象格式。Key为数值类型端口号，Value为该实例特定的JSON配置项。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis-test: # redis native cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;3m x 3s&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_node: 1 ,redis_instances&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6379&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;} ,6380&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;} ,6381&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.13&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_node: 2 ,redis_instances&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6379&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;} ,6380&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;} ,6381&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_cluster: redis-test ,redis_password: &amp;#39;redis.test&amp;#39; ,redis_mode: cluster, redis_max_memory&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;32MB }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;每一个Redis实例在对应节点上监听一个唯一端口，实例配置项中&lt;code&gt;replica_of&lt;/code&gt; 用于设置一个实例的上游主库地址，构建主从复制关系。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_instances&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6379&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6380&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;replica_of&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;10.10.10.13 6379&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;6381&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;replica_of&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;10.10.10.13 6379&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;redis_fs_main&#34;&gt;&lt;code&gt;redis_fs_main&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_fs_main&lt;/code&gt;， 类型： &lt;code&gt;path&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis使用的主数据盘挂载点，默认为&lt;code&gt;/data&lt;/code&gt;，Pigsty会在该目录下创建&lt;code&gt;redis&lt;/code&gt;目录，用于存放Redis数据。&lt;/p&gt;
+&lt;p&gt;所以实际存储数据的目录为 &lt;code&gt;/data/redis&lt;/code&gt;，该目录的属主为操作系统用户 &lt;code&gt;redis&lt;/code&gt;，内部结构详情请参考 &lt;a href=&#34;/zh/docs/fhs#redis-fhs&#34;&gt;FHS：Redis&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id=&#34;redis_exporter_enabled&#34;&gt;&lt;code&gt;redis_exporter_enabled&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_exporter_enabled&lt;/code&gt;， 类型： &lt;code&gt;bool&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;是否启用Redis监控组件 Redis Exporter？&lt;/p&gt;
+&lt;p&gt;默认启用，在每个Redis节点上部署一个，默认监听 &lt;a href=&#34;/zh/docs/redis/param/#redis_exporter_port&#34;&gt;&lt;code&gt;redis_exporter_port&lt;/code&gt;&lt;/a&gt; &lt;code&gt;9121&lt;/code&gt; 端口。所有本节点上 Redis 实例的监控指标都由它负责抓取。&lt;/p&gt;
+&lt;h3 id=&#34;redis_exporter_port&#34;&gt;&lt;code&gt;redis_exporter_port&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_exporter_port&lt;/code&gt;， 类型： &lt;code&gt;port&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis Exporter监听端口，默认值为：&lt;code&gt;9121&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;redis_exporter_options&#34;&gt;&lt;code&gt;redis_exporter_options&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_exporter_options&lt;/code&gt;， 类型： &lt;code&gt;string&lt;/code&gt;， 层次：&lt;code&gt;C/I&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;传给 Redis Exporter 的额外命令行参数，会被渲染到 &lt;code&gt;/etc/defaut/redis_exporter&lt;/code&gt; 中，默认为空字符串。&lt;/p&gt;
+&lt;h3 id=&#34;redis_safeguard&#34;&gt;&lt;code&gt;redis_safeguard&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_safeguard&lt;/code&gt;， 类型： &lt;code&gt;bool&lt;/code&gt;， 层次：&lt;code&gt;G/C/A&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis的防误删安全保险开关：打开后无法使用剧本抹除正在运行的 Redis 实例。&lt;/p&gt;
+&lt;p&gt;默认值为 &lt;code&gt;false&lt;/code&gt;，如果设置为 &lt;code&gt;true&lt;/code&gt;，那么当剧本遇到正在运行的 Redis 实例时，会中止初始化/抹除的操作，避免误删。&lt;/p&gt;
+&lt;h3 id=&#34;redis_clean&#34;&gt;&lt;code&gt;redis_clean&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_clean&lt;/code&gt;， 类型： &lt;code&gt;bool&lt;/code&gt;， 层次：&lt;code&gt;G/C/A&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis清理开关：是否在初始化的过程中抹除运行中的Redis实例？默认值为：&lt;code&gt;true&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;剧本 &lt;code&gt;redis.yml&lt;/code&gt; 会在执行时抹除具有相同定义的现有 Redis 实例，这样可以保证剧本的幂等性。&lt;/p&gt;
+&lt;p&gt;如果您不希望 &lt;code&gt;redis.yml&lt;/code&gt; 这样做，可以将此参数设置为 &lt;code&gt;false&lt;/code&gt;，那么当剧本遇到正在运行的 Redis 实例时，会中止初始化/抹除的操作，避免误删。&lt;/p&gt;
+&lt;p&gt;如果安全保险参数 &lt;a href=&#34;/zh/docs/redis/param/#redis_safeguard&#34;&gt;&lt;code&gt;redis_safeguard&lt;/code&gt;&lt;/a&gt; 已经打开，那么本参数的优先级低于该参数。&lt;/p&gt;
+&lt;h3 id=&#34;redis_rmdata&#34;&gt;&lt;code&gt;redis_rmdata&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_rmdata&lt;/code&gt;， 类型： &lt;code&gt;bool&lt;/code&gt;， 层次：&lt;code&gt;G/C/A&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;移除 Redis 实例的时候，是否一并移除 Redis 数据目录？默认为 &lt;code&gt;true&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;数据目录包含了 Redis 的 RDB与AOF文件，如果不抹除它们，那么新拉起的 Redis 实例将会从这些备份文件中加载数据。&lt;/p&gt;
+&lt;h3 id=&#34;redis_mode&#34;&gt;&lt;code&gt;redis_mode&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_mode&lt;/code&gt;， 类型： &lt;code&gt;enum&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis集群的工作模式，有三种选项：&lt;code&gt;standalone&lt;/code&gt;, &lt;code&gt;cluster&lt;/code&gt;, &lt;code&gt;sentinel&lt;/code&gt;，默认值为 &lt;code&gt;standalone&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;standalone&lt;/code&gt;：默认，独立的Redis主从模式&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;cluster&lt;/code&gt;： Redis原生集群模式&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sentinel&lt;/code&gt;：Redis高可用组件：哨兵&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当使用&lt;code&gt;standalone&lt;/code&gt;模式时，Pigsty会根据 &lt;code&gt;replica_of&lt;/code&gt; 参数设置Redis主从复制关系。&lt;/p&gt;
+&lt;p&gt;当使用&lt;code&gt;cluster&lt;/code&gt;模式时，Pigsty会根据 &lt;a href=&#34;/zh/docs/redis/param/#redis_cluster_replicas&#34;&gt;&lt;code&gt;redis_cluster_replicas&lt;/code&gt;&lt;/a&gt; 参数使用所有定义的实例创建原生Redis集群。&lt;/p&gt;
+&lt;h3 id=&#34;redis_conf&#34;&gt;&lt;code&gt;redis_conf&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_conf&lt;/code&gt;， 类型： &lt;code&gt;string&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis 配置模板路径，Sentinel除外。&lt;/p&gt;
+&lt;p&gt;默认值：&lt;code&gt;redis.conf&lt;/code&gt;，这是一个模板文件，位于 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/redis/templates/redis.conf&#34;&gt;&lt;code&gt;roles/redis/templates/redis.conf&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;如果你想使用自己的 Redis 配置模板，你可以将它放在 &lt;code&gt;templates/&lt;/code&gt; 目录中，并设置此参数为模板文件名。&lt;/p&gt;
+&lt;p&gt;注意： Redis Sentinel 使用的是另一个不同的模板文件，即 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/roles/redis/templates/redis-sentinel.conf&#34;&gt;&lt;code&gt;roles/redis/templates/redis-sentinel.conf&lt;/code&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;redis_bind_address&#34;&gt;&lt;code&gt;redis_bind_address&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_bind_address&lt;/code&gt;， 类型： &lt;code&gt;ip&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis服务器绑定的IP地址，空字符串将使用配置清单中定义的主机名。&lt;/p&gt;
+&lt;p&gt;默认值：&lt;code&gt;0.0.0.0&lt;/code&gt;，这将绑定到此主机上的所有可用 IPv4 地址。&lt;/p&gt;
+&lt;p&gt;在生产环境中出于安全性考虑，建议仅绑定内网 IP，即将此值设置为空字符串 &lt;code&gt;&#39;&#39;&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;redis_max_memory&#34;&gt;&lt;code&gt;redis_max_memory&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_max_memory&lt;/code&gt;， 类型： &lt;code&gt;size&lt;/code&gt;， 层次：&lt;code&gt;C/I&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;每个 Redis 实例使用的最大内存配置，默认值：&lt;code&gt;1GB&lt;/code&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;redis_mem_policy&#34;&gt;&lt;code&gt;redis_mem_policy&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_mem_policy&lt;/code&gt;， 类型： &lt;code&gt;enum&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis 内存回收策略，默认值：&lt;code&gt;allkeys-lru&lt;/code&gt;，&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;noeviction&lt;/code&gt;：内存达限时不保存新值：当使用主从复制时仅适用于主库&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;allkeys-lru&lt;/code&gt;：保持最近使用的键；删除最近最少使用的键（LRU）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;allkeys-lfu&lt;/code&gt;：保持频繁使用的键；删除最少频繁使用的键（LFU）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;volatile-lru&lt;/code&gt;：删除带有真实过期字段的最近最少使用的键&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;volatile-lfu&lt;/code&gt;：删除带有真实过期字段的最少频繁使用的键&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;allkeys-random&lt;/code&gt;：随机删除键以为新添加的数据腾出空间&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;volatile-random&lt;/code&gt;：随机删除带有过期字段的键&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;volatile-ttl&lt;/code&gt;：删除带有真实过期字段和最短剩余生存时间（TTL）值的键。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;详情请参阅&lt;a href=&#34;https://redis.io/docs/reference/eviction/&#34;&gt;Redis内存回收策略&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;redis_password&#34;&gt;&lt;code&gt;redis_password&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_password&lt;/code&gt;， 类型： &lt;code&gt;password&lt;/code&gt;， 层次：&lt;code&gt;C/N&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis 密码，空字符串将禁用密码，这是默认行为。&lt;/p&gt;
+&lt;p&gt;注意，由于 redis_exporter 的实现限制，您每个节点只能设置一个 &lt;code&gt;redis_password&lt;/code&gt;。这通常不是问题，因为 pigsty 不允许在同一节点上部署两个不同的 Redis 集群。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;请在生产环境中使用强密码&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id=&#34;redis_rdb_save&#34;&gt;&lt;code&gt;redis_rdb_save&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_rdb_save&lt;/code&gt;， 类型： &lt;code&gt;string[]&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis RDB 保存指令，使用空列表则禁用 RDB。&lt;/p&gt;
+&lt;p&gt;默认值是 &lt;code&gt;[&amp;quot;1200 1&amp;quot;]&lt;/code&gt;：如果最近20分钟至少有1个键更改，则将数据集转储到磁盘。&lt;/p&gt;
+&lt;p&gt;详情请参考 &lt;a href=&#34;https://redis.io/docs/management/persistence/&#34;&gt;Redis持久化&lt;/a&gt;。&lt;/p&gt;
+&lt;h3 id=&#34;redis_aof_enabled&#34;&gt;&lt;code&gt;redis_aof_enabled&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_aof_enabled&lt;/code&gt;， 类型： &lt;code&gt;bool&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;启用 Redis AOF 吗？默认值是 &lt;code&gt;false&lt;/code&gt;，即不使用 AOF。&lt;/p&gt;
+&lt;h3 id=&#34;redis_rename_commands&#34;&gt;&lt;code&gt;redis_rename_commands&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_rename_commands&lt;/code&gt;， 类型： &lt;code&gt;dict&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;重命名 Redis 危险命令，这是一个 k:v 字典：&lt;code&gt;old: new&lt;/code&gt;，old是待重命名的命令名称，new是重命名后的名字。&lt;/p&gt;
+&lt;p&gt;默认值：&lt;code&gt;{}&lt;/code&gt;，你可以通过设置此值来隐藏像 &lt;code&gt;FLUSHDB&lt;/code&gt; 和 &lt;code&gt;FLUSHALL&lt;/code&gt; 这样的危险命令，下面是一个例子：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;keys&amp;#34;: &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;op_keys&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;flushdb&amp;#34;: &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;op_flushdb&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;flushall&amp;#34;: &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;op_flushall&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;&amp;#34;config&amp;#34;: &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;op_config&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;redis_cluster_replicas&#34;&gt;&lt;code&gt;redis_cluster_replicas&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_cluster_replicas&lt;/code&gt;， 类型： &lt;code&gt;int&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;在 Redis 原生集群中，应当为一个 Master/Primary 实例配置多少个从库？默认值为： &lt;code&gt;1&lt;/code&gt;，即每个主库配一个从库。&lt;/p&gt;
+&lt;h3 id=&#34;redis_sentinel_monitor&#34;&gt;&lt;code&gt;redis_sentinel_monitor&lt;/code&gt;&lt;/h3&gt;
+&lt;p&gt;参数名称： &lt;code&gt;redis_sentinel_monitor&lt;/code&gt;， 类型： &lt;code&gt;master[]&lt;/code&gt;， 层次：&lt;code&gt;C&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;Redis哨兵监控的主库列表，只在哨兵集群上使用。每个待纳管的主库定义方式如下所示：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_sentinel_monitor&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# primary list for redis sentinel, use cls as name, primary ip:port&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-src, host: 10.10.10.45, port: 6379 ,password: redis.src, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-dst, host: 10.10.10.48, port: 6379 ,password: redis.dst, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;其中，&lt;code&gt;name&lt;/code&gt;，&lt;code&gt;host&lt;/code&gt; 是必选参数，&lt;code&gt;port&lt;/code&gt;，&lt;code&gt;password&lt;/code&gt;，&lt;code&gt;quorum&lt;/code&gt; 是可选参数，&lt;code&gt;quorum&lt;/code&gt; 用于设置判定主库失效所需的法定人数数，通常大于哨兵实例数的一半（默认为1）。&lt;/p&gt;
+&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 预置剧本</title>
+      <link>/zh/docs/redis/playbook/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/playbook/</guid>
+      <description>
+        
+        
+        &lt;p&gt;Etcd 模块提供了一个默认的剧本 &lt;a href=&#34;/zh/docs/redis/playbook/#etcdyml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt; ，用于安装 Etcd 集群。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;etcdyml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;剧本原始文件：&lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/etcd.yml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;执行本剧本，将会在硬编码的固定分组 &lt;code&gt;etcd&lt;/code&gt; 上安装配置 Etcd 集群，并启动 etcd 服务。&lt;/p&gt;
+&lt;p&gt;在 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/etcd.yml&#34;&gt;&lt;code&gt;etcd.yml&lt;/code&gt;&lt;/a&gt; 中，提供了以下是可用的任务子集：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_assert&lt;/code&gt;  ：生成 etcd 身份&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_install&lt;/code&gt; ：安装 etcd rpm 包&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_clean&lt;/code&gt;   ：清理现有的 etcd 实例
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_check&lt;/code&gt; ：检查 etcd 实例是否在运行&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_purge&lt;/code&gt; ：删除正在运行的 etcd 实例和数据&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_dir&lt;/code&gt;     ：创建 etcd 数据和配置目录&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_config&lt;/code&gt;  ：生成 etcd 配置
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd_conf&lt;/code&gt;  ：生成 etcd 主配置&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_cert&lt;/code&gt;  ：生成 etcd ssl 证书&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_launch&lt;/code&gt;  ：启动 etcd 服务&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;etcd_register&lt;/code&gt; ： 将 etcd 注册到 prometheus&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Etcd 模块没有提供专门的卸载剧本，如果您需要卸载 Etcd，可以使用剧本中的 &lt;code&gt;etcd_clean&lt;/code&gt; 子任务，请参考 &lt;a href=&#34;/zh/docs/redis/playbook/#保护机制&#34;&gt;&lt;strong&gt;保护机制&lt;/strong&gt;&lt;/a&gt; 中的介绍。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;执行演示&#34;&gt;执行演示&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://asciinema.org/a/566414&#34;&gt;&lt;img alt=&#34;asciicast&#34; src=&#34;https://asciinema.org/a/566414.svg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;命令速查&#34;&gt;命令速查&lt;/h2&gt;
+&lt;p&gt;Etcd 剧本与快捷方式：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml                                      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 etcd 集群 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_launch                       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重启整个 etcd 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_clean                        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 移除整个集群，会检查现有实例是否存在，根据安全保险判断是否执行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_purge                        &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 强制移除整个集群，根本不管安全保险是否启用。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -t etcd_conf                         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 使用最新状态刷新 /etc/etcd/etcd.conf&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l 10.10.10.12 -e &lt;span style=&#34;color:#000&#34;&gt;etcd_init&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;existing &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 扩容节点：一定要添加 existing 参数，命令行或配置文件均可&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l 10.10.10.12 -t etcd_purge         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 删除节点&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;保护机制&#34;&gt;保护机制&lt;/h2&gt;
+&lt;p&gt;出于防止误删的目的，Pigsty 的 ETCD 模块提供了防误删保险，由以下参数控制：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/param/#etcd_clean&#34;&gt;&lt;code&gt;etcd_clean&lt;/code&gt;&lt;/a&gt; 默认为 &lt;code&gt;true&lt;/code&gt;，即，默认在初始化时清理现有实例。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/param/#etcd_safeguard&#34;&gt;&lt;code&gt;etcd_safeguard&lt;/code&gt;&lt;/a&gt;: 默认为 &lt;code&gt;false&lt;/code&gt;，即默认不打开防误删保护。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;默认配置使得您可以使用剧本重置 etcd 集群的状态，这对于开发、测试和生产环境中紧急重建 etcd 集群非常有用。&lt;/p&gt;
+&lt;p&gt;如果您希望在初始化时清理现有实例，请修改配置文件，显式关闭此保险，或者在执行时使用命令行参数 &lt;code&gt;-e etcd_clean=true&lt;/code&gt; 进行覆盖。&lt;/p&gt;
+&lt;p&gt;如果您单纯希望清理现有实例，而不安装新实例，直接执行 &lt;code&gt;etcd_clean&lt;/code&gt; 子任务即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l &amp;lt;cls&amp;gt; -e &lt;span style=&#34;color:#000&#34;&gt;etcd_clean&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt; -t etcd_clean
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您确定要摧毁这个 etcd 集群，更简单暴力直接的方式是：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./etcd.yml -l &amp;lt;cls&amp;gt; -t etcd_purge
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;除非您清楚地知道自己在做什么，我们并不建议用户这样清理 Etcd 集群。&lt;/p&gt;
+&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 管理预案</title>
+      <link>/zh/docs/redis/admin/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/admin/</guid>
+      <description>
+        
+        
+        &lt;p&gt;以下是一些常见的 etcd 管理任务 SOP（预案）：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#创建集群&#34;&gt;创建集群&lt;/a&gt;：如何初始化 etcd 集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#销毁集群&#34;&gt;销毁集群&lt;/a&gt;：如何销毁 etcd 集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#环境变量&#34;&gt;环境变量&lt;/a&gt;：如何配置 etcd 客户端，以访问 etcd 服务器集群？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#重载配置&#34;&gt;重载配置&lt;/a&gt;：如何更新客户端使用的 etcd 服务器成员列表？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#添加成员&#34;&gt;添加成员&lt;/a&gt;：如何向现有 etcd 集群添加新成员？&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/admin/#移除成员&#34;&gt;移除成员&lt;/a&gt;：如何从 etcd 集群移除老成员？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;更多问题请参考 &lt;a href=&#34;/zh/docs/redis/faq/&#34;&gt;FAQ：ETCD&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;管理&#34;&gt;管理&lt;/h2&gt;
+&lt;p&gt;下面是 REDIS 模块常用的管理任务，更多问题请参考 &lt;a href=&#34;/zh/docs/redis/faq/&#34;&gt;FAQ：REDIS&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id=&#34;初始化redis&#34;&gt;初始化Redis&lt;/h3&gt;
+&lt;p&gt;您可以使用 &lt;a href=&#34;/zh/docs/redis/admin/#redisyml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt; 剧本来初始化 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化集群内所有 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l &amp;lt;cluster&amp;gt;      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 集群&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化特定节点上的所有 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l 10.10.10.10    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 节点&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化特定 Redis 实例：  10.10.10.11:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l 10.10.10.11 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; -t redis
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你也可以使用包装脚本命令行脚本来初始化：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add redis-ms          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 集群 &amp;#39;redis-ms&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add 10.10.10.10       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 节点 &amp;#39;10.10.10.10&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-add 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 初始化 redis 实例 &amp;#39;10.10.10.10:6379&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;下线redis&#34;&gt;下线Redis&lt;/h3&gt;
+&lt;p&gt;您可以使用 &lt;a href=&#34;/zh/docs/redis/admin/#redis-rmyml&#34;&gt;&lt;code&gt;redis-rm.yml&lt;/code&gt;&lt;/a&gt; 剧本来初始化 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 集群 `redis-test`&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l redis-test
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 集群 `redis-test` 并卸载 Redis 软件包&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l redis-test -e &lt;span style=&#34;color:#000&#34;&gt;redis_uninstall&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#204a87&#34;&gt;true&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 Redis 节点 10.10.10.13 上的所有实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l 10.10.10.13
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线特定 Redis 实例 10.10.10.13:6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis-rm.yml -l 10.10.10.13 -e &lt;span style=&#34;color:#000&#34;&gt;redis_port&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;你也可以使用包装脚本来下线 Redis 集群/节点/实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm redis-ms          &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 集群 &amp;#39;redis-ms&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm 10.10.10.10       &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 节点 &amp;#39;10.10.10.10&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;bin/redis-rm 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 下线 redis 实例 &amp;#39;10.10.10.10:6379&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;重新配置redis&#34;&gt;重新配置Redis&lt;/h3&gt;
+&lt;p&gt;您可以部分执行 &lt;a href=&#34;/zh/docs/redis/admin/#redisyml&#34;&gt;&lt;code&gt;redis.yml&lt;/code&gt;&lt;/a&gt; 剧本来重新配置 Redis 集群、节点、或实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l &amp;lt;cluster&amp;gt; -t redis_config,redis_launch
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;请注意，redis 无法在线重载配置，您只能使用 launch 任务进行重启来让配置生效。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;使用redis客户端&#34;&gt;使用Redis客户端&lt;/h2&gt;
+&lt;p&gt;使用 &lt;code&gt;redis-cli&lt;/code&gt; 访问 Reids 实例：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ redis-cli -h 10.10.10.10 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 使用 Host 与 Port 访问对应 Redis 实例&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; auth redis.ms    &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 使用密码验证&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OK
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; &lt;span style=&#34;color:#204a87&#34;&gt;set&lt;/span&gt; a &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;10&lt;/span&gt;         &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 设置一个Key&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;OK
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.10:6379&amp;gt; get a            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# &amp;lt;--- 获取 Key 的值&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;10&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Redis提供了&lt;code&gt;redis-benchmark&lt;/code&gt;工具，可以用于Redis的性能评估，或生成一些负载用于测试。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;redis-benchmark -h 10.10.10.13 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;手工设置redis从库&#34;&gt;手工设置Redis从库&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://redis.io/commands/replicaof/&#34;&gt;https://redis.io/commands/replicaof/&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将一个 Redis 实例提升为主库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&amp;gt; REPLICAOF NO ONE
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;OK&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 将一个 Redis 实例设置为另一个实例的从库&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&amp;gt; REPLICAOF 127.0.0.1 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6799&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;OK&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id=&#34;设置redis主从高可用&#34;&gt;设置Redis主从高可用&lt;/h3&gt;
+&lt;p&gt;Redis独立主从集群可以通过 Redis 哨兵集群配置自动高可用，详细用户请参考 &lt;a href=&#34;https://redis.io/docs/management/sentinel/&#34;&gt;Sentinel官方文档&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;以四节点&lt;a href=&#34;/zh/docs/setup/provision#%E6%B2%99%E7%AE%B1%E7%8E%AF%E5%A2%83&#34;&gt;沙箱环境&lt;/a&gt;为例，一套 Redis Sentinel 集群 &lt;code&gt;redis-meta&lt;/code&gt;，可以用来管理很多套独立 Redis 主从集群。&lt;/p&gt;
+&lt;p&gt;以一主一从的Redis普通主从集群 &lt;code&gt;redis-ms&lt;/code&gt; 为例，您需要在每个 Sentinel 实例上，使用 &lt;code&gt;SENTINEL MONITOR&lt;/code&gt; 添加目标，并使用 &lt;code&gt;SENTINEL SET&lt;/code&gt; 提供密码，高可用就配置完毕了。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 对于每一个 sentinel，将 redis 主服务器纳入哨兵管理：（26379,26380,26381）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ redis-cli -h 10.10.10.11 -p &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;26379&lt;/span&gt; -a redis.meta
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.11:26379&amp;gt; SENTINEL MONITOR redis-ms 10.10.10.10 &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;6379&lt;/span&gt; &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;10.10.10.11:26379&amp;gt; SENTINEL SET redis-ms auth-pass redis.ms      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果启用了授权，需要配置密码&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;如果您想移除某个由 Sentinel 管理的 Redis 主从集群，使用 &lt;code&gt;SENTINEL REMOVE &amp;lt;name&amp;gt;&lt;/code&gt; 移除即可。&lt;/p&gt;
+&lt;p&gt;您可以使用定义在 Sentinel 集群上的 &lt;a href=&#34;/zh/docs/reference/param#redis_sentinel_monitor&#34;&gt;&lt;code&gt;redis_sentinel_monitor&lt;/code&gt;&lt;/a&gt; 参数，来自动配置管理哨兵监控管理的主库列表。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;redis_sentinel_monitor&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 需要被监控的主库列表，端口、密码、法定人数（应为1/2以上的哨兵数量）为可选参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-src, host: 10.10.10.45, port: 6379 ,password: redis.src, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;- {&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;name: redis-dst, host: 10.10.10.48, port: 6379 ,password: redis.dst, quorum&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;使用以下命令刷新 Redis 哨兵集群上的纳管主库列表：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./redis.yml -l redis-meta -t redis-ha   &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 如果您的 Sentinel 集群名称不是 redis-meta，请在这里替换。&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+    <item>
+      <title>Docs: 监控告警</title>
+      <link>/zh/docs/redis/monitor/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/monitor/</guid>
+      <description>
+        
+        
+        &lt;hr&gt;
+&lt;h2 id=&#34;监控面板&#34;&gt;监控面板&lt;/h2&gt;
+&lt;p&gt;ETCD 模块提供了一个监控面板：Etcd Overview。&lt;/p&gt;
+&lt;h3 id=&#34;etcd-overview-dashboard&#34;&gt;ETCD Overview Dashboard&lt;/h3&gt;
+&lt;p&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/etcd-overview&#34;&gt;ETCD Overview&lt;/a&gt;：ETCD 集群概览&lt;/p&gt;
+&lt;p&gt;这个监控面板提供了 ETCD 状态的关键信息：最值得关注的是 ETCD Aliveness，它显示了 ETCD 集群整体的服务状态。&lt;/p&gt;
+&lt;p&gt;红色的条带标识着实例不可用的时间段，而底下蓝灰色的条带标识着整个集群处于不可用的时间段。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/etcd-overview&#34;&gt;&lt;img alt=&#34;etcd-overview.jpg&#34; src=&#34;/img/dashboard/etcd-overview.jpg&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;告警规则&#34;&gt;告警规则&lt;/h2&gt;
+&lt;p&gt;Pigsty 针对 Etcd 提供了以下五条预置告警规则，定义于 &lt;a href=&#34;https://github.com/Vonng/pigsty/blob/main/files/prometheus/rules/etcd.yml&#34;&gt;&lt;code&gt;files/prometheus/rules/etcd.yml&lt;/code&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;EtcdServerDown&lt;/code&gt;：Etcd 节点宕机，严重警报&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;EtcdNoLeader&lt;/code&gt;：Etcd 集群没有领导者，严重警报&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;EtcdQuotaFull&lt;/code&gt;：Etcd 配额使用超过 90%，警告&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;EtcdNetworkPeerRTSlow&lt;/code&gt;：Etcd 网络时延缓慢，提醒&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;EtcdWalFsyncSlow&lt;/code&gt;：Etcd 磁盘刷盘缓慢，提醒&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#                         Aliveness                            #&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# etcd server instance down&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alert&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EtcdServerDown&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;expr&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd_up &amp;lt; 1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;1m&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;labels&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;level: 0, severity: CRIT, category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;annotations&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;summary&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;CRIT EtcdServerDown {{ $labels.ins }}@{{ $labels.instance }}&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;description&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      etcd_up[ins={{ $labels.ins }}, instance={{ $labels.instance }}] = {{ $value }} &amp;lt; 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      http://g.pigsty/d/etcd-overview&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#                         Error                                #&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Etcd no Leader triggers a P0 alert immediately&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# if dcs_failsafe mode is not enabled, this may lead to global outage&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alert&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EtcdNoLeader&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;expr&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;min(etcd_server_has_leader) by (cls) &amp;lt; 1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;15s&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;labels&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;level: 0, severity: CRIT, category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;annotations&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;summary&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;CRIT EtcdNoLeader: {{ $labels.cls }} {{ $value }}&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;description&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      etcd_server_has_leader[cls={{ $labels.cls }}] = {{ $value }} &amp;lt; 1
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      http://g.pigsty/d/etcd-overview?from=now-5m&amp;amp;to=now&amp;amp;var-cls={{$labels.cls}}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#                        Saturation                            #&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alert&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EtcdQuotaFull&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;expr&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd:cls:quota_usage &amp;gt; 0.90&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;1m&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;labels&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;level: 1, severity: WARN, category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;annotations&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;summary&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;WARN EtcdQuotaFull: {{ $labels.cls }}&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;description&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      etcd:cls:quota_usage[cls={{ $labels.cls }}] = {{ $value | printf &amp;#34;%.3f&amp;#34; }} &amp;gt; 90%&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#                         Latency                              #&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;#==============================================================#&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# etcd network peer rt p95 &amp;gt; 200ms for 1m&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alert&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EtcdNetworkPeerRTSlow&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;expr&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd:ins:network_peer_rt_p95_5m &amp;gt; 0.200&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;1m&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;labels&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;level: 2, severity: INFO, category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;annotations&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;summary&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;INFO EtcdNetworkPeerRTSlow: {{ $labels.cls }} {{ $labels.ins }}&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;description&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      etcd:ins:network_peer_rt_p95_5m[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &amp;gt; 200ms
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      http://g.pigsty/d/etcd-instance?from=now-10m&amp;amp;to=now&amp;amp;var-cls={{ $labels.cls }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# Etcd wal fsync rt p95 &amp;gt; 50ms&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;- &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;alert&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EtcdWalFsyncSlow&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;expr&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd:ins:wal_fsync_rt_p95_5m &amp;gt; 0.050&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;for&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;1m&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;labels&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;level: 2, severity: INFO, category&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;annotations&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;summary&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;INFO EtcdWalFsyncSlow: {{ $labels.cls }} {{ $labels.ins }}&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;description&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;|&lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      etcd:ins:wal_fsync_rt_p95_5m[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &amp;gt; 50ms
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;      http://g.pigsty/d/etcd-instance?from=now-10m&amp;amp;to=now&amp;amp;var-cls={{ $labels.cls }}&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      </description>
+    </item>
+    
+    <item>
       <title>Docs: 指标列表</title>
       <link>/zh/docs/redis/metric/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>

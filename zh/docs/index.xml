@@ -23739,6 +23739,74 @@ MinIO 实例的名称非常重要，会自动写入到 MinIO 节点的 &lt;code&
     </item>
     
     <item>
+      <title>Docs: 集群配置</title>
+      <link>/zh/docs/redis/config/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/docs/redis/config/</guid>
+      <description>
+        
+        
+        &lt;p&gt;在部署 Etcd 之前，你需要在 &lt;a href=&#34;/zh/docs/setup/config&#34;&gt;配置清单&lt;/a&gt; 中定义一个 Etcd 集群，通常来说，你可以选择：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#单节点&#34;&gt;单节点&lt;/a&gt;，没有高可用性，适用于开发、测试、演示，或者依赖外部S3备份进行PITR的无高可用单机部署。&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#三节点&#34;&gt;三节点&lt;/a&gt;，具有基本的高可用性，可以容忍一个节点的故障，适用于中小规模的生产环境&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;/zh/docs/redis/config/#五节点&#34;&gt;五节点&lt;/a&gt;，具有更好的高可用性，可以容忍两个节点的故障，适用于大规模生产环境。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;偶数节点的 Etcd 集群没有意义，超过五节点的 Etcd 集群并不常见，因此通常使用的规格就是单节点，三节点，五节点。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;单节点&#34;&gt;单节点&lt;/h2&gt;
+&lt;p&gt;在 Pigsty 中，定义一个单例 Etcd 实例非常简单，只需要一行配置即可：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq: 1 } }, vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd } }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 Pigsty 提供的所有单机配置模板中，都有这样一项，其中的占位 IP 地址：&lt;code&gt;10.10.10.10&lt;/code&gt; 默认会被替换为当前管理节点的 IP。&lt;/p&gt;
+&lt;p&gt;除了 IP 地址外，这里唯一必要的参数是 &lt;a href=&#34;/zh/docs/redis/param/#etcd_seq&#34;&gt;&lt;code&gt;etcd_seq&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/redis/param/#etcd_cluster&#34;&gt;&lt;code&gt;etcd_cluster&lt;/code&gt;&lt;/a&gt;，它们会唯一标识每一个 Etcd 实例。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;三节点&#34;&gt;三节点&lt;/h2&gt;
+&lt;p&gt;三节点的 Etcd 集群最为常见，它可以容忍一个节点的故障，适用于中小规模的生产环境。&lt;/p&gt;
+&lt;p&gt;例如，Pigsty 的三节点模板：&lt;a href=&#34;/zh/docs/conf/trio&#34;&gt;&lt;code&gt;trio&lt;/code&gt;&lt;/a&gt; 和 &lt;a href=&#34;/zh/docs/conf/safe&#34;&gt;&lt;code&gt;safe&lt;/code&gt;&lt;/a&gt; 就使用了三节点的 Etcd 集群，如下所示：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; 
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.10&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# etcd_seq （etcd实例号）是必须指定的身份参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.11&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 实例号是正整数，一般从 0 或 1 开始依次分配&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.12&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 实例号应当终生不可变，一旦分配就不再回收使用。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 集群层面的参数&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd   &lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 默认情况下，etcd集群名就叫 etcd， 除非您想要部署多套 etcd 集群，否则不要改这个名字&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_safeguard&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;false&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 是否打开 etcd 的防误删安全保险？ 在生产环境初始化完成后，可以考虑打开这个选项，避免误删。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_clean&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;      &lt;/span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 在初始化过程中，是否强制移除现有的 etcd 实例？测试的时候可以打开，这样剧本就是真正幂等的。&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;五节点&#34;&gt;五节点&lt;/h2&gt;
+&lt;p&gt;五节点的 Etcd 集群可以容忍两个节点的故障，适用于大规模生产环境。&lt;/p&gt;
+&lt;p&gt;例如，Pigsty 的生产仿真模板：&lt;a href=&#34;/zh/docs/conf/prod&#34;&gt;&lt;code&gt;prod&lt;/code&gt;&lt;/a&gt; 中就使用了一个五节点的 Etcd 集群：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;hosts&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.21 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.22 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.23 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;3&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.24 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;4&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;    &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;10.10.10.25 &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_seq&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;5&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;}&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;vars&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;{&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;etcd_cluster&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;etcd    }&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;使用etcd的服务&#34;&gt;使用Etcd的服务&lt;/h2&gt;
+&lt;p&gt;目前使用 Etcd 的服务有：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;patroni: 用于 PostgreSQL 高可用，Etcd 的配置将填入 Patroni 配置文件。&lt;/li&gt;
+&lt;li&gt;vip-manager: 用于在 PostgreSQL 集群上绑定一个可选的 L2 VIP，会从 Etcd 中读取集群的领导者信息。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当 etcd 集群的成员信息发生永久性变更时，您应当 &lt;a href=&#34;/zh/docs/redis/admin/#重载配置&#34;&gt;重载相关服务的配置&lt;/a&gt;，以确保服务能够正确访问 Etcd 集群。&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;patroni&lt;/code&gt; 上更新 etcd 端点引用：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_conf                            &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新生成 patroni 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ansible all -f &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; -b -a &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;systemctl reload patroni&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新加载 patroni 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在 &lt;code&gt;vip-manager&lt;/code&gt; 上更新 etcd 端点引用（如果你正在使用 PGSQL L2 VIP 才需要执行此操作）：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;./pgsql.yml -t pg_vip_config                           &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重新生成 vip-manager 配置&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;ansible all -f &lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;1&lt;/span&gt; -b -a &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;systemctl restart vip-manager&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;# 重启 vip-manager 以使用新配置 &lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;br&gt;
+&lt;hr&gt;
+&lt;br&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Docs: 监控系统</title>
       <link>/zh/docs/concept/monitor/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
@@ -23748,77 +23816,6 @@ MinIO 实例的名称非常重要，会自动写入到 MinIO 节点的 &lt;code&
         
         
         
-      </description>
-    </item>
-    
-    <item>
-      <title>Docs: 历史沿革</title>
-      <link>/zh/docs/about/history/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/docs/about/history/</guid>
-      <description>
-        
-        
-        &lt;hr&gt;
-&lt;h2 id=&#34;历史起源&#34;&gt;历史起源&lt;/h2&gt;
-&lt;p&gt;Pigsty 项目始于 2018 ～ 2019 年，起源于 &lt;a href=&#34;https://tantanapp.com/en&#34;&gt;探探&lt;/a&gt;。
-探探是一个互联网交友 App —— 中国的 Tinder，现已被陌陌收购。
-探探这家公司是一个北欧 Style 的创业公司，有着一个瑞典工程师初创团队。&lt;/p&gt;
-&lt;p&gt;探探在技术上极有品味，使用 PostgreSQL 与 Go 作为核心技术栈。
-探探整个系统架构参照了 Instagram ，一切围绕 PostgreSQL 数据库设计。
-直到几百万日活，几百万 TPS，几百 TB 数据的量级下，数据组件 &lt;a href=&#34;/zh/blog/pg/just-use-pg&#34;&gt;&lt;strong&gt;只用了 PostgreSQL&lt;/strong&gt;&lt;/a&gt;。
-几乎所有的业务逻辑都使用 PG 存储过程实现 —— 甚至包括 100ms 的推荐算法！&lt;/p&gt;
-&lt;p&gt;探探这种深度使用 PostgreSQL 特性的非典型研发模式，对工程师与DBA的水平提出了极高的要求。
-而 Pigsty ，就是我们用这种真实世界的大规模，高标准数据库集群场景打磨出的开源项目 ——
-沉淀着我们作为顶尖 PostgreSQL 专家的经验与最佳实践。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;发展过程&#34;&gt;发展过程&lt;/h2&gt;
-&lt;p&gt;在最开始，Pigsty 并没有现在这样的愿景、目标与版图。而是旨在提供一个供我们自己使用的 PostgreSQL 监控系统。
-我们调研了市面上所有的方案，开源的、商业的、云的，datadog, pgwatch，…… ，没有一个能满足我们对于可观测性的需求。
-因此我们决定亲自动手，基于 Grafana 与 Prometheus 自己动手打造一个，这就是 Pigsty 的前身与雏形。
-Pigsty 作为监控系统的效果相当惊艳，帮助我们解决了无数管理问题。&lt;/p&gt;
-&lt;p&gt;随后，研发人员希望在本地的开发机上也有这样的监控系统，于是我们使用 Ansible 编写了置备剧本，将这套系统从一次性建设任务转变为了可重复使用，可复制的软件。
-新的功能允许用户使用  Vagrant 和 Terraform，用 Infra as Code 的方式快速拉起本地 DevBox 开发机，或生产环境服务器，并自动完成 PostgreSQL 与监控系统的部署。&lt;/p&gt;
-&lt;p&gt;接下来，我们重新设计了生产环境的 PostgreSQL 架构，引入了 Patroni 与 pgBackRest 解决了数据库的 &lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;&lt;strong&gt;高可用&lt;/strong&gt;&lt;/a&gt; 与 &lt;a href=&#34;/zh/docs/concept/pitr&#34;&gt;&lt;strong&gt;时间点恢复&lt;/strong&gt;&lt;/a&gt; 问题。
-开发了基于逻辑复制的不停机 &lt;a href=&#34;/zh/docs/pgsql/migration&#34;&gt;&lt;strong&gt;迁移&lt;/strong&gt;&lt;/a&gt; 方案，通过蓝绿部署将生产环境两百套数据库集群滚动升级至最新大版本。并将这些能力引入 Pigsty 中。&lt;/p&gt;
-&lt;p&gt;Pigsty 是我们做给自己使用的软件，我们自己作为甲方用户，非常清楚自己需要什么，也不会在自己的需求上偷懒。
-“Eat dog food”最大的好处就是，我们自己既是开发者也更是用户 —— 因此非常了解自己需要什么，也不会在自己的需求上偷懒。&lt;/p&gt;
-&lt;p&gt;我们解决了一个又一个的问题，并将解决方案沉淀到 Pigsty 里。Pigsty 的定位，也从一个监控系统，逐渐发展成为一个开箱即用的 PostgreSQL 数据库发行版。
-因此在这一阶段，我们决定将 Pigsty 对外开源，并开始了一系列的技术分享与宣传,也开始有各行各业的外部用户使用起 Pigsty 并提出反馈意见。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;全职创业&#34;&gt;全职创业&lt;/h2&gt;
-&lt;p&gt;在 2022 年，Pigsty 项目获得了由陆奇博士发起的奇绩创坛的种子轮投资，我得以全职出来做这件事情。&lt;/p&gt;
-&lt;p&gt;作为一个开源项目，Pigsty 的发展相当不赖，在全职创业这两年里，Pigsty 在 Github 上的 Star 数从的 几百翻了几番到了 3400；上了 HN 头条推荐，增长开始滚起雪球；
-在 &lt;a href=&#34;https://ossrank.com/cat/368-postgresql-extension?page=2&#34;&gt;&lt;strong&gt;OSSRank&lt;/strong&gt;&lt;/a&gt; 开源榜单 中，Pigsty 在 PostgreSQL 生态项目中排名第 37 名，在中国人主导的项目里是最靠前的。&lt;/p&gt;
-&lt;p&gt;从前 Pigsty 只能跑在 CentOS 7 上，现今已经基本覆盖了所有主流 Linux 发行版 （EL, Debian, Ubuntu）。支持的 PG 大版本覆盖 12 - 17，维护，收录整合了PG生态中的 340+ 扩展插件。
-其中，我本人维护了这里超过一半的扩展插件，并提供开箱即用的 RPM/DEB 包，算上 Pigsty 本身，“基于开源，回馈开源”，算是为 PG 生态做一些贡献。&lt;/p&gt;
-&lt;p&gt;Pigsty 的定位，也在不断发展的过程中，从一个 PostgreSQL 数据库发行版，进一步扩展到了 &lt;strong&gt;开源云数据库替代&lt;/strong&gt;。它真正对标的是云厂商的整个云数据库品牌。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;公有云的反叛者&#34;&gt;公有云的反叛者&lt;/h2&gt;
-&lt;p&gt;AWS、Azure、GCP、Aliyun 等公有云厂商为初创企业提供了许多便利，但它们是闭源的，并迫使用户以高额费用租赁基础资源。&lt;/p&gt;
-&lt;p&gt;我们认为，优秀的数据库服务，应该和优秀的数据库内核一样，普及到每一个用户手中，而不是必须花费高昂的代价去向赛博领主租赁。&lt;/p&gt;
-&lt;p&gt;云计算的敏捷与弹性都很好，但它应该是自由、开源、普惠、本地优先的 ——
-我们认为云计算宇宙中需要一个代表开源价值观的解决方案，在不牺牲云带来好处的前提下，将基础设施的控制权交还给用户。&lt;/p&gt;
-&lt;p&gt;因此，我们也在引领着一场 &lt;a href=&#34;/zh/blog/cloud/exit&#34;&gt;&lt;strong&gt;下云的运动与战役&lt;/strong&gt;&lt;/a&gt;，作为公有云的反叛者，来重塑这个行业的价值观。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;我们的愿景&#34;&gt;我们的愿景&lt;/h2&gt;
-&lt;p&gt;我希望，未来的世界人人都有自由使用优秀服务的事实权利，而不是只能被圈养在几个赛博领主公有云巨头厂商的地盘上当赛博佃户甚至赛博农奴。&lt;/p&gt;
-&lt;p&gt;这正是 Pigsty要做的事 —— &lt;strong&gt;一个更好的，开源免费的RDS替代&lt;/strong&gt;。让用户能够在任何地方（包括云服务器）上，一键拉起有比云RDS更好的数据库服务。&lt;/p&gt;
-&lt;p&gt;Pigsty 是是对 PostgreSQL 的彻底补完，&lt;strong&gt;更是对云数据库的辛辣嘲讽&lt;/strong&gt;。它本意是“猪圈”，但更是 Postgres In Great STYle 的缩写，即“&lt;strong&gt;全盛状态下的 PostgreSQL&lt;/strong&gt;”。&lt;/p&gt;
-&lt;p&gt;Pigsty 本身是一款完全开源免费的软件，我们纯粹靠提供 &lt;a href=&#34;/zh/docs/about/service&#34;&gt;&lt;strong&gt;咨询与服务&lt;/strong&gt;&lt;/a&gt; 来维持运营
-建设良好的系统也许跑个几年都不会遇到需要 ”兜底“ 的问题，但数据库的问题一但出现就不是小问题。
-很多时候，专家的经验更是能够一言化腐朽为神奇，而我们为有需求的客户提供这样的服务 —— 我们认为这是一种更加公正、合理、可持续的模式。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;关于团队&#34;&gt;关于团队&lt;/h2&gt;
-&lt;p&gt;我是冯若航，Pigsty 的作者，Pigsty 绝大部分的代码由我 &lt;a href=&#34;https://github.com/Vonng/pigsty/pulse&#34;&gt;一人开发&lt;/a&gt;，个别特性由社区贡献。&lt;/p&gt;
-&lt;p&gt;软件领域依然存在个人英雄主义，独一无二的个体才能够创造出独一无二的作品来 —— 我希望 Pigsty 能够成为这样的作品。&lt;/p&gt;
-&lt;p&gt;如果您对我感兴趣，这里是我的个人主页：&lt;a href=&#34;https://vonng.com/en/&#34;&gt;https://vonng.com/&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;《&lt;a href=&#34;https://vonng.com/cn/blog/life/modb-interview-vonng/&#34;&gt;墨天轮风云人物访谈录 —— 冯若航&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;《&lt;a href=&#34;https://vonng.com/cn/blog/life/entrepreneur-vs-rds/&#34;&gt;90后，辞职创业，说要卷死云数据库&lt;/a&gt;》&lt;/p&gt;
-&lt;br&gt;
-&lt;hr&gt;
-&lt;br&gt;
       </description>
     </item>
     
