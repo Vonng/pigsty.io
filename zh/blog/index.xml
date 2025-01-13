@@ -673,6 +673,569 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: 花钱买罪受的大冤种：逃离云计算妙瓦底</title>
+      <link>/zh/blog/cloud/patsy/</link>
+      <pubDate>Mon, 13 Jan 2025 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/patsy/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/patsy/featured_hu02aa61ae1d9de35cbe238d2676170cb9_299184_640x0_resize_q75_catmullrom.jpg" width="640" height="365"/>]]>
+        
+        &lt;blockquote&gt;
+&lt;p&gt;本文来自真实咨询案例，如有雷同，纯属云厂商和钱包缘分太深。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;昨天一用户来咨询，问我 PostgreSQL 分布式数据库扩展 Citus 有没有什么坑，Pigsty 支持不。我想好家伙都要上分布式了，那你这数据量应该挺大了？&lt;/p&gt;
+&lt;p&gt;结果令人啼笑皆非，原来他并不是因为数据大到要冲破服务器柜门，而是栽在了 &lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;AWS EBS 云盘&lt;/a&gt; 的“杀猪盘”套路里。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;捂着钱包慌忙上分布式数据库&#34;&gt;捂着钱包慌忙上分布式数据库&lt;/h2&gt;
+&lt;p&gt;“Citus 分布式数据库坑多吗？Pigsty 支持不？” 前两天一个用户火急火燎地跑来咨询，开口就提“Citus”。
+我心想：都要上分布式了，想必有着海量数据、疯狂QPS，一定是个狠角色？估计得几百 TB 起步吧？&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;zhuniaopao.gif&#34; src=&#34;/zh/blog/cloud/patsy/zhuniaopao.gif&#34;&gt;&lt;/p&gt;
+&lt;p&gt;开源分布式扩展 Citus 在 PostgreSQL 生态里确实名气不小，尤其被微软收购后，在 Azure 上干脆还被包装成了 CosmosDB / Hyperscale PG。让 PG 原地升级成分布式数据库，一听就很酷炫。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/patsy/intro.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;但是老朋友们也知道，我是不太待见分布式数据库的。（《&lt;a href=&#34;/zh/blog/db/distributive-bullshit/&#34;&gt;分布式数据库是伪需求吗&lt;/a&gt;》），
+分布式数据库的基本原则就是如果你的问题能在经典主从范围内搞定就不要去折腾分布式，所以例行公事我也要问问这到底得多大负载。&lt;/p&gt;
+&lt;p&gt;一问具体指标，数据量 &lt;strong&gt;60TB&lt;/strong&gt;，用 TimescaleDB 扩展压缩后到 &lt;strong&gt;14 TB&lt;/strong&gt;； QPS 5K，查询基本都是点查，扫个 100 条数据最多 —— 嗨，典型的 “数据量不算小，吞吐量不算大”。
+不过这种量级在 2015 年也许要分布式，但在单卡 64 TB 的 2025 年，随便来个万把块的 NVMe SSD 跑个原生 PG 不就轻松解决了？单机 PG 随便每秒百万点查点写更是不在话下
+——  那么用分布式是什么原因？磁盘装不下了吗？&lt;/p&gt;
+&lt;p&gt;用户说：“&lt;em&gt;因为会有突发流量，我要扩容加个从库，需要好几天。&lt;/em&gt;”&lt;/p&gt;
+&lt;p&gt;这就让我有点不解了：14TB 数据，万兆网卡环境下一次同步备份也就四五个小时吧？ 我用 2016 年的破旧硬件限速跑，拖个3TB的从库都用不了半小时。
+再说，加从库耗时主要取决于 I/O 能力，要是 I/O 卡脖子了，那扩容分布式也没用啊，分布式不也得做分区再平衡，能解决啥问题？&lt;/p&gt;
+&lt;p&gt;于是用户又说：“网络没问题，主要是磁盘成本太贵了：现在架构是一主三从，一个从库就一份数据，总共四份“。&lt;/p&gt;
+&lt;p&gt;用户还特意强调了两次 “磁盘太贵” 这就更让我纳闷了 —— 这年头企业级大容量 NVMe SSD 已经便宜的跟白菜价一样了，200 ¥/TB/年，你有这十几T数据，和折腾TimescaleDB，Citus人力，没钱买硬盘？
+然后我看既然拖从库慢不是因为网络问题，那基本那就是磁盘问题了？磁盘这么慢，不会还在用 HDD机械硬盘吧，HDD 能贵到哪里去？&lt;/p&gt;
+&lt;p&gt;当然，因为用户都会手工拖从库，玩转 PG 扩展了，数据量也挺大，还敢上分布式，我已经默认他不是只会用云数据库，控制台点点点的菜鸟了。
+但我还是想到了一种可能性 —— 难道说 …… 你买的是公有云厂商的 &lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;天价杀猪盘&lt;/a&gt; ？&lt;/p&gt;
+&lt;p&gt;这位哥们说到：“是，我们现在用的 AWS 自建”。&lt;/p&gt;
+&lt;p&gt;嗨，破案了，又是一个花钱买罪受的杀猪盘受害用户。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;天价杀猪盘让动作都走形了&#34;&gt;天价杀猪盘，让动作都走形了&lt;/h2&gt;
+&lt;p&gt;深聊后发现，用户在云上的开销非常惊人，光数据库毛估每年就有 200 万人民币，而得到的却是一个拉 14 TB 从库都要花几天的乞丐盘 ——
+换算下来吞吐也就不到 100 MB/s。 一块 Gen5 NVMe SSD 的 12 GB/s 带宽，3M IOPS 性能，可以把这种乞丐盘轰杀成渣，而只要百分之一不到的成本。&lt;/p&gt;
+&lt;p&gt;按照 AWS EBS io2 盘折后价，大约 1900 元 / TB / 月，14 TB 数据 × 4 份 × 12 个月，光存储就差不多一年 128 万；
+再加上 EC2 主机费用（通常云数据库存储/计算费用配比估算比例 2:1），每年 200 万往上走。
+更离谱的是，花这么多钱换来的，却是性能奇差无比的存储。“交了保护费还得挨打”，可不就是这么回事？&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/patsy/ebs-2.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;为了省这笔云盘费，他们宁可把业务架构改得七零八落，或让运维花几天时间加从库，把无底洞似的人力和时间成本都扔进去。最后甚至想靠分布式数据库来“自救”，以为这样能省点存储费。
+但结果呢？依然被“杀猪盘”牢牢锁死。每年烧掉 200 万，换来又慢又折腾的服务，还要自己额外承担把业务拆成拼图的成本。&lt;/p&gt;
+&lt;p&gt;那么追本溯源，分布式数据库的需求是怎么来的？—— &lt;strong&gt;不是因为业务或数据真的需要分布式，而是云上块存储价格昂贵、性能太差&lt;/strong&gt;。
+这问题光靠换个“分布式数据库”或者用个 S3数据库是治不了本的。要真正治本，得先问：为什么云上的块存储会这么离谱？&lt;/p&gt;
+&lt;p&gt;其实，在 &lt;a href=&#34;/zh/blog/cloud/ebs/&#34;&gt;公有云是不是杀猪盘？&lt;/a&gt; 中，我早就告诉过你们答案。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;花钱买罪受别当云上大冤种&#34;&gt;花钱买罪受，别当云上大冤种&lt;/h2&gt;
+&lt;p&gt;大型公有云厂商的核心套路无非是：用极便宜的小微实例和免费额度先把用户诱上云，再依托数据库等云 PaaS 技术壁垒锁定用户，用户上了规模之后“跑不掉”，只能留在云上持续出血，也就是所谓“杀猪盘”。&lt;/p&gt;
+&lt;p&gt;当然肯定会有人会说：大公有云厂商都有 Serverless ，或者弹性存储共享存储的云数据库服务嘛，肯定是这位客户 &lt;strong&gt;用云的姿势不对&lt;/strong&gt;。
+但实际上，去看看那些云数据库的荒谬定价吧！《&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是智商税&lt;/a&gt;》
+，用云数据库的成本只会比纯用资源的价格更震撼 —— 毕竟，PaaS 50% - 70% 的毛利可不是从天上掉下来的。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;price.webp&#34; src=&#34;/zh/blog/cloud/patsy/price.webp&#34;&gt;&lt;/p&gt;
+&lt;p&gt;正如《&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;下云奥德赛：是时候放弃云计算了吗？&lt;/a&gt;》中 DHH 所说：
+“在几个关键例子上，云的成本都极其高昂 —— 无论是大型物理机数据库、大型 NVMe 存储，或者只是最新最快的算力。
+租生产队的驴所花的钱是如此高昂，以至于几个月的租金就能与直接购买它的价格持平。在这种情况下，你应该直接直接把这头驴买下来！”&lt;/p&gt;
+&lt;p&gt;以及 “被锁死困在亚马逊的云里，在实验新东西（比如固态硬盘）时，不得不忍受高昂到荒诞的定价带来的羞辱，这已经构成对核心价值观无法容忍的侵犯”。
+我认为这一案例就是很典型的&lt;strong&gt;花钱买罪受&lt;/strong&gt; —— 花了每年两百万的巨款，得到的却是性能不堪入目的破烂。&lt;/p&gt;
+&lt;p&gt;而更关键地是，你以为云厂商会为你的业务负责到底吗？
+用户耗费巨款买到的，除了加价一百倍卖给你的硬件，基本就是《&lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;》这个案例里提供的售后支持
+—— 你以为可以把锅甩给云厂商就能高枕无忧？真出了事，回旋镖还得打在自己头上。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;别让这种付费续集不断上映&#34;&gt;别让这种付费续集不断上映&lt;/h2&gt;
+&lt;p&gt;只要具备自建 PG 的能力，把数据库搬回自建机房或换家不捆绑 PaaS 的平价云，哪怕在 AWS 上直接选自带 Host Storage 的实例，都能把成本降好几个档次。
+让我们做个小学三年级的算术：这类数据库实例放在云下，买几台托管物理机，一次性投入几十万、每年维护几万，五年甚至六七年都能用。&lt;/p&gt;
+&lt;p&gt;当然你要问搞不定怎么办？有不少 PG 专业供应商都提供技术咨询与技术支持服务，比如我就可以提供成熟且经过大规模实战验证的PG RDS解决方案，
+在这一例中，我可以保证用20~40万一次性的硬件投入彻底解决每年两百万天价账单，同时性能还能比云上的乞丐盘高出 N 倍不止，而只收取只 15-40 万的咨询费。&lt;/p&gt;
+&lt;p&gt;即使你不得不在云上跑，我也强烈建议选择那些没有 PaaS 绑定的平价云 —— 在保留云端“弹性”这一核心优势的同时，却能把成本打到每月万把块。
+毕竟 Hetzner、Linode、DigitalOcean 都提供物美价廉（通常+15%毛利，很合理）的全托管专属服务器，
+这些平价云的价格，足以让习惯了十倍百倍溢价的传统云计算妙瓦底的用户瞠目结舌。&lt;/p&gt;
+&lt;p&gt;&lt;img alt=&#34;hetzner.jpg&#34; src=&#34;/zh/blog/cloud/patsy/hetzner.jpg&#34;&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;嘿，我的意思是，你觉得 AWS 会为这样的规格每月收你多少钱？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;开源-rds-解决下云关键难题&#34;&gt;开源 RDS 解决下云关键难题&lt;/h2&gt;
+&lt;p&gt;数据库是下云的关键卡点，微软 CEO 纳德拉说：你看到的这些 App 与应用不过都是数据库的漂亮封装而已 ——
+所以下云最大的卡点就在于：能否在自己的服务器上跑好 PostgreSQL？应该怎么样解决这个问题？&lt;/p&gt;
+&lt;p&gt;当业务规模增长超出“云计算适用光谱”后，只有拥有了数据库自建的能力，用户才真正有自由去重新选择；
+才能把所有云厂商当作纯资源供应商 —— 哪家收保护费，就能立马迁到另一家，实现真正的 “自由” 与 “自主可控”。&lt;/p&gt;
+&lt;p&gt;我一直主张，云数据库能力应该民主化普及到所有用户，而不是只能从几个垄断的赛博封建领主以天价租赁。
+因此我做了开源版的 RDS for PostgreSQL：Pigsty，让你不依赖 DBA 专家，也能在物理机/虚拟机上一键拉起比 RDS 更强劲的 PostgreSQL，
+并充分利用新硬件的高性能、低成本。解决下云的关键卡点。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/img/pigsty/ecosystem.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;Pigsty 包含 PG 生态里独一无二的 &lt;a href=&#34;https://ext.pigsty.io&#34;&gt;351 个扩展插件&lt;/a&gt;，&lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;远胜云上那些可怜的几十个阉割版插件&lt;/a&gt;，还提供免配置开箱即用的 &lt;a href=&#34;/zh/docs/concept/ha&#34;&gt;高可用架构&lt;/a&gt; 与业内领先的监控系统。
+它已在互联网、金融、新能源、军工、制造业等行业广泛应用，目前在 &lt;a href=&#34;https://ossrank.com/cat/368-postgresql-extension-ecosystem?page=2&#34;&gt;OSSRANK&lt;/a&gt; 全球 PostgreSQL 生态开源榜单里排第 22 名。&lt;/p&gt;
+&lt;p&gt;Pigsty 采用 AGPLv3 开源协议，开源免费。如果有人觉得“还是希望付费买个安心”，我们也提供明码标价的商业咨询服务兜底。—— 用公道的价格解决实际问题，不玩那些花里胡哨的“杀猪盘”套路。&lt;/p&gt;
+&lt;p&gt;真正的“弹性”从来都不是“把钱丢给云厂商，自己却一脸懵逼”，而是知道什么时候该花钱、怎么花钱。愿所有数据库用户都能别做大冤种，让自己的时间与金钱花费的更有意义。&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 数据库老司机：文章导航</title>
+      <link>/zh/blog/db/guru/</link>
+      <pubDate>Mon, 13 Jan 2025 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/db/guru/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/db/guru/featured_hu02aa61ae1d9de35cbe238d2676170cb9_539965_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;h3 id=&#34;国产信创篇&#34;&gt;国产信创篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-11-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/MrRsK5lqZsCZwCUnnO1VMQ&#34;&gt;这么吹国产数据库，听的尴尬癌都要犯了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/IcmXCMyflqGlAPA8vFzyyA&#34;&gt;开源皇帝Linus清洗整风&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/IeYwrKHfgxLkZBBPS3Ai8A&#34;&gt;第二批数据库国测名单：国产化来了怎么办？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/uccjOkAR1zgur6tftHkzMg&#34;&gt;机场出租车恶性循环与国产数据库怪圈&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/AqcYpOgVj91JnkB1B3s4sA&#34;&gt;国产数据库到底能不能打？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/aLXC7f2iYUfATNWsnyotkA&#34;&gt;国产数据库是大炼钢铁吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/79_PnX-a5iSfDMgz_VUx5A&#34;&gt;中国对PostgreSQL的贡献约等于零吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/vh1JE_BdaLetWtt5vvPDDw&#34;&gt;数据库真被卡脖子了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/xHG8OURTYlmnQTorFkzioA&#34;&gt;EL系操作系统发行版哪家强？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/hWbcc9cMM9qTjPJ0m6G0Kg&#34;&gt;基础软件到底需要什么样的自主可控？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;行业洞察篇&#34;&gt;行业洞察篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-12-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/d8pEo6aOoEJVbrElXc0TCQ&#34;&gt;七周七数据库 @ 2025&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Y17J-opjq1fceRi8777Xg&#34;&gt;面向未来数据库的现代硬件&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/E0MtNxPVMQ4PAkIFmispTw&#34;&gt;20刀好兄弟PolarDB：论数据库该卖什么价？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/TJk9TUW7xsEglhEK_qYi-w&#34;&gt;谁整合好DuckDB，谁赢得OLAP数据库世界&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/0eBZ4zyX6XjBQO0GqlANnw&#34;&gt;向量数据库凉了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;分布式数据库是伪需求吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&#34;&gt;数据库需求层次金字塔&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;dbards篇&#34;&gt;DBA/RDS篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/4a8Qy4O80xqsnytC4l9lRg&#34;&gt;数据库应该放入K8S里吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/kFftay1IokBDqyMuArqOpg&#34;&gt;把数据库放入Docker是一个好主意吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2022-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA&#34;&gt;DBA还是一份好工作吗？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;pg生态篇&#34;&gt;PG生态篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2025-01-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/jgYDHdCqWDRDfoFkfs7W8Q&#34;&gt;Andy Pavlo: 2024年度数据库回顾&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-12-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/K7tVsOUCq32kHgogR4kBrA&#34;&gt;PostgreSQL 2024 社区现状调查报告&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/3uD9sxCg-lI1MlOg3NacvQ&#34;&gt;你为什么不用连接池？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/VD_o1HIUVQHmHGcAS4UNwA&#34;&gt;StackOverflow 2024调研：PostgreSQL已经超神了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/qNcqGHL-wVTSB7Kxko2eNw&#34;&gt;PostgreSQL会修改开源许可证吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/olTWUG0p0DqJYHVOqn_wcQ&#34;&gt;为什么PostgreSQL是未来数据的基石？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AMQ8eMR8ivpbhAelaJgXEQ&#34;&gt;PostgreSQL is eating the database world&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/8_uhRH93oAoHZqoC90DA6g&#34;&gt;PostgreSQL正在吞噬数据库世界&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/yI06zdqnW5uWnqvKmgM-9g&#34;&gt;技术极简主义：一切皆用Postgres&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/8FJfdxiqiWBOgpjCbk6i6A&#34;&gt;2023年度数据库：PostgreSQL (DB-Engine)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;PostgreSQL 到底有多强？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/UeNibtbN8JlA1QIlio1mkw&#34;&gt;为什么PostgreSQL是最成功的数据库？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-06-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/xcORYy2suzOw50SOaOCodw&#34;&gt;StackOverflow 2022数据库年度调查&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2021-05-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/KBypNeeM4puvzGiKFJ1FmQ&#34;&gt;为什么说PostgreSQL前途无量？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;pg发布篇&#34;&gt;PG发布篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-11-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/l1BgfLaRKNNEqHyfx33E6A&#34;&gt;不要更新！发布当日叫停：PG也躲不过大翻车&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/54eFghwJhQt_uCmRaJpF0A&#34;&gt;PostgreSQL 12 过保，PG 17 上位&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/Dv3--O0K70Fevz39r3T4Ag&#34;&gt;PostgreSQL神功大成！最全扩展仓库&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/oOZIP1CYj4a319YvoT7Y1w&#34;&gt;PostgreSQL 17 发布：摊牌了，我不装了！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/cAdqXVlfsOygsyEjZuR9hw&#34;&gt;PostgreSQL 17 RC1 发布！与近期PG新闻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/kl498R4h65J13DgoyrlzdA&#34;&gt;PostgreSQL小版本更新，17beta3，12将EOL&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/3EBoAHWEI6zZ-T0nNQsk4Q&#34;&gt;PostgreSQL 17 Beta1 发布！牙膏管挤爆了！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/NH8UgObijvxKekmP6sXN1Q&#34;&gt;快速掌握PostgreSQL版本新特性&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/OM8xhIFB3m95T1GCAQm1Ow&#34;&gt;展望PostgreSQL的2024 (Jonathan Katz)&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;创业融资篇&#34;&gt;创业融资篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/fi_p3tTZTnwP5XDJrkVbQw&#34;&gt;PG系创业公司Supabase：$80M C轮融资&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/3RuZ7ite_exxh2XOPB3HCA&#34;&gt;ClickHouse收购PeerDB：这浓眉大眼的也要来搞 PG 了？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/bx2dRxlrtLcM6AD2qsplQQ&#34;&gt;PG生态新玩家ParadeDB&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;mysql杀手篇&#34;&gt;MySQL杀手篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-11-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/xveP91NMYF4NFlIX_JcpYA&#34;&gt;PZ：MySQL还有机会赶上PostgreSQL的势头吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LTlR65SY7ZOpPFGH0kUsVg&#34;&gt;MySQL新版恶性Bug，表太多就崩给你看！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/JgGCn9o2-DNPNqazPZXTtA&#34;&gt;MySQL安魂九霄，PostgreSQL驶向云外&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/73EVmMRVGBJmGCuoMaUu4Q&#34;&gt;用PG的开发者，年薪比MySQL多赚四成？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/1zlDPie_bVvP7eO6_uTkSw&#34;&gt;Oracle最终还是杀死了MySQL！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/nKD00j84R-EcOU1VPL1ibA&#34;&gt;MySQL性能越来越差，Sakila将何去何从？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/gQZ3Q5JKV8gaBNhc1puPcA&#34;&gt;MySQL的正确性为何如此拉垮？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/tRNedHlXmp7YfCqd21e5PA&#34;&gt;如何看待 MySQL vs PGSQL 直播闹剧&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/7UvQulQGt9SIhUQasxuEZw&#34;&gt;驳《MySQL：这个星球最成功的数据库》&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;其他db篇&#34;&gt;其他DB篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-09-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/I3ug7Qv9jz3-uD3x_N1jKw&#34;&gt;MongoDB没有未来：“好营销”救不了烂芒果&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/e3_32Neoy5RVRBSozsa_7A&#34;&gt;《黑历史：Mongo》：现由PostgreSQL驱动&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/c2TmMo0DflkSUli1BsLthQ&#34;&gt;PostgreSQL可以替换微软SQL Server吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;司机本人篇&#34;&gt;司机本人篇&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/bGoILFWfF7ZiIf3EPNxSqw&#34;&gt;GOTC 2024 BTW采访冯若航：Pigsty作者，简化PG管理，推动PG开源社区的中国参与&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/B35KlM6zeI-m9epfKD8VDQ&#34;&gt;2023总结：三十而立&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-09-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/93QZBS694UQJRTLwHnStPQ&#34;&gt;冯若航：不想当段子手的技术狂，不是一位好的开源创始人&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/I7OA0thv9Dwvj4zoxIOhJQ&#34;&gt;90后，辞职创业，说要卷死云数据库&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;数据库老司机专栏&#34;&gt;数据库老司机专栏&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;2025-01-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/jgYDHdCqWDRDfoFkfs7W8Q&#34;&gt;Andy Pavlo: 2024年度数据库回顾&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-12-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/K7tVsOUCq32kHgogR4kBrA&#34;&gt;PostgreSQL 2024 社区现状调查报告&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-12-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/d8pEo6aOoEJVbrElXc0TCQ&#34;&gt;七周七数据库 @ 2025&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/3uD9sxCg-lI1MlOg3NacvQ&#34;&gt;你为什么不用连接池？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/HJDfcSC8XFL_PkDlxHbqRQ&#34;&gt;创业出海神器 Supabase 自建指南&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Y17J-opjq1fceRi8777Xg&#34;&gt;面向未来数据库的现代硬件&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/MrRsK5lqZsCZwCUnnO1VMQ&#34;&gt;这么吹国产数据库，听的尴尬癌都要犯了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/E0MtNxPVMQ4PAkIFmispTw&#34;&gt;20刀好兄弟PolarDB：论数据库该卖什么价？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/l1BgfLaRKNNEqHyfx33E6A&#34;&gt;不要更新！发布当日叫停：PG也躲不过大翻车&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/54eFghwJhQt_uCmRaJpF0A&#34;&gt;PostgreSQL 12 过保，PG 17 上位&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/xveP91NMYF4NFlIX_JcpYA&#34;&gt;PZ：MySQL还有机会赶上PostgreSQL的势头吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/Dv3--O0K70Fevz39r3T4Ag&#34;&gt;PostgreSQL神功大成！最全扩展仓库&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/9BWDCL5yOcyw6_pSn9rqmA&#34;&gt;YC教父Paul Graham：写作者与非写作者&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/IcmXCMyflqGlAPA8vFzyyA&#34;&gt;开源皇帝Linus清洗整风&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/IeYwrKHfgxLkZBBPS3Ai8A&#34;&gt;第二批数据库国测名单：国产化来了怎么办？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/oOZIP1CYj4a319YvoT7Y1w&#34;&gt;PostgreSQL 17 发布：摊牌了，我不装了！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/fi_p3tTZTnwP5XDJrkVbQw&#34;&gt;PG系创业公司Supabase：$80M C轮融资&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/cAdqXVlfsOygsyEjZuR9hw&#34;&gt;PostgreSQL 17 RC1 发布！与近期PG新闻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/I3ug7Qv9jz3-uD3x_N1jKw&#34;&gt;MongoDB没有未来：“好营销”救不了烂芒果&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/e3_32Neoy5RVRBSozsa_7A&#34;&gt;《黑历史：Mongo》：现由PostgreSQL驱动&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/c2TmMo0DflkSUli1BsLthQ&#34;&gt;PostgreSQL可以替换微软SQL Server吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/bGoILFWfF7ZiIf3EPNxSqw&#34;&gt;GOTC 2024 BTW采访冯若航：Pigsty作者，简化PG管理，推动PG开源社区的中国参与&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/TJk9TUW7xsEglhEK_qYi-w&#34;&gt;谁整合好DuckDB，谁赢得OLAP数据库世界&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/kl498R4h65J13DgoyrlzdA&#34;&gt;PostgreSQL小版本更新，17beta3，12将EOL&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/MY-ZFrc8QfsenrEvD8hz2w&#34;&gt;PG隆中对，一个PG三个核，一个好汉三百个帮&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/bwiVnU9UUkMP5ai1NUyM4g&#34;&gt;最近在憋大招，数据库全能王真的要来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/3RuZ7ite_exxh2XOPB3HCA&#34;&gt;ClickHouse收购PeerDB：这浓眉大眼的也要来搞 PG 了？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/VD_o1HIUVQHmHGcAS4UNwA&#34;&gt;StackOverflow 2024调研：PostgreSQL已经超神了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/uccjOkAR1zgur6tftHkzMg&#34;&gt;机场出租车恶性循环与国产数据库怪圈&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LTlR65SY7ZOpPFGH0kUsVg&#34;&gt;MySQL新版恶性Bug，表太多就崩给你看！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/JgGCn9o2-DNPNqazPZXTtA&#34;&gt;MySQL安魂九霄，PostgreSQL驶向云外&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/aVFI1vC9goekD-XYAAj0ug&#34;&gt;CentOS 7过保了，换什么OS发行版更好？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/73EVmMRVGBJmGCuoMaUu4Q&#34;&gt;用PG的开发者，年薪比MySQL多赚四成？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/1zlDPie_bVvP7eO6_uTkSw&#34;&gt;Oracle最终还是杀死了MySQL！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/nKD00j84R-EcOU1VPL1ibA&#34;&gt;MySQL性能越来越差，Sakila将何去何从？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/dW3byoQkEIR0_EzWxobrWg&#34;&gt;让PG停摆一周的大会：PGCon.Dev参会记&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/C0YyE52KbLLbnG1C2FqGRg&#34;&gt;PGCon.Dev 2024 温哥华扩展生态峰会小记&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/3EBoAHWEI6zZ-T0nNQsk4Q&#34;&gt;PostgreSQL 17 Beta1 发布！牙膏管挤爆了！&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/olTWUG0p0DqJYHVOqn_wcQ&#34;&gt;为什么PostgreSQL是未来数据的基石？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/AqcYpOgVj91JnkB1B3s4sA&#34;&gt;国产数据库到底能不能打？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/DizvD5EYT3atP3I2CdobFw&#34;&gt;PostgreSQL 主要贡献者 Simon Riggs 因坠机去世&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/qNcqGHL-wVTSB7Kxko2eNw&#34;&gt;PostgreSQL会修改开源许可证吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AMQ8eMR8ivpbhAelaJgXEQ&#34;&gt;PostgreSQL is eating the database world&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/8_uhRH93oAoHZqoC90DA6g&#34;&gt;PostgreSQL正在吞噬数据库世界&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/yI06zdqnW5uWnqvKmgM-9g&#34;&gt;技术极简主义：一切皆用Postgres&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/bx2dRxlrtLcM6AD2qsplQQ&#34;&gt;PG生态新玩家ParadeDB&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/NH8UgObijvxKekmP6sXN1Q&#34;&gt;快速掌握PostgreSQL版本新特性&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/iH34payWSE_GROsq-9MN8g&#34;&gt;令人惊叹的PostgreSQL可伸缩性&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/aLXC7f2iYUfATNWsnyotkA&#34;&gt;国产数据库是大炼钢铁吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/79_PnX-a5iSfDMgz_VUx5A&#34;&gt;中国对PostgreSQL的贡献约等于零吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/OM8xhIFB3m95T1GCAQm1Ow&#34;&gt;展望PostgreSQL的2024 (Jonathan Katz)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/8FJfdxiqiWBOgpjCbk6i6A&#34;&gt;2023年度数据库：PostgreSQL (DB-Engine)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/B35KlM6zeI-m9epfKD8VDQ&#34;&gt;2023总结：三十而立&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/gQZ3Q5JKV8gaBNhc1puPcA&#34;&gt;MySQL的正确性为何如此拉垮？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/4a8Qy4O80xqsnytC4l9lRg&#34;&gt;数据库应该放入K8S里吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/kFftay1IokBDqyMuArqOpg&#34;&gt;把数据库放入Docker是一个好主意吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/0eBZ4zyX6XjBQO0GqlANnw&#34;&gt;向量数据库凉了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/vh1JE_BdaLetWtt5vvPDDw&#34;&gt;数据库真被卡脖子了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/VXkpDlUdnKlK3DKtoyg2wA&#34;&gt;PG查询优化：观宏之道&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/xHG8OURTYlmnQTorFkzioA&#34;&gt;EL系操作系统发行版哪家强？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/jmlzhktasg06MiA7b4huew&#34;&gt;如何用 pg_filedump 抢救数据？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/y3qY9eBfOic6tQYOiErIHg&#34;&gt;PGSQL x Pigsty: 数据库全能王来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g&#34;&gt;PG先写脏页还是先写WAL？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-09-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/93QZBS694UQJRTLwHnStPQ&#34;&gt;冯若航：不想当段子手的技术狂，不是一位好的开源创始人&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/hWbcc9cMM9qTjPJ0m6G0Kg&#34;&gt;基础软件到底需要什么样的自主可控？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/tRNedHlXmp7YfCqd21e5PA&#34;&gt;如何看待 MySQL vs PGSQL 直播闹剧&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/7UvQulQGt9SIhUQasxuEZw&#34;&gt;驳《MySQL：这个星球最成功的数据库》&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-08-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/BJkbtwl_SPx99GBOzPsJiA&#34;&gt;向量是新的JSON&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-06-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/TH-exGEpt4ZZrlz8fLGLLA&#34;&gt;ISD数据集：分析全球120年气候变化&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/R4jp1uTCiLOLGsiADZ9jxQ&#34;&gt;AI大模型与向量数据库 PGVECTOR&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-05-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Q0OtrpEhF24XN7gwMjbSRA&#34;&gt;技术反思录：正本清源 之 序章&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-05-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/mEmz8pviahEAWy1-SA8vcg&#34;&gt;微服务是不是个蠢主意？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;分布式数据库是伪需求吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-04-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/clM2f2f2-EPa4EVBIpznfw&#34;&gt;AI 会有自我意识吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&#34;&gt;数据库需求层次金字塔&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;PostgreSQL 到底有多强？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/UeNibtbN8JlA1QIlio1mkw&#34;&gt;为什么PostgreSQL是最成功的数据库？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/I7OA0thv9Dwvj4zoxIOhJQ&#34;&gt;90后，辞职创业，说要卷死云数据库&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-06-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/xcORYy2suzOw50SOaOCodw&#34;&gt;StackOverflow 2022数据库年度调查&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA&#34;&gt;DBA还是一份好工作吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2021-05-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/KBypNeeM4puvzGiKFJ1FmQ&#34;&gt;为什么说PostgreSQL前途无量？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+      </description>
+    </item>
+    
+    <item>
+      <title>Blog: 云计算泥石流：文章导航</title>
+      <link>/zh/blog/cloud/exit/</link>
+      <pubDate>Mon, 13 Jan 2025 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/cloud/exit/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/cloud/exit/featured_hu02aa61ae1d9de35cbe238d2676170cb9_787877_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;div style=&#34;text-align: center;&#34;&gt;&lt;p&gt;
+世人常道云上好，托管服务烦恼少。我言云乃杀猪盘，溢价百倍实厚颜。
+&lt;p&gt;赛博地主搞垄断，坐地起价剥血汗。运维外包嫖开源，租赁电脑炒概念。&lt;/p&gt;
+&lt;p&gt;世人皆趋云上游，不觉开销似水流。云租天价难为持，开源自建更稳实。&lt;/p&gt;
+&lt;p&gt;下云先锋把路趟，引领潮流一肩扛。不畏浮云遮望眼，只缘身在最前线。&lt;/p&gt;
+&lt;/p&gt;&lt;/div&gt;&lt;br&gt;
+&lt;p&gt;曾几何时，“&lt;strong&gt;上云&lt;/strong&gt;“近乎成为技术圈的政治正确，整整一代应用开发者的视野被云遮蔽。就让我们用实打实的数据分析与亲身经历，讲清楚公有云租赁模式的价值与陷阱 —— 在这个降本增效的时代中，供您借鉴与参考。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;下云案例篇&#34;&gt;&lt;strong&gt;下云案例篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;下云奥德赛：是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/zwJ2T2Vh_R7xD8IKPso31Q&#34;&gt;花钱买罪受的大冤种：逃离云计算妙瓦底&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;人仰马翻篇&#34;&gt;&lt;strong&gt;人仰马翻篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;无双删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;基础资源篇&#34;&gt;&lt;strong&gt;基础资源篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云上算力真实成本&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;商业模式篇&#34;&gt;&lt;strong&gt;商业模式篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/W1hwbl3qmjC4Dcmadc8uSg&#34;&gt;DBA 会被云淘汰吗？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/2w0bLJI7TvUNp1tzLYbvsA&#34;&gt;本土云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;rds批判篇&#34;&gt;&lt;strong&gt;RDS批判篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;高可用容灾神话的破灭&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;滑稽肖像篇&#34;&gt;&lt;strong&gt;滑稽肖像篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/qAnEmtLz3EpSophz1TbFGA&#34;&gt;性学家，化学家，软件行业里的废话文学家&lt;/a&gt; 【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/8ZffsCgchv8LH5ujv0lRGQ&#34;&gt;互联网技术大师速成班 &lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OxhhJ4U1P43di_eaE1uGPw&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;商业评论篇&#34;&gt;&lt;strong&gt;商业评论篇&lt;/strong&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/BYu8nZjqAQbWc2yT8K_pFQ&#34;&gt;阿里云降价背后折射出的绝望&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/qSTEf9txjHNTHeEFv3NkWg&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/1dse1KSCq2xG-QaL1JzZ8Q&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/_ijL2OXAQJQrmWiE-KKzdw&#34;&gt;公有云厂商卖的云计算到底是什么玩意？&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/mMvDiTiMOt6eiTTYbHvbbQ&#34;&gt;腾讯云阿里云做的真的是云计算吗?&lt;/a&gt;【转载】&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;主题分类&#34;&gt;主题分类&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;亚马逊&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-01-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/zwJ2T2Vh_R7xD8IKPso31Q&#34;&gt;花钱买罪受的大冤种：逃离云计算妙瓦底&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;云上黑暗森林：打爆云账单，只需要S3桶名&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;阿里云&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-11-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/D2XmL2YYN2kqHtwFN4FVGQ&#34;&gt;支付宝崩了？双十一整活王又来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt; 转&lt;/li&gt;
+&lt;li&gt;2024-09-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;阿里云：高可用容灾神话的破灭&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/G41IN2y8DrC002FQ_BXtXw&#34;&gt;阿里云故障预报：本次事故将持续至20年后？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/EDRmP7ninfSx-CgNDb8mpg&#34;&gt;阿里云新加坡可用区C故障，网传机房着火&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/cb2Lh56uINxacM2uUaB6Vw&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/jYIqj94B07oTu9KC85bjtQ&#34;&gt;云计算：菜就是一种原罪&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/-ntsNfdEq3b4qs5tKP7tfQ&#34;&gt;taobao.com 证书过期&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/s_MCdaCByDBuocXkY1tvKw&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/w7YzdxSrAsIqk2gXBks9CA&#34;&gt;迷失在阿里云的年轻人&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/FIOB_Oqefx1oez1iu7AGGg&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/3F1ud-tWB3eymu1-dxSHMA&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt; 马工&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;腾讯云&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/v0vbsy_OXIDNrbBvUUMV9Q&#34;&gt;腾讯真的走通云原生之路了吗？&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-04-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/SpxKyjSb1luCrJ8xIFjylg&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/5F2YgVtfpXoe7A1MoSoKLg&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Cloudflare&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-04-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/jU418HAlObe1nWgzEsLrJQ&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/i4wk9ebyUK7irNSwuT3NWQ&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Google&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-05-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Microsoft&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-07-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;其他&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/dQrlBnlQO1mcZkg1wQESiA&#34;&gt;沸沸扬扬！！！某国内互联网公司，信息泄露导致国外用卡被盗刷。。。&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/z-hQ57BaSNPC6GkvqNAafw&#34;&gt;本号收到美团投诉：美团没有存储外卡CVV等敏感信息&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/ShArrg1xidfDgniF9jS7Yg&#34;&gt;某平台CVV泄露：你的信用卡被盗刷了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/BLHaiMYGpUTjMhP7msGHhA&#34;&gt;这次轮到WPS崩了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/tmlP1ol9qP2SIxB9VbvpEg&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/nOzSFkULOJeuQ4NChGxE5w&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;DHH&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-10-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/jKv9l_ro6rWei4QnXck-zw&#34;&gt;单租户时代：SaaS范式转移&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;DBA vs RDS&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;开源软件&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-10-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/tNeqnBUjWhk8Vu_tIABMjg&#34;&gt;WordPress社区内战：论共同体划界问题&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;云计算泥石流专栏原文&#34;&gt;云计算泥石流专栏原文&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;2024-01-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/zwJ2T2Vh_R7xD8IKPso31Q&#34;&gt;花钱买罪受的大冤种：逃离云计算妙瓦底&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/D2XmL2YYN2kqHtwFN4FVGQ&#34;&gt;支付宝崩了？双十一整活王又来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/tNeqnBUjWhk8Vu_tIABMjg&#34;&gt;WordPress社区内战：论共同体划界问题&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-10-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt; 转&lt;/li&gt;
+&lt;li&gt;2024-09-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;阿里云：高可用容灾神话的破灭&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/G41IN2y8DrC002FQ_BXtXw&#34;&gt;阿里云故障预报：本次事故将持续至20年后？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/C7XGgGmzvMjKJGbBGVmrzw&#34;&gt;阿里云盘灾难级BUG：能看别人照片？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/EDRmP7ninfSx-CgNDb8mpg&#34;&gt;阿里云新加坡可用区C故障，网传机房着火&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/BLHaiMYGpUTjMhP7msGHhA&#34;&gt;这次轮到WPS崩了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-09-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/tmlP1ol9qP2SIxB9VbvpEg&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-08-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/nOzSFkULOJeuQ4NChGxE5w&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-07-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/cb2Lh56uINxacM2uUaB6Vw&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-06-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/qAnEmtLz3EpSophz1TbFGA&#34;&gt;性学家，化学家，软件行业里的废话文学家&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-05-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-05-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;云上黑暗森林：打爆云账单，只需要S3桶名&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/jU418HAlObe1nWgzEsLrJQ&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/jYIqj94B07oTu9KC85bjtQ&#34;&gt;云计算：菜就是一种原罪&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/-ntsNfdEq3b4qs5tKP7tfQ&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/v0vbsy_OXIDNrbBvUUMV9Q&#34;&gt;腾讯真的走通云原生之路了吗？&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-04-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/SpxKyjSb1luCrJ8xIFjylg&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/5F2YgVtfpXoe7A1MoSoKLg&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/i4wk9ebyUK7irNSwuT3NWQ&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-04-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/s_MCdaCByDBuocXkY1tvKw&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/_ijL2OXAQJQrmWiE-KKzdw&#34;&gt;公有云厂商卖的云计算到底是什么玩意？&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-03-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/w7YzdxSrAsIqk2gXBks9CA&#34;&gt;迷失在阿里云的年轻人&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/Fit7MtSDQdp9IcedmWdYQg&#34;&gt;云计算反叛军联盟&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-03-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/jKv9l_ro6rWei4QnXck-zw&#34;&gt;单租户时代：SaaS范式转移&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/8ZffsCgchv8LH5ujv0lRGQ&#34;&gt;互联网技术大师速成班&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-01-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/qSTEf9txjHNTHeEFv3NkWg&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt; Leo&lt;/li&gt;
+&lt;li&gt;2023-12-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/gPdeaWqFDRe131c78UBkSA&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2024-01-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/YrDngnKQc_0juN1B3SPnNg&#34;&gt;云计算泥石流&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2024-01-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-12-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/OxhhJ4U1P43di_eaE1uGPw&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2023-11-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/FIOB_Oqefx1oez1iu7AGGg&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/3F1ud-tWB3eymu1-dxSHMA&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-11-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-07-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/eag0CqfUTeNPbIB6TZqFVg&#34;&gt;云计算泥石流合集 —— 用数据解构公有云&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-07-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-06-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/2w0bLJI7TvUNp1tzLYbvsA&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-06-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-04-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/TksQ108v_nGaW11-87Es3A&#34;&gt;杀猪盘真的降价了吗？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;公有云是不是杀猪盘？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
+&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;下云之歌&#34;&gt;下云之歌&lt;/h2&gt;
+&lt;p&gt;甜美朋克：https://app.suno.ai/song/98f03bcd-5b4d-428f-a3f1-f581910d2e56&lt;/p&gt;
+&lt;p&gt;滑稽上口：https://app.suno.ai/song/308069a2-9d97-41c0-b1a9-ce14eb137ffe&lt;/p&gt;
+&lt;p&gt;新纪元：https://app.suno.ai/song/81e1b275-4652-4442-aa47-3127171d874d&lt;/p&gt;
+&lt;p&gt;死亡摇滚：https://app.suno.ai/song/6c203c72-0ce7-4b63-a447-a63b31080776&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: v3.2：命令行工具pig，完备的ARM扩展仓库，Supabase &amp; Grafana 加强</title>
       <link>/zh/blog/releases/v3.2.0/</link>
       <pubDate>Sun, 29 Dec 2024 00:00:00 +0000</pubDate>
@@ -1322,215 +1885,6 @@ Grafana自己的 CLI 工具确实可以用于安装插件，不过墙内的用�
 &lt;p&gt;另外两个数据库，正在我的整合 TODOLIST 中，SQLite 除了 FDW，下一步就是把 ElectricSQL 给弄进来；提供本地 PG 与远端 SQLite / PGLite 的同步能力；CockroachDB 则一直在我的 TODOLIST 中，准备一有空闲就做个部署支持。FoundationDB 是我感兴趣的对象，下一个我愿意花时间深入研究的数据库不出意料会是这个。&lt;/p&gt;
 &lt;p&gt;总的来说，我认为这些技术代表着领域前沿的发展趋势。如果让我设想一下十年后的格局，那么大概会是这样的： FoundationDB，TigerBeetle，CockRoachDB 能有自己的小众基本盘生态位。DuckDB 大概会在分析领域大放异彩，SQLite 会在本地优先的端侧继续攻城略地，而 PostgreSQL 会从 “默认数据库” 变成无处不在的的  “Linux 内核”，数据库领域的主旋律变成 Neon，Supabase，Vercel，RDS，Pigsty 这样 PostgreSQL 发行版竞争的战场。&lt;/p&gt;
 &lt;p&gt;毕竟，PostgreSQL 吞噬数据库世界可不只是说说而已，PostgreSQL生态的公司几乎拿光了这两年资本市场数据库领域的钱，早就有无数真金白银用脚投票押注上去了。当然，未来到底如何，还是让我们拭目以待吧。&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: 数据库老司机：文章导航</title>
-      <link>/zh/blog/db/guru/</link>
-      <pubDate>Tue, 03 Dec 2024 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/db/guru/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/db/guru/featured_hu02aa61ae1d9de35cbe238d2676170cb9_539965_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
-        
-        &lt;h3 id=&#34;国产信创篇&#34;&gt;国产信创篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-11-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/MrRsK5lqZsCZwCUnnO1VMQ&#34;&gt;这么吹国产数据库，听的尴尬癌都要犯了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/IcmXCMyflqGlAPA8vFzyyA&#34;&gt;开源皇帝Linus清洗整风&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/IeYwrKHfgxLkZBBPS3Ai8A&#34;&gt;第二批数据库国测名单：国产化来了怎么办？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/uccjOkAR1zgur6tftHkzMg&#34;&gt;机场出租车恶性循环与国产数据库怪圈&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/AqcYpOgVj91JnkB1B3s4sA&#34;&gt;国产数据库到底能不能打？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/aLXC7f2iYUfATNWsnyotkA&#34;&gt;国产数据库是大炼钢铁吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/79_PnX-a5iSfDMgz_VUx5A&#34;&gt;中国对PostgreSQL的贡献约等于零吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/vh1JE_BdaLetWtt5vvPDDw&#34;&gt;数据库真被卡脖子了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/xHG8OURTYlmnQTorFkzioA&#34;&gt;EL系操作系统发行版哪家强？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/hWbcc9cMM9qTjPJ0m6G0Kg&#34;&gt;基础软件到底需要什么样的自主可控？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;行业洞察篇&#34;&gt;行业洞察篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-12-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/d8pEo6aOoEJVbrElXc0TCQ&#34;&gt;七周七数据库 @ 2025&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Y17J-opjq1fceRi8777Xg&#34;&gt;面向未来数据库的现代硬件&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/E0MtNxPVMQ4PAkIFmispTw&#34;&gt;20刀好兄弟PolarDB：论数据库该卖什么价？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/TJk9TUW7xsEglhEK_qYi-w&#34;&gt;谁整合好DuckDB，谁赢得OLAP数据库世界&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/0eBZ4zyX6XjBQO0GqlANnw&#34;&gt;向量数据库凉了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;分布式数据库是伪需求吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&#34;&gt;数据库需求层次金字塔&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;dbards篇&#34;&gt;DBA/RDS篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/4a8Qy4O80xqsnytC4l9lRg&#34;&gt;数据库应该放入K8S里吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/kFftay1IokBDqyMuArqOpg&#34;&gt;把数据库放入Docker是一个好主意吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2022-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA&#34;&gt;DBA还是一份好工作吗？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;pg生态篇&#34;&gt;PG生态篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-11-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/3uD9sxCg-lI1MlOg3NacvQ&#34;&gt;你为什么不用连接池？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/VD_o1HIUVQHmHGcAS4UNwA&#34;&gt;StackOverflow 2024调研：PostgreSQL已经超神了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/qNcqGHL-wVTSB7Kxko2eNw&#34;&gt;PostgreSQL会修改开源许可证吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/olTWUG0p0DqJYHVOqn_wcQ&#34;&gt;为什么PostgreSQL是未来数据的基石？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AMQ8eMR8ivpbhAelaJgXEQ&#34;&gt;PostgreSQL is eating the database world&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/8_uhRH93oAoHZqoC90DA6g&#34;&gt;PostgreSQL正在吞噬数据库世界&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/yI06zdqnW5uWnqvKmgM-9g&#34;&gt;技术极简主义：一切皆用Postgres&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/8FJfdxiqiWBOgpjCbk6i6A&#34;&gt;2023年度数据库：PostgreSQL (DB-Engine)&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;PostgreSQL 到底有多强？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/UeNibtbN8JlA1QIlio1mkw&#34;&gt;为什么PostgreSQL是最成功的数据库？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-06-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/xcORYy2suzOw50SOaOCodw&#34;&gt;StackOverflow 2022数据库年度调查&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2021-05-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/KBypNeeM4puvzGiKFJ1FmQ&#34;&gt;为什么说PostgreSQL前途无量？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;pg发布篇&#34;&gt;PG发布篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-11-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/l1BgfLaRKNNEqHyfx33E6A&#34;&gt;不要更新！发布当日叫停：PG也躲不过大翻车&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/54eFghwJhQt_uCmRaJpF0A&#34;&gt;PostgreSQL 12 过保，PG 17 上位&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/Dv3--O0K70Fevz39r3T4Ag&#34;&gt;PostgreSQL神功大成！最全扩展仓库&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/oOZIP1CYj4a319YvoT7Y1w&#34;&gt;PostgreSQL 17 发布：摊牌了，我不装了！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/cAdqXVlfsOygsyEjZuR9hw&#34;&gt;PostgreSQL 17 RC1 发布！与近期PG新闻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/kl498R4h65J13DgoyrlzdA&#34;&gt;PostgreSQL小版本更新，17beta3，12将EOL&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/3EBoAHWEI6zZ-T0nNQsk4Q&#34;&gt;PostgreSQL 17 Beta1 发布！牙膏管挤爆了！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/NH8UgObijvxKekmP6sXN1Q&#34;&gt;快速掌握PostgreSQL版本新特性&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/OM8xhIFB3m95T1GCAQm1Ow&#34;&gt;展望PostgreSQL的2024 (Jonathan Katz)&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;创业融资篇&#34;&gt;创业融资篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/fi_p3tTZTnwP5XDJrkVbQw&#34;&gt;PG系创业公司Supabase：$80M C轮融资&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/3RuZ7ite_exxh2XOPB3HCA&#34;&gt;ClickHouse收购PeerDB：这浓眉大眼的也要来搞 PG 了？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/bx2dRxlrtLcM6AD2qsplQQ&#34;&gt;PG生态新玩家ParadeDB&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;mysql杀手篇&#34;&gt;MySQL杀手篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-11-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/xveP91NMYF4NFlIX_JcpYA&#34;&gt;PZ：MySQL还有机会赶上PostgreSQL的势头吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LTlR65SY7ZOpPFGH0kUsVg&#34;&gt;MySQL新版恶性Bug，表太多就崩给你看！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/JgGCn9o2-DNPNqazPZXTtA&#34;&gt;MySQL安魂九霄，PostgreSQL驶向云外&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/73EVmMRVGBJmGCuoMaUu4Q&#34;&gt;用PG的开发者，年薪比MySQL多赚四成？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/1zlDPie_bVvP7eO6_uTkSw&#34;&gt;Oracle最终还是杀死了MySQL！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/nKD00j84R-EcOU1VPL1ibA&#34;&gt;MySQL性能越来越差，Sakila将何去何从？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/gQZ3Q5JKV8gaBNhc1puPcA&#34;&gt;MySQL的正确性为何如此拉垮？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/tRNedHlXmp7YfCqd21e5PA&#34;&gt;如何看待 MySQL vs PGSQL 直播闹剧&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/7UvQulQGt9SIhUQasxuEZw&#34;&gt;驳《MySQL：这个星球最成功的数据库》&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;其他db篇&#34;&gt;其他DB篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-09-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/I3ug7Qv9jz3-uD3x_N1jKw&#34;&gt;MongoDB没有未来：“好营销”救不了烂芒果&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/e3_32Neoy5RVRBSozsa_7A&#34;&gt;《黑历史：Mongo》：现由PostgreSQL驱动&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/c2TmMo0DflkSUli1BsLthQ&#34;&gt;PostgreSQL可以替换微软SQL Server吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;司机本人篇&#34;&gt;司机本人篇&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/bGoILFWfF7ZiIf3EPNxSqw&#34;&gt;GOTC 2024 BTW采访冯若航：Pigsty作者，简化PG管理，推动PG开源社区的中国参与&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/B35KlM6zeI-m9epfKD8VDQ&#34;&gt;2023总结：三十而立&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-09-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/93QZBS694UQJRTLwHnStPQ&#34;&gt;冯若航：不想当段子手的技术狂，不是一位好的开源创始人&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/I7OA0thv9Dwvj4zoxIOhJQ&#34;&gt;90后，辞职创业，说要卷死云数据库&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;数据库老司机专栏原文列表&#34;&gt;数据库老司机专栏原文列表&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-12-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/d8pEo6aOoEJVbrElXc0TCQ&#34;&gt;七周七数据库 @ 2025&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/3uD9sxCg-lI1MlOg3NacvQ&#34;&gt;你为什么不用连接池？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/HJDfcSC8XFL_PkDlxHbqRQ&#34;&gt;创业出海神器 Supabase 自建指南&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Y17J-opjq1fceRi8777Xg&#34;&gt;面向未来数据库的现代硬件&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/MrRsK5lqZsCZwCUnnO1VMQ&#34;&gt;这么吹国产数据库，听的尴尬癌都要犯了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/E0MtNxPVMQ4PAkIFmispTw&#34;&gt;20刀好兄弟PolarDB：论数据库该卖什么价？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/l1BgfLaRKNNEqHyfx33E6A&#34;&gt;不要更新！发布当日叫停：PG也躲不过大翻车&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/54eFghwJhQt_uCmRaJpF0A&#34;&gt;PostgreSQL 12 过保，PG 17 上位&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/xveP91NMYF4NFlIX_JcpYA&#34;&gt;PZ：MySQL还有机会赶上PostgreSQL的势头吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/Dv3--O0K70Fevz39r3T4Ag&#34;&gt;PostgreSQL神功大成！最全扩展仓库&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/9BWDCL5yOcyw6_pSn9rqmA&#34;&gt;YC教父Paul Graham：写作者与非写作者&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/IcmXCMyflqGlAPA8vFzyyA&#34;&gt;开源皇帝Linus清洗整风&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/IeYwrKHfgxLkZBBPS3Ai8A&#34;&gt;第二批数据库国测名单：国产化来了怎么办？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/oOZIP1CYj4a319YvoT7Y1w&#34;&gt;PostgreSQL 17 发布：摊牌了，我不装了！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/fi_p3tTZTnwP5XDJrkVbQw&#34;&gt;PG系创业公司Supabase：$80M C轮融资&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/cAdqXVlfsOygsyEjZuR9hw&#34;&gt;PostgreSQL 17 RC1 发布！与近期PG新闻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/I3ug7Qv9jz3-uD3x_N1jKw&#34;&gt;MongoDB没有未来：“好营销”救不了烂芒果&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/e3_32Neoy5RVRBSozsa_7A&#34;&gt;《黑历史：Mongo》：现由PostgreSQL驱动&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/c2TmMo0DflkSUli1BsLthQ&#34;&gt;PostgreSQL可以替换微软SQL Server吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/bGoILFWfF7ZiIf3EPNxSqw&#34;&gt;GOTC 2024 BTW采访冯若航：Pigsty作者，简化PG管理，推动PG开源社区的中国参与&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/TJk9TUW7xsEglhEK_qYi-w&#34;&gt;谁整合好DuckDB，谁赢得OLAP数据库世界&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/kl498R4h65J13DgoyrlzdA&#34;&gt;PostgreSQL小版本更新，17beta3，12将EOL&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/MY-ZFrc8QfsenrEvD8hz2w&#34;&gt;PG隆中对，一个PG三个核，一个好汉三百个帮&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/bwiVnU9UUkMP5ai1NUyM4g&#34;&gt;最近在憋大招，数据库全能王真的要来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/3RuZ7ite_exxh2XOPB3HCA&#34;&gt;ClickHouse收购PeerDB：这浓眉大眼的也要来搞 PG 了？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/VD_o1HIUVQHmHGcAS4UNwA&#34;&gt;StackOverflow 2024调研：PostgreSQL已经超神了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/uccjOkAR1zgur6tftHkzMg&#34;&gt;机场出租车恶性循环与国产数据库怪圈&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LTlR65SY7ZOpPFGH0kUsVg&#34;&gt;MySQL新版恶性Bug，表太多就崩给你看！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/JgGCn9o2-DNPNqazPZXTtA&#34;&gt;MySQL安魂九霄，PostgreSQL驶向云外&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/aVFI1vC9goekD-XYAAj0ug&#34;&gt;CentOS 7过保了，换什么OS发行版更好？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/73EVmMRVGBJmGCuoMaUu4Q&#34;&gt;用PG的开发者，年薪比MySQL多赚四成？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/1zlDPie_bVvP7eO6_uTkSw&#34;&gt;Oracle最终还是杀死了MySQL！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/nKD00j84R-EcOU1VPL1ibA&#34;&gt;MySQL性能越来越差，Sakila将何去何从？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/dW3byoQkEIR0_EzWxobrWg&#34;&gt;让PG停摆一周的大会：PGCon.Dev参会记&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/C0YyE52KbLLbnG1C2FqGRg&#34;&gt;PGCon.Dev 2024 温哥华扩展生态峰会小记&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/3EBoAHWEI6zZ-T0nNQsk4Q&#34;&gt;PostgreSQL 17 Beta1 发布！牙膏管挤爆了！&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/olTWUG0p0DqJYHVOqn_wcQ&#34;&gt;为什么PostgreSQL是未来数据的基石？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/AqcYpOgVj91JnkB1B3s4sA&#34;&gt;国产数据库到底能不能打？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/DizvD5EYT3atP3I2CdobFw&#34;&gt;PostgreSQL 主要贡献者 Simon Riggs 因坠机去世&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/qNcqGHL-wVTSB7Kxko2eNw&#34;&gt;PostgreSQL会修改开源许可证吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AMQ8eMR8ivpbhAelaJgXEQ&#34;&gt;PostgreSQL is eating the database world&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/8_uhRH93oAoHZqoC90DA6g&#34;&gt;PostgreSQL正在吞噬数据库世界&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/yI06zdqnW5uWnqvKmgM-9g&#34;&gt;技术极简主义：一切皆用Postgres&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-18 &lt;a href=&#34;https://mp.weixin.qq.com/s/bx2dRxlrtLcM6AD2qsplQQ&#34;&gt;PG生态新玩家ParadeDB&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/NH8UgObijvxKekmP6sXN1Q&#34;&gt;快速掌握PostgreSQL版本新特性&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/iH34payWSE_GROsq-9MN8g&#34;&gt;令人惊叹的PostgreSQL可伸缩性&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/aLXC7f2iYUfATNWsnyotkA&#34;&gt;国产数据库是大炼钢铁吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/79_PnX-a5iSfDMgz_VUx5A&#34;&gt;中国对PostgreSQL的贡献约等于零吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/OM8xhIFB3m95T1GCAQm1Ow&#34;&gt;展望PostgreSQL的2024 (Jonathan Katz)&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/8FJfdxiqiWBOgpjCbk6i6A&#34;&gt;2023年度数据库：PostgreSQL (DB-Engine)&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/B35KlM6zeI-m9epfKD8VDQ&#34;&gt;2023总结：三十而立&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/gQZ3Q5JKV8gaBNhc1puPcA&#34;&gt;MySQL的正确性为何如此拉垮？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-05 &lt;a href=&#34;https://mp.weixin.qq.com/s/4a8Qy4O80xqsnytC4l9lRg&#34;&gt;数据库应该放入K8S里吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/kFftay1IokBDqyMuArqOpg&#34;&gt;把数据库放入Docker是一个好主意吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/0eBZ4zyX6XjBQO0GqlANnw&#34;&gt;向量数据库凉了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/vh1JE_BdaLetWtt5vvPDDw&#34;&gt;数据库真被卡脖子了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/VXkpDlUdnKlK3DKtoyg2wA&#34;&gt;PG查询优化：观宏之道&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/xHG8OURTYlmnQTorFkzioA&#34;&gt;EL系操作系统发行版哪家强？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/gfs8pBJuYjE_wfAvjcak8Q&#34;&gt;FerretDB：假扮成MongoDB的PostgreSQL？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-09-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/jmlzhktasg06MiA7b4huew&#34;&gt;如何用 pg_filedump 抢救数据？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-09-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/y3qY9eBfOic6tQYOiErIHg&#34;&gt;PGSQL x Pigsty: 数据库全能王来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/ynwCz24bRoluVC6ILs_a8g&#34;&gt;PG先写脏页还是先写WAL？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-09-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/93QZBS694UQJRTLwHnStPQ&#34;&gt;冯若航：不想当段子手的技术狂，不是一位好的开源创始人&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/hWbcc9cMM9qTjPJ0m6G0Kg&#34;&gt;基础软件到底需要什么样的自主可控？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/tRNedHlXmp7YfCqd21e5PA&#34;&gt;如何看待 MySQL vs PGSQL 直播闹剧&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/7UvQulQGt9SIhUQasxuEZw&#34;&gt;驳《MySQL：这个星球最成功的数据库》&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-08-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/BJkbtwl_SPx99GBOzPsJiA&#34;&gt;向量是新的JSON&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-06-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/TH-exGEpt4ZZrlz8fLGLLA&#34;&gt;ISD数据集：分析全球120年气候变化&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/R4jp1uTCiLOLGsiADZ9jxQ&#34;&gt;AI大模型与向量数据库 PGVECTOR&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-05-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Q0OtrpEhF24XN7gwMjbSRA&#34;&gt;技术反思录：正本清源 之 序章&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-05-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/mEmz8pviahEAWy1-SA8vcg&#34;&gt;微服务是不是个蠢主意？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/-eaCoZR9Z5srQ-1YZm1QJA&#34;&gt;分布式数据库是伪需求吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-04-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/clM2f2f2-EPa4EVBIpznfw&#34;&gt;AI 会有自我意识吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/1xR92Z67kvvj2_NpUMie1Q&#34;&gt;数据库需求层次金字塔&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-08-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/651zXDKGwFy8i0Owrmm-Xg&#34;&gt;PostgreSQL 到底有多强？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-07-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/UeNibtbN8JlA1QIlio1mkw&#34;&gt;为什么PostgreSQL是最成功的数据库？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/I7OA0thv9Dwvj4zoxIOhJQ&#34;&gt;90后，辞职创业，说要卷死云数据库&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-06-24 &lt;a href=&#34;https://mp.weixin.qq.com/s/xcORYy2suzOw50SOaOCodw&#34;&gt;StackOverflow 2022数据库年度调查&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-05-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/Py3o31w3db5E9FsviAZeCA&#34;&gt;DBA还是一份好工作吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2021-05-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/KBypNeeM4puvzGiKFJ1FmQ&#34;&gt;为什么说PostgreSQL前途无量？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
 
       </description>
     </item>
@@ -3160,255 +3514,6 @@ Hydra 和 DuckDB 原厂 MotherDuck 亲自下场搞的 &lt;code&gt;pg_duckdb&lt;/
 &lt;li&gt;允许用户更方便地自建 &lt;a href=&#34;/zh/docs/kernel/supabase&#34;&gt;Supabase&lt;/a&gt; —— 开源 Firebase，一站式后端平台&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;如果您希望使用原汁原味的 PostgreSQL 体验，欢迎使用我们的发行版，开源免费，没有供应商锁定；同时我们也提供商业咨询支持，为您解决疑难杂症兜底的需求与烦恼。&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: 云计算泥石流：文章导航</title>
-      <link>/zh/blog/cloud/exit/</link>
-      <pubDate>Thu, 14 Nov 2024 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/cloud/exit/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/cloud/exit/featured_hu02aa61ae1d9de35cbe238d2676170cb9_787877_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
-        
-        &lt;div style=&#34;text-align: center;&#34;&gt;&lt;p&gt;
-世人常道云上好，托管服务烦恼少。我言云乃杀猪盘，溢价百倍实厚颜。
-&lt;p&gt;赛博地主搞垄断，坐地起价剥血汗。运维外包嫖开源，租赁电脑炒概念。&lt;/p&gt;
-&lt;p&gt;世人皆趋云上游，不觉开销似水流。云租天价难为持，开源自建更稳实。&lt;/p&gt;
-&lt;p&gt;下云先锋把路趟，引领潮流一肩扛。不畏浮云遮望眼，只缘身在最前线。&lt;/p&gt;
-&lt;/p&gt;&lt;/div&gt;&lt;br&gt;
-&lt;p&gt;曾几何时，“&lt;strong&gt;上云&lt;/strong&gt;“近乎成为技术圈的政治正确，整整一代应用开发者的视野被云遮蔽。就让我们用实打实的数据分析与亲身经历，讲清楚公有云租赁模式的价值与陷阱 —— 在这个降本增效的时代中，供您借鉴与参考。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;下云案例篇&#34;&gt;&lt;strong&gt;下云案例篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;下云奥德赛：是时候放弃云计算了吗？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;人仰马翻篇&#34;&gt;&lt;strong&gt;人仰马翻篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;黑暗森林：打爆AWS云账单，只需要S3桶名&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;无双删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;基础资源篇&#34;&gt;&lt;strong&gt;基础资源篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云上算力真实成本&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;云盘是不是杀猪盘？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;商业模式篇&#34;&gt;&lt;strong&gt;商业模式篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/W1hwbl3qmjC4Dcmadc8uSg&#34;&gt;DBA 会被云淘汰吗？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/2w0bLJI7TvUNp1tzLYbvsA&#34;&gt;本土云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;rds批判篇&#34;&gt;&lt;strong&gt;RDS批判篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;高可用容灾神话的破灭&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;滑稽肖像篇&#34;&gt;&lt;strong&gt;滑稽肖像篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/qAnEmtLz3EpSophz1TbFGA&#34;&gt;性学家，化学家，软件行业里的废话文学家&lt;/a&gt; 【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/8ZffsCgchv8LH5ujv0lRGQ&#34;&gt;互联网技术大师速成班 &lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/OxhhJ4U1P43di_eaE1uGPw&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;商业评论篇&#34;&gt;&lt;strong&gt;商业评论篇&lt;/strong&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/BYu8nZjqAQbWc2yT8K_pFQ&#34;&gt;阿里云降价背后折射出的绝望&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/qSTEf9txjHNTHeEFv3NkWg&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/1dse1KSCq2xG-QaL1JzZ8Q&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/_ijL2OXAQJQrmWiE-KKzdw&#34;&gt;公有云厂商卖的云计算到底是什么玩意？&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/mMvDiTiMOt6eiTTYbHvbbQ&#34;&gt;腾讯云阿里云做的真的是云计算吗?&lt;/a&gt;【转载】&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;主题分类&#34;&gt;主题分类&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;亚马逊&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-05-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;云上黑暗森林：打爆云账单，只需要S3桶名&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;阿里云&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-11-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/D2XmL2YYN2kqHtwFN4FVGQ&#34;&gt;支付宝崩了？双十一整活王又来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt; 转&lt;/li&gt;
-&lt;li&gt;2024-09-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;阿里云：高可用容灾神话的破灭&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/G41IN2y8DrC002FQ_BXtXw&#34;&gt;阿里云故障预报：本次事故将持续至20年后？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/EDRmP7ninfSx-CgNDb8mpg&#34;&gt;阿里云新加坡可用区C故障，网传机房着火&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/cb2Lh56uINxacM2uUaB6Vw&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/jYIqj94B07oTu9KC85bjtQ&#34;&gt;云计算：菜就是一种原罪&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/-ntsNfdEq3b4qs5tKP7tfQ&#34;&gt;taobao.com 证书过期&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/s_MCdaCByDBuocXkY1tvKw&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/w7YzdxSrAsIqk2gXBks9CA&#34;&gt;迷失在阿里云的年轻人&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/FIOB_Oqefx1oez1iu7AGGg&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/3F1ud-tWB3eymu1-dxSHMA&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt; 马工&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;腾讯云&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/v0vbsy_OXIDNrbBvUUMV9Q&#34;&gt;腾讯真的走通云原生之路了吗？&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-04-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/SpxKyjSb1luCrJ8xIFjylg&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/5F2YgVtfpXoe7A1MoSoKLg&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-04-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/jU418HAlObe1nWgzEsLrJQ&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/i4wk9ebyUK7irNSwuT3NWQ&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Google&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-05-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;Microsoft&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-07-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;其他&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/dQrlBnlQO1mcZkg1wQESiA&#34;&gt;沸沸扬扬！！！某国内互联网公司，信息泄露导致国外用卡被盗刷。。。&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/z-hQ57BaSNPC6GkvqNAafw&#34;&gt;本号收到美团投诉：美团没有存储外卡CVV等敏感信息&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/ShArrg1xidfDgniF9jS7Yg&#34;&gt;某平台CVV泄露：你的信用卡被盗刷了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/BLHaiMYGpUTjMhP7msGHhA&#34;&gt;这次轮到WPS崩了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/tmlP1ol9qP2SIxB9VbvpEg&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/nOzSFkULOJeuQ4NChGxE5w&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;DHH&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-10-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yxyir8kjRDUZwkkE_dscZQ&#34;&gt;先优化碳基BIO核，再优化硅基CPU核&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/jKv9l_ro6rWei4QnXck-zw&#34;&gt;单租户时代：SaaS范式转移&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;DBA vs RDS&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;开源软件&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-10-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/tNeqnBUjWhk8Vu_tIABMjg&#34;&gt;WordPress社区内战：论共同体划界问题&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/NdeeYn10qQ0xBPL-67IXdQ&#34;&gt;ElasticSearch又重新开源了？？？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;云计算泥石流专栏原文&#34;&gt;云计算泥石流专栏原文&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;2024-12-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/ze4y9x7VpPmibitH7tAGMQ&#34;&gt;OpenAI全球宕机复盘：K8S循环依赖&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/D2XmL2YYN2kqHtwFN4FVGQ&#34;&gt;支付宝崩了？双十一整活王又来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-11-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/eawgZ3hE63b3fRfrJ1sqfw&#34;&gt;草台回旋镖：Apple Music证书过期服务中断&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/mknFXO5DSfxw7st8hhxjBQ&#34;&gt;DHH：下云超预期，能省一个亿&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/tNeqnBUjWhk8Vu_tIABMjg&#34;&gt;WordPress社区内战：论共同体划界问题&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-10-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/0Wnv1B80Tk4J03X3uAm4Ww&#34;&gt;记一次阿里云 DCDN 加速仅 32 秒就欠了 1600 的问题处理（扯皮）&lt;/a&gt; 转&lt;/li&gt;
-&lt;li&gt;2024-09-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/rXwEayprvDKCgba4m-naoQ&#34;&gt;阿里云：高可用容灾神话的破灭&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/G41IN2y8DrC002FQ_BXtXw&#34;&gt;阿里云故障预报：本次事故将持续至20年后？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/C7XGgGmzvMjKJGbBGVmrzw&#34;&gt;阿里云盘灾难级BUG：能看别人照片？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/EDRmP7ninfSx-CgNDb8mpg&#34;&gt;阿里云新加坡可用区C故障，网传机房着火&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/BLHaiMYGpUTjMhP7msGHhA&#34;&gt;这次轮到WPS崩了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/kOIw8uPjZUZ0-QisC1TBOA&#34;&gt;草台班子唱大戏，阿里云RDS翻车记&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-09-19 &lt;a href=&#34;https://mp.weixin.qq.com/s/tmlP1ol9qP2SIxB9VbvpEg&#34;&gt;我们能从网易云音乐故障中学到什么？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-08-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/nOzSFkULOJeuQ4NChGxE5w&#34;&gt;GitHub全站故障，又是数据库上翻的车？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/s7i7bSYzNY8mrcpfkHPjOg&#34;&gt;全球Windows蓝屏：甲乙双方都是草台班子&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-07-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/cb2Lh56uINxacM2uUaB6Vw&#34;&gt;阿里云又挂了，这次是光缆被挖断了？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-06-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/qAnEmtLz3EpSophz1TbFGA&#34;&gt;性学家，化学家，软件行业里的废话文学家&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-05-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/csQmMrSGg5ukDgS06h8xXw&#34;&gt;Ahrefs不上云，省下四亿美元&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-05-11 &lt;a href=&#34;https://mp.weixin.qq.com/s/eH5HBbL7cQhjQY8rm1gFLQ&#34;&gt;删库：Google云爆破了大基金的整个云账户&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/35ScjtPjC1GNGKaSArJhcA&#34;&gt;云上黑暗森林：打爆云账单，只需要S3桶名&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-23 &lt;a href=&#34;https://mp.weixin.qq.com/s/jU418HAlObe1nWgzEsLrJQ&#34;&gt;赛博菩萨Cloudflare圆桌访谈与问答录&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/jYIqj94B07oTu9KC85bjtQ&#34;&gt;云计算：菜就是一种原罪&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-20 &lt;a href=&#34;https://mp.weixin.qq.com/s/-ntsNfdEq3b4qs5tKP7tfQ&#34;&gt;taobao.com证书过期&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/v0vbsy_OXIDNrbBvUUMV9Q&#34;&gt;腾讯真的走通云原生之路了吗？&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-04-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/SpxKyjSb1luCrJ8xIFjylg&#34;&gt;我们能从腾讯云故障复盘中学到什么？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/mgkOybNeEH3LO0gRa1rQBQ&#34;&gt;云SLA是安慰剂还是厕纸合同？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/PgduTGIvWSUgHZhVfnb7Bg&#34;&gt;腾讯云：颜面尽失的草台班子&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/5F2YgVtfpXoe7A1MoSoKLg&#34;&gt;【腾讯】云计算史诗级二翻车来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/i4wk9ebyUK7irNSwuT3NWQ&#34;&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/XZqe4tbJ9lgf8a6PWj7vjw&#34;&gt;牙膏云？您可别吹捧云厂商了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-04-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/s_MCdaCByDBuocXkY1tvKw&#34;&gt;罗永浩救不了牙膏云&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-26 &lt;a href=&#34;https://mp.weixin.qq.com/s/W5kOLxeJCIHjnWbIHc1Pzw&#34;&gt;Redis不开源是“开源”之耻，更是公有云之耻&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-25 &lt;a href=&#34;https://mp.weixin.qq.com/s/_ijL2OXAQJQrmWiE-KKzdw&#34;&gt;公有云厂商卖的云计算到底是什么玩意？&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-03-21 &lt;a href=&#34;https://mp.weixin.qq.com/s/w7YzdxSrAsIqk2gXBks9CA&#34;&gt;迷失在阿里云的年轻人&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/EH7RPB6ImfMHXhOMU7P5Qg&#34;&gt;RDS阉掉了PostgreSQL的灵魂&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-13 &lt;a href=&#34;https://mp.weixin.qq.com/s/Fit7MtSDQdp9IcedmWdYQg&#34;&gt;云计算反叛军联盟&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-03-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/rp8Dtvyo9cItBJSsvfrKjw&#34;&gt;剖析云算力成本，阿里云真的降价了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-02-02 &lt;a href=&#34;https://mp.weixin.qq.com/s/BcsaChZ-PHDEy9u5bOmMJA&#34;&gt;DBA会被云淘汰吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/jKv9l_ro6rWei4QnXck-zw&#34;&gt;单租户时代：SaaS范式转移&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/8ZffsCgchv8LH5ujv0lRGQ&#34;&gt;互联网技术大师速成班&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-01-04 &lt;a href=&#34;https://mp.weixin.qq.com/s/qSTEf9txjHNTHeEFv3NkWg&#34;&gt;门内的国企如何看门外的云厂商&lt;/a&gt; Leo&lt;/li&gt;
-&lt;li&gt;2023-12-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/gPdeaWqFDRe131c78UBkSA&#34;&gt;卡在政企客户门口的阿里云&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2024-01-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/YrDngnKQc_0juN1B3SPnNg&#34;&gt;云计算泥石流&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2024-01-10 &lt;a href=&#34;https://mp.weixin.qq.com/s/yIVal-9U6_TXX-dZpVtjBg&#34;&gt;拒绝用复杂度自慰，下云也保稳定运行&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/HathxpQ_KUuqxyrtyCDzWw&#34;&gt;扒皮对象存储：从降本到杀猪&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-22 &lt;a href=&#34;https://mp.weixin.qq.com/s/xaa079P4DRCz0hzNovGoOA&#34;&gt;半年下云省千万：DHH下云FAQ答疑&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-12-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/OxhhJ4U1P43di_eaE1uGPw&#34;&gt;互联网故障背后的草台班子们&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2023-11-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/FIOB_Oqefx1oez1iu7AGGg&#34;&gt;从降本增笑到真的降本增效&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-27 &lt;a href=&#34;https://mp.weixin.qq.com/s/3F1ud-tWB3eymu1-dxSHMA&#34;&gt;阿里云周爆：云数据库管控又挂了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-17 &lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;重新拿回计算机硬件的红利&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/OIlR0rolEQff9YfCpj3wIQ&#34;&gt;我们能从阿里云史诗级故障中学到什么&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/cTge3xOlIQCALQc8Mi-P8w&#34;&gt;【阿里】云计算史诗级大翻车来了&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-09 &lt;a href=&#34;https://mp.weixin.qq.com/s/Nh28VahZkQMdR8fDoi0_rQ&#34;&gt;阿里云的羊毛抓紧薅，五千的云服务器三百拿&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-11-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/y9IradwxTxOsUGcOHia1XQ&#34;&gt;云厂商眼中的客户：又穷又闲又缺爱&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2023-10-29 &lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;是时候放弃云计算了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-07-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/eag0CqfUTeNPbIB6TZqFVg&#34;&gt;云计算泥石流合集 —— 用数据解构公有云&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-07-07 &lt;a href=&#34;https://mp.weixin.qq.com/s/H2S3TV-AsqS43A5Hh-XMhQ&#34;&gt;下云奥德赛&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-07-06 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;FinOps终点是下云&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-06-14 &lt;a href=&#34;https://mp.weixin.qq.com/s/2w0bLJI7TvUNp1tzLYbvsA&#34;&gt;云计算为啥还没挖沙子赚钱？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-06-12 &lt;a href=&#34;https://mp.weixin.qq.com/s/LC5jAhuVObRcrTLxI1FUQA&#34;&gt;云SLA是不是安慰剂？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-04-28 &lt;a href=&#34;https://mp.weixin.qq.com/s/TksQ108v_nGaW11-87Es3A&#34;&gt;杀猪盘真的降价了吗？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-15 &lt;a href=&#34;https://mp.weixin.qq.com/s/UxjiUBTpb1pRUfGtR9V3ag&#34;&gt;公有云是不是杀猪盘？&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-08 &lt;a href=&#34;https://mp.weixin.qq.com/s/ANFnbDXwuhKI99fgYRZ9ug&#34;&gt;垃圾腾讯云CDN：从入门到放弃&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-03-01 &lt;a href=&#34;https://mp.weixin.qq.com/s/CMRrqI2yBWlNbACHpNgL1g&#34;&gt;驳《再论为什么你不应该招DBA》&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-02-03 &lt;a href=&#34;https://mp.weixin.qq.com/s/Yp6L0hh4b4HuJQRPD3aJYw&#34;&gt;范式转移：从云到本地优先&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/LefEAXTcBH-KBJNhXNoc7A&#34;&gt;云数据库是不是杀猪盘&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2023-01-31 &lt;a href=&#34;https://mp.weixin.qq.com/s/PqCD80H927s0yJrBr4QQqw&#34;&gt;你怎么还在招聘DBA?&lt;/a&gt; 马工&lt;/li&gt;
-&lt;li&gt;2023-01-30 &lt;a href=&#34;https://mp.weixin.qq.com/s/c8bpK4o3H7-EyRqVdNDndQ&#34;&gt;云数据库是不是智商税&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;2022-05-16 &lt;a href=&#34;https://mp.weixin.qq.com/s/AGEW1iHQkQy4NQyYC2GonQ&#34;&gt;云RDS：从删库到跑路&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;下云之歌&#34;&gt;下云之歌&lt;/h2&gt;
-&lt;p&gt;甜美朋克：https://app.suno.ai/song/98f03bcd-5b4d-428f-a3f1-f581910d2e56&lt;/p&gt;
-&lt;p&gt;滑稽上口：https://app.suno.ai/song/308069a2-9d97-41c0-b1a9-ce14eb137ffe&lt;/p&gt;
-&lt;p&gt;新纪元：https://app.suno.ai/song/81e1b275-4652-4442-aa47-3127171d874d&lt;/p&gt;
-&lt;p&gt;死亡摇滚：https://app.suno.ai/song/6c203c72-0ce7-4b63-a447-a63b31080776&lt;/p&gt;
 
       </description>
     </item>
@@ -9649,165 +9754,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;hr&gt;
 &lt;p&gt;&lt;strong&gt;明确云厂商的 SLA 是营销工具，而非战绩承诺&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;在云计算的世界里，&lt;a href=&#34;/zh/blog/cloud/sla/&#34;&gt;&lt;strong&gt;服务等级协议&lt;/strong&gt;&lt;/a&gt;（SLA）曾被视为云厂商对其服务质量的承诺。然而，当我们深入研究这些由一堆9组成的协议时，会发现它们并不能像期望的那样“兜底”。与其说是 SLA 是对用户的补偿，不如说 SLA 是对云厂商服务质量没达标时的“惩罚”。比起会因为故障丢掉奖金与工作的专家来说，SLA 的惩罚对于云厂商不痛不痒，更像是自罚三杯。如果惩罚没有意义，云厂商也没有动力去提供更好的服务质量。所以，SLA 对用户来说不是兜底损失的保险单。在最坏的情况下，它是堵死了实质性追索的哑巴亏；在最好的情况下，它才是提供情绪价值的安慰剂。&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: 吊打公有云的赛博佛祖 Cloudflare</title>
-      <link>/zh/blog/cloud/cloudflare/</link>
-      <pubDate>Wed, 03 Apr 2024 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/cloud/cloudflare/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/cloud/cloudflare/featured_huf46615db3e2baa55dbab3d6562c83645_104649_640x0_resize_q75_catmullrom.jpg" width="640" height="640"/>]]>
-        
-        &lt;p&gt;是在今天的 2024 开发者周上，Cloudflare 发布了一系列令人激动的新特性，例如 Python Worker 以及 Workers AI，把应用开发与交付的便利性拔高到了一个全新的程度。与 Cloudflare 的 Serverless 开发体验相比，传统云厂商号称 Serverless 的各种产品都显得滑稽可笑。&lt;/p&gt;
-&lt;p&gt;Cloudflare 更广为人知的是它的慷慨免费套餐，一些中小型网站几乎能以零成本运行在这里。在 Cloudflare 的鲜明对比之下，天价出租 &lt;a href=&#34;/zh/blog/cloud/ecs&#34;&gt;CPU&lt;/a&gt;、&lt;a href=&#34;/zh/blog/cloud/ebs&#34;&gt;磁盘&lt;/a&gt;、&lt;a href=&#34;/zh/blog/cloud/cdn&#34;&gt;带宽&lt;/a&gt; 的公有云厂商显得面目可憎。Cloudflare 这样的云带来的开发体验，才真正配得上“云”的称号。在我看来， Cloudflare 应该主动出击，与传统公有云厂商抢夺云计算的定义权。&lt;/p&gt;
-&lt;p&gt;利益相关：Cloudflare 没给我钱，我倒是给 Cloudflare 付了钱。纯粹是因为 Cloudflare 产品非常出色，极好地解决了我的需求，让我非常乐意付点费支持一下，并告诉更多朋友有这项福利。与之相反的是，我付钱给传统公有云厂商之后的感受是这做的都是什么玩意 —— 必须写文章&lt;a href=&#34;/zh/blog/cloud&#34;&gt;狠狠地骂他们&lt;/a&gt;，才能缓解内心的精神损失。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;cloudflare-是什么&#34;&gt;Cloudflare 是什么&lt;/h2&gt;
-&lt;p&gt;Cloudflare是一家提供内容分发网络（CDN）、互联网安全性、抗DDoS（分布式拒绝服务）和分布式DNS服务的美国公司。全世界互联网流量的 20% 由它服务。如果你挂着 VPN 访问一些网站，经常可以看到 Cloudflare 的抗 DDoS 验证码页面和 Logo。他们提供：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;strong&gt;内容分发网络（CDN）&lt;/strong&gt;：Cloudflare的CDN服务通过全球分布的数据中心缓存客户网站的内容，加快网站加载速度并减少服务器压力。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;网站安全性&lt;/strong&gt;：提供SSL加密、防止SQL注入和跨站脚本攻击的安全措施，增强网站的安全性。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;DDoS防护&lt;/strong&gt;：具备先进的DDoS防护功能，能够抵御各种规模的攻击，保护网站不受干扰。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;智能路由&lt;/strong&gt;：使用Anycast网络技术，能够智能识别数据传输的最佳路径，减少延迟。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;自动HTTPS重定向&lt;/strong&gt;：自动将访问转换为HTTPS，增强通信的安全性。&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Workers平台&lt;/strong&gt;：提供Serverless架构，允许在Cloudflare的全球网络上运行JavaScript或WASM（WebAssembly）代码，无需管理服务器。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;当然，Cloudflare 还有一些非常不错的服务，例如托管网站的 Pages，对象存储 R2，分布式数据库D1 等，开发者体验非常不错。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cloudflare/cloudflare-1.jpg&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.cloudflare.com/zh-cn/what-is-cloudflare/&#34;&gt;Cloudflare 官网介绍&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;pages简单易用的网站托管&#34;&gt;Pages：简单易用的网站托管&lt;/h2&gt;
-&lt;p&gt;举个例子，如果您要托管一个静态网站。用 Cloudflare 有多简单？首先在 GitHub 创建一个 Repo，把网站内容丢进去，然后在 Cloudflare 链接到你的 &lt;a href=&#34;https://developers.cloudflare.com/pages/configuration/git-integration/&#34;&gt;Git Repo&lt;/a&gt;，分配一个子域名，然后你的网站就自动部署到全世界的各个角落了。如果你要更新网站内容，只要 git push 到特定分支就足够了。&lt;/p&gt;
-&lt;p&gt;如果你使用特定的 &lt;a href=&#34;https://developers.cloudflare.com/pages/framework-guides/&#34;&gt;&lt;strong&gt;网站框架&lt;/strong&gt;&lt;/a&gt;，甚至还可以直接在线从仓库内容中构建：Blazor、Brunch、Docusaurus、Gatsby、Gridsome、Hexo、Hono、Hugo、Jekyll、Next.js、Nuxt、Pelican、Preact、Qwik、React、Remix、Solid、Sphinx、Svelte、Vite 3、Vue、VuePress、Zola、Angular、Astro、Elder.js、Eleventy、Ember、MkDocs。&lt;/p&gt;
-&lt;p&gt;我从完全没接触过 Cloudflare，到把 Pigsty 的网站搬运到 CF 上并完成部署，只用了一个小时左右。我不需要操心什么服务器，CI/CD / HTTPS 证书，安全高防抗 DDoS，Cloudflare 已经把一切都替我做好了 —— 更重要的是流量费全免，我唯一做的就是绑了个信用卡花了十几块钱买了个域名，但实际上根本不需要什么额外费用 —— 都已经包含在免费计划中了。&lt;/p&gt;
-&lt;p&gt;更令我震惊的是，虽然访问速度慢了一些，但在中国大陆是可以直接访问 CF 上的网站的，甚至不需要备案！说来也滑稽，本土云厂商虽然可以很快替你完成网站资源置备这件事，但耗时最久的步骤往往是卡在备案上。这一点确实算是 Cloudflare 的一个福利特性了。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;worker极致的-serverless-体验&#34;&gt;Worker：极致的 Serverless 体验&lt;/h2&gt;
-&lt;p&gt;尽管你可以把许多业务逻辑放在前端在浏览器中用 Javascript 解决，但一个复杂的动态网站也是需要一些后端开发的。而 Cloudflare 也把这一点简化到了极致 —— &lt;strong&gt;你只需要编写业务逻辑的 Javascript 函数就可以了&lt;/strong&gt;。当然，也可以使用 Typescript，现在更是支持 Python 了 —— 直接调用 AI 模型，难以想象后面会出现多少新的花活！&lt;/p&gt;
-&lt;p&gt;用户编写的这个函数会被部署在 Cloudflare 全世界 CDN 边缘服务器节点上，执行用户定义的业务逻辑。你可以 &lt;a href=&#34;https://developers.cloudflare.com/workers/examples/&#34;&gt;&lt;strong&gt;干各种各样的事情&lt;/strong&gt;&lt;/a&gt;，返回动态的HTML与JSON，自定义路由、重定向、转发、过滤、缓存、A/B测试，重写请求，聚合请求，执行认证。当然，你也可以直接使用业务代码中调用对象存储 R2 与 SQL 数据库 D1，或者把请求转发到你自己的数据中心服务器上处理。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-js&#34; data-lang=&#34;js&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;export&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Env&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;// If you set another name in wrangler.toml as the value for &amp;#39;binding&amp;#39;,
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;  &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;// replace &amp;#34;DB&amp;#34; with the variable name you defined.
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;  &lt;span style=&#34;color:#000&#34;&gt;DB&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;D1Database&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;export&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;default&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;async&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;fetch&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;request&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Request&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;env&lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Env&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;pathname&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;URL&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;request&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;url&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;pathname&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;===&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;/api/beverages&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;// If you did not use `DB` as your binding name, change it here
-&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#8f5902;font-style:italic&#34;&gt;&lt;/span&gt;      &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;const&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;results&lt;/span&gt; &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;await&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;env&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;DB&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;prepare&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;SELECT * FROM Customers WHERE CompanyName = ?&amp;#34;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;bind&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;Bs Beverages&amp;#34;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;all&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;();&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Response&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;json&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;results&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;}&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;new&lt;/span&gt; &lt;span style=&#34;color:#000&#34;&gt;Response&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;      &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;Call /api/beverages to see everyone who works at Bs Beverages&amp;#34;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;  &lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;},&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;};&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://developers.cloudflare.com/d1/get-started/#write-queries-within-your-worker&#34;&gt;在 Worker 中查询 D1&lt;/a&gt;，简单到就是调用个变量。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-ini&#34; data-lang=&#34;ini&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;[[d1_databases]]&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;binding&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;DB&amp;#34; # available in your Worker on env.DB&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;database_name&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;prod-d1-tutorial&amp;#34;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#c4a000&#34;&gt;database_id&lt;/span&gt; &lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#34;&amp;lt;unique-ID-for-your-database&amp;gt;&amp;#34;&lt;/span&gt;
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;blockquote&gt;
-&lt;p&gt;也不需要什么配置，指定一下D1数据库/R2对象存储名称就好了。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;比起传统云上笨拙的开发部署体验来所，CF worker 真正做到了让开发者爽翻天的 Serverless 效果。开发者不需要操心什么数据库连接串，AccessPoint，AK/SK密钥管理，用什么数据库驱动，怎么管理本地日志，怎么搭建 CI/CD 流程这些繁琐问题，最多在环境变量里面指定一下存储桶名称这类简单信息就够了。写好 Worker 胶水代码实现业务逻辑，命令行一把梭就可以完成全球部署上线。&lt;/p&gt;
-&lt;p&gt;与之对应的是传统公有云厂商提供的各种所谓 Serverless 服务，比如 RDS Serverless，就像一个恶劣的笑话，单纯是一种计费模式上的区别 —— 既不能 Scale to Zero，也没什么易用性上的改善 —— 你依然要在控制台去点点点创建一套 RDS，而不是像 Neon 这种真 Serverless 一样用连接串连上去就能直接迅速拉起一个新实例。更重要的是，稍微有个几十上百的QPS，相比包年包月的账单就要爆炸上天了 —— 这种平庸的 “Serverless” 确实污染了这个词语的本意。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;r2吊打-s3-的对象存储&#34;&gt;R2：吊打 S3 的对象存储&lt;/h2&gt;
-&lt;p&gt;Cloudflare R2 提供了对象存储服务。与 AWS S3 相比，便宜了也许能有一个数量级 —— 我的意思是，尽管单纯看存储的价格 $ / GB·月，Cloudflare（0.015 $）价格与 S3 (0.023 $) 差距并不大，但 Cloudflare 的 R2 是免流量费的！&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th style=&#34;text-align:center&#34;&gt;每月免费额度&lt;/th&gt;
-&lt;th style=&#34;text-align:center&#34;&gt;Cloudflare R2&lt;/th&gt;
-&lt;th style=&#34;text-align:center&#34;&gt;Amazon S3&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;存储&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;10 GB / 月&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;5 GB / 月&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;写请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;1 M / 月&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;2 K / 月&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;读请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;10 M / 月&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;20 K / 月&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;数据传输&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;无限量！&lt;/strong&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;100 GB&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;超出免费额度后的价格&lt;/strong&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;存储&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 0.11 / GB&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 0.17 / GB&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;写请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 32.63 / 百万请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 36.25 / 百万请求&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;读请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 2.61 / 百万请求&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 2.9 / 百万请求&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;流量费&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;&lt;strong&gt;免费！&lt;/strong&gt;&lt;/td&gt;
-&lt;td style=&#34;text-align:center&#34;&gt;¥ 0.65 / GB&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Cloudflare &lt;a href=&#34;https://www.cloudflare.com/pg-cloudflare-r2-vs-aws-s3/&#34;&gt;R2 定价&lt;/a&gt; 与 AWS S3 对比&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;举个例子，我的网站，R2 在过去一个月内消耗了 300 GB 流量，按照本土云 1GB 流量八毛钱左右的价格，需要支付 240 元，但我一分钱也没付。而且，我还知道更极端的例子 —— 比如一个月消耗了 3TB 流量，也依然在免费套餐中……&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cloudflare/cloudflare-3.jpg&#34;&gt;&lt;/p&gt;
-&lt;p&gt;Cloudflare R2 是与 CDN 二合一的。在传统的云服务商中，你还需要操心额外的 CDN 配置，回源流量，CDN流量包，抗DDoS等等问题。但 Cloudflare 不需要，只要勾选配置启用，你的 R2 Bucket 可以直接被全世界读取，而最重要的是，而你根本不用担心账单被刷爆的问题 —— 我知道好几个在传统云厂商上，因为攻击把 CDN 流量刷爆，几万块钱余额一夜耗干欠费的案例。（包括我自己还亲历过一个因为云厂商自己SB的CDN回源设计，&lt;a href=&#34;/zh/blog/cloud/cdn&#34;&gt;爆刷CDN流量的案例&lt;/a&gt;）但是在 Cloudflare 上，你不需要像斗牛犬和猫头鹰一样监视着 &lt;a href=&#34;/zh/blog/cloud/finops&#34;&gt;&lt;strong&gt;账单&lt;/strong&gt;&lt;/a&gt; 与流量，首先，Cloudflare 流量免费…… ，更强的是， Cloudflare 已经有了智能的抗 DDoS 服务了，即使是免费的 Plan 也默认提供这项服务，可以有效避免恶意攻击（在传统云厂商，这玩意单独卖几千上万的所谓高防IP服务）。再加上每月慷慨的免费 1千万读取请求（对于放图片、软件包来说这已经非常大了！），可以确保在这上面的费用是高度确定性的 —— 如果不是零的话。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;cloudflare在线的价值&#34;&gt;Cloudflare：在线的价值&lt;/h2&gt;
-&lt;p&gt;王坚博士那本讲云计算的书《在线》其实说得很明白，云计算的真正价值是 &lt;strong&gt;在线&lt;/strong&gt;（而不是什么弹性、敏捷、便宜之类的东西）。举个例子：我有一些下云的客户与用户，虽然已经把主体业务从公有云上搬到了 IDC 或者自己办公室的服务器上，但依然在云上留一些 ECS 和 RDS 的尾巴 —— 因为他们收取数据的 API 放在那里，感觉公有云提供的网络接入要比自己的机房/办公室更稳定可靠 —— 注意是网络接入而不是存储计算。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cloudflare/cloudflare-4.jpg&#34;&gt;&lt;/p&gt;
-&lt;p&gt;很多云上的客户，&lt;a href=&#34;/zh/blog/cloud/ebs&#34;&gt;在算力上付出了几倍到十几倍溢价&lt;/a&gt;，&lt;a href=&#34;/zh/blog/cloud/ebs&#34;&gt;在存储上付出了几十倍到上百倍的溢价&lt;/a&gt;，都是为了这个网络 “在线” 的能力。但 Cloudflare 这样遍布全球的，带有边缘计算能力的 CDN ，将 “在线” 的能力拔高到了一个全新的高度上，比传统公有云更好地解决了这个问题。例如，AI 当红炸子鸡 OpenAI 的网站和 API 就是这么做的 —— 通过 CF 对外提供接入。&lt;/p&gt;
-&lt;p&gt;在这种模式下，用户完全可以把网站与 API 通过 Cloudflare 对外提供接入，而将重量级的存储与计算放在 IDC 中，而不是在传统公有云上用几倍的价格进行租赁。Cloudflare 提供的 Worker 可以在边缘用于发送、收取数据，并将请求转发至您自己的数据中心进行处理。如果希望实现更可靠的容灾，您还可以利用 Cloudflare 上的 R2 与 D1 作为临时性本地缓存，预处理汇总数据后，统一拉取到 IDC 进行处理。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;cf-与-idc-从两头挤压公有云&#34;&gt;CF 与 IDC 从两头挤压公有云&lt;/h2&gt;
-&lt;p&gt;在 IT 规模光谱的一侧 —— 个人站长与小微企业上，新一代云服务 / SaaS（CF，Neon，Vercel，Supabase） 赛博菩萨们的免费套餐，对公有云产生了明显的替代与冲击 —— 别说 99 块钱包年的云服务器了，9块9 都不一定香了 —— &lt;strong&gt;再便宜能便宜过免费吗？&lt;/strong&gt; —— 更何况用 CF 建站的体验比云服务器自建要好太多了。&lt;/p&gt;
-&lt;p&gt;但更重要的是，在光谱另一侧的中大型企业中，新出现的 IDC 2.0 与开源管控软件替代合流，短路掉公有云这个中间商，利用好&lt;a href=&#34;https://mp.weixin.qq.com/s/1OSRcBfd58s0tgZTUZHB9g&#34;&gt;硬件摩尔定律&lt;/a&gt;的累积优势，成为&lt;a href=&#34;https://mp.weixin.qq.com/s/Yp_PU8nmyK-NVq0clD98RQ&#34;&gt;终极FinOps实践&lt;/a&gt;，实现极为&lt;a href=&#34;https://mp.weixin.qq.com/s/CicctyvV1xk5B-AsKfzPjw&#34;&gt;惊人的降本增效能力&lt;/a&gt;。Cloudflare 的出现补齐了开源IDC自建模式的最后一块短板 —— “&lt;strong&gt;在线&lt;/strong&gt;” 能力。&lt;/p&gt;
-&lt;p&gt;Cloudflare 并没有提供传统公有云上的那些弹性计算、存储、&lt;a href=&#34;/zh/blog/db/k8s&#34;&gt;K8S&lt;/a&gt;、&lt;a href=&#34;/zh/blog/cloud/rds&#34;&gt;RDS&lt;/a&gt; 服务。但幸运地是，Cloudflare 可以与公有云 / IDC 良好地配合协同 —— 从某种意义上来说，因为 Cloudflare 成功解决了 “在线” 的问题，这使得传统数据库中心 IDC 2.0 也同样可以拥有比肩甚至超越公有云的 “在线” 能力，两者配合，在事实上摧毁了一些公有云的护城河，并挤压了传统公有云厂商的生存空间。&lt;/p&gt;
-&lt;p&gt;我非常看好 Cloudflare 这种模式，实际上，这种丝滑的体验才配称的上是云，配享太庙，可以心安理得吃高科技行业的高毛利。传统的 IDC 2.0 也在不断进步，租赁机柜、裸金属服务器的体验也并不逊色传统公有云（无非是服务器从两分钟到位变成几个小时到位）。而无法提供更多技术附加值，产品不可替代性的公有云厂商，生存空间会越来越小 —— &lt;a href=&#34;/zh/blog/cloud/profit&#34;&gt;最终回退到传统 IDC / IaaS 业务中去&lt;/a&gt;。&lt;/p&gt;
 
       </description>
     </item>
