@@ -92,7 +92,7 @@ if (!doNotTrack) {
     aria-label="Search this site…"
     autocomplete="off"
     
-    data-offline-search-index-json-src="/offline-search-index.b40d8bc16bcda835248990ff9db38455.json"
+    data-offline-search-index-json-src="/offline-search-index.223b25cbca956773c67248ce39bab5b2.json"
     data-offline-search-base-href="/"
     data-offline-search-max-results="10"
   >
@@ -139,7 +139,7 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>1: <a href="#pg-5bcac294a078899a139a79dc1fb2b009">Metrics</a></li>
+<li>1: <a href="#pg-d30f775631874dbea209c56a3cf88d88">Redis Administration</a></li>
 
 
     
@@ -147,7 +147,47 @@ This is the multi-page printable view of this section.
     
     
 	
-<li>2: <a href="#pg-b2e89e0d2e5fa7361edacff6f86e00ea">FAQ</a></li>
+<li>2: <a href="#pg-81482490a3974d936d1dca668f5c2d09">Redis Monitoring</a></li>
+
+
+    
+  
+    
+    
+	
+<li>3: <a href="#pg-107d691b6855a16e3959ebbb20893769">Redis Parameters</a></li>
+
+
+    
+  
+    
+    
+	
+<li>4: <a href="#pg-a4ac99db4d7e939afec8be333eb8e254">Redis Playbooks</a></li>
+
+
+    
+  
+    
+    
+	
+<li>5: <a href="#pg-fc15b08dead0af0ef0581be1e78f1089">集群配置</a></li>
+
+
+    
+  
+    
+    
+	
+<li>6: <a href="#pg-5bcac294a078899a139a79dc1fb2b009">Metrics</a></li>
+
+
+    
+  
+    
+    
+	
+<li>7: <a href="#pg-b2e89e0d2e5fa7361edacff6f86e00ea">FAQ</a></li>
 
 
     
@@ -157,100 +197,37 @@ This is the multi-page printable view of this section.
 
 
 <div class="content">
-      <hr>
-<h2 id="concept">Concept</h2>
-<p>The entity model of Redis is almost the same as that of <a href="/docs/concept/model/#er-diagram">PostgreSQL</a>, which also includes the concepts of <strong>Cluster</strong> and <strong>Instance</strong>. The Cluster here does not refer to the native Redis Cluster mode.</p>
-<p>The core difference between the REDIS module and the <a href="/docs/pgsql/">PGSQL</a> module is that Redis uses a <strong>single-node multi-instance</strong> deployment rather than the 1:1 deployment: multiple Redis instances are typically deployed on a physical/virtual machine node to utilize multi-core CPUs fully. Therefore, the ways to <a href="/docs/redis/#configuration">configure</a> and <a href="/docs/redis/#administration">administer</a> Redis instances are slightly different from PGSQL.</p>
-<p>In Redis managed by Pigsty, nodes are entirely subordinate to the cluster, which means that currently, it is not allowed to deploy Redis instances of two different clusters on one node. However, this does not affect deploying multiple independent Redis primary replica instances on one node.</p>
+      
+</div>
+</div>
+
+
+  
+  
+  
+  
+
+  
+  
+
+  
+    
+    
+	
+    
+
+<div class="td-content" style="">
+    
+	<h1 id="pg-d30f775631874dbea209c56a3cf88d88">1 - Redis Administration</h1>
+    <div class="lead">How to administrate Redis instances in Pigsty</div>
+	<p>Here are some common administration tasks for Redis. Check <a href="/docs/redis/faq/">FAQ: Redis</a> for more details.</p>
 <hr>
-<h2 id="configuration">Configuration</h2>
-<p><strong>Redis Identity</strong></p>
-<p>Redis <a href="/docs/reference/param/#redis_id"><strong>identity parameters</strong></a> are required parameters when defining a Redis cluster.</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">Name</th>
-<th style="text-align:center">Attribute</th>
-<th style="text-align:center">Description</th>
-<th style="text-align:center">Example</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center"><a href="/docs/reference/param/#redis_cluster"><code>redis_cluster</code></a></td>
-<td style="text-align:center"><strong>REQUIRED</strong>, cluster level</td>
-<td style="text-align:center">cluster name</td>
-<td style="text-align:center"><code>redis-test</code></td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="/docs/reference/param/#redis_node"><code>redis_node</code></a></td>
-<td style="text-align:center"><strong>REQUIRED</strong>, node level</td>
-<td style="text-align:center">Node Sequence Number</td>
-<td style="text-align:center"><code>1</code>,<code>2</code></td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="/docs/reference/param/#redis_instances"><code>redis_instances</code></a></td>
-<td style="text-align:center"><strong>REQUIRED</strong>, node level</td>
-<td style="text-align:center">Instance Definition</td>
-<td style="text-align:center"><code>{ 6001 : {} ,6002 : {}}</code></td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li><a href="/docs/reference/param/#redis_cluster"><code>redis_cluster</code></a>: Redis cluster name, top-level namespace for cluster sources.</li>
-<li><a href="/docs/reference/param/#redis_node"><code>redis_node</code></a>: Redis node identity, integer, and node number in the cluster.</li>
-<li><a href="/docs/reference/param/#redis_instances"><code>redis_instances</code></a>: A Dict with the Key as redis port and the value as an instance level parameter.</li>
-</ul>
-<p><strong>Redis Mode</strong></p>
-<p>There are three <a href="/docs/reference/param/#redis_mode"><code>redis_mode</code></a> available in Pigsty:</p>
-<ul>
-<li><code>standalone</code>: setup Redis in standalone (master-slave) mode</li>
-<li><code>cluster</code>: setup this Redis cluster as a Redis native cluster</li>
-<li><code>sentinel</code>: setup Redis as a sentinel for standalone Redis HA</li>
-</ul>
-<p><strong>Redis Definition</strong></p>
-<p>Here are three examples:</p>
-<ul>
-<li>A 1-node, one master &amp; one slave Redis Standalone cluster: <code>redis-ms</code></li>
-<li>A 1-node, 3-instance Redis Sentinel cluster: <code>redis-sentinel</code></li>
-<li>A 2-node, 6-instance Redis Cluster: <code>redis-cluster</code></li>
-</ul>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis-ms</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis classic primary &amp; replica</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 , redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">}, 6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">replica_of</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;10.10.10.10 6379&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-ms ,redis_password: &#39;redis.ms&#39; ,redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">64MB }</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis-meta</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis sentinel x 3</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.11</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 , redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">26379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,26380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,26381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis-meta</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;redis.meta&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">16MB</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># primary list for redis sentinel, use cls as name, primary ip:port</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-ms, host: 10.10.10.10, port: 6379 ,password: redis.ms, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis-test: # redis native cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">3m x 3s</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 2 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-test ,redis_password: &#39;redis.test&#39; ,redis_mode: cluster, redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">32MB }</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div><p><strong>Limitation</strong></p>
-<ul>
-<li>A Redis node can only belong to one Redis cluster, which means you cannot assign a node to two different Redis clusters simultaneously.</li>
-<li>On each Redis node, you need to assign a unique port number to the Redis instance to avoid port conflicts.</li>
-<li>Typically, the same Redis cluster will use the same password, but multiple Redis instances on a Redis node cannot set different passwords (because redis_exporter only allows one password).</li>
-<li>Redis Cluster has built-in HA, while standalone HA requires manually configured in Sentinel because we are unsure if you have any sentinels available. Fortunately, configuring standalone Redis HA is straightforward: <a href="/docs/redis/#configure-ha-with-sentinel">Configure HA with sentinel</a>.</li>
-</ul>
-<hr>
-<h2 id="administration">Administration</h2>
-<p>Here are some common administration tasks for Redis. Check <a href="/docs/redis/faq/">FAQ: Redis</a> for more details.</p>
-<hr>
-<h3 id="init-redis">Init Redis</h3>
+<h2 id="init-redis">Init Redis</h2>
 <p><strong>Init Cluster/Node/Instance</strong></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># init all redis instances on group &lt;cluster&gt;</span>
 </span></span><span style="display:flex;"><span>./redis.yml -l &lt;cluster&gt;      <span style="color:#8f5902;font-style:italic"># init redis cluster</span>
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># init redis node</span>
+</span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># init redis node  </span>
 </span></span><span style="display:flex;"><span>./redis.yml -l 10.10.10.10    <span style="color:#8f5902;font-style:italic"># init redis node</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># init one specific redis instance 10.10.10.11:6379</span>
@@ -260,7 +237,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>bin/redis-add 10.10.10.10       <span style="color:#8f5902;font-style:italic"># create redis node &#39;10.10.10.10&#39;</span>
 </span></span><span style="display:flex;"><span>bin/redis-add 10.10.10.10 <span style="color:#0000cf;font-weight:bold">6379</span>  <span style="color:#8f5902;font-style:italic"># create redis instance &#39;10.10.10.10:6379&#39;</span>
 </span></span></code></pre></div><hr>
-<h3 id="remove-redis">Remove Redis</h3>
+<h2 id="remove-redis">Remove Redis</h2>
 <p><strong>Remove Cluster/Node/Instance</strong></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># Remove cluster `redis-test`</span>
 </span></span><span style="display:flex;"><span>redis-rm.yml -l redis-test
@@ -278,8 +255,8 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>bin/redis-rm 10.10.10.10       <span style="color:#8f5902;font-style:italic"># remove redis node &#39;10.10.10.10&#39;</span>
 </span></span><span style="display:flex;"><span>bin/redis-rm 10.10.10.10 <span style="color:#0000cf;font-weight:bold">6379</span>  <span style="color:#8f5902;font-style:italic"># remove redis instance &#39;10.10.10.10:6379&#39;</span>
 </span></span></code></pre></div><hr>
-<h3 id="reconfigure-redis">Reconfigure Redis</h3>
-<p>You can partially run <a href="/docs/redis/#redisyml"><code>redis.yml</code></a> tasks to re-configure redis.</p>
+<h2 id="reconfigure-redis">Reconfigure Redis</h2>
+<p>You can partially run <a href="/docs/redis/playbook/#redisyml"><code>redis.yml</code></a> tasks to re-configure redis.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./redis.yml -l &lt;cluster&gt; -t redis_config,redis_launch
 </span></span></code></pre></div><p>Beware that redis can not be reload online, you have to restart redis to make config effective.</p>
 <hr>
@@ -295,7 +272,7 @@ This is the multi-page printable view of this section.
 </span></span></code></pre></div><p>Redis also has a <code>redis-benchmark</code> which can be used for benchmark and generate load on redis server:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>redis-benchmark -h 10.10.10.13 -p <span style="color:#0000cf;font-weight:bold">6379</span>
 </span></span></code></pre></div><hr>
-<h3 id="configure-redis-replica">Configure Redis Replica</h3>
+<h2 id="configure-redis-replica">Configure Redis Replica</h2>
 <p><a href="https://redis.io/commands/replicaof/">https://redis.io/commands/replicaof/</a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># promote a redis instance to primary</span>
 </span></span><span style="display:flex;"><span>&gt; REPLICAOF NO ONE
@@ -305,7 +282,7 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>&gt; REPLICAOF 127.0.0.1 <span style="color:#0000cf;font-weight:bold">6799</span>
 </span></span><span style="display:flex;"><span><span style="color:#4e9a06">&#34;OK&#34;</span>
 </span></span></code></pre></div><hr>
-<h3 id="configure-ha-with-sentinel">Configure HA with Sentinel</h3>
+<h2 id="configure-ha-with-sentinel">Configure HA with Sentinel</h2>
 <p>You have to enable HA for redis standalone m-s cluster manually with your redis sentinel.</p>
 <p>Take the 4-node sandbox as an example, a redis sentinel cluster <code>redis-meta</code> is used manage the <code>redis-ms</code> standalone cluster.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic"># for each sentinel, add redis master to the sentinel with:</span>
@@ -313,14 +290,504 @@ This is the multi-page printable view of this section.
 </span></span><span style="display:flex;"><span>10.10.10.11:26379&gt; SENTINEL MONITOR redis-ms 10.10.10.10 <span style="color:#0000cf;font-weight:bold">6379</span> <span style="color:#0000cf;font-weight:bold">1</span>
 </span></span><span style="display:flex;"><span>10.10.10.11:26379&gt; SENTINEL SET redis-ms auth-pass redis.ms      <span style="color:#8f5902;font-style:italic"># if auth enabled, password has to be configured</span>
 </span></span></code></pre></div><p>If you wish to remove a redis master from sentinel, use <code>SENTINEL REMOVE &lt;name&gt;</code>.</p>
-<p>You can configure multiple redis master on sentinel cluster with <a href="/docs/reference/param/#redis_sentinel_monitor"><code>redis_sentinel_monitor</code></a>.</p>
+<p>You can configure multiple redis master on sentinel cluster with <a href="/docs/redis/param/#redis_sentinel_monitor"><code>redis_sentinel_monitor</code></a>.</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># primary list for redis sentinel, use cls as name, primary ip:port</span><span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-src, host: 10.10.10.45, port: 6379 ,password: redis.src, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-dst, host: 10.10.10.48, port: 6379 ,password: redis.dst, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
 </span></span></span></code></pre></div><p>And refresh master list on sentinel cluster with:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./redis.yml -l redis-meta -t redis-ha   <span style="color:#8f5902;font-style:italic"># replace redis-meta if your sentinel cluster has different name</span>
-</span></span></code></pre></div><hr>
-<h2 id="playbook">Playbook</h2>
+</span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-81482490a3974d936d1dca668f5c2d09">2 - Redis Monitoring</h1>
+    <div class="lead">How to monitor Redis instances in Pigsty</div>
+	<h2 id="dashboard">Dashboard</h2>
+<p>There are three dashboards for <a href="/docs/redis/"><code>REDIS</code></a> module.</p>
+<h3 id="redis-overview">Redis Overview</h3>
+<p><a href="https://demo.pigsty.cc/d/redis-overview">Redis Overview</a>: Overview of all Redis Instances</p>
+<details><summary>Redis Overview Dashboard</summary>
+<p><a href="https://demo.pigsty.cc/d/redis-overview"><img alt="redis-overview.jpg" src="/img/dashboard/redis-overview.jpg"></a></p>
+</details>
+<h3 id="redis-cluster">Redis Cluster</h3>
+<p><a href="https://demo.pigsty.cc/d/redis-cluster">Redis Cluster</a> : Overview of one single redis cluster</p>
+<details><summary>Redis Cluster Dashboard</summary>
+<p><a href="https://demo.pigsty.cc/d/redis-cluster"><img alt="redis-cluster.jpg" src="/img/dashboard/redis-cluster.jpg"></a></p>
+</details>
+<h3 id="redis-instance">Redis Instance</h3>
+<p><a href="https://demo.pigsty.cc/d/redis-instance">Redis Instance</a> : Overview of one single redis instance</p>
+<details><summary>Redis Instance Dashboard</summary>
+<p><a href="https://demo.pigsty.cc/d/redis-instance"><img alt="redis-instance" src="/img/dashboard/redis-instance.jpg"></a></p>
+</details>
+<hr>
+<h2 id="alert-rules">Alert Rules</h2>
+<p>There are 6 predefined alert rules for Redis, defined in <a href="https://github.com/Vonng/pigsty/blob/main/files/prometheus/rules/redis.yml"><code>files/prometheus/rules/redis.yml</code></a>.</p>
+<ul>
+<li><code>RedisDown</code>：redis server is down</li>
+<li><code>RedisRejectConn</code>：redis instance reject connection</li>
+<li><code>RedisRTHigh</code>：redis instance response time is too high</li>
+<li><code>RedisCPUHigh</code>：redis instance CPU usage is too high</li>
+<li><code>RedisMemHigh</code>：redis instance memory usage is too high</li>
+<li><code>RedisQPSHigh</code>：redis instance QPS is too high</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#                         Error                                #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis down triggers a P0 alert</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisDown</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis_up &lt; 1</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 0, severity: CRIT, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;CRIT RedisDown: {{ $labels.ins }} {{ $labels.instance }} {{ $value }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      redis_up[ins={{ $labels.ins }}, instance={{ $labels.instance }}] = {{ $value }} == 0
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-5m&amp;to=now&amp;var-ins={{$labels.ins}}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis reject connection in last 5m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisRejectConn</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis:ins:conn_reject &gt; 0</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 0, severity: CRIT, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;CRIT RedisRejectConn: {{ $labels.ins }} {{ $labels.instance }} {{ $value }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      redis:ins:conn_reject[cls={{ $labels.cls }}, ins={{ $labels.ins }}][5m] = {{ $value }} &gt; 0
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-10m&amp;to=now&amp;viewPanel=88&amp;fullscreen&amp;var-ins={{ $labels.ins }}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#                         Latency                              #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis avg query response time &gt; 160 µs</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisRTHigh</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis:ins:rt &gt; 0.00016</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 1, severity: WARN, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;WARN RedisRTHigh: {{ $labels.cls }} {{ $labels.ins }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      pg:ins:query_rt[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &gt; 160µs
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-10m&amp;to=now&amp;viewPanel=97&amp;fullscreen&amp;var-ins={{ $labels.ins }}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#                        Saturation                            #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis cpu usage more than 70% for 1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisCPUHigh</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis:ins:cpu_usage &gt; 0.70</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 1, severity: WARN, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;WARN RedisCPUHigh: {{ $labels.cls }} {{ $labels.ins }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      redis:ins:cpu_all[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &gt; 60%
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-10m&amp;to=now&amp;viewPanel=43&amp;fullscreen&amp;var-ins={{ $labels.ins }}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis mem usage more than 70% for 1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisMemHigh</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis:ins:mem_usage &gt; 0.70</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 1, severity: WARN, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;WARN RedisMemHigh: {{ $labels.cls }} {{ $labels.ins }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      redis:ins:mem_usage[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &gt; 80%
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-10m&amp;to=now&amp;viewPanel=7&amp;fullscreen&amp;var-ins={{ $labels.ins }}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#                         Traffic                              #</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#==============================================================#</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic"># redis qps more than 32000 for 5m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>- <span style="color:#204a87;font-weight:bold">alert</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">RedisQPSHigh</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">expr</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis:ins:qps &gt; 32000</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">for</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">5m</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">labels</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">level: 2, severity: INFO, category</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">annotations</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">summary</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#34;INFO RedisQPSHigh: {{ $labels.cls }} {{ $labels.ins }}&#34;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">description</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">|</span><span style="color:#8f5902;font-style:italic">
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      redis:ins:qps[cls={{ $labels.cls }}, ins={{ $labels.ins }}] = {{ $value }} &gt; 16000
+</span></span></span><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">      http://g.pigsty/d/redis-instance?from=now-10m&amp;to=now&amp;viewPanel=96&amp;fullscreen&amp;var-ins={{ $labels.ins }}</span><span style="color:#f8f8f8;text-decoration:underline">      
+</span></span></span></code></pre></div>
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-107d691b6855a16e3959ebbb20893769">3 - Redis Parameters</h1>
+    <div class="lead">Redis module parameters reference</div>
+	<h2 id="parameter">Parameter</h2>
+<p>There 21 parameters in the redis module.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th style="text-align:center">Type</th>
+<th style="text-align:center">Level</th>
+<th>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/docs/redis/param/#redis_cluster"><code>redis_cluster</code></a></td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">C</td>
+<td>redis cluster name, required identity parameter</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_instances"><code>redis_instances</code></a></td>
+<td style="text-align:center">dict</td>
+<td style="text-align:center">I</td>
+<td>redis instances definition on this redis node</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_node"><code>redis_node</code></a></td>
+<td style="text-align:center">int</td>
+<td style="text-align:center">I</td>
+<td>redis node sequence number, node int id required</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_fs_main"><code>redis_fs_main</code></a></td>
+<td style="text-align:center">path</td>
+<td style="text-align:center">C</td>
+<td>redis main data mountpoint, <code>/data</code> by default</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_exporter_enabled"><code>redis_exporter_enabled</code></a></td>
+<td style="text-align:center">bool</td>
+<td style="text-align:center">C</td>
+<td>install redis exporter on redis nodes?</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_exporter_port"><code>redis_exporter_port</code></a></td>
+<td style="text-align:center">port</td>
+<td style="text-align:center">C</td>
+<td>redis exporter listen port, 9121 by default</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_exporter_options"><code>redis_exporter_options</code></a></td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">C/I</td>
+<td>cli args and extra options for redis exporter</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_safeguard"><code>redis_safeguard</code></a></td>
+<td style="text-align:center">bool</td>
+<td style="text-align:center">G/C/A</td>
+<td>prevent purging running redis instance?</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_clean"><code>redis_clean</code></a></td>
+<td style="text-align:center">bool</td>
+<td style="text-align:center">G/C/A</td>
+<td>purging existing redis during init?</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_rmdata"><code>redis_rmdata</code></a></td>
+<td style="text-align:center">bool</td>
+<td style="text-align:center">G/C/A</td>
+<td>remove redis data when purging redis server?</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_mode"><code>redis_mode</code></a></td>
+<td style="text-align:center">enum</td>
+<td style="text-align:center">C</td>
+<td>redis mode: standalone,cluster,sentinel</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_conf"><code>redis_conf</code></a></td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">C</td>
+<td>redis config template path, except sentinel</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_bind_address"><code>redis_bind_address</code></a></td>
+<td style="text-align:center">ip</td>
+<td style="text-align:center">C</td>
+<td>redis bind address, empty string will use host ip</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_max_memory"><code>redis_max_memory</code></a></td>
+<td style="text-align:center">size</td>
+<td style="text-align:center">C/I</td>
+<td>max memory used by each redis instance</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_mem_policy"><code>redis_mem_policy</code></a></td>
+<td style="text-align:center">enum</td>
+<td style="text-align:center">C</td>
+<td>redis memory eviction policy</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_password"><code>redis_password</code></a></td>
+<td style="text-align:center">password</td>
+<td style="text-align:center">C</td>
+<td>redis password, empty string will disable password</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_rdb_save"><code>redis_rdb_save</code></a></td>
+<td style="text-align:center">string[]</td>
+<td style="text-align:center">C</td>
+<td>redis rdb save directives, disable with empty list</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_aof_enabled"><code>redis_aof_enabled</code></a></td>
+<td style="text-align:center">bool</td>
+<td style="text-align:center">C</td>
+<td>enable redis append only file?</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_rename_commands"><code>redis_rename_commands</code></a></td>
+<td style="text-align:center">dict</td>
+<td style="text-align:center">C</td>
+<td>rename redis dangerous commands</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_cluster_replicas"><code>redis_cluster_replicas</code></a></td>
+<td style="text-align:center">int</td>
+<td style="text-align:center">C</td>
+<td>replica number for one master in redis cluster</td>
+</tr>
+<tr>
+<td><a href="/docs/redis/param/#redis_sentinel_monitor"><code>redis_sentinel_monitor</code></a></td>
+<td style="text-align:center">master[]</td>
+<td style="text-align:center">C</td>
+<td>sentinel master list, sentinel cluster only</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#redis_cluster:        &lt;CLUSTER&gt; # redis cluster name, required identity parameter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_node: 1            &lt;NODE&gt; # redis node sequence number, node int id required</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_instances: {}      &lt;NODE&gt; # redis instances definition on this redis node</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_fs_main</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/data             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis main data mountpoint, `/data` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#8f5902;font-style:italic"># install redis exporter on redis nodes?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">9121</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># redis exporter listen port, 9121 by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_options</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># cli args and extra options for redis exporter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_safeguard</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># prevent purging running redis instance?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_clean</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># purging existing redis during init?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rmdata</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># remove redis data when purging redis server?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mode: standalone            # redis mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">standalone,cluster,sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_conf</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis.conf           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis config template path, except sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_bind_address</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0.0.0.0&#39;</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic"># redis bind address, empty string will use host ip</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1GB            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># max memory used by each redis instance</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mem_policy</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">allkeys-lru    </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis memory eviction policy</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># redis password, empty string will disable password</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rdb_save</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#4e9a06">&#39;1200 1&#39;</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># redis rdb save directives, disable with empty list</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_aof_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#8f5902;font-style:italic"># enable redis append only file?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rename_commands</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{}<span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># rename redis dangerous commands</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_cluster_replicas</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># replica number for one master in redis cluster</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># sentinel master list, works on sentinel cluster only</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h1 id="redis"><code>REDIS</code></h1>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#redis_cluster:        &lt;CLUSTER&gt; # redis cluster name, required identity parameter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_node: 1            &lt;NODE&gt; # redis node sequence number, node int id required</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_instances: {}      &lt;NODE&gt; # redis instances definition on this redis node</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_fs_main</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/data             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis main data mountpoint, `/data` by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#8f5902;font-style:italic"># install redis exporter on redis nodes?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">9121</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># redis exporter listen port, 9121 by default</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_options</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># cli args and extra options for redis exporter</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_safeguard</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># prevent purging running redis instance?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_clean</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># purging existing redis during init?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rmdata</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># remove redis data when purging redis server?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mode: standalone            # redis mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">standalone,cluster,sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_conf</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis.conf           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis config template path, except sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_bind_address</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0.0.0.0&#39;</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic"># redis bind address, empty string will use host ip</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1GB            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># max memory used by each redis instance</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mem_policy</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">allkeys-lru    </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis memory eviction policy</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># redis password, empty string will disable password</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rdb_save</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#4e9a06">&#39;1200 1&#39;</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># redis rdb save directives, disable with empty list</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_aof_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#8f5902;font-style:italic"># enable redis append only file?</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rename_commands</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{}<span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># rename redis dangerous commands</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_cluster_replicas</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># replica number for one master in redis cluster</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># sentinel master list, works on sentinel cluster only</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="redis_cluster"><code>redis_cluster</code></h2>
+<p>name: <code>redis_cluster</code>, type: <code>string</code>, level: <code>C</code></p>
+<p>redis cluster name, required identity parameter.</p>
+<p>no default value, you have to define it explicitly.</p>
+<p>Comply with regexp <code>[a-z][a-z0-9-]*</code>, it is recommended to use the same name as the group name and start with <code>redis-</code></p>
+<hr>
+<h2 id="redis_node"><code>redis_node</code></h2>
+<p>name: <code>redis_node</code>, type: <code>int</code>, level: <code>I</code></p>
+<p>redis node sequence number,  unique integer among redis cluster is required</p>
+<p>You have to explicitly define the node id for each redis node. integer start from 0 or 1.</p>
+<hr>
+<h2 id="redis_instances"><code>redis_instances</code></h2>
+<p>name: <code>redis_instances</code>, type: <code>dict</code>, level: <code>I</code></p>
+<p>redis instances definition on this redis node</p>
+<p>no default value, you have to define redis instances on each redis node using this parameter explicitly.</p>
+<p>Here is an example for a native redis cluster definition</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis-test: # redis native cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">3m x 3s</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 2 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-test ,redis_password: &#39;redis.test&#39; ,redis_mode: cluster, redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">32MB }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>The port number should be unique among the <strong>node</strong>, and the <code>replica_of</code> in <code>value</code> should be instance member of the same redis <strong>cluster</strong>.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">replica_of</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;10.10.10.13 6379&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">replica_of</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;10.10.10.13 6379&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="redis_fs_main"><code>redis_fs_main</code></h2>
+<p>name: <code>redis_fs_main</code>, type: <code>path</code>, level: <code>C</code></p>
+<p>redis main data mountpoint, <code>/data</code> by default</p>
+<p>default values: <code>/data</code>, and <code>/data/redis</code> will be used as the redis data directory.</p>
+<hr>
+<h2 id="redis_exporter_enabled"><code>redis_exporter_enabled</code></h2>
+<p>name: <code>redis_exporter_enabled</code>, type: <code>bool</code>, level: <code>C</code></p>
+<p>install redis exporter on redis nodes?</p>
+<p>default value is <code>true</code>, which will launch a redis_exporter on this redis_node</p>
+<hr>
+<h2 id="redis_exporter_port"><code>redis_exporter_port</code></h2>
+<p>name: <code>redis_exporter_port</code>, type: <code>port</code>, level: <code>C</code></p>
+<p>redis exporter listen port, 9121 by default</p>
+<p>default values: <code>9121</code></p>
+<hr>
+<h2 id="redis_exporter_options"><code>redis_exporter_options</code></h2>
+<p>name: <code>redis_exporter_options</code>, type: <code>string</code>, level: <code>C/I</code></p>
+<p>cli args and extra options for redis exporter, will be added to <code>/etc/defaut/redis_exporter</code>.</p>
+<p>default value is empty string</p>
+<hr>
+<h2 id="redis_safeguard"><code>redis_safeguard</code></h2>
+<p>name: <code>redis_safeguard</code>, type: <code>bool</code>, level: <code>G/C/A</code></p>
+<p>prevent purging running redis instance?</p>
+<p>default value is <code>false</code>, if set to <code>true</code>, and redis instance is running, init / remove playbook will abort immediately.</p>
+<hr>
+<h2 id="redis_clean"><code>redis_clean</code></h2>
+<p>name: <code>redis_clean</code>, type: <code>bool</code>, level: <code>G/C/A</code></p>
+<p>purging existing redis during init?</p>
+<p>default value is <code>true</code>, which will remove redis server during redis init or remove.</p>
+<hr>
+<h2 id="redis_rmdata"><code>redis_rmdata</code></h2>
+<p>name: <code>redis_rmdata</code>, type: <code>bool</code>, level: <code>G/C/A</code></p>
+<p>remove redis data when purging redis server?</p>
+<p>default value is <code>true</code>, which will remove redis rdb / aof along with redis instance.</p>
+<hr>
+<h2 id="redis_mode"><code>redis_mode</code></h2>
+<p>name: <code>redis_mode</code>, type: <code>enum</code>, level: <code>C</code></p>
+<p>redis mode: standalone,cluster,sentinel</p>
+<p>default values: <code>standalone</code></p>
+<ul>
+<li><code>standalone</code>: setup redis as standalone (master-slave) mode</li>
+<li><code>cluster</code>: setup this redis cluster as a redis native cluster</li>
+<li><code>sentinel</code>: setup redis as sentinel for standalone redis HA</li>
+</ul>
+<hr>
+<h2 id="redis_conf"><code>redis_conf</code></h2>
+<p>name: <code>redis_conf</code>, type: <code>string</code>, level: <code>C</code></p>
+<p>redis config template path, except sentinel</p>
+<p>default values: <code>redis.conf</code>, which is a template file in <a href="https://github.com/Vonng/pigsty/blob/main/roles/redis/templates/redis.conf"><code>roles/redis/templates/redis.conf</code></a>.</p>
+<p>If you want to use your own redis config template, you can put it in <code>templates/</code> directory and set this parameter to the template file name.</p>
+<p>Note that redis sentinel are using a different template file, which is <a href="https://github.com/Vonng/pigsty/blob/main/roles/redis/templates/redis-sentinel.conf"><code>roles/redis/templates/redis-sentinel.conf</code></a></p>
+<hr>
+<h2 id="redis_bind_address"><code>redis_bind_address</code></h2>
+<p>name: <code>redis_bind_address</code>, type: <code>ip</code>, level: <code>C</code></p>
+<p>redis bind address, empty string will use inventory hostname</p>
+<p>default values: <code>0.0.0.0</code>, which will bind to all available IPv4 address on this host</p>
+<blockquote>
+<p>PLEASE bind to intranet IP only in production environment, i.e. set this value to <code>''</code></p>
+</blockquote>
+<hr>
+<h2 id="redis_max_memory"><code>redis_max_memory</code></h2>
+<p>name: <code>redis_max_memory</code>, type: <code>size</code>, level: <code>C/I</code></p>
+<p>max memory used by each redis instance, default values: <code>1GB</code></p>
+<hr>
+<h2 id="redis_mem_policy"><code>redis_mem_policy</code></h2>
+<p>name: <code>redis_mem_policy</code>, type: <code>enum</code>, level: <code>C</code></p>
+<p>redis memory eviction policy</p>
+<p>default values: <code>allkeys-lru</code>, check redis <a href="https://redis.io/docs/reference/eviction/">eviction policy</a> for more details</p>
+<ul>
+<li><code>noeviction</code>: New values aren’t saved when memory limit is reached. When a database uses replication, this applies to the primary database</li>
+<li><code>allkeys-lru</code>: Keeps most recently used keys; removes least recently used (LRU) keys</li>
+<li><code>allkeys-lfu</code>: Keeps frequently used keys; removes least frequently used (LFU) keys</li>
+<li><code>volatile-lru</code>: Removes least recently used keys with the expire field set to true.</li>
+<li><code>volatile-lfu</code>: Removes least frequently used keys with the expire field set to true.</li>
+<li><code>allkeys-random</code>: Randomly removes keys to make space for the new data added.</li>
+<li><code>volatile-random</code>: Randomly removes keys with expire field set to true.</li>
+<li><code>volatile-ttl</code>: Removes keys with expire field set to true and the shortest remaining time-to-live (TTL) value.</li>
+</ul>
+<hr>
+<h2 id="redis_password"><code>redis_password</code></h2>
+<p>name: <code>redis_password</code>, type: <code>password</code>, level: <code>C/N</code></p>
+<p>redis password, empty string will disable password, which is the default behavior</p>
+<p>Note that due to the implementation limitation of redis_exporter, you can only set one <code>redis_password</code> per node.
+This is usually not a problem, because pigsty does not allow deploying two different redis cluster on the same node.</p>
+<blockquote>
+<p>PLEASE use a strong password in production environment</p>
+</blockquote>
+<hr>
+<h2 id="redis_rdb_save"><code>redis_rdb_save</code></h2>
+<p>name: <code>redis_rdb_save</code>, type: <code>string[]</code>, level: <code>C</code></p>
+<p>redis rdb save directives, disable with empty list, check redis <a href="https://redis.io/docs/management/persistence/">persist</a> for details.</p>
+<p>the default value is  <code>[&quot;1200 1&quot;]</code>: dump the dataset to disk every 20 minutes if at least 1 key changed:</p>
+<hr>
+<h2 id="redis_aof_enabled"><code>redis_aof_enabled</code></h2>
+<p>name: <code>redis_aof_enabled</code>, type: <code>bool</code>, level: <code>C</code></p>
+<p>enable redis append only file? default value is <code>false</code>.</p>
+<hr>
+<h2 id="redis_rename_commands"><code>redis_rename_commands</code></h2>
+<p>name: <code>redis_rename_commands</code>, type: <code>dict</code>, level: <code>C</code></p>
+<p>rename redis dangerous commands, which is a dict of k:v <code>old: new</code></p>
+<p>default values: <code>{}</code>, you can hide dangerous commands like <code>FLUSHDB</code> and <code>FLUSHALL</code> by setting this value, here&rsquo;s an example:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>{<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">&#34;keys&#34;: </span><span style="color:#4e9a06">&#34;op_keys&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">&#34;flushdb&#34;: </span><span style="color:#4e9a06">&#34;op_flushdb&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">&#34;flushall&#34;: </span><span style="color:#4e9a06">&#34;op_flushall&#34;</span><span style="color:#000;font-weight:bold">,</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">&#34;config&#34;: </span><span style="color:#4e9a06">&#34;op_config&#34;</span><span style="color:#f8f8f8;text-decoration:underline">  
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="redis_cluster_replicas"><code>redis_cluster_replicas</code></h2>
+<p>name: <code>redis_cluster_replicas</code>, type: <code>int</code>, level: <code>C</code></p>
+<p>replica number for one master/primary in redis cluster, default values: <code>1</code></p>
+<hr>
+<h2 id="redis_sentinel_monitor"><code>redis_sentinel_monitor</code></h2>
+<p>name: <code>redis_sentinel_monitor</code>, type: <code>master[]</code>, level: <code>C</code></p>
+<p>This can only be used when <a href="/docs/redis/param/#redis_mode"><code>redis_mode</code></a> is set to <code>sentinel</code>.</p>
+<p>List of redis master to be monitored by this sentinel cluster. each master is defined as a dict with <code>name</code>, <code>host</code>, <code>port</code>, <code>password</code>, <code>quorum</code> keys.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#8f5902;font-style:italic"># primary list for redis sentinel, use cls as name, primary ip:port</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-src, host: 10.10.10.45, port: 6379 ,password: redis.src, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-dst, host: 10.10.10.48, port: 6379 ,password: redis.dst, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><p>The <code>name</code> and <code>host</code> are mandatory, <code>port</code>, <code>password</code>, <code>quorum</code> are optional, <code>quorum</code> is used to set the quorum for this master, usually large than half of the sentinel instances.</p>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-a4ac99db4d7e939afec8be333eb8e254">4 - Redis Playbooks</h1>
+    <div class="lead">Redis module playbooks reference</div>
+	<h2 id="playbook">Playbook</h2>
 <p>There are two playbooks for redis:</p>
 <ul>
 <li><a href="https://github.com/Vonng/pigsty/blob/main/redis.yml"><code>redis.yml</code></a>: create redis cluster / node / instance</li>
@@ -349,200 +816,17 @@ This is the multi-page printable view of this section.
 <h3 id="redis-rmyml"><code>redis-rm.yml</code></h3>
 <p>The playbook <a href="https://github.com/Vonng/pigsty/blob/main/redis.yml"><code>redis-rm.yml</code></a> will remove redis cluster/node/instance:</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>- register       : remove monitor target from prometheus
-</span></span><span style="display:flex;"><span>- redis_exporter : stop and disable redis_exporter
+</span></span><span style="display:flex;"><span>- redis_exporter : stop and disable redis_exporter  
 </span></span><span style="display:flex;"><span>- redis          : stop and disable redis cluster/node/instance
 </span></span><span style="display:flex;"><span>- redis_data     : remove redis data <span style="color:#ce5c00;font-weight:bold">(</span>rdb, aof<span style="color:#ce5c00;font-weight:bold">)</span>
 </span></span><span style="display:flex;"><span>- redis_pkg      : uninstall redis <span style="color:#000;font-weight:bold">&amp;</span> redis_exporter packages
-</span></span></code></pre></div><hr>
-<h2 id="dashboard">Dashboard</h2>
-<p>There are three dashboards for <a href="/docs/redis/"><code>REDIS</code></a> module.</p>
-<p><a href="https://demo.pigsty.cc/d/redis-overview">Redis Overview</a>: Overview of all Redis Instances</p>
-<details><summary>Redis Overview Dashboard</summary>
-<p><a href="https://demo.pigsty.cc/d/redis-overview"><img alt="redis-overview.jpg" src="/img/dashboard/redis-overview.jpg"></a></p>
-</details><br>
-<p><a href="https://demo.pigsty.cc/d/redis-cluster">Redis Cluster</a> : Overview of one single redis cluster</p>
-<details><summary>Redis Cluster Dashboard</summary>
-<p><a href="https://demo.pigsty.cc/d/redis-cluster"><img alt="redis-cluster.jpg" src="/img/dashboard/redis-cluster.jpg"></a></p>
-</details><br>
-<p><a href="https://demo.pigsty.cc/d/redis-instance">Redis Instance</a> : Overview of one single redis cluster</p>
-<details><summary>Redis Instance Dashboard</summary>
-<p><a href="https://demo.pigsty.cc/d/redis-instance"><img alt="redis-instance" src="/img/dashboard/redis-instance.jpg"></a></p>
-</details><br>
-<hr>
-<h2 id="parameter">Parameter</h2>
-<p>There 20 parameters in the redis module.</p>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th style="text-align:center">Type</th>
-<th style="text-align:center">Level</th>
-<th>Comment</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="/docs/reference/param/#redis_cluster"><code>redis_cluster</code></a></td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">C</td>
-<td>redis cluster name, required identity parameter</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_instances"><code>redis_instances</code></a></td>
-<td style="text-align:center">dict</td>
-<td style="text-align:center">I</td>
-<td>redis instances definition on this redis node</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_node"><code>redis_node</code></a></td>
-<td style="text-align:center">int</td>
-<td style="text-align:center">I</td>
-<td>redis node sequence number, node int id required</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_fs_main"><code>redis_fs_main</code></a></td>
-<td style="text-align:center">path</td>
-<td style="text-align:center">C</td>
-<td>redis main data mountpoint, <code>/data</code> by default</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_exporter_enabled"><code>redis_exporter_enabled</code></a></td>
-<td style="text-align:center">bool</td>
-<td style="text-align:center">C</td>
-<td>install redis exporter on redis nodes?</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_exporter_port"><code>redis_exporter_port</code></a></td>
-<td style="text-align:center">port</td>
-<td style="text-align:center">C</td>
-<td>redis exporter listen port, 9121 by default</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_exporter_options"><code>redis_exporter_options</code></a></td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">C/I</td>
-<td>cli args and extra options for redis exporter</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_safeguard"><code>redis_safeguard</code></a></td>
-<td style="text-align:center">bool</td>
-<td style="text-align:center">G/C/A</td>
-<td>prevent purging running redis instance?</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_clean"><code>redis_clean</code></a></td>
-<td style="text-align:center">bool</td>
-<td style="text-align:center">G/C/A</td>
-<td>purging existing redis during init?</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_rmdata"><code>redis_rmdata</code></a></td>
-<td style="text-align:center">bool</td>
-<td style="text-align:center">G/C/A</td>
-<td>remove redis data when purging redis server?</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_mode"><code>redis_mode</code></a></td>
-<td style="text-align:center">enum</td>
-<td style="text-align:center">C</td>
-<td>redis mode: standalone,cluster,sentinel</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_conf"><code>redis_conf</code></a></td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">C</td>
-<td>redis config template path, except sentinel</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_bind_address"><code>redis_bind_address</code></a></td>
-<td style="text-align:center">ip</td>
-<td style="text-align:center">C</td>
-<td>redis bind address, empty string will use host ip</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_max_memory"><code>redis_max_memory</code></a></td>
-<td style="text-align:center">size</td>
-<td style="text-align:center">C/I</td>
-<td>max memory used by each redis instance</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_mem_policy"><code>redis_mem_policy</code></a></td>
-<td style="text-align:center">enum</td>
-<td style="text-align:center">C</td>
-<td>redis memory eviction policy</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_password"><code>redis_password</code></a></td>
-<td style="text-align:center">password</td>
-<td style="text-align:center">C</td>
-<td>redis password, empty string will disable password</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_rdb_save"><code>redis_rdb_save</code></a></td>
-<td style="text-align:center">string[]</td>
-<td style="text-align:center">C</td>
-<td>redis rdb save directives, disable with empty list</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_aof_enabled"><code>redis_aof_enabled</code></a></td>
-<td style="text-align:center">bool</td>
-<td style="text-align:center">C</td>
-<td>enable redis append only file?</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_rename_commands"><code>redis_rename_commands</code></a></td>
-<td style="text-align:center">dict</td>
-<td style="text-align:center">C</td>
-<td>rename redis dangerous commands</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_cluster_replicas"><code>redis_cluster_replicas</code></a></td>
-<td style="text-align:center">int</td>
-<td style="text-align:center">C</td>
-<td>replica number for one master in redis cluster</td>
-</tr>
-<tr>
-<td><a href="/docs/reference/param/#redis_sentinel_monitor"><code>redis_sentinel_monitor</code></a></td>
-<td style="text-align:center">master[]</td>
-<td style="text-align:center">C</td>
-<td>sentinel master list, sentinel cluster only</td>
-</tr>
-</tbody>
-</table>
-<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#8f5902;font-style:italic">#redis_cluster:        &lt;CLUSTER&gt; # redis cluster name, required identity parameter</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_node: 1            &lt;NODE&gt; # redis node sequence number, node int id required</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#8f5902;font-style:italic">#redis_instances: {}      &lt;NODE&gt; # redis instances definition on this redis node</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_fs_main</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">/data             </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis main data mountpoint, `/data` by default</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">      </span><span style="color:#8f5902;font-style:italic"># install redis exporter on redis nodes?</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_port</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">9121</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># redis exporter listen port, 9121 by default</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_exporter_options</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># cli args and extra options for redis exporter</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_safeguard</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">            </span><span style="color:#8f5902;font-style:italic"># prevent purging running redis instance?</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_clean</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                 </span><span style="color:#8f5902;font-style:italic"># purging existing redis during init?</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rmdata</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">true</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># remove redis data when purging redis server?</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mode: standalone            # redis mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">standalone,cluster,sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_conf</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis.conf           </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis config template path, except sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_bind_address</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;0.0.0.0&#39;</span><span style="color:#f8f8f8;text-decoration:underline">     </span><span style="color:#8f5902;font-style:italic"># redis bind address, empty string will use host ip</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">1GB            </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># max memory used by each redis instance</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_mem_policy</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">allkeys-lru    </span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis memory eviction policy</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;&#39;</span><span style="color:#f8f8f8;text-decoration:underline">                </span><span style="color:#8f5902;font-style:italic"># redis password, empty string will disable password</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rdb_save</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[</span><span style="color:#4e9a06">&#39;1200 1&#39;</span><span style="color:#000;font-weight:bold">]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># redis rdb save directives, disable with empty list</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_aof_enabled</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">false</span><span style="color:#f8f8f8;text-decoration:underline">          </span><span style="color:#8f5902;font-style:italic"># enable redis append only file?</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_rename_commands</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{}<span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># rename redis dangerous commands</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_cluster_replicas</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">1</span><span style="color:#f8f8f8;text-decoration:underline">         </span><span style="color:#8f5902;font-style:italic"># replica number for one master in redis cluster</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000;font-weight:bold">[]</span><span style="color:#f8f8f8;text-decoration:underline">        </span><span style="color:#8f5902;font-style:italic"># sentinel master list, works on sentinel cluster only</span><span style="color:#f8f8f8;text-decoration:underline">
-</span></span></span></code></pre></div>
-</div>
+</span></span></code></pre></div>
 </div>
 
 
-  
-  
-  
-  
 
-  
-  
-
+    
+	
   
     
     
@@ -551,7 +835,107 @@ This is the multi-page printable view of this section.
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-5bcac294a078899a139a79dc1fb2b009">1 - Metrics</h1>
+	<h1 id="pg-fc15b08dead0af0ef0581be1e78f1089">5 - 集群配置</h1>
+    <div class="lead">根据需求场景选择合适的 Redis 模式，并通过配置清单表达您的需求</div>
+	<hr>
+<h2 id="concept">Concept</h2>
+<p>The entity model of Redis is almost the same as that of <a href="/docs/concept/model/#er-diagram">PostgreSQL</a>, which also includes the concepts of <strong>Cluster</strong> and <strong>Instance</strong>. The Cluster here does not refer to the native Redis Cluster mode.</p>
+<p>The core difference between the REDIS module and the <a href="/docs/pgsql/">PGSQL</a> module is that Redis uses a <strong>single-node multi-instance</strong> deployment rather than the 1:1 deployment: multiple Redis instances are typically deployed on a physical/virtual machine node to utilize multi-core CPUs fully. Therefore, the ways to <a href="/docs/redis/config/#configuration">configure</a> and <a href="/docs/redis/config/#administration">administer</a> Redis instances are slightly different from PGSQL.</p>
+<p>In Redis managed by Pigsty, nodes are entirely subordinate to the cluster, which means that currently, it is not allowed to deploy Redis instances of two different clusters on one node. However, this does not affect deploying multiple independent Redis primary replica instances on one node.</p>
+<h2 id="configuration">Configuration</h2>
+<hr>
+<h2 id="redis-identity">Redis Identity</h2>
+<p>Redis <a href="/docs/redis/param/#redis_id"><strong>identity parameters</strong></a> are required parameters when defining a Redis cluster.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Name</th>
+<th style="text-align:center">Attribute</th>
+<th style="text-align:center">Description</th>
+<th style="text-align:center">Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><a href="/docs/redis/param/#redis_cluster"><code>redis_cluster</code></a></td>
+<td style="text-align:center"><strong>REQUIRED</strong>, cluster level</td>
+<td style="text-align:center">cluster name</td>
+<td style="text-align:center"><code>redis-test</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="/docs/redis/param/#redis_node"><code>redis_node</code></a></td>
+<td style="text-align:center"><strong>REQUIRED</strong>, node level</td>
+<td style="text-align:center">Node Sequence Number</td>
+<td style="text-align:center"><code>1</code>,<code>2</code></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="/docs/redis/param/#redis_instances"><code>redis_instances</code></a></td>
+<td style="text-align:center"><strong>REQUIRED</strong>, node level</td>
+<td style="text-align:center">Instance Definition</td>
+<td style="text-align:center"><code>{ 6001 : {} ,6002 : {}}</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="redis-mode">Redis Mode</h2>
+<p>There are three <a href="/docs/redis/param/#redis_mode"><code>redis_mode</code></a> available in Pigsty:</p>
+<ul>
+<li><code>standalone</code>: setup Redis in standalone (master-slave) mode</li>
+<li><code>cluster</code>: setup this Redis cluster as a Redis native cluster</li>
+<li><code>sentinel</code>: setup Redis as a sentinel for standalone Redis HA</li>
+</ul>
+<p>Here are three examples:</p>
+<ul>
+<li>A 1-node, one master &amp; one slave Redis Standalone cluster: <code>redis-ms</code></li>
+<li>A 1-node, 3-instance Redis Sentinel cluster: <code>redis-sentinel</code></li>
+<li>A 2-node, 6-instance Redis Cluster: <code>redis-cluster</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#204a87;font-weight:bold">redis-ms</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis classic primary &amp; replica</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.10</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 , redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">}, 6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">replica_of</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;10.10.10.10 6379&#39;</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-ms ,redis_password: &#39;redis.ms&#39; ,redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">64MB }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis-meta</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># redis sentinel x 3</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">10.10.10.11</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 , redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">26379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,26380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,26381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">redis-meta</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_password</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#4e9a06">&#39;redis.meta&#39;</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_mode</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">sentinel</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">16MB</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">redis_sentinel_monitor</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#8f5902;font-style:italic"># primary list for redis sentinel, use cls as name, primary ip:port</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">      </span>- {<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">name: redis-ms, host: 10.10.10.10, port: 6379 ,password: redis.ms, quorum</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#0000cf;font-weight:bold">2</span><span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline"></span><span style="color:#204a87;font-weight:bold">redis-test: # redis native cluster</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">3m x 3s</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">hosts</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.12</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 1 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">    </span><span style="color:#204a87;font-weight:bold">10.10.10.13</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_node: 2 ,redis_instances</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">6379</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6380</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">} ,6381</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline"> </span>}<span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span><span style="display:flex;"><span><span style="color:#f8f8f8;text-decoration:underline">  </span><span style="color:#204a87;font-weight:bold">vars</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span>{<span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#204a87;font-weight:bold">redis_cluster: redis-test ,redis_password: &#39;redis.test&#39; ,redis_mode: cluster, redis_max_memory</span><span style="color:#000;font-weight:bold">:</span><span style="color:#f8f8f8;text-decoration:underline"> </span><span style="color:#000">32MB }</span><span style="color:#f8f8f8;text-decoration:underline">
+</span></span></span></code></pre></div><hr>
+<h2 id="limitation">Limitation</h2>
+<ul>
+<li>A Redis node can only belong to one Redis cluster, which means you cannot assign a node to two different Redis clusters simultaneously.</li>
+<li>On each Redis node, you need to assign a unique port number to the Redis instance to avoid port conflicts.</li>
+<li>Typically, the same Redis cluster will use the same password, but multiple Redis instances on a Redis node cannot set different passwords (because redis_exporter only allows one password).</li>
+<li>Redis Cluster has built-in HA, while standalone HA requires manually configured in Sentinel because we are unsure if you have any sentinels available. Fortunately, configuring standalone Redis HA is straightforward: <a href="/docs/redis/admin/#configure-ha-with-sentinel">Configure HA with sentinel</a>.</li>
+</ul>
+<br>
+<hr>
+<br>
+
+</div>
+
+
+
+    
+	
+  
+    
+    
+	
+    
+
+<div class="td-content" style="page-break-before: always">
+    
+	<h1 id="pg-5bcac294a078899a139a79dc1fb2b009">6 - Metrics</h1>
     <div class="lead">Pigsty REDIS module metric list</div>
 	<p><a href="/docs/redis/"><strong><code>REDIS</code></strong></a> module has 275 available metrics</p>
 <table>
@@ -2231,21 +2615,21 @@ This is the multi-page printable view of this section.
 
 <div class="td-content" style="page-break-before: always">
     
-	<h1 id="pg-b2e89e0d2e5fa7361edacff6f86e00ea">2 - FAQ</h1>
+	<h1 id="pg-b2e89e0d2e5fa7361edacff6f86e00ea">7 - FAQ</h1>
     <div class="lead">Pigsty REDIS module frequently asked questions</div>
 	<hr>
 <h2 id="abort-due-to-existing-redis-instance">ABORT due to existing redis instance</h2>
 <blockquote>
 <p>use <code>redis_clean = true</code> and <code>redis_safeguard = false</code> to force clean redis data</p>
 </blockquote>
-<p>This happens when you run <code>redis.yml</code> to init a redis instance that is already running, and <a href="/docs/reference/param/#redis_clean"><code>redis_clean</code></a> is set to <code>false</code>.</p>
+<p>This happens when you run <code>redis.yml</code> to init a redis instance that is already running, and <a href="/docs/redis/param/#redis_clean"><code>redis_clean</code></a> is set to <code>false</code>.</p>
 <p>If <code>redis_clean</code> is set to <code>true</code> (and the <code>redis_safeguard</code> is set to <code>false</code>, too), the <code>redis.yml</code> playbook will remove the existing redis instance and re-init it as a new one, which makes the <code>redis.yml</code> playbook fully idempotent.</p>
 <hr>
 <h2 id="abort-due-to-redis_safeguard-enabled">ABORT due to redis_safeguard enabled</h2>
 <blockquote>
-<p>This happens when removing a redis instance with <a href="/docs/reference/param/#redis_safeguard"><code>redis_safeguard</code></a> set to <code>true</code>.</p>
+<p>This happens when removing a redis instance with <a href="/docs/redis/param/#redis_safeguard"><code>redis_safeguard</code></a> set to <code>true</code>.</p>
 </blockquote>
-<p>You can disable <a href="/docs/reference/param/#redis_safeguard"><code>redis_safeguard</code></a> to remove the Redis instance. This is redis_safeguard is what it is for.</p>
+<p>You can disable <a href="/docs/redis/param/#redis_safeguard"><code>redis_safeguard</code></a> to remove the Redis instance. This is redis_safeguard is what it is for.</p>
 <hr>
 <h2 id="how-to-add-a-single-new-redis-instance-on-this-node">How to add a single new redis instance on this node?</h2>
 <blockquote>
