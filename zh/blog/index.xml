@@ -673,9 +673,105 @@ stateDiagram-v2
     </item>
     
     <item>
+      <title>Blog: PostgreSQL 生态前沿进展</title>
+      <link>/zh/blog/pg/pg-frontier/</link>
+      <pubDate>Fri, 24 Jan 2025 00:00:00 +0000</pubDate>
+      
+      <guid>/zh/blog/pg/pg-frontier/</guid>
+      <description>
+        
+        
+        
+        <![CDATA[<img src="/zh/blog/pg/pg-frontier/featured_hu02aa61ae1d9de35cbe238d2676170cb9_375774_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
+        
+        &lt;p&gt;读者朋友们，今天我要开始休假了。也许会停更两周，在这里提前祝大家新年快乐。&lt;/p&gt;
+&lt;p&gt;当然在开始休假之前，这篇文章和大家分享一下最近 PG 生态有趣的一些进展。昨天我也赶紧趁着还有时间，推出了 Pigsty 3.2.2 版本与 Pig v0.1.3 ：这个版本将可用的 PG 扩展从 350 一路干到 390 个，其中包含了上面大部分花活，下面简单介绍一下：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Omnigres&lt;/strong&gt;：在PG里搞前后端Web全栈开发&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;PG Mooncake&lt;/strong&gt;：在PG中实现Clickhouse的分析性能&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Citus&lt;/strong&gt;：支持 PG17 的分布式扩展 Citus 13 终于上新了&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;FerretDB&lt;/strong&gt;：将PG仿真为MongoDB，2.0有20倍性能提升&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;ParadeDB&lt;/strong&gt;：在PG提供ES全文检索能力，PG块存储实现&lt;/p&gt;
+&lt;p&gt;Pigsty 3.2.2：将上面的东西装进一个盒子里，开箱即用&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;omnigres&#34;&gt;Omnigres&lt;/h2&gt;
+&lt;p&gt;在前天的《&lt;a href=&#34;https://mp.weixin.qq.com/s/8NS15_fkuR_gSLG50MNtMQ&#34;&gt;数据库即架构&lt;/a&gt;》中，我已经介绍过这个有趣的项目了 —— Omnigres。简单来说，它可以把所有业务逻辑，甚至是Web服务器和整个后端都塞进 PostgreSQL 数据库里。&lt;/p&gt;
+&lt;p&gt;例如以下 SQL，将会启动一个 Web 服务器，将 &lt;code&gt;/www&lt;/code&gt; 作为一个 Web 服务器的根目录对外提供服务。这意味着，你可以把一个经典前端-后端-数据库三层架构的应用，完整地塞入一个数据库中！。&lt;/p&gt;
+&lt;p&gt;如果是熟悉 Oracle 的用户可能会发现，这有点类似于 Oracle Apex。但在 PostgreSQL 中，你可以用二十多种编程语言来开发存储过程，而不仅仅局限于 PL/SQL！而且这里 Omnigres 提供的也远远不止一个 HTTPD 服务器，而是有 33 个扩展插件，几乎是提供了一个 PG 中的 “Web开发标准库”。&lt;/p&gt;
+&lt;p&gt;俗话说：“分久必合，合久必分”。在上古时期，许多 C/S，B/S 架构的应用就是几个客户端直接读写数据库。
+但是后来，随着业务逻辑的复杂化，以及硬件性能（相对于业务需求）的捉襟见肘，许多东西从数据库中被剥离出来，形成了传统的三层架构。&lt;/p&gt;
+&lt;p&gt;硬件的发展让数据库服务器的性能重新出现大量的富余，而数据库软件的发展让存储过程的编写变得更加容易，
+那么拆分剥离的趋势也很有可能会逆转，原本从数据库中分离出去的业务逻辑，又会重新回到数据库中。我认为 Omnigres，以及 Supabase 就是这样一种重新 ‘合“ 的尝试。&lt;/p&gt;
+&lt;p&gt;如果你有几十万 TPS，几十 TB 的数据，或者运行着一些至关重要、人命关天、硕大无朋的核心系统，那么这种玩法可能不太合时宜。但如果你运行的是一些个人项目，小网站，或者是初创公司与边缘创新系统，那么这种架构会让你的迭代更为敏捷，开发、运维更加简单。&lt;/p&gt;
+&lt;p&gt;Pigsty v3.2.2 中提供了 Omnigres 扩展，确实花了我不少功夫，在原作者 Yurii 的手把手帮助下，才在 10 个 Linux 发行版大版本上完成构建与封装。注意，这些插件是一个可以独立使用的扩展仓库中，您并非一定要使用 Pigsty 才能拥有这些扩展 ——  Omnigres 与 AutoBase 这样的 PostgreSQL 也在使用这个仓库进行扩展交付，这确实是一个开源生态互惠共赢的大好例子。&lt;/p&gt;
+&lt;h2 id=&#34;pg_mooncake&#34;&gt;pg_mooncake&lt;/h2&gt;
+&lt;p&gt;《DuckDB 缝合大赛》开赛以来，pg_mooncake 是最后一个入场的选手。他们一度沉寂让我几乎以为它们都放弃维护了。结果上周它们整了个大的，发布了 0.1.0 ，并直接在 ClickBench 排行榜上干进了前十，跟 ClickHouse 一个水平线了。&lt;/p&gt;
+&lt;p&gt;这是第一次， PG  + 扩展插件的分析性能，能直接杀入分析榜单的 Tier 0 ，值得铭记。看来 pg_duckdb 确实迎来了一个劲敌 —— 我认为这是一件大好事，在给用户提供更多选择的同事，避免了一家独大垄断，在生态内部赛马卷翻天的同时，让整个 PostgreSQL 生态与其他 DBMS 在分析能力上远远拉开差距。&lt;/p&gt;
+&lt;p&gt;多数人对 PostgreSQL 的印象仍然停留在稳健的 OLTP（联机事务处理）数据库，却很少把它与“实时分析”联系起来。然而，PostgreSQL 的可扩展性让它能够“突破”固有印象，在实时分析上打出一片天地。mooncake 团队利用 PostgreSQL 的可扩展性，编写了一个原生扩展 pg_mooncake。他们把 DuckDB 的执行引擎嵌入到了列式查询中，这样在执行流程中可以以批量的方式（而不是逐行）处理数据，并利用 SIMD 指令集，从而在扫描、分组和聚合等场景获得更高效率。&lt;/p&gt;
+&lt;p&gt;mooncake 采用了一种更高效的元数据机制：与其从 Parquet 等存储格式外部再拉取元数据和统计信息，不如把它们直接存储在 PostgreSQL 中，这样不仅提升了查询优化与执行的速度，同时也支持更高级的功能，例如文件级别跳过，加速扫描等。&lt;/p&gt;
+&lt;p&gt;通过这些优化与设计，mooncake 实现了惊人的性能成绩（号称1000x）。这让 PostgreSQL 不再只是传统意义上的 OLTP “重型马”。通过充分的优化与工程实践，它完全可以在分析性能上与专业分析型数据库一较高下，同时仍然保留了 PostgreSQL 灵活性强、生态成熟的优势。这意味着，以后的数据堆栈可能会比现在简单的多 —— 你不再需要什么大数据全家桶与 ETL —— 在 Postgres 内部就可以实现顶级的分析性能。&lt;/p&gt;
+&lt;p&gt;Pigsty 在 v3.2.2 中正式提供了 mooncake 0.1 版本的二进制，请注意，这个扩展和 pg_duckdb 互斥，因为它们都带了自己的 libduckdb ，因此在一套系统中只能二选一。这一点比较让人遗憾，但我提了 Issue 希望他们能够共享一个 libduckdb ，毕竟每次编译这两个扩展冤家，都要从头编译 DuckDB 可真是要老命了。&lt;/p&gt;
+&lt;p&gt;最后，从这个扩展的名字（月饼）上就不难看出，这是一个华人主导的团队，越来越多的中国人出现并活跃在 PostgreSQL 生态中，这真是一件非常让人高兴的事。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;博客：ClickBench 说Postgres是一个很棒的分析数据库 &lt;a href=&#34;https://www.mooncake.dev/blog/clickbench-v0.1&#34;&gt;https://www.mooncake.dev/blog/clickbench-v0.1&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;paradedb&#34;&gt;ParadeDB&lt;/h2&gt;
+&lt;p&gt;ParadeDB 是 Pigsty 的老朋友，我们从非常早期的时候就支持着 ParadeDB ，并见证着它一路发展壮大，成为 PostgreSQL 生态中提供 ElasticSearch 能力替代的领导者。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;pg_search&lt;/code&gt; 是 ParadeDB 基于 Postgres 的扩展，它实现了自定义索引以支持全文搜索和分析功能。该扩展由用 Rust 编写、受 Lucene 启发的搜索库 &lt;a href=&#34;https://github.com/quickwit-oss/tantivy&#34;&gt;Tantivy&lt;/a&gt; 提供底层支持。&lt;/p&gt;
+&lt;p&gt;pg_search 在最近两周发布了新的 0.14 版本，这个版本中它们切换到了 PG 原生的块存储，而不再依赖 Tantivy 自己的文件格式。这一架构改进带来了极大的可靠性改进与几倍的性能提升，属实惊人，并标志着它不再是一个 “缝合怪”，而是深度原生融入了 PG 之中。&lt;/p&gt;
+&lt;p&gt;在 &lt;code&gt;v0.14.0&lt;/code&gt; 之前，&lt;code&gt;pg_search&lt;/code&gt; 并未使用 Postgres 的块存储和缓冲区缓存（buffer cache）。这意味着扩展会自己创建一些不受 Postgres 管理的文件，并直接从磁盘读取其内容。虽然让扩展直接访问文件系统并不罕见(见注1)，但迁移到块存储后，&lt;code&gt;pg_search&lt;/code&gt; 同时达成了以下目标：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;与 Postgres 写前日志（WAL）的深度集成，从而可以对索引进行物理复制。&lt;/li&gt;
+&lt;li&gt;支持崩溃恢复和任意时间点恢复（point-in-time recovery）。&lt;/li&gt;
+&lt;li&gt;完整支持 Postgres 的 MVCC（多版本并发控制）。&lt;/li&gt;
+&lt;li&gt;与 Postgres 缓冲区缓存集成，大幅提升索引创建速度与写入吞吐量。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;img alt=&#34;img&#34; src=&#34;https://www.paradedb.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fblock_storage_create_index.de1454d3.png&amp;w=3840&amp;q=75&#34;&gt;
+&lt;img alt=&#34;img&#34; src=&#34;https://www.paradedb.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fblock_storage_tps.598e54c0.png&amp;w=3840&amp;q=75&#34;&gt;&lt;/p&gt;
+&lt;p&gt;pg_search 的最新版本已经收录到了 Pigsty 中，当然，我们也提供其他提供类似全文检索/分词能力的扩展，比如 pgroonga，p g_bestmatch，hunspell，以及中文分词 zhparser，供用户按需使用。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;博客：使用 Postgres 块存储布局的全文检索 &lt;a href=&#34;https://www.paradedb.com/blog/block_storage_part_one&#34;&gt;https://www.paradedb.com/blog/block_storage_part_one&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;citus&#34;&gt;citus&lt;/h2&gt;
+&lt;p&gt;pg_duckdb 与 pg_mooncake 是 PG 生态的 OLAP 新秀，而 Citus 与 Hydra 则是 PG 生态的老牌 OLAP （或者说 HTAP）扩展。前天 Citus 发布了 13.0.0 版本，正式提供了对 PostgerSQL 最新大版本 17 的支持，这意味着所有 &lt;strong&gt;主力&lt;/strong&gt; 扩展均已完成对 PG 17 的适配，PG 17 冲冲冲！&lt;/p&gt;
+&lt;p&gt;Citus 是 PG 生态的分布式扩展，能够丝滑地将单机 PostgreSQL 主从部署转换为一个水平分布式集群。Citus 被微软收购后完全开源，云服务版本叫 Hyperscale PG 或 CosmosDB PG。&lt;/p&gt;
+&lt;p&gt;一般来说在当代硬件条件下，绝大多数用户都不会有机会接触到非要用分布式数据库不可的场景 —— 但这样的场景确实存在，比如在 《&lt;a href=&#34;https://mp.weixin.qq.com/s/zwJ2T2Vh_R7xD8IKPso31Q&#34;&gt;花钱买罪受的大冤种：逃离云计算妙瓦底&lt;/a&gt;》中的这位朋友，就因为云上云盘太贵而动作走形，考虑使用 Citus。所以，Pigsty 也在最近更新跟进了对 Citus 的支持。&lt;/p&gt;
+&lt;p&gt;通常来说，分布式数据库的运维管理要比主从麻烦很多，但我们设计了一套优雅的抽象，让部署管理 Citus 变得非常简单 —— 你只需要把他们当作多套水平的 PostgreSQL 集群来处理就好了，下面这个配置就可以一件拉起一套10节点的 Citus。&lt;/p&gt;
+&lt;p&gt;我最近还写了一篇如何部署 Citus 高可用集群的教程，供感兴趣的用户参考： &lt;a href=&#34;https://pigsty.cc/zh/docs/tasks/citus/&#34;&gt;https://pigsty.cc/zh/docs/tasks/citus/&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;博客：Citus v13.0.0 发布注记：https://github.com/citusdata/citus/blob/v13.0.0/CHANGELOG.md&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;ferretdb&#34;&gt;FerretDB&lt;/h2&gt;
+&lt;p&gt;最后，我们迎来了 FerretDB 2.0 。FerretDB 是 Pigsty 的老朋友了。Marcin 第一时间与我分享了新版本发布的喜悦。可惜现在 FerretDB 2.0 还是 RC，我只能等正式版本发布后再更新到 Pigsty 仓库中了，所以错过了这次 Pigsty v3.2.2 的发布窗口。但是没关系，下一个版本它就进来了！&lt;/p&gt;
+&lt;p&gt;FerretDB 是将 PostgreSQL 转换成 MongoDB “线缆协议兼容” 的适配中间件 —— 提供 Apache 2.0 协议，“真正开源” 的 MongoDB。FerretDB 2.0 依托微软全新开源的 DocumentDB PostgreSQL 扩展， 在性能、兼容性、支持和灵活性方面实现了重大飞跃，可应对更复杂的使用场景。主要亮点包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;实现超过 20 倍的性能提升&lt;/li&gt;
+&lt;li&gt;更高的功能兼容性&lt;/li&gt;
+&lt;li&gt;支持向量搜索&lt;/li&gt;
+&lt;li&gt;支持复制（replication）&lt;/li&gt;
+&lt;li&gt;广泛的支持与服务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;FerretDB 为 MongoDB 用户丝滑迁移到 PostgreSQL 提供了一条阻力最小的选择 —— 你不需要修改应用代码，就可以完成偷天换日，在兼容 MongoDB API 的同时还能享受 PG 生态几百个扩展提供的各种超能力。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;博客：https://blog.ferretdb.io/ferretdb-releases-v2-faster-more-compatible-mongodb-alternative/&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;pigsty-322&#34;&gt;Pigsty 3.2.2&lt;/h2&gt;
+&lt;p&gt;最后，就是 Pigsty v3.2.2 了。这一次 Release 版本号更新带来 40 个全新的扩展插件（当然其中 33 个来自 Omnigres），以及现有扩展的更新版本（比如 Citus，ParadeDB，PGML）。同时，我们还推动并跟进了 PolarDB PG 支持 ARM64，以及支持 Debian 系统，并跟进了 IvorySQL 最新 PostgreSQL 17.2 兼容的 4.2 版本。&lt;/p&gt;
+&lt;p&gt;Well ，听上去都是一些版本跟进的活儿，但要不是这样，我也不能在休假前一天发布上线呀！总之，欢迎大家试试这些新扩展插件，如果遇到任何问题，欢迎向我反馈，但休假中我可不保证什么哈哈。&lt;/p&gt;
+&lt;p&gt;顺便一提，有用户反馈 Pigsty 的老网站太 “丑” 了，一股浓郁的技术直男风味，把所有信息密密麻麻的全部糊在首页上。我觉得，他们说的有一定道理，所以我最近找了个前端模板，重新做了个网站首页，看上去似乎更有 “国际范” 了一些。&lt;/p&gt;
+&lt;p&gt;老实说我得有七八年没搞前端了，上次折腾还是 JQuery 一把梭的时代，这次 Next.js / Vercel 这些新花样让我眼花撩乱。但好在摸清楚了之后也不算复杂，特别是有了GPT o1 pro 和 Cursor 的帮助下，花了一天时间就全部搞定了，AI 带来的惊人生产力提升确实让人感叹 。&lt;/p&gt;
+&lt;p&gt;好吧，以上就是最近 PostgreSQL 生态的新闻，我也准备打包行李了，下午飞机出发去泰国，希望不要遇到电诈。在这里就提前祝大家新年快乐啦！&lt;/p&gt;
+
+      </description>
+    </item>
+    
+    <item>
       <title>Blog: 数据库即业务架构</title>
       <link>/zh/blog/db/db-is-the-arch/</link>
-      <pubDate>Wed, 22 Jan 2025 00:00:00 +0000</pubDate>
+      <pubDate>Fri, 24 Jan 2025 00:00:00 +0000</pubDate>
       
       <guid>/zh/blog/db/db-is-the-arch/</guid>
       <description>
@@ -684,11 +780,25 @@ stateDiagram-v2
         
         <![CDATA[<img src="/zh/blog/db/db-is-the-arch/featured_hu02aa61ae1d9de35cbe238d2676170cb9_973027_640x0_resize_q75_catmullrom.jpg" width="640" height="366"/>]]>
         
-        &lt;p&gt;数据库是业务架构的核心，是不言自明的共识。但如果我们更进一步，&lt;strong&gt;将数据库作为业务架构本身&lt;/strong&gt;，将业务逻辑，Web Server，甚至是整个前后端都放入数据库中，又会擦出怎么样的火花？未来会是一个数据库吞噬后端，前端，操作系统，甚至一切的世界吗？&lt;/p&gt;
+        &lt;p&gt;数据库是业务架构的核心，是不言自明的共识。但如果我们更进一步，&lt;strong&gt;将数据库作为架构本身&lt;/strong&gt;，又会发生什么？
+未来会是一个数据库吞噬后端，前端，操作系统，甚至一切的世界吗？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;数据库是架构的核心&#34;&gt;数据库是架构的核心&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;em&gt;“If you show me your software architecture, I learn nothing about your business. But if you show me your data model, I can guess exactly what your business is.”&lt;/em&gt;。 —— Michael Stonebraker&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;数据库祖师爷迈克·石破天有句名言：“如果你给我看软件架构，我对你的业务一无所知；但如果你给我看数据模型，我就能精准知道你的业务是干嘛的”&lt;/p&gt;
+&lt;p&gt;无独有偶，微软 CEO 纳德拉 &lt;a href=&#34;https://mp.weixin.qq.com/s/8t5qdz9DvHO7xt8VA8vzsQ&#34;&gt;也在最近公开表示&lt;/a&gt;：我们今天所称的软件，你喜欢的那些应用程序，不过是包装精美的数据库操作界面而已。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/db/db-is-the-arch/msceo.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;即使在 GenAI / LLM 爆火的当下，绝大多数信息系统依然是以数据库为核心设计。所谓的分库分表，几地几中心，异地多活这些架构花活，说到底也就是数据库的不同使用方式罢了。&lt;/p&gt;
+&lt;p&gt;数据库是业务架构的核心，早已是不言自明的共识。但如果我们更进一步，&lt;strong&gt;将数据库作为业务架构本身&lt;/strong&gt;，又会如何？&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;驱动未来的数据库&#34;&gt;驱动未来的数据库&lt;/h2&gt;
-&lt;p&gt;不久之前，Omnigres 的创始人 Yurii 在 &lt;a href=&#34;https://mp.weixin.qq.com/s/Hybx7nIPAGfuyul-wDHU-A&#34;&gt;第七届PG生态大会&lt;/a&gt; 上 进行了题为《&lt;a href=&#34;https://gamma.app/docs/The-Database-Drives-the-Future-41vma58e3502p70?mode=doc&#34;&gt;数据库驱动未来&lt;/a&gt;》的演讲分享。抛出了一个有趣的观点 —— &lt;strong&gt;数据库就是业务架构&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;他的开源项目 &lt;a href=&#34;https://omnigres.com/&#34;&gt;Omnigres&lt;/a&gt; 做了一件“疯狂”的事：&lt;strong&gt;把所有应用逻辑，甚至 Web Server 都塞进 PostgreSQL 数据库&lt;/strong&gt;。不只是后端包个REST接口，而是把前后端都整个塞进 PG 里去了！他是怎么做到的？Omnigres 提供了一套扩展全家桶，包括 &lt;code&gt;httpd&lt;/code&gt;、&lt;code&gt;vfs&lt;/code&gt;、&lt;code&gt;os&lt;/code&gt;、&lt;code&gt;python&lt;/code&gt; 等33个 PG “标准库”扩展模块。安装完后，一条 SQL 就能把 PostgreSQL 变成一个能跑在 8080 端口的 &amp;lsquo;Nginx&amp;rsquo;：&lt;/p&gt;
+&lt;p&gt;不久之前，我邀请 &lt;a href=&#34;https://omnigres.com/&#34;&gt;Omnigres&lt;/a&gt;  创始人 Yurii 到 &lt;a href=&#34;https://mp.weixin.qq.com/s/Hybx7nIPAGfuyul-wDHU-A&#34;&gt;第七届PG生态大会&lt;/a&gt; 上进行分享。
+他在题为《&lt;a href=&#34;https://gamma.app/docs/The-Database-Drives-the-Future-41vma58e3502p70?mode=doc&#34;&gt;数据库驱动未来&lt;/a&gt;》 的演讲中抛出了一个有趣的观点 ——
+&lt;strong&gt;数据库就是业务架构&lt;/strong&gt;。（DBaaA, Database as an Architecture）&lt;/p&gt;
+&lt;p&gt;具体来说，他的开源项目做了一件“疯狂”的事：&lt;strong&gt;把所有应用逻辑，甚至 Web Server 都塞进 PostgreSQL 数据库&lt;/strong&gt;。
+不只是后端包个REST接口中间件这种形式，而是把前后端都整个塞进 PG 里去了！&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sql&#34; data-lang=&#34;sql&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;omni_httpd&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CASCADE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CREATE&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;EXTENSION&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;omni_vfs&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;   &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;CASCADE&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;;&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
@@ -699,30 +809,93 @@ stateDiagram-v2
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SET&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SELECT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;omni_httpd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;cascading_query&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;name&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;  &lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;SELECT&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#ce5c00;font-weight:bold&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;FROM&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;omni_httpd&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;static_file_handlers&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color:#4e9a06&#34;&gt;&amp;#39;mount_point&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#0000cf;font-weight:bold&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;,&lt;/span&gt;&lt;span style=&#34;color:#204a87;font-weight:bold&#34;&gt;true&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;))&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt; &lt;/span&gt;&lt;span style=&#34;color:#000&#34;&gt;routes&lt;/span&gt;&lt;span style=&#34;color:#000;font-weight:bold&#34;&gt;);&lt;/span&gt;&lt;span style=&#34;color:#f8f8f8;text-decoration:underline&#34;&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img alt=&#34;httpd.png&#34; src=&#34;/zh/blog/db/db-is-the-arch/httpd.png&#34;&gt;&lt;/p&gt;
-&lt;p&gt;看到这种神奇玩法，我一度怀疑这玩意到底能不能行。但事实就是它居然跑了起来，还真挺像那么回事。&lt;/p&gt;
-&lt;p&gt;从浏览器可以访问 HTML 页面，而 HTML 页面可以通过 Javascript 动态访问 HTTP 服务器与数据库存储过程。
-这意味着，你可以把一个经典前端-后端-数据库三层架构的应用，完整地塞入一个数据库中！&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;这个想法的实质是：&lt;strong&gt;把所有业务逻辑，甚至是Web服务器和整个前后端都塞进 PostgreSQL 数据库里&lt;/strong&gt;。
-让我们来看一个有趣的例子，在 PostgreSQL 中执行以下 SQL，将会启动一个 Web 服务器，将 &lt;code&gt;/www&lt;/code&gt; 作为一个 Web 服务器的根目录对外提供服务：
-天啊，PostgreSQL 数据库竟然拉起来了一个 HTTP 服务器，默认跑在 &lt;code&gt;8080&lt;/code&gt; 端口！你可以把它当成 Nginx 用！
-除了实现 httpd 之外，他还以 PG 扩展的形式实现了许多 “标准库”，这包括一个由 33 个扩展插件组成的全家桶，提供在 PostgreSQL 中进行完整 Web 应用开发的能力！&lt;/p&gt;
-&lt;/blockquote&gt;
+&lt;p&gt;几行 SQL 就能把 PostgreSQL 变成一个能跑在 8080 端口的 &amp;lsquo;Nginx&amp;rsquo;，并且还能用数据库函数编写业务逻辑，实现 HTTP API。
+看到这种神奇玩法，我一度怀疑这玩意到底能不能行。但事实就是它居然跑了起来，还真挺像那么回事。&lt;/p&gt;
+&lt;p&gt;除了这里的 &lt;code&gt;httpd&lt;/code&gt; 扩展外，Omnigres 还提供了另外 33 个扩展插件，
+这套扩展全家桶，提供了在 PostgreSQL 中进行完整 Web 应用开发的能力！&lt;/p&gt;
+&lt;p&gt;类似 &lt;a href=&#34;https://docs.postgrest.org/en/v12/&#34;&gt;PostgREST&lt;/a&gt; 这样的工具，可以将设计良好的 PostgreSQL 模式直接转化为开箱即用的 RESTful API。
+而 Omnigres 这样的工具则是百尺竿头更进一步，直接让 HTTP 服务器运行在了 PG 数据库内部！而这意味着，你不仅可以把后端放进数据库里，你甚至可以把前端也放进数据库中！&lt;/p&gt;
+&lt;p&gt;但这真的会是一个好主意吗？还是要看具体情况。
+互联网企业出身的架构师或者数据库 DBA 看到这种玩法可能会大喊：“这也太离经叛道了！”
+但是也不要着急下结论，我还真的看到过这种开发范式取得过成功。&lt;/p&gt;
 &lt;hr&gt;
-&lt;h2 id=&#34;数据库是架构的核心&#34;&gt;数据库是架构的核心&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;em&gt;“If you show me your software architecture, I learn nothing about your business. But if you show me your data model, I can guess exactly what your business is.”&lt;/em&gt;。 —— Michael Stonebraker&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;数据库祖师爷迈克·石破天有句名言：“如果你给我看软件架构，我对你的业务一无所知；但如果你给我看数据模型，我就能精准知道你的业务是干嘛的”&lt;/p&gt;
-&lt;p&gt;无独有偶，微软 CEO 纳德拉 &lt;a href=&#34;https://mp.weixin.qq.com/s/8t5qdz9DvHO7xt8VA8vzsQ&#34;&gt;也在最近公开表示&lt;/a&gt;：我们今天所称的软件，你喜欢的那些应用程序，不过是包装精美的数据库操作界面而已。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/db/db-is-the-arch/msceo.png&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;BTW 他还说 SaaS is Dead：因为以后 Agent 可以直接绕过中间商，代替前后端去读写数据库&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;即使在 GenAI 爆火的当下，绝大多数信息系统的整个 IT 技术栈依然是以数据库为核心设计的。
-所谓的分库分表，几地几中心，异地多活这些架构花活，说到底也就是数据库的不同使用方式罢了。&lt;/p&gt;
-&lt;p&gt;无论业务架构怎么折腾，底层的东西万变不离其宗。数据库是业务架构的核心，早已是不言自明的共识。
-但如果我们更进一步，&lt;strong&gt;将数据库作为业务架构本身&lt;/strong&gt;，又会如何？&lt;/p&gt;
+&lt;h2 id=&#34;dbaaa的利弊权衡&#34;&gt;DBaaA的利弊权衡&lt;/h2&gt;
+&lt;p&gt;早先我在探探时（一个瑞典团队在中国运营的约会应用，Tinder in China），我们深度利用了 PostgreSQL：那时候我们所有的业务逻辑（包括一个 100ms 的推荐算法）都是 PG 存储过程。
+后端应用只是一个 Go 写的非常轻薄一层转发代理，虽然没有把 Web Server 放到 PostgreSQL 中，但也基本差不多了。&lt;/p&gt;
+&lt;p&gt;靠着这种单一 PostgreSQL 选型的架构，我们在没有使用任何其他数据库（我们确实用了对象存储）的情况下，一路干到了在四百万日活，与 2.5M 数据库 QPS。
+而建设这一切的只有三位工程师。其实有点儿像 Instagram，因为其实我们就是仿照着 Instagram 的架构搞的。
+将业务逻辑，甚至业务架构整个放入数据库中（以下简称为 DBaaA）优点与缺点都非常明显。&lt;/p&gt;
+&lt;p&gt;这种玩法的优点在于出活快，架构简单、部署敏捷、延迟性能好，开发成本低：当你设计好 PostgreSQL 数据库模式后，用 PostgREST + Kong 几行配置就能自动生成后端，一套服务新鲜出炉。
+很多管理操作可以用纯SQL完成，比如 CI/CD/发布/迁移/降级等；比如，要实现一个断路器，执行 SQL 刷新存储过程逻辑，提前返回即可。
+架构设计与部署交付上非常简单，一个数据库 + 一个无状态的网关，复制一份数据目录，就是一套新的部署。
+而且出乎意料的是，这种实践的性能并不差 —— 因为存储过程可以有效节省交互式查询多次网络往返的开销，
+而内置的web服务器也省下了额外的交互，所以在响应时间/延迟（RT/Latency）表现上反而相当出色。&lt;/p&gt;
+&lt;p&gt;但这种架构的劣势也同样非常显著：数据库的吞吐确实会因为承担了更多计算逻辑而下降，
+而在 2017 年那会的硬件性能还没有现在发达，数据库通常是整个架构中的性能瓶颈，单节点动辄大几万 TPS，确实没有多少性能余量给这些花活。&lt;/p&gt;
+&lt;p&gt;而比起吞吐量上的问题，人力的挑战更为棘手，而随着创始骨干的离开，编写存储过程开始成为一门逐渐失传的高深技术 —— 新员工不会写了！&lt;/p&gt;
+&lt;p&gt;所以我们最后还是逐渐将这些存储过程抽离出来在外部应用中实现，也开始使用 Redis 以及其他数据库给 PG 打辅助，但那已经是被收购之后的事了。
+不过现在回头再看看，如果是在 2025 年的当下，我认为会有完全不一样的选择：因为无论是软件还是硬件都已经发生了翻天覆地的变化，而这些变化带来了全新的利弊权衡。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;分久必合的架构钟摆&#34;&gt;分久必合的架构钟摆&lt;/h2&gt;
+&lt;p&gt;俗话说：“分久必合，合久必分”。在上古时期，许多应用使用的也是这种简单的 C/S，B/S 架构，几个客户端直接读写数据库。
+但是后来，随着业务逻辑的复杂化，以及硬件性能（相对于业务需求）的捉襟见肘，许多东西从数据库中被剥离出来，形成了传统的三层架构，以及越来越多的组件。&lt;/p&gt;
+&lt;p&gt;但现在时过境迁，GPT 已经达到了能够熟练编写存储过程的中高级开发者的水准，而遵循摩尔定律发展的硬件直接把单机性能推到了一个匪夷所思的地步。
+那么拆分剥离的趋势也很有可能会逆转，原本从数据库中分离出去的业务逻辑，又会重新回到数据库中。
+将业务逻辑放到数据库中，甚至让数据库成为整个业务架构本身，可能重新成为一种流行的实践。&lt;/p&gt;
+&lt;p&gt;实际上，我们已经可以在《&lt;a href=&#34;/zh/blog/pg/pg-eat-db-world&#34;&gt;PostgreSQL吞噬数据库世界&lt;/a&gt;》，以及社区正在流行的 “一切皆用 PostgreSQL” 口号中，观察到观察到数据库领域正在出现的收敛趋势：
+原先从数据库中分离出去的细分领域专用数据库，如全文搜索、向量，机器学习、图数据库、时序数据库等，现在都在重新以插件超融合的方式回归到 PostgreSQL 中。&lt;/p&gt;
+&lt;p&gt;相应地，前端，后端重新融合回归到数据库的实践也开始出现。我认为一个非常值得注意的例子是 Supabase，一个号称 “开源 Firebase” 的项目，据说 80% YC 创业公司都在使用它。
+它将 PostgreSQL，对象存储，PostgREST，EdgeFunction 和各种工具封装成为一整个运行时，然后将后端与传统意义上的数据库整体打包成为一个 “新的数据库”。&lt;/p&gt;
+&lt;p&gt;Supabase 实际上就是 “吃掉” 了后端的数据库，如果这种架构走到极致，那大概会是像 Omnigres 这样的架构 —— 一个运行着 HTTP 服务器的 PostgreSQL，干脆把前端也吃下去了。&lt;/p&gt;
+&lt;p&gt;当然，可能还有更为激进的尝试 —— 例如 Stonebraker 老爷子的新创业项目 DBOS，甚至要把操作系统也给吞进数据库里去了！&lt;/p&gt;
+&lt;p&gt;这也许意味着软件架构领域的钟摆正在重新回归简单与常识 —— 前端绕开花里胡哨的中间件，直接访问数据库，螺旋上升回归到最初的 C/S，B/S 架构上去。
+或者像纳德拉所说，Agent 可以直接绕过中间商，代替前后端与软件去读写数据库，出现一种新的 A(gent)/D(atabase) 架构也未尝不可。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;拆分与合并的利弊权衡&#34;&gt;拆分与合并的利弊权衡&lt;/h2&gt;
+&lt;p&gt;在当下，&lt;/p&gt;
+&lt;p&gt;然而，吞吐和人力，这两个核心障碍在 2025 年的当下，已经被软硬件告诉&lt;/p&gt;
+&lt;p&gt;有机会规避一些复杂的并发争用，并通过节省了后端与数据库的网络 RT 带来更好的延迟性能表现；
+而且在管理上也会有一些独特优势：所有业务逻辑、模式定义和数据都在同一个地方，用同样的方式处理，你的 CI/CD，发布/迁移/降级都可以用SQL实现。
+你想部署一套新系统？把 PostgreSQL 数据目录复制一份，重新拉起一个 PostgreSQL 实例就可以了。一个数据库解决所有问题，架构简单无比。&lt;/p&gt;
+&lt;p&gt;而主要缺点在于人员要求高，运维复杂，最大吞吐下降。&lt;/p&gt;
+&lt;p&gt;类似 &lt;a href=&#34;https://docs.postgrest.org/en/v12/&#34;&gt;PostgREST&lt;/a&gt; 这样的工具，可以将设计良好的 PostgreSQL 模式直接转化为开箱即用的 RESTful API。
+而 Supabase 这样的 BaaS 更是在其基础上将整个后端都变成了一项公用服务 —— 这意味着你只要设计好数据库模型，基本就没有什么后端开发的工作了。
+Omnigres 这样的工具则是百尺竿头更进一步，直接让 HTTP 服务器运行在了 PG 数据库内部！而这意味着，你不仅可以把后端放进数据库里，你甚至可以把前端也放进数据库中！&lt;/p&gt;
+&lt;p&gt;这样做在管理上也有一些独特优势：所有业务逻辑、模式定义和数据都在同一个地方，用同样的方式处理，你的 CI/CD，发布/迁移/降级都可以用SQL实现。
+你想部署一套新系统？把 PostgreSQL 数据目录复制一份，重新拉起一个 PostgreSQL 实例就可以了。一个数据库解决所有问题，架构简单无比。&lt;/p&gt;
+&lt;p&gt;使用 PostgreSQL 作为业务架构，你可以&lt;/p&gt;
+&lt;p&gt;由数据库处理业务逻辑，可以通过避免交互式查询的多次网络RT来提高查询（延迟）性能，但是消耗数据库服务器的 CPU 资源会导致最大吞吐量下降。
+将业务逻辑作为 SQL / 存储过程会带来一些管理上的优势：用统一的方式管理代码与数据，CI/CD，发布/迁移/降级都可以用SQL实现，高度集成，非常灵活；
+但也会带来新的挑战：在数据库里对模式变更，版本控制，备份恢复都是全新的玩法，一般的开发者和DBA恐怕并没有能力兜住这种“激进”的玩法。&lt;/p&gt;
+&lt;p&gt;有机会规避一些复杂的并发争用，并通过节省了后端与数据库的网络 RT 带来更好的延迟性能表现；
+而且在管理上也会有一些独特优势：所有业务逻辑、模式定义和数据都在同一个地方，用同样的方式处理，你的 CI/CD，发布/迁移/降级都可以用SQL实现。
+你想部署一套新系统？把 PostgreSQL 数据目录复制一份，重新拉起一个 PostgreSQL 实例就可以了。一个数据库解决所有问题，架构简单无比。&lt;/p&gt;
+&lt;p&gt;时将几乎所有的业务逻辑（甚至推荐算法）都在 PostgreSQL 里实现，后端只有很轻薄的一层转发。
+只不过这种做法对开发者、DBA 的综合技能要求较高 —— 毕竟写存储过程、维护复杂的数据库逻辑不是一件轻松活儿。&lt;/p&gt;
+&lt;p&gt;老实说 DBA 和运维很难喜欢这些看上去 “离经叛道” 的玩意。但作为一个开发者，特我认为这个主意非常有趣，值得探索！&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;吞噬一切的数据库&#34;&gt;吞噬一切的数据库&lt;/h2&gt;
+&lt;p&gt;俗话说：“分久必合，合久必分”。在上古时期，许多 C/S，B/S 架构的应用就是几个客户端直接读写数据库。
+但是后来，随着业务逻辑的复杂化，以及硬件性能（相对于业务需求）的捉襟见肘，许多东西从数据库中被剥离出来，形成了传统的三层架构。&lt;/p&gt;
+&lt;p&gt;硬件的发展让数据库服务器的性能重新出现大量的富余，而数据库软件的发展让存储过程的编写变得更加容易，
+那么拆分剥离的趋势也很有可能会逆转，原本从数据库中分离出去的业务逻辑，又会重新回到数据库中。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;拥抱新趋势&#34;&gt;拥抱新趋势&lt;/h2&gt;
+&lt;p&gt;如果你想试试在数据库里写应用，一套 PostgreSQL 打天下的刺激玩法，确实应该尝试一下 Supabase 或者 Omnigres！
+我们最近实现了了在本地自建 Supabase 的能力（这涉及到二十多个扩展，其中有几个棘手的扩展使用Rust编写），
+并在刚刚提供了对 Omnigres 扩展的支持 —— 这为 PostgreSQL 提供了 DBaaA 的能力。&lt;/p&gt;
+&lt;p&gt;如果你有几十万 TPS，几十 TB 的数据，或者运行着一些至关重要、人命关天、硕大无朋的核心系统，那么这种玩法可能不太合时宜。
+但如果你运行的是一些个人项目，小网站，或者是初创公司与边缘创新系统，那么这种架构会让你的迭代更为敏捷，开发、运维更加简单。&lt;/p&gt;
+&lt;p&gt;当然不要忘记，除了二十多种可以用于编写存储过程的的语言支持外，PostgreSQL 生态中还有 1000+ 扩展插件可以提供各种强力功能。
+除了大家都已经耳熟能详的 &lt;code&gt;postgis&lt;/code&gt;, &lt;code&gt;timescaledb&lt;/code&gt;, &lt;code&gt;pgvector&lt;/code&gt;, &lt;code&gt;citus&lt;/code&gt; 之外，最近还有许多亮眼的新兴扩展：
+比如在 PG 上提供 ClickHouse T0 分析性能的 &lt;code&gt;pg_duckdb&lt;/code&gt; 与 &lt;code&gt;pg_mooncake&lt;/code&gt;，提供比肩 ES 全文检索的 &lt;code&gt;pg_search&lt;/code&gt;，
+将 PG 转换为 S3 湖仓的 &lt;code&gt;pg_analytics&lt;/code&gt; 与 &lt;code&gt;pg_parquet&lt;/code&gt;，……
+我们将在 OLAP 领域再次见证一个类似 &lt;code&gt;pgvector&lt;/code&gt; 的玩家出现，让许多 “大数据” 组件变成 Punchline。&lt;/p&gt;
+&lt;p&gt;而这正是我们 Pigsty 想要解决的问题 —— Extensible Postgres，让所有人都可以轻松使用这些扩展插件，让 PostgreSQL 成为一个真正的超融合数据库全能王。&lt;/p&gt;
+&lt;p&gt;在我们开源的 Pigsty 扩展仓库中，总共已经提供了将近 400 个开箱即用的扩展，你可以在主流Linux系统（amd/arm, EL 8/9, Debian 12, Ubuntu 22/24），使用 Pigsty 一键安装这些扩展。
+但这些插件是一个可以独立使用的仓库（Apache 2.0），您非一定要使用 Pigsty 才能拥有这些扩展 ——  Omnigres 与 AutoBase 这样的 PostgreSQL 也在使用这个仓库进行扩展交付，这确实是一个开源生态互惠共赢的大好例子。
+如果您是 PostgreSQL 供应商，我们非常欢迎您使用 Pigsty 的扩展仓库作为上游安装源，或在 Pigsty 中分发您的扩展插件。&lt;/p&gt;
+&lt;p&gt;如果您是 PostgreSQL 用户，并对扩展插件感兴趣，也非常欢迎看一看我们开源的 PG 包管理器 [&lt;code&gt;pig&lt;/code&gt;] ，可以让您一键轻松解决 PostgreSQL 扩展插件的安装问题。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id=&#34;什么还能这么玩&#34;&gt;什么，还能这么玩&lt;/h2&gt;
 &lt;p&gt;在 PG 生态大会上，尤里展示了一个想法：&lt;strong&gt;把所有业务逻辑，甚至是Web服务器和整个后端都塞进 PostgreSQL 数据库里&lt;/strong&gt;。
@@ -745,51 +918,27 @@ stateDiagram-v2
 &lt;p&gt;如果是熟悉 Oracle 的用户可能会发现，这有点类似于 Oracle Apex。但在 PostgreSQL 中，你可以用二十多种编程语言来开发存储过程，而不仅仅局限于 PL/SQL！&lt;/p&gt;
 &lt;p&gt;&lt;img src=&#34;/zh/blog/db/db-is-the-arch/pl.png&#34;&gt;&lt;/p&gt;
 &lt;p&gt;除了这里的 &lt;code&gt;httpd&lt;/code&gt; 扩展外，Omnigres 还提供了另外 33 个扩展插件，这套扩展全家桶，提供了在 PostgreSQL 中进行完整 Web 应用开发的能力！&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;这会是一个好主意吗&#34;&gt;这会是一个好主意吗？&lt;/h2&gt;
-&lt;p&gt;类似 &lt;a href=&#34;https://docs.postgrest.org/en/v12/&#34;&gt;PostgREST&lt;/a&gt; 这样的工具，可以将设计良好的 PostgreSQL 模式直接转化为开箱即用的 RESTful API。
-而 Omnigres 这样的工具则是百尺竿头更进一步，直接让 HTTP 服务器运行在了 PG 数据库内部！而这意味着，你不仅可以把后端放进数据库里，你甚至可以把前端也放进数据库中！&lt;/p&gt;
-&lt;p&gt;老实说 DBA 和运维很难喜欢这些看上去 “离经叛道” 的玩意。但作为一个开发者，特我认为这个主意非常有趣，值得探索！
-因为这么搞确实很省事 —— 由数据库处理业务逻辑有机会规避一些复杂的并发争用，并通过节省了后端与数据库的网络 RT 带来更好的延迟性能表现；
-而且在管理上也会有一些独特优势：所有业务逻辑、模式定义和数据都在同一个地方，用同样的方式处理，你的 CI/CD，发布/迁移/降级都可以用SQL实现。
-你想部署一套新系统？把 PostgreSQL 数据目录复制一份，重新拉起一个 PostgreSQL 实例就可以了。一个数据库解决所有问题，架构简单无比。&lt;/p&gt;
-&lt;p&gt;早先我在探探，我们在使用 PostgreSQL 时将几乎所有的业务逻辑（甚至推荐算法）都在 PostgreSQL 里实现，后端只有很轻薄的一层转发。
-只不过这种做法对开发者、DBA 的综合技能要求较高 —— 毕竟写存储过程、维护复杂的数据库逻辑不是一件轻松活儿。
-而且在那个时候（2017），数据库通常也是整个架构中的性能瓶颈，单节点动辄大几万 TPS，没有多少性能余量给这些花活。&lt;/p&gt;
-&lt;p&gt;但现在时过境迁，LLM 的出现与硬件的发展让这种做法变得更加可行起来：
-GPT 已经达到了能够熟练编写存储过程的中高级开发者的水准，而遵循摩尔定律发展的硬件直接把单机性能推到了一个匪夷所思的地步。
-因此，将业务逻辑放到数据库中，甚至让数据库成为整个业务架构本身，这种做法在当下成为一种非常值得探索的实践。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;吞噬一切的数据库&#34;&gt;吞噬一切的数据库&lt;/h2&gt;
-&lt;p&gt;俗话说：“分久必合，合久必分”。在上古时期，许多 C/S，B/S 架构的应用就是几个客户端直接读写数据库。
-但是后来，随着业务逻辑的复杂化，以及硬件性能（相对于业务需求）的捉襟见肘，许多东西从数据库中被剥离出来，形成了传统的三层架构。&lt;/p&gt;
-&lt;p&gt;硬件的发展让数据库服务器的性能重新出现大量的富余，而数据库软件的发展让存储过程的编写变得更加容易，
-那么拆分剥离的趋势也很有可能会逆转，原本从数据库中分离出去的业务逻辑，又会重新回到数据库中。&lt;/p&gt;
-&lt;p&gt;实际上，我们已经可以在《&lt;a href=&#34;/zh/blog/pg/pg-eat-db-world&#34;&gt;PostgreSQL吞噬数据库世界&lt;/a&gt;》，以及社区正在流行的 “一切皆用 PostgreSQL” 口号中，观察到观察到数据库领域正在出现的收敛趋势：
-原先从数据库中分离出去的细分领域专用数据库，如全文搜索、向量，机器学习、图数据库、时序数据库等，现在都在重新以插件超融合的方式回归到 PostgreSQL 中。&lt;/p&gt;
-&lt;p&gt;相应地，前端，后端重新融合回归到数据库的实践也开始出现。我认为一个非常值得注意的例子是 Supabase，一个号称 “开源 Firebase” 的项目，据说 80% YC 创业公司都在使用它。
-它将 PostgreSQL，对象存储，PostgREST，EdgeFunction 和各种工具封装成为一整个运行时，然后将后端与传统意义上的数据库整体打包成为一个 “新的数据库”。&lt;/p&gt;
-&lt;p&gt;Supabase 实际上就是 “吃掉” 了后端的数据库，如果这种架构走到极致，那大概会是像 Omnigres 这样的架构 —— 一个运行着 HTTP 服务器的 PostgreSQL，干脆把前端也吃下去了。&lt;/p&gt;
-&lt;p&gt;当然，可能还有更为激进的尝试 —— 例如 Stonebraker 老爷子的新创业项目 DBOS，甚至要把操作系统也给吞进数据库里去了！&lt;/p&gt;
-&lt;p&gt;这也许意味着软件架构领域的钟摆正在重新回归简单与常识 —— 前端绕开花里胡哨的中间件，直接访问数据库，螺旋上升回归到最初的 C/S，B/S 架构上去。
-或者像纳德拉所说，Agent 可以直接绕过中间商，代替前后端与软件去读写数据库，出现一种新的 A(gent)/D(atabase) 架构也未尝不可。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;拥抱新趋势&#34;&gt;拥抱新趋势&lt;/h2&gt;
-&lt;p&gt;如果你想试试在数据库里写应用，一套 PostgreSQL 打天下的刺激玩法，确实应该尝试一下 Supabase 或者 Omnigres！
-我们最近实现了了在本地自建 Supabase 的能力（这涉及到二十多个扩展，其中有几个棘手的扩展使用Rust编写），
-并在刚刚提供了对 Omnigres 扩展的支持 —— 这为 PostgreSQL 提供了 DBaaA 的能力。&lt;/p&gt;
-&lt;p&gt;如果你有几十万 TPS，几十 TB 的数据，或者运行着一些至关重要、人命关天、硕大无朋的核心系统，那么这种玩法可能不太合时宜。
-但如果你运行的是一些个人项目，小网站，或者是初创公司与边缘创新系统，那么这种架构会让你的迭代更为敏捷，开发、运维更加简单。&lt;/p&gt;
-&lt;p&gt;当然不要忘记，除了二十多种可以用于编写存储过程的的语言支持外，PostgreSQL 生态中还有 1000+ 扩展插件可以提供各种强力功能。
-除了大家都已经耳熟能详的 &lt;code&gt;postgis&lt;/code&gt;, &lt;code&gt;timescaledb&lt;/code&gt;, &lt;code&gt;pgvector&lt;/code&gt;, &lt;code&gt;citus&lt;/code&gt; 之外，最近还有许多亮眼的新兴扩展：
-比如在 PG 上提供 ClickHouse T0 分析性能的 &lt;code&gt;pg_duckdb&lt;/code&gt; 与 &lt;code&gt;pg_mooncake&lt;/code&gt;，提供比肩 ES 全文检索的 &lt;code&gt;pg_search&lt;/code&gt;，
-将 PG 转换为 S3 湖仓的 &lt;code&gt;pg_analytics&lt;/code&gt; 与 &lt;code&gt;pg_parquet&lt;/code&gt;，……
-我们将在 OLAP 领域再次见证一个类似 &lt;code&gt;pgvector&lt;/code&gt; 的玩家出现，让许多 “大数据” 组件变成 Punchline。&lt;/p&gt;
-&lt;p&gt;而这正是我们 Pigsty 想要解决的问题 —— Extensible Postgres，让所有人都可以轻松使用这些扩展插件，让 PostgreSQL 成为一个真正的超融合数据库全能王。&lt;/p&gt;
-&lt;p&gt;在我们开源的 Pigsty 扩展仓库中，总共已经提供了将近 400 个开箱即用的扩展，你可以在主流Linux系统（amd/arm, EL 8/9, Debian 12, Ubuntu 22/24），使用 Pigsty 一键安装这些扩展。
-但这些插件是一个可以独立使用的仓库（Apache 2.0），您非一定要使用 Pigsty 才能拥有这些扩展 ——  Omnigres 与 AutoBase 这样的 PostgreSQL 也在使用这个仓库进行扩展交付，这确实是一个开源生态互惠共赢的大好例子。
-如果您是 PostgreSQL 供应商，我们非常欢迎您使用 Pigsty 的扩展仓库作为上游安装源，或在 Pigsty 中分发您的扩展插件。&lt;/p&gt;
-&lt;p&gt;如果您是 PostgreSQL 用户，并对扩展插件感兴趣，也非常欢迎看一看我们开源的 PG 包管理器 [&lt;code&gt;pig&lt;/code&gt;] ，可以让您一键轻松解决 PostgreSQL 扩展插件的安装问题。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;BTW 他还说 SaaS is Dead：因为以后 Agent 可以直接绕过中间商，代替前后端去读写数据库&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&#34;/zh/blog/db/db-is-the-arch/pl.png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;这意味着，你可以把一个经典前端-后端-数据库三层架构的应用，完整地塞入一个数据库中！&lt;/p&gt;
+&lt;p&gt;当然，你可以选择任意你喜欢的编程语言来创建 PostgreSQL 函数，并将这些函数挂载到 HTTP 端点上，实现你想要的任何逻辑。
+他是怎么做到的？Omnigres 提供了一套扩展全家桶，包括 &lt;code&gt;httpd&lt;/code&gt;、&lt;code&gt;vfs&lt;/code&gt;、&lt;code&gt;os&lt;/code&gt;、&lt;code&gt;python&lt;/code&gt; 等33个 PG “标准库”扩展模块。
+从浏览器可以访问 HTML 页面，而 HTML 页面可以通过 Javascript 动态访问 HTTP 服务器与数据库存储过程。&lt;/p&gt;
+&lt;p&gt;将业务逻辑，Web Server，甚至是整个前后端都放入数据库中，又会擦出怎么样的火花？&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这个想法的实质是：&lt;strong&gt;把所有业务逻辑，甚至是Web服务器和整个前后端都塞进 PostgreSQL 数据库里&lt;/strong&gt;。
+让我们来看一个有趣的例子，在 PostgreSQL 中执行以下 SQL，将会启动一个 Web 服务器，将 &lt;code&gt;/www&lt;/code&gt; 作为一个 Web 服务器的根目录对外提供服务：
+天啊，PostgreSQL 数据库竟然拉起来了一个 HTTP 服务器，默认跑在 &lt;code&gt;8080&lt;/code&gt; 端口！你可以把它当成 Nginx 用！
+除了实现 httpd 之外，他还以 PG 扩展的形式实现了许多 “标准库”，这包括一个由 33 个扩展插件组成的全家桶，提供在 PostgreSQL 中进行完整 Web 应用开发的能力！&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;熟悉 Oracle 的用户可能会发现，这有点类似于 Oracle Apex。但在 PostgreSQL 中，你可以用二十多种编程语言来开发存储过程，而不仅仅局限于 PL/SQL！&lt;/p&gt;
+&lt;p&gt;但如果你的性能主要指的是 “最大TPS吞吐量”，那么&lt;/p&gt;
+&lt;p&gt;但比起吞吐性能下降，这种实践不受待见的一个核心原因是，它对人的要求太高了 —— 这种实践通常只有精英小团队才能玩转。
+你要会写存储过程，以及更重要的，你要知道在这种范式下如何实现各种各样的管理操作（PITR，备份恢复，高可用，CI/CD，模式变更，版本控制）。
+而拥有这些经验的人要比拥有常规实践经验的人要稀少得多。&lt;/p&gt;
+&lt;p&gt;吞吐和人力，是这种范式的最大困难。&lt;/p&gt;
 
       </description>
     </item>
@@ -9667,126 +9816,6 @@ PolarDB 属于自主可控，安全可靠的国产信创数据库。（中国信
 &lt;p&gt;&lt;code&gt;[3]&lt;/code&gt; 墨天轮国产数据库排行榜: &lt;em&gt;&lt;a href=&#34;https://www.modb.pro/dbRank&#34;&gt;https://www.modb.pro/dbRank&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;[4]&lt;/code&gt; DB-Engine 数据分析: &lt;em&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/db-analysis&#34;&gt;https://demo.pigsty.cc/d/db-analysis&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;[5]&lt;/code&gt; StackOverflow 7年调研数据: &lt;strong&gt;&lt;a href=&#34;https://demo.pigsty.cc/d/sf-survey&#34;&gt;https://demo.pigsty.cc/d/sf-survey&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
-
-      </description>
-    </item>
-    
-    <item>
-      <title>Blog: Cloudflare圆桌访谈与问答录</title>
-      <link>/zh/blog/cloud/cf-interview/</link>
-      <pubDate>Tue, 23 Apr 2024 00:00:00 +0000</pubDate>
-      
-      <guid>/zh/blog/cloud/cf-interview/</guid>
-      <description>
-        
-        
-        
-        <![CDATA[<img src="/zh/blog/cloud/cf-interview/featured_hu04231d9bc7cd3ef23d4bb4ec3641bb94_410122_640x0_resize_q75_h2_catmullrom_2.webp" width="640" height="366"/>]]>
-        
-        &lt;p&gt;上周我作为圆桌嘉宾受邀参加了 Cloudflare 在深圳举办的 Immerse 大会，在 Cloudflare Immerse 鸡尾酒会和晚宴上，我与 Cloudflare 亚太区CMO，大中华区技术总监，以及一线工程师深入交流探讨了许多关于 Cloudflare 的问题。&lt;/p&gt;
-&lt;p&gt;本文是圆桌会谈纪要与问答采访的摘录，从用户视角点评 Cloudflare 请参考本号前一篇文章：《&lt;a href=&#34;/zh/blog/cloud/cloudflare&#34;&gt;&lt;strong&gt;吊打公有云的赛博佛祖 Cloudflare&lt;/strong&gt;&lt;/a&gt;》&lt;/p&gt;
-&lt;p&gt;&lt;a href=&#34;https://mp.weixin.qq.com/s/jU418HAlObe1nWgzEsLrJQ&#34;&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/featured.webp&#34;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;第一部分圆桌访谈&#34;&gt;第一部分：圆桌访谈&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;您与 Cloudflare 如何结缘？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我是冯若航，现在做 &lt;strong&gt;PostgreSQL&lt;/strong&gt; 数据库发行版 &lt;a href=&#34;https://pigsty.io/zh/&#34;&gt;&lt;strong&gt;Pigsty&lt;/strong&gt;&lt;/a&gt;，运营着一个开源社区，同时作为一个数据库 &amp;amp; 云计算领域的 KOL，在国内宣扬下云理念。在 Cloudflare 的场子里讲下云挺有意思，但我并不是来踢馆的。&lt;/p&gt;
-&lt;p&gt;事实上我与 Cloudflare 还有好几层缘分，所以今天很高兴在这里和大家分享一下我的&lt;strong&gt;三重视角&lt;/strong&gt; ：作为一个独立开发者终端用户，作为一个开源社区的成员与运营者，作为一个公有云计算反叛军，我是如何看待 Cloudflare 的。&lt;/p&gt;
-&lt;p&gt;作为一个&lt;strong&gt;开源软件供应商&lt;/strong&gt;，我们需要一种稳定可靠的软件分发方式。我们最开始使用了本土的阿里云与腾讯云，在国内的体验尚可，但当我们需要走出海外，面向国外用户时，使用体验确实不尽如人意。我们尝试了 AWS，Package Cloud ，但最终选择了 Cloudflare。包括我们有几个网站也托管到了CF。&lt;/p&gt;
-&lt;p&gt;作为 &lt;strong&gt;PostgreSQL 社区的一员&lt;/strong&gt;，我们知道 Cloudflare 深度使用了 PostgreSQL 作为底层存储的数据库。并且不同于其他云厂商喜欢将其包装为 RDS 白嫖社区，Cloudflare 一直是杰出的开源社区参与者与建设者。甚至像 Pingora 和 Workerd 这样的核心组件都是开源的。我对此给出高度评价，这是开源软件社区与云厂商共存的典范。&lt;/p&gt;
-&lt;p&gt;作为&lt;strong&gt;下云理念的倡导者&lt;/strong&gt;，我一直认为传统公有云使用了一种非常不健康的商业模式。所以在中国引领着一场针对公有云的&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486813&amp;idx=1&amp;sn=ffb126fdd061c1e27626dd558f6fa26a&amp;chksm=fe4b3886c93cb190e2acf7af6cfd25f298199f6ee73da566bed050c066b96753b913e3453d4f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;下云运动&lt;/strong&gt;&lt;/a&gt;。我认为 Cloudflare 也许是这场运动中的重要盟友 —— 传统 IDC 开源自建，难以解决 “在线” 的问题，而 Cloudflare 的接入能力，边缘计算能力，都弥补了这一块短板。所以我非常看好这种模式。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-1.jpg&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;您用到了哪些 Cloudflare的服务，打动你的是什么？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我用到了 Cloudflare 的静态网站托管服务 Pages，对象存储服务 R2 和边缘计算 Worker。最打动我的有这么几点：易用性，成本，质量，安全，专业的服务态度，以及这种模式的前景与未来。&lt;/p&gt;
-&lt;p&gt;首先聊一聊&lt;strong&gt;易用性&lt;/strong&gt;吧，我使用的第一项服务是 Pages。我自己有一个网站，静态 HTML 托管在这里。我把这个网站搬上 Cloudflare 用了多长时间？一个小时！我只是创建了一个新的 GitHub Repo，把静态内容提交上去，然后在 Cloudflare 点点按钮，绑定一个新的子域名，链接到 GitHub Repo，整个网站瞬间就可以被全世界访问，你不需要操心什么高可用，高并发，全球部署，HTTPS 证书，抗 DDoS 之类的问题 —— 这种丝滑的用户体验让我非常舒适，并很乐意在这上面花点钱解锁额外功能。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;再来聊一聊&lt;strong&gt;成本&lt;/strong&gt;吧。在独立开发者，个人站长这个圈子里，我们给 Cloudflare 起了一个外号 —— “&lt;strong&gt;赛博佛祖&lt;/strong&gt;”。这主要是因为 Cloudflare 提供了非常慷慨的免费计划。Cloudflare 有着相当独特的商业模式 —— &lt;strong&gt;免流量费，靠安全赚钱&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;比如说 R2，我认为这就是专门针对 AWS S3 进行啪啪打脸的。我曾经作为大甲方对各种云服务与自建的成本进行过精算 —— 得出会让普通用户感到震惊的结论。云上的&lt;a href=&#34;/zh/blog/cloud/s3&#34;&gt;&lt;strong&gt;对象存储&lt;/strong&gt;&lt;/a&gt; / &lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247485745&amp;idx=4&amp;sn=93746ecea381afd8e2f9820447b09ec7&amp;chksm=fe4b3ceac93cb5fc44f33ffff226747bc317854acbb3882aeb0d9a7e196eeb5df002d0e77275&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;块存储&lt;/strong&gt;&lt;/a&gt; 比本地自建贵了两个数量级，堪称史诗级杀猪盘。AWS S3 标准档价格 0.023 $/GB·月，而 Cloudflare R2 价格 0.015 $/GB·月，看上去只是便宜了 1/3 。但重要的是&lt;strong&gt;流量费全免&lt;/strong&gt;！这就带来质变了！&lt;/p&gt;
-&lt;p&gt;比如，我自己那个网站也还算有点流量，最近一个月跑了 300GB ，没收钱，我有一个朋友每月跑掉 3TB 流量，没收钱；然后我在推特上看到有个朋友 Free Plan 跑黄网图床，每月 1PB 流量，这确实挺过分了，于是 CF 联系了他 —— 建议购买企业版，也仅仅是 “建议”。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;接下来我们来聊一聊&lt;strong&gt;质量&lt;/strong&gt;。我讲下云的一个前提是：各家公有云厂商卖的是没有不可替代性的大路货标准品。比如那种在&lt;a href=&#34;/zh/blog/cloud/luo-live&#34;&gt;&lt;strong&gt;老罗直播间&lt;/strong&gt;&lt;/a&gt;中，夹在吸尘器与牙膏中间卖的云服务器。但是 Cloudflare 确实带来了一些不一样的东西。&lt;/p&gt;
-&lt;p&gt;举个例子，Cloudflare Worker 确实很有意思，比起传统云上笨拙的开发部署体验来说，CF worker 真正做到了让开发者爽翻天的 Serverless 效果。开发者不需要操心什么数据库连接串，AccessPoint，AK/SK密钥管理，用什么数据库驱动，怎么管理本地日志，怎么搭建 CI/CD 流程这些繁琐问题，最多在环境变量里面指定一下存储桶名称这类简单信息就够了。写好 Worker 胶水代码实现业务逻辑，命令行一把梭就可以完成全球部署上线。&lt;/p&gt;
-&lt;p&gt;与之对应的是传统公有云厂商提供的各种所谓 Serverless 服务，比如 RDS Serverless，就像一个恶劣的笑话，单纯是一种计费模式上的区别 —— 既不能 Scale to Zero，也没什么易用性上的改善 —— 你依然要在控制台去点点点创建一套 RDS，而不是像 Neon 这种真 Serverless 一样用连接串连上去就能直接迅速拉起一个新实例。更重要的是，稍微有个几十上百的QPS，相比包年包月的账单就要爆炸上天了 —— 这种平庸的 “Serverless” 确实污染了这个词语的本意。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;最后我想说一下&lt;strong&gt;安全&lt;/strong&gt;，我认为安全才是 Cloudflare 核心价值主张。为什么这么说，还是举一个例子。有一个独立站长朋友用了某个头部本土云 CDN ，最近两年有莫名其妙的超多流量。一个月海外几个T流量，一个IP 过来吃个10G 流量然后消失掉。后来换了个地方提供服务，这些奇怪的流量就没了。运行成本变为本来的 1/10，这就有点让人细思恐极 —— &lt;strong&gt;是不是这些云厂商坚守自盗，在盗刷流量？或者是是云厂商本身（或其附属）组织在有意攻击，从而推广他们的高防 IP 服务&lt;/strong&gt;？这种例子其实我是有所耳闻的。&lt;/p&gt;
-&lt;p&gt;因此，在使用本土云 CDN 的时候，很多用户会有一些天然的顾虑与不信任。但 Cloudflare 就解决了这个问题 —— 第一，流量不要钱，按请求量计费，所以刷流量没意义；第二，它替你抗 DDoS，即使是 Free Plan 也有这个服务，CF不能砸自己的招牌 —— 这解决了一个用户痛点，就是把账单刷爆的问题 —— 我确实有见过这样的案例，公有云账号里有几万块钱，一下子给盗刷干净了。用 Cloudflare 就彻底没有这个问题，我可以确保账单有高度的确定性 —— 如果不是确定为零的话。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;专业的服务态度指的是？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;本土云厂商在面对大故障时，体现出相当业余的专业素养与服务态度，这一点我专门写了好几篇文章进行批判。说起来特别赶巧，去年双十一，阿里云出了一个史诗级&lt;a href=&#34;/zh/blog/cloud/aliyun&#34;&gt;&lt;strong&gt;全球大故障&lt;/strong&gt;&lt;/a&gt;。Cloudflare 也出了个机房断电故障。一周前 4.8 号，腾讯云也出了个翻版&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487267&amp;idx=1&amp;sn=7d31d44e89560356b5c5a2e7a40bb1e1&amp;chksm=fe4b3af8c93cb3ee9b8000cd90a12a798395f67205d4ba5b0c77b8c5b6ce9ea448d9fc014921&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;全球故障&lt;/strong&gt;&lt;/a&gt;，Cloudflare 也恰好在同一天又出了 Code Orange 机房断电故障。作为一个工程师，我理解故障是难以避免的 —— &lt;strong&gt;但出现故障后，体现出来的专业素养和服务态度是天差地别的&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;首先，阿里云和腾讯云的故障都是人为操作失误/糟糕的软件工程/架构设计导致的，而 Cloudflare 的问题是机房断电，某种程度上算不可抗力的天灾。其次，在处理态度上，阿里云到现在都没发布一个像样的故障复盘，我替它做了一个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247486468&amp;idx=1&amp;sn=7fead2b49f12bc2a2a94aae942403c22&amp;chksm=fe4b39dfc93cb0c92e5d4c67241de0519ae6a23ce6f07fe5411b95041accb69e5efb86a38150&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;非官方故障复盘&lt;/strong&gt;&lt;/a&gt;；至于腾讯云，我干脆连故障通告都替他们发了 —— 比官网还快10分钟。腾讯云倒是在前天发布了一个&lt;a href=&#34;http://mp.weixin.qq.com/s?__biz=MzU5ODAyNTM5Ng==&amp;mid=2247487348&amp;idx=1&amp;sn=412cf2afcd93c3f0a83d65219c4a28e8&amp;chksm=fe4b3aafc93cb3b900cef33bd0510c7c86367d71877b0ee65d4847da0ae1298e2b1fd88d0b3f&amp;scene=21#wechat_redirect&#34;&gt;&lt;strong&gt;故障复盘&lt;/strong&gt;&lt;/a&gt;，但是也比较敷衍，专业素养不足，这种复盘报告拿到 Apple 和 Google 都属于不合格的 Post-Mortem ……&lt;/p&gt;
-&lt;p&gt;Cloudflare 则恰恰相反，在故障的当天 CEO 亲自出来撰写故障复盘，细节翔实，态度诚恳，你见过本土云厂商这么做吗？没有!&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;您对 Cloudflare 未来有什么期待？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我主张下云理念，是针对中型以上规模的企业。像我之前任职的探探，以及美国 DHH 37 Signal 这样的。但是 IDC 自建有个问题，&lt;strong&gt;接入&lt;/strong&gt;的问题，&lt;strong&gt;在线的问题&lt;/strong&gt; —— 你可以自建KVM，K8S，RDS，甚至是对象存储。但你不可能自建 CDN 吧？Cloudflare 就很好地弥补了这个缺憾。&lt;/p&gt;
-&lt;p&gt;我认为，Cloudflare 是下云运动的坚实盟友。Cloudflare 并没有提供传统公有云上的那些弹性计算、存储、&lt;strong&gt;K8S&lt;/strong&gt;、&lt;strong&gt;RDS&lt;/strong&gt; 服务。但幸运地是，Cloudflare 可以与公有云 / IDC 良好地配合协同 —— 从某种意义上来说，因为 Cloudflare 成功解决了 “在线” 的问题，这使得传统数据库中心 IDC 2.0 也同样可以拥有比肩甚至超越公有云的 “在线” 能力，两者配合，在事实上摧毁了一些公有云的护城河，并挤压了传统公有云厂商的生存空间。&lt;/p&gt;
-&lt;p&gt;我非常看好 Cloudflare 这种模式，实际上，这种丝滑的体验才配称的上是云，配享太庙，可以心安理得吃高科技行业的高毛利。实际上，&lt;strong&gt;我认为 Cloudflare 应该主动出击，去与传统公有云抢夺云计算的定义权&lt;/strong&gt; —— 我希望未来人们说起云的时候，指的应该是 Cloudflare 这种慷慨体面的连接云，而不是传统公有杀猪云。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id=&#34;第二部分互动问答&#34;&gt;第二部分：互动问答&lt;/h2&gt;
-&lt;p&gt;在 Cloudflare Immerse 鸡尾酒会和晚宴上，我与 Cloudflare 亚太区CMO，大中华区技术总监，以及一线工程师深入交流探讨了许多关于 Cloudflare 的问题，收获颇丰，这里给出了一些适合公开的问题与答案。因为我也不会录音，因此这里的文字属于我的事后回忆与阅读理解，&lt;strong&gt;仅供参考，不代表 CF 官方观点&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-2.jpg&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 如何定位自己，和 AWS 这种传统公有云是什么关系？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;其实 Cloudflare 不是传统公有云，而是一种 &lt;strong&gt;SaaS&lt;/strong&gt;。我们现在管自己叫做 “Connectivity Cloud”（翻译为：&lt;strong&gt;全球联通云&lt;/strong&gt;），旨在为所有事物之间建立连接，与所有网络相集成；内置情报防范安全风险，并提供统一、简化的界面以恢复&lt;strong&gt;可见性&lt;/strong&gt;与&lt;strong&gt;控制&lt;/strong&gt;。从传统的视角来看，我们做的像是安全、CDN与边缘计算的一个整合。AWS 的 CloudFront 算是我们的竞品。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-3.png&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 为什么提供了如此慷慨的免费计划，到底靠什么赚钱？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Cloudflare 的免费服务就像 Costco 的5美元烤鸡一样。实际上除了免费套餐，那个 Workers 和 Pages 的付费计划也是每月五美元，跟白送的一样，Cloudflare 也不是从这些用户身上赚钱的。&lt;/p&gt;
-&lt;p&gt;Cloudflare 的核心商业模式是&lt;strong&gt;安全&lt;/strong&gt;。相比于只服务付费客户，更多的免费用户可以带来更深入的数据洞察 —— 也就能够发现更为广泛的攻击与威胁情报，为付费用户提供更好的安全服务。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;strong&gt;我们的 Free 计划有何优势？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;在 Cloudflare，我们的使命是帮助建立更好的互联网。我们认为 web 应该是开放和免费的，所有网站和 web 用户，无论多小，都应该是安全、稳固、快速的。由于&lt;a href=&#34;https://webmasters.stackexchange.com/questions/88659/how-can-cloudflare-offer-a-free-cdn-with-unlimited-bandwidth&#34;&gt;种种原因&lt;/a&gt;，Cloudflare 始终都提供慷慨的免费计划。&lt;/p&gt;
-&lt;p&gt;我们努力将网络运营成本降至最低，从而能在我们的 Free 计划中提供巨大价值。最重要的是，通过保护更多网站，我们能就针对我们网络的各类攻击获得更完善的数据，从而能为所有网站提供更佳的安全和保护。&lt;/p&gt;
-&lt;p&gt;作为隐私第一的公司，我们绝不出售您的数据。事实上，Cloudflare 承认个人数据隐私是一项基本人权，并已采取&lt;a href=&#34;https://blog.cloudflare.com/certifying-our-commitment-to-your-right-to-information-privacy/&#34;&gt;一系列措施&lt;/a&gt;来证明我们对隐私的承诺。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;实际上 Cloudflare 的 CEO 在 StackOverflow &lt;a href=&#34;https://webmasters.stackexchange.com/questions/88659/how-can-cloudflare-offer-a-free-cdn-with-unlimited-bandwidth&#34;&gt;亲自对这个问题作出过回答&lt;/a&gt;：&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-4.webp&#34;&gt;&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Five reasons we offer a free version of the service and always will:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Data: we see a much broader range of attacks than we would if we only had our paid users. This allows us to offer better protection to our paid users.&lt;/li&gt;
-&lt;li&gt;Customer Referrals: some of our most powerful advocates are free customers who then &amp;ldquo;take CloudFlare to work.&amp;rdquo; Many of our largest customers came because a critical employee of theirs fell in love with the free version of our service.&lt;/li&gt;
-&lt;li&gt;Employee Referrals: we need to hire some of the smartest engineers in the world. Most enterprise SaaS companies have to hire recruiters and spend significant resources on hiring. We don&amp;rsquo;t but get a constant stream of great candidates, most of whom are also CloudFlare users. In 2015, our employment acceptance rate was 1.6%, on par with some of the largest consumer Internet companies.&lt;/li&gt;
-&lt;li&gt;QA: one of the hardest problems in software development is quality testing at production scale. When we develop a new feature we often offer it to our free customers first. Inevitably many volunteer to test the new code and help us work out the bugs. That allows an iteration and development cycle that is faster than most enterprise SaaS companies and a MUCH faster than any hardware or boxed software company.&lt;/li&gt;
-&lt;li&gt;Bandwidth Chicken &amp;amp; Egg: in order to get the unit economics around bandwidth to offer competitive pricing at acceptable margins you need to have scale, but in order to get scale from paying users you need competitive pricing. Free customers early on helped us solve this chicken &amp;amp; egg problem. Today we continue to see that benefit in regions where our diversity of customers helps convince regional telecoms to peer with us locally, continuing to drive down our unit costs of bandwidth.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Today CloudFlare has 70%+ gross margins and is profitable (EBITDA)/break even (Net Income) even with the vast majority of our users paying us nothing.&lt;/p&gt;
-&lt;p&gt;Matthew Prince Co-founder &amp;amp; CEO, CloudFlare&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;创始人的情怀与愿景其实挺重要的 …… ，Cloudflare 早期的许多服务一直都是免费提供的，第一个付费服务其实是 SSL 证书，现在也不要钱了。总的来说，就是靠企业级客户为安全付费。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare付费用户都是什么样的？怎么从免费用户成为付费用户的。&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我们的免费客户转变为企业级付费客户的主要契机是安全问题。Cloudflare 控制台上有个 “&lt;strong&gt;遭受攻击&lt;/strong&gt;” 的按钮 —— 是这样的，只要用户在控制台上点这个 “Under Attack” 按钮，即使是免费客户，我们也会第一时间有人响应，帮助客户解决问题。例如在疫情期间，某头部视频会议厂商遭受到了安全攻击。我们立即抽调人手替客户解决问题 —— 他们很满意，我们就签了单子。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-5.webp&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 的免费套餐有可能会在未来取消吗？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Costco 有个 1.5 美元的热狗汽水套餐，创始人承诺永远不会提高热狗和苏打水套餐的价格。我知道像 Vercel，Planetscale 之类的 SaaS 厂商开始削减免费套餐，但我认为这事基本不太可能发生在 Cloudflare 上。因为如上所述，我们有充分的理由继续提供免费计划。实际上我们的大多数客户都没付钱，在使用 Free Plan。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-6.webp&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;为什么Cloudflare 会在故障后由 CEO 亲自出马复盘？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我们的 CEO 是技术出身，工程师背景。出现故障的时候 IM 里一堆人在掰扯，CEO 跳出来说：够了，我来写故障复盘报告 —— 然后故障当天就发出来了，这种事放在公有云厂商里绝对是相当罕见的了… 我们其实也很震惊…。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-7.webp&#34;&gt;&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 在中国区域访问为什么这么慢？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;中国区域带宽/流量费用太贵了，所以普通用户访问其实访问的其实主要是北美地区的机房与节点。我们在 全世界 95% 的地区都有非常优秀的延迟表现（比），但剩下 5% 嘛主要指的就是 …… ，在这里&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-8.webp&#34;&gt;&lt;/p&gt;
-&lt;p&gt;如果你的主要用户群体都是国内，又比较在乎速度，可以考虑一下 Cloudflare 企业版，或者是本土 CDN 厂商。我们和京东云有合作，企业级客户在国内也可以使用他们提供的这些节点。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;中国区域用户使用 Cloudflare 的主要动机是什么？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;主要是因为&lt;strong&gt;安全&lt;/strong&gt;：Cloudflare 即使是免费计划中，也提供了抗 DDoS 服务。中国的用户使用 Cloudflare 主要是为了出海。而那些纯粹面向本土的中国客户，宁可慢一点也要用 CF 的主要动机就是安全（抗DDoS）。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 会在中国被封禁吗？有什么运营风险吗？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;我觉得这件事不太可能会发生，你知道现在有多少网站托管在 Cloudflare 上面吗 … 这一炮打下去，大半个互联网都访问不了了。Cloudflare 本身并没有在中国地区运营…… ，在中国也主要服务于 C2G （China to Global）业务。
-你刚才问为什么 Cloudflare 域名不备案为什么就能访问，就是这个原因 —— 我们压根没在中国运营。&lt;/p&gt;
-&lt;hr&gt;
-&lt;p&gt;&lt;strong&gt;在与本土云厂商合作中，资源互换主要是一种什么形式？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;有一些本土云厂商通过资源互换的方式合作，所谓资源互换嘛，&lt;code&gt;&amp;lt;Redacted&amp;gt;&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;你们如何看待腾讯云模仿你们的产品 EdgeOne ？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;做生意和气生财，我们不好公开评论其他云。但私下里说，CopyCat……&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 企业版的主要价值点在于？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;流量优先级。举个例子你出海的流量大概率是从上海的某一根跨海光纤出去的，平时这条线路的使用率是 &lt;code&gt;&amp;lt;Redacted&amp;gt;&lt;/code&gt; % ，但是在高峰期，我们就会优先保证企业级用户的服务质量。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&#34;/zh/blog/cloud/cf-interview/cf-interview-9.webp&#34;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Cloudflare 考虑推出托管的 RDS，Postgres数据库服务吗？&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;现在那个 D1 其实是 SQLite，目前没有计划做这种托管数据库服务，但是生态里已经有可以满足这种需求的供应商了，你看有不少在 Worker 里使用 Neon （Serverless Postgres）的例子。&lt;/p&gt;
 
       </description>
     </item>
